@@ -108,6 +108,9 @@ pub struct Calibrated {
     pub lined_up_again: bool,
 }
 
+/// A scale is one drawings are made at if it is within 1 per cent of one (call 186).
+const SCALE_NEAR: f64 = 0.01;
+
 impl Drawing {
     /// The scale as a drawing's title block writes it, where the page is paper of a
     /// known size (a PDF's page, 72 units to the inch) and the scale is one of the
@@ -129,6 +132,36 @@ impl Drawing {
         }
         let [w, h] = self.size;
         Some(format!("sheet covers {} x {}", units::feet_as_ft_in(w * k, 1), units::feet_as_ft_in(h * k, 1)))
+    }
+    /// A caution when the scale is not one drawings are made at (call 186): the architect's and the engineer's scales
+    /// and the metric ones, each within 1 per cent. A sheet printed smaller than it was drawn is at no such scale and is
+    /// still true to its dimension, so this is a caution and no refusal. It names the nearest scales either side.
+    /// None for a scale that is one, for a picture (it has no paper size), and with no scale.
+    pub fn scale_caution(&self) -> Option<String> {
+        let k = self.feet_per_unit()?;
+        if !self.file.value.as_deref().is_some_and(|f| f.to_ascii_lowercase().ends_with(".pdf")) {
+            return None;
+        }
+        // Inches of paper to a foot of building.
+        let paper = 1.0 / (k * 72.0);
+        let mut scales: Vec<(f64, String)> = Vec::new();
+        for (inches, name) in [(1.0 / 32.0, "1/32"), (0.0625, "1/16"), (0.09375, "3/32"), (0.125, "1/8"), (0.1875, "3/16"), (0.25, "1/4"), (0.375, "3/8"), (0.5, "1/2"), (0.75, "3/4"), (1.0, "1"), (1.5, "1 1/2"), (3.0, "3"), (12.0, "12")] {
+            scales.push((inches, format!("{name}\" = 1'-0\"")));
+        }
+        for feet in [10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 80.0, 100.0, 200.0] {
+            scales.push((1.0 / feet, format!("1\" = {feet}'")));
+        }
+        for ratio in [1.0, 2.0, 5.0, 10.0, 20.0, 25.0, 50.0, 75.0, 100.0, 125.0, 150.0, 200.0, 250.0, 500.0] {
+            scales.push((12.0 / ratio, format!("1:{ratio}")));
+        }
+        if scales.iter().any(|(s, _)| (paper / s - 1.0).abs() <= SCALE_NEAR) {
+            return None;
+        }
+        let below = scales.iter().filter(|(s, _)| *s < paper).max_by(|a, b| a.0.total_cmp(&b.0));
+        let above = scales.iter().filter(|(s, _)| *s > paper).min_by(|a, b| a.0.total_cmp(&b.0));
+        let nearest: Vec<String> = [above, below].into_iter().flatten().map(|(_, n)| n.clone()).collect();
+        let said = self.scale_said().unwrap_or_default();
+        Some(format!("{said} is not a scale drawings are made at (the nearest are {}): a dimension read wrong gives this, and so does a sheet printed smaller than it was drawn, which is still true to its dimension. Check the dimension the scale was set from before the walls are trusted", nearest.join(" and ")))
     }
     /// Feet on the building to one unit of the page, when it has a scale that works out.
     pub fn feet_per_unit(&self) -> Option<f64> {
@@ -687,5 +720,30 @@ mod found_tests {
         let why = lay_found(&mut job, &level, "house", 8.0, None, &walls()).unwrap_err();
         assert!(why.contains("needs the wall type"), "{why}");
         assert_eq!(crate::file::save(&mut job), before);
+    }
+
+    #[test]
+    fn a_scale_no_drawing_is_made_at_is_cautioned_with_the_nearest_and_one_that_is_made_at_is_not() {
+        // Call 186, item 6: a scale worked from a wrong dimension draws a caution, and no refusal.
+        let (mut job, level) = job_with_a_level();
+        let how = || Entered { status: Status::Assumed, source: "test" };
+        let sheet = add(&mut job, &level, "A-103", Read { file: "a.pdf", page: 1, bytes: 1, checksum: "0123456789abcdef", size: [1224.0, 792.0] }, how()).unwrap();
+        // 648 points as 36 ft is 1/4 in to the foot.
+        calibrate(&mut job, &sheet, [0.0, 0.0], [648.0, 0.0], "36 ft", how()).unwrap();
+        assert!(drawing_of(&mut job, &sheet).unwrap().scale_caution().is_none());
+        // Within 1 per cent of it (36 ft 3 in is 0.7 per cent more) is the same scale.
+        calibrate(&mut job, &sheet, [0.0, 0.0], [648.0, 0.0], "36 ft 3 in", how()).unwrap();
+        assert!(drawing_of(&mut job, &sheet).unwrap().scale_caution().is_none());
+        // 648 points as 39 ft: 0.231 in of paper to the foot, between 3/16 in and 1:50 (0.240 in).
+        calibrate(&mut job, &sheet, [0.0, 0.0], [648.0, 0.0], "39 ft", how()).unwrap();
+        let caution = drawing_of(&mut job, &sheet).unwrap().scale_caution().expect("a caution");
+        assert!(caution.contains("is not a scale drawings are made at (the nearest are 1:50 and 3/16\" = 1'-0\")"), "{caution}");
+        // The engineer's scale 1 in = 20 ft (0.05 in of paper to the foot): 1080 points are 15 in, 300 ft.
+        calibrate(&mut job, &sheet, [0.0, 0.0], [1080.0, 0.0], "300 ft", how()).unwrap();
+        assert!(drawing_of(&mut job, &sheet).unwrap().scale_caution().is_none());
+        // A picture has no paper size: no caution, whatever its scale.
+        let pic = add(&mut job, &level, "photo", Read { file: "a.png", page: 1, bytes: 1, checksum: "fedcba9876543210", size: [1000.0, 800.0] }, how()).unwrap();
+        calibrate(&mut job, &pic, [0.0, 0.0], [100.0, 0.0], "39 ft", how()).unwrap();
+        assert!(drawing_of(&mut job, &pic).unwrap().scale_caution().is_none());
     }
 }

@@ -13,11 +13,21 @@
 //! counted and said. The edges of filled shapes are lines, as strokes are.
 
 pub mod drawn;
+pub mod faces;
 #[cfg(test)]
 mod drawn_tests;
 pub mod found;
+pub(crate) mod found_183;
+pub(crate) mod found_188;
+pub(crate) mod found_189;
 #[cfg(test)]
 mod found_179;
+#[cfg(test)]
+mod found_183_tests;
+#[cfg(test)]
+mod found_188_tests;
+#[cfg(test)]
+mod found_189_tests;
 #[cfg(test)]
 mod found_scenes;
 pub mod scan;
@@ -58,6 +68,13 @@ pub struct Page {
     /// The straight lines drawn on the page, each as two points in the page's units,
     /// measured from its lower-left corner, up and to the right.
     pub lines: Vec<[[f64; 2]; 2]>,
+    /// Which of `lines` are dashed, by their place in it (call 186: a wall's lines are solid).
+    pub dashed: Vec<usize>,
+    /// Places on the page, in its own units from its lower-left corner, where a line was cut off at the edge of what
+    /// shows: a clip's edge or the page's own.
+    pub cuts: Vec<[f64; 2]>,
+    /// How many pictures the page shows: nothing is read from a picture.
+    pub pictures: usize,
     /// What reading it could not give, each in a sentence.
     pub lost: Vec<String>,
 }
@@ -127,8 +144,11 @@ struct Lines {
     short: usize,
     /// Lines drawn in white, or in no colour at all: not ink, and not kept.
     white: usize,
-    /// Lines drawn dashed, kept whole.
+    /// Lines drawn dashed, kept whole; and where each is among the lines kept.
     dashed: usize,
+    dashed_at: Vec<usize>,
+    /// Where a line was cut off, at a clip's edge or the page's, among the lines kept (page units, from the lower-left corner).
+    cuts: Vec<[f64; 2]>,
     /// Lines cut to what a square clip shows of them, and lines a clip hides whole.
     cut: usize,
     hidden: usize,
@@ -165,8 +185,9 @@ impl Lines {
         if ![a.x, a.y, b.x, b.y].iter().all(|v| v.is_finite()) {
             return;
         }
-        // What the clips in force show of it.
+        // What the clips in force show of it; the places it was cut off are kept, if the line is.
         let (mut a, mut b) = (a, b);
+        let mut cut_at: Vec<Point> = Vec::new();
         for clip in self.clips.clone().into_iter().flatten() {
             match inside(a, b, clip) {
                 None => {
@@ -176,6 +197,12 @@ impl Lines {
                 Some((c, d)) => {
                     if (c - a).hypot() > 1.0e-6 || (d - b).hypot() > 1.0e-6 {
                         self.cut += 1;
+                        if (c - a).hypot() > 1.0e-6 {
+                            cut_at.push(c);
+                        }
+                        if (d - b).hypot() > 1.0e-6 {
+                            cut_at.push(d);
+                        }
                     }
                     (a, b) = (c, d);
                 }
@@ -191,6 +218,12 @@ impl Lines {
                 Some((c, d)) => {
                     if (c - a).hypot() > 1.0e-6 || (d - b).hypot() > 1.0e-6 {
                         self.off_page_cut += 1;
+                        if (c - a).hypot() > 1.0e-6 {
+                            cut_at.push(c);
+                        }
+                        if (d - b).hypot() > 1.0e-6 {
+                            cut_at.push(d);
+                        }
                     }
                     (a, b) = (c, d);
                 }
@@ -206,6 +239,10 @@ impl Lines {
         }
         if dashed {
             self.dashed += 1;
+            self.dashed_at.push(self.kept.len());
+        }
+        for p in cut_at {
+            self.cuts.push([p.x, self.height - p.y]);
         }
         // The page is drawn from its top; lines are kept from its lower-left corner up.
         self.kept.push([[a.x, self.height - a.y], [b.x, self.height - b.y]]);
@@ -374,7 +411,7 @@ pub fn read(bytes: &[u8], page: usize) -> Result<Page, String> {
             } else {
                 opened.to_rgba8()
             };
-            Ok(Page { sort, pages: 1, size: [f64::from(width), f64::from(height)], picture: Picture { width: shown.width(), height: shown.height(), rgba: shown.into_raw() }, lines: Vec::new(), lost })
+            Ok(Page { sort, pages: 1, size: [f64::from(width), f64::from(height)], picture: Picture { width: shown.width(), height: shown.height(), rgba: shown.into_raw() }, lines: Vec::new(), dashed: Vec::new(), cuts: Vec::new(), pictures: 0, lost })
         }
     }
 }
@@ -510,7 +547,7 @@ fn read_pdf(bytes: &[u8], page: usize) -> Result<Page, String> {
     if lines.over > 0 {
         lost.push(format!("{} lines beyond the first {MOST_LINES} are not kept", lines.over));
     }
-    Ok(Page { sort: Sort::Pdf, pages: count, size: [f64::from(width), f64::from(height)], picture, lines: lines.kept, lost })
+    Ok(Page { sort: Sort::Pdf, pages: count, size: [f64::from(width), f64::from(height)], picture, lines: lines.kept, dashed: lines.dashed_at, cuts: lines.cuts, pictures: lines.pictures, lost })
 }
 
 // ---- The words on a page ----
@@ -529,6 +566,8 @@ pub struct Words {
 struct Letters {
     /// The letter, where it starts (x to the right, y down), and how tall it is.
     all: Vec<(String, f64, f64, f64)>,
+    /// The same letters in the order the page draws them, each with the way its baseline runs on the page (x, y down).
+    drawn: Vec<(String, f64, f64, f64, [f64; 2])>,
 }
 
 impl<'a> Device<'a> for Letters {
@@ -547,6 +586,7 @@ impl<'a> Device<'a> for Letters {
                 Some(hayro_cmap::BfString::String(s)) => s,
                 None => continue,
             };
+            self.drawn.push((said.clone(), at.x, at.y, tall, [c[0], c[1]]));
             self.all.push((said, at.x, at.y, tall));
         }
     }
@@ -628,5 +668,69 @@ pub fn words(bytes: &[u8], page: usize) -> Result<Vec<Words>, String> {
             out.push(Words { text, size });
         }
     }
+    Ok(out)
+}
+
+/// A string of letters on a PDF page, where it stands and which way it reads (call 188 item 9).
+#[derive(Clone, Debug, PartialEq)]
+pub struct Text {
+    pub text: String,
+    /// Where the string starts (its first letter's left end on the baseline), in page units from the lower-left corner.
+    pub at: [f64; 2],
+    /// How tall its letters are, in points.
+    pub tall: f64,
+    /// The way it reads: a unit step along its baseline, up and to the right being positive. (1, 0) is level.
+    pub dir: [f64; 2],
+}
+
+/// The strings a PDF page draws as words, each where it is and which way it reads, in the order the page draws them. Letters
+/// the page draws one after another along one baseline, no further apart than a letter and a half, are one string; a gap wider
+/// than that is a space the page did not draw. A page whose words are drawn as shapes, or are a picture, has none, and that is
+/// for the caller to say.
+pub fn strings(bytes: &[u8], page: usize) -> Result<Vec<Text>, String> {
+    if sort_of(bytes) != Some(Sort::Pdf) {
+        return Err("only a PDF has words that can be read; a picture of a sheet is read by eye".into());
+    }
+    let pdf = Pdf::new(bytes.to_vec()).map_err(|_| "the PDF could not be read: it is damaged, cut short, locked with a password, or not a PDF at all. Print it to a new PDF, or send it again".to_string())?;
+    let pages = pdf.pages();
+    let (width, height) = page_size(pages, page)?;
+    let p = &pages[page - 1];
+    let mut letters = Letters::default();
+    let mut context = Context::new(p.initial_transform(true).to_kurbo(), Rect::new(0.0, 0.0, f64::from(width), f64::from(height)), &hayro::hayro_interpret::InterpreterCache::new(), p.xref(), InterpreterSettings::default());
+    interpret_page(p, &mut context, &mut letters);
+    let h = f64::from(height);
+    // Page units: y up from the lower-left corner; a baseline's direction turned the same way.
+    let unit = |v: [f64; 2]| {
+        let n = v[0].hypot(v[1]).max(1e-12);
+        [v[0] / n, -v[1] / n]
+    };
+    let mut out: Vec<Text> = Vec::new();
+    let mut last: Option<([f64; 2], f64)> = None;
+    for (said, x, y, tall, base) in letters.drawn {
+        let (here, dir) = ([x, h - y], unit(base));
+        let joined = match (out.last(), last) {
+            (Some(cur), Some((before, _))) => {
+                let step = [here[0] - before[0], here[1] - before[1]];
+                let along = step[0] * cur.dir[0] + step[1] * cur.dir[1];
+                let across = (-step[0] * cur.dir[1] + step[1] * cur.dir[0]).abs();
+                let same_way = dir[0] * cur.dir[0] + dir[1] * cur.dir[1] > 0.98;
+                same_way && along > -0.1 * cur.tall && across <= 0.3 * cur.tall && (tall - cur.tall).abs() <= 0.3 * cur.tall.max(tall) && along <= 3.0 * cur.tall.max(tall)
+            }
+            _ => false,
+        };
+        if joined {
+            let cur = out.last_mut().unwrap();
+            let before = last.unwrap().0;
+            let along = (here[0] - before[0]) * cur.dir[0] + (here[1] - before[1]) * cur.dir[1];
+            if along > 1.2 * cur.tall && !cur.text.ends_with(' ') && said != " " {
+                cur.text.push(' ');
+            }
+            cur.text.push_str(&said);
+        } else {
+            out.push(Text { text: said, at: here, tall, dir });
+        }
+        last = Some((here, tall));
+    }
+    out.retain(|t| !t.text.trim().is_empty());
     Ok(out)
 }

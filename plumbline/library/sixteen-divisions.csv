@@ -22,6 +22,7 @@ Framed floor,Floor,,,,Unknown,not coded,Frame the floor and lay the subfloor,Lab
 "Exterior wall, 2x6, lap siding",Wall,,,,Unknown,not coded,Weather barrier,Material,net_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,7
 "Exterior wall, 2x6, lap siding",Wall,,,,Unknown,not coded,Batt insulation,Material,net_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,7
 "Exterior wall, 2x6, lap siding",Wall,,,,Unknown,not coded,Lap siding,Material,net_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,7
+"Exterior wall, 2x6, lap siding",Wall,,,,Unknown,not coded,Corner boards,Material,corner_board_length,,,,,,,,,,,,$?/LF,Unknown,no price entered,,,6
 "Exterior wall, 2x6, lap siding",Wall,,,,Unknown,not coded,"Gypsum board, hung and finished",Material,net_area,,,,10,Assumed,"cuts at openings, corners and ends: the estimator's allowance; no standard sets it",sheet,32 SF/sheet,yes,Known,a 4 ft by 8 ft sheet,$?/sheet,Unknown,no price entered,,,9
 "Exterior wall, 2x6, lap siding",Wall,,,,Unknown,not coded,"Paint, two coats",Material,net_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,9
 "Exterior wall, 2x6, lap siding",Wall,,,,Unknown,not coded,Frame and sheathe the wall,Labor,face_area,,,,,,,hr,unknown SF/hr,no,Unknown,no production rate entered,$?/hr,Unknown,no price entered,,,6
@@ -34,6 +35,7 @@ Framed floor,Floor,,,,Unknown,not coded,Frame the floor and lay the subfloor,Lab
 "Exterior wall, 2x6, lap siding over a stone wainscot",Wall,,,,Unknown,not coded,Weather barrier,Material,net_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,7
 "Exterior wall, 2x6, lap siding over a stone wainscot",Wall,,,,Unknown,not coded,Batt insulation,Material,net_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,7
 "Exterior wall, 2x6, lap siding over a stone wainscot",Wall,,,,Unknown,not coded,Lap siding,Material,net_area - net_area_below_wainscot,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,7,wainscot = 3 ft,Assumed,the 3 ft in the name of the stone line
+"Exterior wall, 2x6, lap siding over a stone wainscot",Wall,,,,Unknown,not coded,Corner boards,Material,corner_board_length,,,,,,,,,,,,$?/LF,Unknown,no price entered,,,6
 "Exterior wall, 2x6, lap siding over a stone wainscot",Wall,,,,Unknown,not coded,"Stone veneer wainscot, 3 ft",Subcontract,net_length,,,,,,,,,,,,$?/LF,Unknown,no price entered,,,4
 "Exterior wall, 2x6, lap siding over a stone wainscot",Wall,,,,Unknown,not coded,"Gypsum board, hung and finished",Material,net_area,,,,10,Assumed,"cuts at openings, corners and ends: the estimator's allowance; no standard sets it",sheet,32 SF/sheet,yes,Known,a 4 ft by 8 ft sheet,$?/sheet,Unknown,no price entered,,,9
 "Exterior wall, 2x6, lap siding over a stone wainscot",Wall,,,,Unknown,not coded,"Paint, two coats",Material,net_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,9
@@ -105,14 +107,21 @@ Standing seam roof,RoofPlane,,,,Unknown,not coded,Sheathe the roof,Labor,surface
 "Ridge, steel beam and cap",Ridge,,,,Unknown,not coded,Ridge cap and vent,Material,true_length,,,,,,,,,,,,$?/LF,Unknown,no price entered,,,7
 Hip cap,Hip,,,,Unknown,not coded,Hip cap,Material,true_length,,,,,,,,,,,,$?/LF,Unknown,no price entered,,,7
 Gutter,Eave,,,,Unknown,not coded,Gutter,Material,true_length,,,,,,,,,,,,$?/LF,Unknown,no price entered,,,7
+Gutter,Eave,,,,Unknown,not coded,Fascia,Material,true_length,,,,,,,,,,,,$?/LF,Unknown,no price entered,,,6
+Gutter,Eave,,,,Unknown,not coded,Soffit,Material,true_length * overhang,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,6
+Gutter,Eave,,,,Unknown,not coded,Downspouts,Material,downspouts,,,,,,,,,,,,$?/EA,Unknown,no price entered,,,7,downspouts = unknown EA,Unknown,how many is the job's to say: give the count
+Rake trim,Rake,,,,Unknown,not coded,Rake fascia,Material,true_length,,,,,,,,,,,,$?/LF,Unknown,no price entered,,,6
+Rake trim,Rake,,,,Unknown,not coded,Rake soffit,Material,true_length * overhang,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,6
 Window,Window,,,,Unknown,not coded,Window unit,Material,1,,,,,,,,,,,,$?/EA,Unknown,no price entered,,,8
 Window,Window,,,,Unknown,not coded,Flashing and sealant at the window,Material,1,,,,,,,,,,,,$?/EA,Unknown,no price entered,,,7
 Window,Window,,,,Unknown,not coded,Casing and trim at the window,Material,1,,,,,,,,,,,,$?/EA,Unknown,no price entered,,,6
+Window,Window,,,,Unknown,not coded,Exterior casing,Material,casing_length,,,,,,,,,,,,$?/LF,Unknown,no price entered,,,6
 Window,Window,,,,Unknown,not coded,Window treatment,Material,1,,,,,,,,,,,,$?/EA,Unknown,no price entered,,,12
 Window,Window,,,,Unknown,not coded,Set the window,Labor,1,,,,,,,hr,unknown hr/EA,no,Unknown,no production rate entered,$?/hr,Unknown,no price entered,,,8
 Entry door,Door,,,,Unknown,not coded,"Entry door, prehung",Material,1,,,,,,,,,,,,$?/EA,Unknown,no price entered,,,8
 Entry door,Door,,,,Unknown,not coded,Door hardware,Material,1,,,,,,,,,,,,$?/EA,Unknown,no price entered,,,8
 Entry door,Door,,,,Unknown,not coded,Casing and trim at the door,Material,1,,,,,,,,,,,,$?/EA,Unknown,no price entered,,,6
+Entry door,Door,,,,Unknown,not coded,Exterior casing,Material,casing_length,,,,,,,,,,,,$?/LF,Unknown,no price entered,,,6
 Entry door,Door,,,,Unknown,not coded,Hang the door,Labor,1,,,,,,,hr,unknown hr/EA,no,Unknown,no production rate entered,$?/hr,Unknown,no price entered,,,8
 Interior door,Door,,,,Unknown,not coded,"Interior door, prehung",Material,1,,,,,,,,,,,,$?/EA,Unknown,no price entered,,,8
 Interior door,Door,,,,Unknown,not coded,Door hardware,Material,1,,,,,,,,,,,,$?/EA,Unknown,no price entered,,,8

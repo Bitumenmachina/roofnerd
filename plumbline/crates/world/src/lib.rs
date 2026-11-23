@@ -38,6 +38,7 @@ pub mod plan_set;
 pub mod plans;
 pub mod tables;
 pub mod taper;
+pub mod trim;
 pub mod roof;
 pub mod sample;
 pub mod skeleton;

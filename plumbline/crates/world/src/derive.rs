@@ -225,6 +225,12 @@ pub fn derive(world: &mut World) -> Vec<String> {
     // and added to each element's measure below.
     let mut building = crate::building::measures(world);
 
+    // An eave's or a rake's overhang, where a line of it names it (call 185).
+    let overhangs = {
+        let wanted = crate::trim::naming(world, &[Kind::Eave, Kind::Rake], &[crate::trim::OVERHANG]);
+        if wanted.is_empty() { HashMap::new() } else { crate::trim::overhangs(world, Some(&wanted)) }
+    };
+
     let mut changed = Vec::new();
     let mut to_insert: Vec<(Entity, Option<Measure>, Option<LineQuantities>)> = Vec::new();
     let mut to_remove: Vec<Entity> = Vec::new();
@@ -284,6 +290,9 @@ pub fn derive(world: &mut World) -> Vec<String> {
             } else {
                 let d = lengths.remove(me).unwrap_or_else(|| true_length(*kind, run, plan, &planes, &in_run, &mut Vec::new()));
                 m.insert("true_length".into(), d);
+                if let Some(o) = overhangs.get(me) {
+                    m.insert(crate::trim::OVERHANG.into(), o.clone());
+                }
             }
         }
 

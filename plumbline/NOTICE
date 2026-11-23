@@ -71,6 +71,11 @@ commit, under the same license:
                                         relocate and move_elements in
                                         crates/core/src/commands.rs; the rest of
                                         the file is this project's own
+  crates/world/src/editing/carry.rs     a line of points moved to its side, corners
+                                        where the moved stretches meet, from
+                                        offset_poly in crates/core/src/draw.rs and
+                                        offset in crates/core/src/stairs.rs; the
+                                        sharp-corner rule is this project's own
 
 Each file's header states what is ported and lists what was changed. PORTMAP.md
 names, for every public item of the building model, the BIMCraft file and line
@@ -137,3 +142,49 @@ PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIG
 HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
 CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR
 THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+==============================================================================
+Method ported from Cloud2BIM
+==============================================================================
+
+crates/plans/src/found_189.rs (the scan's walls found by the points near the
+ceiling, `plumbline find-walls ... --by-ceiling`) follows the method of
+Cloud2BIM (https://github.com/VaclavNezerka/Cloud2BIM, at its master branch as
+read on 2026-11-23: LICENSE, README.md, config.yaml, cloud2entities.py and
+aux_functions.py; the paper is arXiv 2503.11498). The order of work and the
+measures its paper's parameter table states are ported: the points in the top
+tenth of the height, laid on the plan as a density picture and closed, the
+outlines of what is there, made straight by Douglas and Peucker, pieces on one
+line merged within 3 degrees, opposite parallel faces paired into a wall, the
+longest wall's direction taken as the axis, the ends carried to meet within half
+the greatest thickness, and each wall's own face read for openings. The code is
+written here in Rust from that description; no line of the Python is copied and
+none of it is linked. Cloud2BIM is licensed MIT:
+
+    MIT License
+
+    Copyright (c) 2025 Václav Nežerka
+
+    Permission is hereby granted, free of charge, to any person obtaining a copy
+    of this software and associated documentation files (the "Software"), to deal
+    in the Software without restriction, including without limitation the rights
+    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+    copies of the Software, and to permit persons to whom the Software is
+    furnished to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in all
+    copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+    SOFTWARE.
+
+The file's header says what is ported and what is written here. Two published
+algorithms the method rests on are written out in the same file, each from its
+paper: border following of a binary picture (Suzuki and Abe, "Topological
+structural analysis of digitized binary images by border following", 1985; what
+OpenCV's findContours does), and line simplification (Douglas and Peucker, 1973).

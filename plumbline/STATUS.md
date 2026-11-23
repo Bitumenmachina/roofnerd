@@ -9651,6 +9651,365 @@ window demonstration is rerun on this tree, their pictures show the window befor
 the merge**, and a wall moved in the window is undemonstrated. That rerun is the next
 window builder's first job.
 
+## The outside trim priced: a demonstration, written before it is built (call 185; 2026-11-23)
+
+`demos/trim.sh`, at the command line, from an empty job; made-up figures.
+
+**The house as made.** One level 9 ft high; a ring of walls on the lines of a box 24 ft
+(east) by 16 ft (north), 6 in thick (outside faces 24 ft 6 in by 16 ft 6 in). A gable
+roof drawn 1 ft outside the walls' lines all round (26 ft by 18 ft on plan), its ridge
+running east-west, pitch 6 in 12. A window 3 ft wide by 5 ft high and a door 3 ft wide
+by 6 ft 8 in high in the south wall.
+
+**By hand.**
+- Eaves: the north and the south, each 26.00 LF. Rakes: four, each the slope of a 9 ft
+  run at 6 in 12: 9 x 1.118034 = **10.0623 LF**; together 40.25 LF.
+- `overhang`: the roof's edge is 1 ft outside the walls' lines; the walls' outside
+  faces are 3 in outside their lines: 12 - 3 = **9 in (0.75 ft)** at every eave and rake.
+- Fascia, on the eaves: 2 x 26 = **52.00 LF**. Rake fascia: **40.25 LF**.
+- Soffit, on the eaves: 2 x 26 x 0.75 = **39.00 SF**. Rake soffit: 40.2492 x 0.75 =
+  **30.19 SF**.
+- Gutter (the line that exists): 52.00 LF. Downspouts: no figure until typed; typed 4
+  EA, Assumed, it is 4.
+- Corner boards: each wall has 2 outside corners: 2 x 9 = 18.00 LF a wall; four walls
+  **72.00 LF** (4 corners, a board on each face, 9 ft each).
+- Exterior casing: the window 2 x (3 + 5) = **16.00 LF**; the door 3 + 2 x 6.6667 =
+  **16.33 LF**.
+
+**Steps.** (1) The house drawn; the eaves and rakes list their lengths and overhangs
+as above, each Assumed with the positions it rests on. (2) The starter lines brought in
+and given to the eaves, the rakes, the walls, the window and the door: the estimate's
+quantities are the figures above, each with no price ("no figure", never zero), and
+"Downspouts" says a person is to say how many. (3) Prices typed (made up: fascia $4.00,
+soffit $6.00, corner boards $3.50, casing $3.00): fascia 52 x 4 = $208.00 and 40.25 x 4
+= $161.00; soffit 39 x 6 = $234.00 and 30.19 x 6 = $181.12; corner boards 72 x 3.5 =
+$252.00; casing (16 + 16.33) x 3 = $97.00 (to the cent as the program rounds a line:
+say each line). (4) **An L-shaped house** (a 24 by 16 box with a 12 by 10 wing off its
+north side): five outside corners and one inside: corner boards 10 x 9 = **90.00 LF**
+(the inside corner has none), and the two walls that meet at the inside corner have
+one outside corner each. (5) A roof with no wall under one edge (the roof drawn
+alone): that edge's overhang is Unknown and says why; its soffit has no figure. (6) A
+job with none of these lines prints what it printed: the sample house's estimate is
+the same before and after, byte for byte.
+
+## Call 183 fixed: the scan's walls after their second judgment (2026-11-23)
+
+`research/worker-report-call183.md` has each cause, every measure and the whole table
+of 65 houses (the last builder's 46, the second judge's 11, 8 new). The lead ran the
+tests and every command-line demonstration on the integration copy and a house turned
+57 degrees (five walls, closing). No house the last builder had right got worse.
+
+| The judge's house | Right | Before | Now |
+|---|---|---|---|
+| a mirror on one wall of a 20 by 12 room | 4 walls, 64 LF | 5 walls, 118 LF laid, "the walls close" | 64 LF laid; 3 walls beyond the mirror in doubt, said |
+| a neighbour's wall through a window | said as beyond | counted as furniture | said as beyond the wall |
+| a garage wall with a 16 ft door | a wall with an opening | "something hung from the ceiling" | a wall, the opening 16 ft 0 in |
+| a curved wall, 8 ft radius | said, not laid | three chords laid, called furniture | "curved", its radius and length said, not laid |
+| a closet with a flat ceiling | no word | "the ceiling is not one height" | no word; walls laid 96 in |
+| a house a tenth as thick at one end | 5 walls, the thin part said | 2 walls | 5 walls, said by where |
+| two storeys in one scan | said; one level at a time | "not likely the house" | "the scan holds 2 levels"; each found alone |
+| a 4 ft stub wall with a door | found | dropped | found, the door 2 ft 7 in |
+| the seven-room house | 10 walls, 8 doors | 8 walls, 6 doors | 9 walls, 7 doors; what is left out said with where |
+
+Every stretch left out is now said one by one with where it is and how long, and
+where leaving it out leaves two rooms open to one another, that is said.
+
+**Run on the integration copy:** 726 tests pass in the six command-line crates, 0
+fail; all 45 command-line demonstrations pass; the three gates and `portmap.sh` pass.
+
+**Still wrong, by the builder's own table:** a curve of 5 ft radius is not detected and
+its chords are laid; the closet's own 4 ft door wall in the seven-room house is still
+dropped (said, with a wrong reason: "reaches the ceiling and not the floor"); a
+stair's top treads read as walls; where the scan thins and the house is turned, walls
+break into pieces (105 of 122 ft found); a hall of four doors has one wall end 1 ft 8
+in short; a room behind a two-faced partition whose door was missed is not said to be
+beyond (call 183, as built); one speed test takes 12 s alone and can pass its 20 s
+limit only on a quiet machine. **It has still seen only made-up scans.** Not judged a
+third time.
+
+## The walls of a drawn plan judged (2026-11-23)
+
+`research/judgment-call181-drawn-plan.md`; DECISIONS.md call 186 has each finding and
+what is decided. **Nothing below is fixed yet.** Held on about sixty sheets the judge
+drew: poché, filled walls, hatching, dimension strings, grid lines, lettering,
+furniture, turned sheets, four scales; a 60 by 40 house by hand; everything laid
+Assumed.
+
+Found: a beam shown dashed laid as a 15 ft wall (150.00 LF where 135.00), not in doubt,
+"the walls close"; a ledge and a closet shelf laid as walls; a wall section beside the
+plan laid as a wall; a door beside a window with a short pier between them dropped
+without a word (a front door lost); "nothing else was left out" over a sheet half
+picture; no word on a scale no drawing is made at; a door 1 in high from a head of 0;
+walls laid at the page's own offsets unsaid; layered walls as dozens "in doubt"; lines
+overshooting jambs shattering a plan.
+
+## Call 185 built: the outside trim priced (2026-11-23)
+
+`crates/world/src/trim.rs`: an eave's and a rake's `overhang` (to the outside face of
+the wall under it, found as a roof over a wall is found), a wall's `outside_corners`
+and `corner_board_length`, an opening's `casing_length`; starter lines for fascia,
+soffit, downspouts (no quantity until a person types it), rake trim, corner boards and
+exterior casing; `plumbline trim <job>`. `research/worker-report-call185.md`.
+
+`demos/trim.sh`, every hand figure of the section above as said: eaves 26 LF, rakes
+10.0623 LF, overhang 0.75 ft at all six, Assumed; fascia 52.00 and 40.25 LF; soffit
+39.00 and 30.19 SF; corner boards 72.00 LF (the L-shaped house 90.00, its two
+inside-corner walls one corner each); casing 16.00 and 16.33 LF; the dollars to the
+cent; a roof with no wall under an edge: overhang Unknown with the reason, soffit "no
+figure"; the four sample houses' files and estimates the same bytes as before.
+
+**Moved, by the library growing** (40 to 41 assemblies, 191 to 200 lines; labor lines
+28): the counts in `crates/cli/tests/cli.rs`, `demos/library.sh`, `shingle.sh`,
+`framing.sh`, `joists.sh`, `foundation.sh`; and one that is not a bare count: changing
+a wall from lap siding to brick now takes 3 lines off (corner boards with the siding
+and its labor), where it took 2. `demos/pricew.sh` (a window demonstration) was edited
+to 41 by reading and not run.
+
+**Run on the integration copy:** 736 tests pass in the six command-line crates, 0
+fail; all 46 command-line demonstrations pass; the three gates and `portmap.sh` pass.
+
+**Not right.** A roof entered as planes by hand, with no footprint (the sample house's
+is), has no overhang: it says why. The corner rule goes by the walls' end points, so a
+house whose walls overshoot or stop short of their corners reads "not closed" and
+Unknown, and no house drawn in the window has been tried. `show` and `takeoff` do not
+list the new figures for a house not yet priced. **Nothing draws any of it yet**: that
+is call 184 step 1's window half. Not judged.
+
+## Call 186 fixed: the walls of a drawn plan after their judgment (2026-11-23)
+
+`research/worker-report-call186.md` has each cause and the table of the judge's 67
+sheets and ten new ones. No sheet got worse. The lead ran the tests and every
+command-line demonstration on the integration copy.
+
+Now right: a beam shown dashed is said and not laid (150 LF read 135.00); a pier
+between a door and a window keeps both openings (the 60 by 40 house: 440.00 LF and 25
+openings, as by hand; it read 434.67 and 23); a line is one wall's face; walls drawn
+with several lines a side are one wall, "drawn with N lines" (they found nothing
+before); lines running past every jamb no longer shatter a plan; a sheet part picture
+says nothing was read from the picture; a wall cut off at the page's edge is said and
+the walls are not said to close; a scale no drawing is made at is cautioned with the
+nearest; a head at or under the floor is refused; a sheet not lined up says where its
+walls are laid. A real-looking ranch plan the worker drew (poché, swings, a stair,
+cabinets, a dashed beam, dimension strings) at two scales and turned 15 degrees: 7
+walls, 197.83 LF against 197.81 by hand, 12 openings (before: 4 walls, 6 openings).
+
+**Run on the integration copy:** 758 tests pass in the six command-line crates, 0
+fail; all 46 command-line demonstrations pass; the three gates and `portmap.sh` pass.
+
+**Two rules of the lead's were wrong as written** and are narrowed in DECISIONS.md
+("Call 186, as built"): a unique thickness in doubt (it would have doubted every
+house's one partition), and anything apart from the plan in doubt (it needed a
+measure). **The narrowed forms were built the same day** (`demos/planwalls.sh` steps 8.10 and
+8.11; 760 tests in the command-line crates and 46 command-line demonstrations pass on
+the integration copy with them): a closet shelf thicker than every other wall, and
+alone at that thickness by 3 in or more, is in doubt and not laid (the judge's two
+shelf sheets read 135.00 LF where 141.00); a wall section beside a plan is in doubt
+(135.00 where 153.92; 124.00 where 136.25). **Still wrong:** a 6 in ledge between 8 in
+and 4 1/2 in walls is laid as a wall (geometry cannot tell it from a partition); the
+smaller of two houses on one sheet is put in doubt when it has under half the larger
+one's wall, and a person must take its four walls by their numbers.
+
+**Still wrong, by the worker's account:** a window's glass lines give a phantom wall in
+doubt at each window; a lone layered wall is in doubt; a dashed line drawn as many
+short strokes is not seen as dashed; stacked dimension strings with arrowheads. The
+worker wrote the layers' tests after their code and says so. **No architect's sheet
+has been through it.** Not judged a second time.
+
+## Real files through the wall-finders, for the first time (2026-11-23)
+
+`research/real-files-first-run.md`: three cities' public plan sheets (vector PDFs) and
+four real scans (three from a phone's LiDAR), run by an agent on the program as
+committed at 0677db0. **Nothing below is fixed yet**; DECISIONS.md call 188 has the order.
+
+- **Drawn plans: mostly right on a clean sheet.** Two single-plan sheets: outside walls,
+  thicknesses, partitions, doors and windows right, overall lengths matching the
+  sheets' own dimension strings (24 ft 2 in, 20 ft 2 in, 22 ft 2 in, 30 ft 2 in). A
+  sheet with a floor plan and a roof plan: the floor plan mostly right, **the roof
+  plan's lines laid as walls, unsaid: 181.33 LF taken off where about 125 is there.**
+  One wall is found two to four times (56 "walls" for about 14, most in doubt).
+- **Scans from a phone: it fails.** A small room with four clear walls: **no wall
+  found** (said: "not straight along the whole length"). A long room: its two long
+  walls right, but 11 walls where about 4, one of them three times. A large room: five
+  short pieces. A file with no ceiling: rightly refused. The wrong way up is not
+  caught.
+
+So: what was built on made-up scans does not yet work on a real phone scan, and what
+was built on made-up sheets mostly works on a real clean sheet.
+
+## Call 188 items 1 to 5 built: the scan's finder on real phone scans (2026-11-23)
+
+`research/worker-report-call188.md`. The builder measured three real phone scans before
+changing anything, then made the finder tolerate what real walls are. Merged; **770
+tests in the six command-line crates and 46 command-line demonstrations pass** on the
+integration copy. The lead ran the three real scans through the merged program itself
+and reads the same as the builder.
+
+| Real scan | By its top-down picture | Before | Now |
+|---|---|---|---|
+| a small furnished room | about 8 wall pieces, the longest about 7 ft | 0 walls found | nothing laid; 3 offered as "likely a wall": the south wall (bowed 2 1/4 in), the east wall twice; the west and north walls not found (said, with where) |
+| a long room | about 8 to 9 walls | 11 found, one three times; 75 s | 12 found, every side there, one wall twice, 6 ends meet nothing (said); 7 s |
+| a large notched room | about 10 to 12 pieces | 5 short pieces; 40 s | 8 found: three right; one wrongly joined across the notch and offered twice; one missed; 5 s |
+
+The wrong way up is now caught. **It is still not right on any real scan**, and by the
+builder's account the unit tests were written after the code. DECISIONS.md call 189
+says why (the finder is the lead's own design where a published method exists) and
+what changes: the finder is rebuilt on the published method, judged on real scans
+first. Made-up houses: 60 of 65 the same; three better; one adds two offers in doubt;
+one says "1 end meets nothing" where it said the walls close (a closet wall's end
+moved 3 in).
+
+## Call 189 built: the scan's finder on the published method (2026-11-23)
+
+Built by a Sonnet worker in a second working copy; accepted by the lead on the
+integration copy: the six command-line crates' tests, 786 passed and none failed (770
+before, 16 new); the lead's own run of the three real scans with each finder agrees
+with the worker's table (the small room's two clear walls within 2 in of where they
+read on the scan); the command-line demonstrations and the gates are in the commit's
+message.
+`plumbline find-walls <job> <scan> --level <level> --by-ceiling` uses the published
+method (the top of the room, where furniture does not reach). **The first finder is
+still the verb's**: the new one is not better on all three real scans (DECISIONS.md,
+"Call 189, as built", has the table). What it is: safe (on three real scans it laid no
+wall that is not there) and incomplete (a wall's top broken into pieces is offered in
+doubt, not laid).
+
+What is not right: neither finder turns a real phone scan into the room's walls by
+itself. Call 190 says what is done about that: the person traces over the cut scan,
+each wall takes the scan's face, and the sure walls are offered to take with a click.
+That is a window job and is next in the window builder's list.
+
+## A wall traced over a scan, set by its face: a demonstration, written before it is built (call 190; 2026-11-23)
+
+`demos/tracew.sh`, in the window. The scan is made up (`tools/made-up-scan.py --scene
+house`): a house 30 ft by 16 ft inside and 8 ft high, one face of each outside wall
+seen from indoors, and a partition 4 1/2 in thick with both faces seen, 18 ft from
+the west wall. Wall types: 6 in for the outside walls, 4 1/2 in for the partition.
+
+Worked by hand:
+
+- **Brought in**, the message says the sheet's lines are read: 6 (four outside faces,
+  two partition faces).
+- **The outside walls**, Wall tool, 6 in type, the choice on Face (it is, over a
+  scan). Four clicks, each 3 in or so off an inside corner, then back to the first.
+  Each lands on the corner of the scan's faces: (0, 0), (30, 0), (30, 16), (0, 16)
+  in the scan's own feet. The walls' centres are 3 in outside those: corners at
+  (-0.25, -0.25), (30.25, -0.25), (30.25, 16.25), (-0.25, 16.25). Centre lines
+  30.5 + 16.5 + 30.5 + 16.5 = **94.00 LF**. Inside the faces: 30 x 16 = **480 SF**.
+  The message says the body is outside the line and offers "Other side".
+- **What it was before** (the choice on Centerline, the same clicks): centres on the
+  faces, the inside 29.5 x 15.5 = 457.25 SF, **22.75 SF short**. The demonstration
+  draws it that way once, on a second level, and checks that figure, so that the
+  choice is seen to be what makes the difference.
+- **The partition**, 4 1/2 in type, a click on either of its faces at the south wall
+  and at the north: the centre goes between the two faces and its ends are on the
+  inside faces of the outside walls: **16.00 LF**. The message says the scan shows
+  4 1/2 in between the faces and the type is 4 1/2 in. Drawn again with the 6 in
+  type (after Undo): the message says the scan shows 4 1/2 in and the type is 6 in;
+  it is laid, not refused.
+- **All walls: 110.00 LF.** The two rooms, inside their walls: 480 - 0.375 x 16 =
+  **474.00 SF** together.
+- **No face near**: a click 3 ft inside the room, away from every line, stays where
+  the hand put it, and the message says the scan shows no face here.
+- **Saved, closed, opened again** with the scan's file taken away: the sheet's lines
+  are read again from its picture and a wall drawn then lands on the face as before.
+- Every wall is Assumed, its source "traced by its face over the scan house".
+
+If the program's own rule for a wall's length is not its centre line end to end, the
+builder says which figure moves and why before anything is built; the hand figures
+above are then set right here, with the reason.
+
+## The drawn plan after real sheets: a demonstration, written before it is built (call 188 items 6 to 9; 2026-11-23)
+
+`demos/planwalls.sh`, new steps, each on a made-up sheet at 1/4 in to the foot. A
+wall's length is counted as the steps before count it (a 30 by 20 ft house is 100 LF).
+The causes of items 7 and 8 are not known to the lead: the builder reads them off the
+real sheets first and draws them into the made-up ones; the figures below are what
+the made-up sheets must come to whatever the cause.
+
+- **Two drawings on a sheet.** A house 30 by 20 ft of 6 in walls with a 4 1/2 in
+  partition across it (100 + 20 = 120 LF, 5 walls), and 50 ft east of it a roof plan:
+  an eave 32 by 22 ft with a second line 6 in inside it all round (32 + 22 + 32 + 22
+  = 108 LF of what reads as 6 in wall, 4 pieces). 108 is over half of 120, so they
+  are of like size. It says there are 2 drawings, about 120 ft and about 108 ft of
+  wall, and lays none. With `--plan 1`: 5 walls, 120.00 LF. With `--within` two
+  corners round the house: the same 5 walls, 120.00 LF. `--plan 3`: refused, there
+  are 2. (A section beside a plan, under half its length, is still set apart without
+  asking: the step that checks that is as it was.)
+- **One wall once.** The 30 by 20 ft house drawn the way the real sheets draw a wall
+  that was found twice: 4 walls, 100.00 LF, and each says how many were joined.
+- **Glass and a tag.** The house with one 5 ft window in the south wall, a 3 ft door,
+  a shower's glass 3 ft long inside a room, drawn as the real sheet draws it, and a
+  tag beside the door: 1 window, 1 door.
+- **The sheet's own dimensions.** "30'-0"" written by a dimension line 540 points
+  long (7 1/2 in of paper) and "20'-0"" by one 360 points long (5 in): both make the
+  sheet 1/4 in to the foot (18 points to the foot); they are listed with where each
+  is, and scaling by the first gives the house 30 by 20 ft, 100.00 LF, the scale
+  Assumed and sourced to the string. A third, "12'-0"" by a line 180 points long
+  (10 ft by the other two): said not to agree, with the 10'-0" it measures, and
+  never used unasked.
+
+## Call 188 items 6 to 9 built: the drawn plan after real sheets (2026-11-23)
+
+Built by a Sonnet worker in a second working copy; accepted by the lead on the
+integration copy (the runs are in the commit's message). `demos/planwalls.sh` steps
+9.1 to 9.5 walk it: two drawings on a sheet said and none laid until `--plan` or
+`--within`; a wall drawn with doubled faces found once; a door leaf in a partition
+not read as a window; the sheet's dimension strings listed and used to scale; a
+house all in doubt beside a clean roof plan of like size said as 2 drawings with
+the doubt of each. DECISIONS.md, "Call 188 items 6 to 9, as built", has the causes
+read off the real sheets and the figures.
+
+Changed: on a sheet whose long lines are all parallel, neighbouring faces are
+listed once where they were listed twice. Hand figures set right: the roof plan of
+the demonstration is 108 LF by its centre line; the glass sheet has 5 walls.
+
+What is not right:
+- A floor plan drawn with hatching and cabinet lines close to every wall is still
+  not found as walls; it is listed as a drawing all in doubt and nothing is laid.
+- A sliding or pocket door is no longer a window and is not yet a door.
+- `--plan <n>` cuts its drawing a foot outside its walls and can take a few more or
+  fewer walls than the listing counted (seen on a real sheet: 4 of 6, 33 for 27).
+- Dimension strings are read only where the page holds them as words.
+- None of this is in the window yet.
+
+The lead's own change on top of the worker's: where the verb has read dimension
+strings from a sheet's words it says so ("the sheet's own dimensions: 9 dimension
+strings are read from its words") in place of the page reader's line that a
+dimension is typed by whoever reads it, which the same run then contradicted.
+
+## Call 190, the two worked-out parts built (2026-11-23)
+
+Built by a Sonnet worker in a second working copy, tests first; accepted by the lead
+on the integration copy (the runs are in the commit's message). Neither is called by
+the window or a verb yet: the window half is next (the demonstration is the section
+"A wall traced over a scan, set by its face", above).
+
+- `plumbline_plans::faces::faces` (and `faces_rgba`): the straight lines a scan's
+  sheet shows, read from the sheet's own picture, each at least 2 ft long, with the
+  side the room is on and, where a wall shows both faces, the other face and how far
+  apart. A made-up face at a whole foot is read within 1/16 in; the house of the
+  demonstration gives its 6 faces at 0, 17, 33 and 45 degrees, the partition's two a
+  pair 4 1/2 in apart.
+- `plumbline_world::editing::carry::carried_out`: a line of clicks carried out by
+  half a thickness, corners both ways. Ported from BIMCraft's `offset_poly`
+  (`PORTMAP.md`); a corner under 15 degrees is cut square (ours).
+
+On the three real phone scans (not in the repository), the lead's reading of the
+worker's pictures: the faces lie on the scanned walls. Small room: 5 faces, 4 on
+walls, 1 through furniture. Long room: 11 faces, 8 on walls, 3 short stubs; every
+wall stretch of the room has a face, and where the hand-read truth file and the
+face differ (the west wall, by about 10 in) the picture shows the face is on the
+wall and the truth file is not. Large room: 17 faces, 7 on walls, about 10 on
+furniture and stray streaks. The room's side is right on every wall looked at.
+
+What is not right:
+- Furniture and stray streaks 2 ft long or more that are straight come back as
+  faces. The program cannot tell a wardrobe from a wall; the person tracing does,
+  which is why the faces are places to pick and are never laid by themselves.
+- A wall scanned in two passes 10 in apart reads as two faces of one 10 in wall.
+- A doorway wider than 1 ft 6 in cuts a face in two (the wall tool draws across).
+- A sheet the page reader has shrunk (over 4,096 dots a side) needs its dots to the
+  foot scaled by the caller: the window half must do it and its demonstration check it.
 ## The window on the merged tree, a moved wall that says what followed, and the sun (contract 184; 2026-11-23)
 
 Built by the window builder (Sonnet); accepted by the lead by its diff, its pictures
@@ -9719,9 +10078,7 @@ send them as each piece lands.
 - At the command line, each judged and its findings fixed: structure and joists (164,
   165), the plan set (168; judged twice: 179 D, 182), a wall moved (170; 179 B, 180),
   the money fixes (175; 179 C, 180), what a wall carries and stands on (176; 180).
-- Walls found in a scan (173; judged twice: 179 A fixed; **183's fixes were with a
-  builder when this was written: look for `call183.patch` in the scratch area, or do
-  it again from call 183**). Walls found on a drawn plan (181; **not judged**). **Both
+- Walls found in a scan (173; judged twice, both rounds fixed: 179 A, 183). Walls found on a drawn plan (181; **not judged**). **Both
   finders have seen only made-up scans and sheets.**
 
 **What is owed, in order.**

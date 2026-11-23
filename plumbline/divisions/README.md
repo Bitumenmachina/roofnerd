@@ -106,6 +106,7 @@ take one division out of a job and put it back: that is PROPOSALS.md 21, not bui
 - Wall framing, 2x6 at 16 in, by the SF (8 lines)
 - Partition framing, 2x4 at 16 in, by the SF (8 lines)
 - Casing and trim, by the EA (9 lines)
+- Fascia and soffit on an eave, rake fascia and rake soffit on a rake, corner boards on a wall that has lap siding, exterior casing on a window and an entry door (call 185; starter lines, by the LF or the SF, each by a figure the model works out from what is drawn: `overhang`, `corner_board_length`, `casing_length`; no price)
 - Base and trim, by the LF (10 lines)
 - Cabinets and countertops, by the EA
 - Floor framing and subfloor, by the SF
@@ -164,6 +165,7 @@ take one division out of a job and put it back: that is PROPOSALS.md 21, not bui
 - Flashing and sealant, by the EA (17 lines)
 - Standing seam roofing, by the SF (4 lines)
 - Gutter, by the LF (4 lines)
+- Downspouts, by the EA (call 185: no quantity until a person types how many; the program does not size them)
 - Hip cap, by the LF (4 lines)
 - Ridge cap and vent, by the LF
 

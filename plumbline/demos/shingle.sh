@@ -39,7 +39,7 @@ says "$T/roof.txt" "valley length    0 LF"
 echo
 echo "== The whole roof given its assembly from the starter library =="
 "$P" import assemblies "$J" starter > "$T/in.txt"
-says "$T/in.txt" "set: 40"
+says "$T/in.txt" "set: 41"
 "$P" apply "$J" "$R" "Asphalt shingle roof, whole roof" --source "made-up roof plan" >/dev/null
 "$P" show "$J" > "$T/show.txt"; block "$R" > "$T/roof.txt"
 says "$T/roof.txt" "with waste: Roof sheathing 1549.5951 SF"

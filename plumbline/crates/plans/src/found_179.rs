@@ -380,8 +380,11 @@ fn a_wall_of_two_faces_ends_at_the_near_face_of_the_wall_it_meets() {
     // they meet (0 and 30 ft east), the outer faces at the outer corners (8 in beyond): the wall ends at the inner face,
     // not 4 in past it.
     let mut s = Scene::new(100.0, 71);
-    s.floor([0.0, 0.0, 30.0, 16.0]);
-    s.ceiling([0.0, 0.0, 30.0, 16.0], 8.0, 8.0);
+    // (call 188, 2: the outer faces are scanned from outside, so there is floor outside them: a face is seen from the side it has floor on, and the two
+    // faces of a wall are seen from opposite sides. Without it the outer faces are seen from the room, through the wall, as the inner ones are: one wall
+    // scanned twice.)
+    s.floor([-8.0, -8.0, 38.0, 24.0]);
+    s.ceiling([-8.0, -8.0, 38.0, 24.0], 8.0, 8.0);
     let t = 8.0 / 12.0;
     // Each wall's inner face runs between the inner faces of the walls it meets, its outer face between their outer ones.
     for (a, b) in [([0.0, 0.0], [30.0, 0.0]), ([30.0, 0.0], [30.0, 16.0]), ([30.0, 16.0], [0.0, 16.0]), ([0.0, 16.0], [0.0, 0.0])] {

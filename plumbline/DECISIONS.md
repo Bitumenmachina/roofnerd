@@ -6841,6 +6841,383 @@ with the hand, nothing jumps), and gains walking with doors that open.
 Built by one window builder at a time, after call 178's clean-up is merged; steps 1
 and 2 first, since they change every picture.
 
+### Call 185. The outside trim priced: fascia, soffit, gutters, corner boards, casing (2026-11-23; call 184 step 1's model half; the envelope reviewer of the sweep: "drawn but not priced")
+
+Call 184 draws detail only from what is priced. These are the figures and the starter
+lines that price the trim an eave, a rake, a corner and an opening have; the window
+draws each from its line (a call of its own for the window's half).
+
+**Figures, each worked in the model from what is drawn, Assumed where its positions
+are:**
+- **An eave's and a rake's `overhang`**: the distance on the plan from the roof's edge
+  to the outside face of the wall under it (what a carpenter measures a soffit by).
+  The wall under an edge is found as call 180 finds a roof over a wall (by the plan).
+  Unknown, with the reason, where no wall is found under the edge.
+- **A rake**: the sloped edge of a roof plane at a gable. Its `true_length` is its
+  length along the slope. Where the model does not yet hold a rake as a thing of its
+  own (it holds eaves, hips and ridges), it is made one, as an eave is.
+- **A wall's `outside_corners`**: how many of its two ends are outside corners of the
+  ring of walls it belongs to (a corner that points out of the house; an inside corner
+  is not one), and **`corner_board_length`**: its height for each of them. A corner is
+  counted on both its walls: a corner has a board on each face.
+- **An opening's `casing_length`**: a window, twice its width and its height (head,
+  two legs and the sill's apron); a door, its width and twice its height.
+
+**Starter lines** (each with no price entered, Division 6 unless said; the library
+grows and its counts move by this call):
+- on an eave: "Fascia", by `true_length`; "Soffit", `true_length * overhang` in SF;
+  the gutter line that is there already; "Downspouts", EA, **with no quantity until a
+  person types it** (how many is a judgment the program does not make);
+- on a rake: "Rake fascia", by `true_length`; "Rake soffit", `true_length * overhang`;
+- on an outside wall's assemblies with siding: "Corner boards", by
+  `corner_board_length`;
+- on a window and a door: "Exterior casing", by `casing_length`.
+
+The sample house's own lines do not change (its "Casing and trim" by the each stays a
+person's choice); nothing existing moves but the library's counts.
+
+### Call 183, as built (2026-11-23)
+
+The builder fixed items 1 to 8 (4 and 7 in part) and left one reading to the lead.
+
+- **Item 2, the reading kept.** Read to the letter, "what is found beyond a wall with no
+  opening leading to it is in doubt" would put the room behind every partition with no
+  doorway found in doubt, and every house the finder was built on has one. **A wall
+  found with both its faces is not a wall in the way: both its sides were scanned, so
+  someone stood on each.** What bars the way is a wall of one face (a mirror, glass,
+  an outside wall) and a window. What this leaves, and is said in STATUS: a room behind
+  a two-faced partition whose door was missed is not said to be beyond.
+- **Item 9 is not done**, rightly: the level and the type by their marks ("laid on
+  level-0002") are in what existing steps of the demonstrations assert as written. They
+  move to names with the window's half of the finders, in one change with those steps.
+- **Item 1** is fixed at the rule (after the find, two walls whose bodies share a
+  length: one is put in doubt); the judge's own scan that laid a wall twice could not
+  be rebuilt in 72 runs.
+
+### Call 186. What the first judge found in the walls of a drawn plan, and what is decided (2026-11-23)
+
+A judge (Sonnet, cold, as an estimator handed a designer's PDF) wrote about sixty sheets
+of its own, drawn as architects draw, and ran them: `research/judgment-call181-drawn-plan.md`.
+Held: poché, walls as filled shapes, hatching, one giant path, white lines, dimension
+strings, grid lines, lettering, furniture, turned sheets, four scales; a 60 by 40 house's
+434.67 LF, face and net face and rooms by hand; everything laid Assumed and sourced to
+the sheet. What it broke, worst first. The rule over all of it is call 179's.
+
+1. **A beam shown dashed, wall to wall, is laid as a 15 ft wall, not in doubt.** **A
+   wall's lines are solid. Two dashed lines are something overhead or hidden (a beam, a
+   soffit, cabinets above): said as that, with where, and never a wall.**
+2. **A ledge and a closet shelf are laid as walls.** **A line is the face of one wall
+   only** (as a scan's face is: call 183): a line already a wall's face cannot pair
+   again with a line beside it. **And a pair whose thickness no other wall on the sheet
+   has is in doubt** ("12 in where the walls found are 4 1/2 in and 6 in").
+3. **A wall section drawn beside the plan at another scale is laid as a wall.** **The
+   plan is the largest group of walls that meet one another; walls apart from it are
+   "apart from the plan: another plan, a detail or a section", in doubt, said with
+   where.** A framed box left out is called what it may be ("a title block, a key, a
+   schedule or a detail").
+4. **A door beside a window with a pier under 2 ft between them vanishes; in a 60 by 40
+   house the front door was lost.** **The least length of 2 ft is of a wall's whole
+   line, not of a piece between two openings: a pier is part of its wall however
+   short, and both openings are found.**
+5. **"Nothing else on the sheet was left out" is printed over a sheet half of which is
+   a picture; walls cut off by the page's clip are said to close.** **Where part of a
+   sheet is a picture it says so and that nothing was read from it; a wall that runs
+   to the edge of what the page shows is said to be cut off there, and the walls are
+   not said to close.**
+6. **A scale worked from a wrong dimension (1 in = 4 ft 4 3/4 in) draws no word.**
+   **A scale that is not one drawings are made at (the architect's and the engineer's
+   scales and the metric ones, within 1 percent) is said when the sheet is scaled and
+   again when its walls are found, with the nearest ones: a caution, not a refusal** (a
+   sheet printed small is at no scale and still true to its dimension).
+7. **A door's head of 0 ft, or less, is taken and lays a door 1 in high.** **A head is
+   above the floor and above its sill, or it is refused.**
+8. **With the sheet not lined up with the job the walls are laid at the page's own
+   offsets, unsaid; a sheet's name misspelled gets the scan's refusal.** **It says
+   where it lays them and why ("the sheet has not been lined up with the job: its lower
+   left corner is taken as 0, 0"); a name that is no drawing of the job and no scan on
+   hand says so and lists the job's drawings.**
+9. **A wall drawn with several lines a side gives 24 to 36 walls in doubt; a wall drawn
+   as one centre line is told "no two lines 3 in to 14 in apart"; lines that overshoot
+   every jamb shatter the plan into 14 walls with no openings.** **Lines lying between
+   a wall's two outer lines, alongside them, are its layers: one wall, "drawn with N
+   lines", said once. A sheet whose walls are single lines is told so ("walls here are
+   drawn as single lines: a thickness cannot be read"). A line across a wall that runs
+   past its faces by less than the wall's thickness is still a line across.**
+
+### Call 185, as built (2026-11-23)
+
+Built as decided; every hand figure came out. Two choices the builder made and the lead
+keeps: the new lines sit inside the assemblies a person already gives a thing (fascia,
+soffit and downspouts in the eave's "Gutter" assembly; corner boards in the two
+lap-siding wall assemblies; exterior casing in "Window" and "Entry door"; a new "Rake
+trim" on a rake), so that giving a wall its siding brings its corner boards with it;
+and downspouts are Division 7, beside the gutter. A rake was already a thing. A figure
+is given only where a line names it (as `net_length` is), so a job with none of these
+lines holds nothing new; `plumbline trim <job>` lists them for a house not yet priced.
+
+### Call 186, as built, and two of its rules narrowed (2026-11-23)
+
+The builder fixed items 1 and 4 to 9 and the first half of item 2, and stopped, rightly,
+on two rules of the lead's that existing tests show were wrong as written.
+
+- **Item 2, second sentence, is withdrawn and narrowed.** "A pair whose thickness no
+  other wall on the sheet has is in doubt" would put in doubt the one partition of an
+  ordinary house (a 4 1/2 in partition in a ring of 6 in walls), which the finder's own
+  tests rightly assert is found. **Narrowed: a pair thicker than every other wall found
+  on the sheet, and alone at that thickness, is in doubt** (a 12 in closet shelf among
+  4 1/2 in and 6 in walls; one thin partition is not). Geometry cannot tell a 6 in
+  ledge between two walls from a 6 in partition; that case stays wrong and is said in
+  STATUS. Not built yet.
+- **Item 3, "apart from the plan", is given its measure.** To the letter it puts the
+  second of two houses on one sheet in doubt. **A group of walls is apart from the plan
+  only where it is under half the plan's length of wall**: two plans of like size are
+  both plans; a section or a detail beside a plan is in doubt. The builder offered this
+  as a patch; it is taken, and goes in with the narrowed item 2.
+- **Dashed lines on a renovation plan** (a wall to demolish drawn dashed): item 1
+  stands. They are said ("something overhead or hidden, or on a renovation a wall to be
+  demolished"), counted, and never laid: a person draws or marks a demolished wall
+  themselves.
+
+### Call 187. The window first: what the lead changes after Patrick asked whether there is progress (2026-11-23)
+
+Patrick: "i am still concerened that we are not making progess what can you do to
+reassure me and confirm there has not been drift or issues with bad looping".
+
+**The audit, from the branch itself** (48f3bdf to 0677db0, 2026-11-22 20:15 to 11-23
+14:37 UTC): 33 commits; 23,020 lines added under `crates/` in 78 files, **1,357 of them
+in the window's crate (6 percent)**; 6,311 lines added to the decisions, the status
+record and the research notes; about half the commits are decisions and records.
+Tests 510 to 760 in the command-line crates.
+
+**What is so.**
+- No drift from the purpose (call 172): each piece built that day is one of scan in,
+  drawn plan in, the 3D building seen by each trade, the renovation, drawings out.
+- **But the work is lopsided, the same way it was two days before**: the window, which
+  is what a person uses, got 6 percent of the new code. Found walls in a scan and on a
+  plan, what a wall carries, beams and posts, the plan set and the priced trim exist
+  only at the command line. One builder at a time can work on the window, a window
+  pass takes hours on this machine, and command-line work beside it is cheap: so it
+  piled up.
+- **One loop with shrinking returns**: build, judge, fix, judge on the two wall-finders,
+  two rounds each, all on made-up files. Each round found real defects; a third round
+  on made-up files would be looping.
+- Lost time that was not work: about nine hours in two stalls (a worker restart that
+  lost done signals; a usage limit that stopped the window's builder), and a steady
+  overhead of check-ins and records.
+
+**Changed from here.**
+1. **The window first.** No new command-line feature is started until the window has
+   what the command line has, in this order: the window's work in hand (contract-184)
+   merged; the priced trim drawn; walls found in a scan and on a plan offered when one
+   is brought in; the bearing tint and what a wall carries; the beam, post and pad
+   tools; the plan set under Write out. Command-line agents fix only what real files
+   show wrong.
+2. **No third judgment on made-up files.** The finders are next judged by real files
+   (the run in hand) and by a person; a judge is sent only to something no judge has
+   seen (the window; the trim).
+3. **An update to Patrick is a picture of something he can now do in the window, or a
+   figure from a real file.** Not a count of calls.
+4. **At most two agents at a time, the window's builder first**, so that the shared
+   usage limit does not stop it again; a check-in resumes a stopped agent.
+5. **Records are kept short**: a call is written where a meaning or an expectation
+   moves, a section of STATUS where something was run; neither for its own sake.
+
+### Call 188. What real files showed, and what is fixed first (2026-11-23)
+
+The first run of real files through the two wall-finders is
+`research/real-files-first-run.md`. By call 187, command-line work now fixes only what
+real files show wrong. In this order:
+
+**The scan first**, because it is what Patrick brings (a phone's LiDAR), and it failed
+worst: no wall found in a room with four clear walls.
+1. **A real wall is not flat.** A phone's scan bows and is rough: a wall face is fitted
+   along its whole length with a tolerance worked from the scan's own roughness (the
+   spread of its floor's points about a flat floor is the measure of it), not a fixed
+   one from made-up scans. A stretch that is a wall but for a bow is found, and **its
+   bow is said** ("bowed 1 1/2 in over 12 ft"), Assumed like the rest. What is still
+   left out and is 6 ft or longer is offered by its number as "likely a wall", to be
+   taken or not.
+2. **One wall is found once.** Faces within a wall's thickness of one another, alongside
+   and facing the same way, are one face (a rough wall scanned in passes); it says how
+   many were joined.
+3. **Which way is up is checked by shape**: the floor and the ceiling are the two
+   largest flat level things; where the other way up fits better, it says so first and
+   lays nothing without the person's word, as with the wrong measure.
+4. **It says how it is going and stops in good time**: a line of progress on a large
+   scan; where a scan would take over a minute it is thinned first, and that is said.
+5. **The made-up scans learn from the real ones**: `tools/made-up-scan.py` gains a
+   scene made as a phone's mesh is (rough, bowed, uneven, scanned in passes), its
+   measures taken from real scans and written beside it; the demonstration walks it.
+   No real scan enters the repository.
+
+**Then the plan** (it is nearer right):
+6. **More than one drawing on a sheet.** Where the walls found fall into more than one
+   group of like size, it says so ("2 drawings on this sheet: about 125 ft and 150 ft
+   of wall") and lays none until the person says which (`--plan <n>`), and a person can
+   bound the plan (`--within` two corners on the sheet). A roof plan's lines are not
+   walls: this is how a person says so.
+7. **One wall is found once**: pairs whose bodies overlap are one wall; how many were
+   joined is said.
+8. **Openings**: glass and shower lines inside a room are not windows (a window is in
+   a wall that has a face to the outside or is cut clean through); a tag is not an
+   opening.
+9. **The sheet's own dimensions**: where the page holds its words as words, the
+   dimension strings are read and offered to scale the sheet by, each with where it is.
+
+### Call 188, as built, and call 189: the scan's finder goes to the published method (2026-11-23)
+
+**Call 188 items 1 to 5, as built.** Built and merged: a face fitted as a plane that
+may lean and bow, its bow said; passes of one wall joined; which way is up checked by
+the area of the two largest level things; progress said and a large scan thinned (40 s
+and 75 s became 7 s); a made-up scene made as a phone's mesh is, from measures taken on
+three real scans. The builder measured the real scans first
+(`research/worker-report-call188.md`): walls rough by 1.7 to 3.1 cm where the made-up
+ones had 1.5; leaning up to 2.2 degrees; bowed 1 to 15 cm; scanned in 1.5 to 5 passes
+1.4 to 4.4 cm apart. **The lead's measure in item 1 (the floor's spread) was wrong for
+the very scan it was aimed at** (floor 1.0 cm, walls 1.7 to 3.4): the builder used the
+larger of the floor's spread and the cleanest strong wall's. Two expectations it moved
+are kept: a 20 ft hanging beam is now offered as "likely a wall", in doubt (it is never
+laid by itself); a test's scene was given a floor and a ceiling (its assertions are as
+they were). The first run's "a room with four clear walls" was the first agent's
+misreading: it is a cramped furnished room of about eight wall pieces.
+
+**And it is still not right on a real scan.** The small room: nothing laid; 3 offered,
+one wall twice, two walls not found. The long room: every side there, one wall twice,
+6 ends meeting nothing. The large room: 8 found, one wall wrongly joined across a
+notch, one missed.
+
+**Call 189. Why, and what changes.** The finder was the lead's own design (lines voted
+from points the whole height of the room), built before anyone had looked at a real
+scan. CLAUDE.md: "Do not invent what already has a name." The published method for
+exactly this (read for the sweep, `research/sweep/edge.md`, second pass, section 1:
+its paper and its permissively licensed code) does it another way, and for the reason
+the real scans showed: **furniture does not reach the ceiling.** It keeps only the
+points in the top tenth of the room's height, lays them on the plan as a picture of
+where points are dense, takes the outlines of the dense parts, makes them straight
+lines, and pairs opposite faces into walls; openings are then read in each wall's own
+face by where points are missing, with "not seen" told from "open" by what the
+scanner could see.
+
+1. **The scan's finder is rebuilt on that method**, ported from the published
+   description and the code read open in front of the builder (its licence recorded in
+   `plumbline/NOTICE` and `LICENSES.md`; nothing linked that is not permissive; its
+   stated measures used and named, and each one the program changes said with why).
+2. **What the first finder got right is kept and laid over it**: everything Assumed and
+   sourced to the scan; a wall seen from one side has no thickness made up; in doubt,
+   and laid only on the person's word; "not seen is not open"; what is left out said
+   with where; whether the walls close; the wrong measure and the wrong way up said
+   first; nothing Known.
+3. **It is judged on real scans first.** The three on hand, by what a person sees in
+   each one's top-down picture, and as many more real scans as can be had under terms
+   that allow it. The made-up houses are run after, as a check that nothing a person
+   would rely on is lost, not as the test.
+4. **Until it is right on real scans, the window offers tracing over the cut scan
+   first** (which works today) and the finder second, as an offer to be looked at.
+
+**Call 189, as built (2026-11-23).** The published method is ported
+(`crates/plans/src/found_189.rs`; Cloud2BIM, MIT, method ported and no code copied;
+`NOTICE`, `LICENSES.md`) and reached with `plumbline find-walls ... --by-ceiling`.
+**It does not replace the first finder**, because the condition written above (better
+on all three real scans) is not met. On the three real phone scans, against what a
+person reads in each one's pictures, written down before any code:
+
+| scan | first finder lays | by ceiling lays |
+|---|---|---|
+| small room | 1 wall, 5 ft too long; 1 missed | the 2 sure walls, right size and place; the other two sides in 2 ft pieces |
+| long room | 10 walls, 3 of them not there | 3 walls, all there; the alcove's walls in pieces or missed |
+| large room | 5 walls, 2 not there, 1 run across a notch | 2 walls, both there |
+
+By ceiling never laid a wall that is not there and takes a quarter of the time; it is
+incomplete, and on the made-up houses it is the same on 28 of 65 and worse on the
+rest (a wall's top broken into pieces; it depends on the angle the house lies at). No
+expectation moved: the default is the code it was. Its own demonstration step is
+`demos/findwalls.sh` step 25.
+
+**Call 190. The scan in the window: the person traces, the scan helps (2026-11-23).**
+Three rounds of finding walls in a scan with nobody looking (173, 183 and 188 on the
+lead's design; 189 on the published one) and none is right on a real phone scan.
+A fourth round is not started. What the real scans did show is which half of the job
+a machine does well and which a person does: a person sees in one look which lines
+are walls and which are a wardrobe; the scan knows to the half inch where the face
+is. So:
+
+1. **Tracing over the cut scan is the path**, and it is the first thing offered when
+   a scan is brought in. It works today.
+2. **A wall drawn over a scan is set by the scan's face.** Two things, and the second
+   is a fault in what tracing a scan does today:
+   - *The click lands on the scan.* The lines the scan's points make where it is cut
+     are read from the sheet's own picture (so they are there again when the job is
+     opened without the scan's file) and are places to pick, exactly as a drawn
+     plan's lines are. Only a line at least 2 ft long is one.
+   - *The line clicked is the wall's face, not its centre.* A scan shows the face of a
+     wall. Today a wall traced over it is laid with its centre on that face, so a
+     room 12 ft by 14 ft inside comes out 11 ft 6 in by 13 ft 6 in with 6 in walls:
+     155.25 SF where there are 168. Over a scan the Wall tool draws by the face: the
+     wall's body lies on the side away from the room (the side with fewer of the
+     scan's points), its centre half its thickness beyond the line, corners carried
+     out both ways. The window says which side it took and offers "Other side".
+     Where the scan shows both faces of a wall the centre goes between them and the
+     distance between them is said beside the type's thickness. The saved wall is
+     what it always was (a centre line and a type): no file changes. It arrives
+     Assumed, "traced by its face over the scan <name>".
+   The same choice ("Centerline" or "Face") is on the Wall tool over a drawn plan,
+   where it stays on Centerline unless the person changes it: nothing drawn today
+   over a plan moves. A click with no scan line near stays where the hand put it and
+   says "the scan shows no face here".
+3. **The walls the by-ceiling finder is sure of are shown as pale lines to take**, one
+   click each, never laid unasked in the window. Only those it would lay by itself
+   (two ends met, or both faces seen): on the real scans that set held no wall that
+   was not there. A taken wall is Assumed, sourced to the scan, as today.
+4. **The verb keeps both finders**; the first is the default; `--lay` is as it was.
+5. **What is said of it**: the README and the help say that a scan is traced over
+   with the scan's help, and that the finder is an offer. Nothing says a scan is
+   turned into walls by itself.
+
+One arithmetic: the line the scan's points make near a place, and the thickness
+between two faces, are worked out in `crates/plans` (the finders' own code) and the
+window only asks; a line of clicks carried out by half a thickness is worked out in
+`crates/world`. The 2 ft in point 2 is the lead's and Assumed: a named constant that
+moves only by a written call. Point 3 is built after point 2 has been tried on the
+real scans.
+
+**Call 188 items 6 to 9, as built (2026-11-23).** Built by a worker that read the
+three real city sheets first and wrote down why each fault happens before any code.
+
+- *Why a wall was found two to four times*: the sheet draws each face of a wall as
+  two lines about an inch apart, so one wall is four pairs. A stack whose lines all
+  lie within 1 1/2 in of its two outermost is one wall, the outermost pair; it says
+  how many pairs were joined. A stack nothing claims is one wall in doubt.
+- *The "shower glass" was not one.* It is a door leaf drawn inside a partition whose
+  faces run on. A window whose wall is not cut through and has a room on both sides
+  is not a window: it is said, with where. **It is not yet found as a door**: owed.
+- *More than one drawing on a sheet*: walls within 15 ft of one another are one
+  drawing, and **a drawing's size is all the wall found in it, in doubt or not** (the
+  lead's ruling when the first build laid a roof plan's lines because the floor
+  plan beside it was all in doubt). Drawings of at least half the largest are
+  listed, each with how much of it is in doubt, and none is laid until the person
+  says which (`--plan <n>`) or bounds it (`--within`). Call 186's rule for a group
+  under half is as it was.
+- *The sheet's own dimension strings*: read where the page holds them as words,
+  listed with where each is and which agree (`--dimensions`); `--scale-by <n>` sets
+  the scale by one, Assumed, its source the string; one that disagrees is said with
+  what its line measures. "Dimension string" is the trade's own word and is kept.
+- *A tag* (a closed shape of short straight pieces) is left out and counted. No tag
+  made an opening on any of the three real sheets: the rule is checked on made-up
+  tags only.
+
+Changed behaviour, named: on a sheet whose long lines are all parallel, each pair of
+neighbouring faces was listed twice and is now listed once (found by a test of this
+work; no existing expectation moved). Two of the lead's hand figures were set right
+by the worker: the roof plan's 108 LF is its centre line 32 by 22 ft; the sheet with
+glass has 5 walls.
+
+On the three real sheets (they are not in the repository): the clean single-plan
+sheet lost its 2 false windows and nothing else moved; the second is unchanged; the
+sheet with a floor plan and a roof plan now says there are 2 drawings, about 150 ft
+(all of it in doubt) and about 129 ft, and lays nothing unasked, where it laid 181 LF
+of the wrong lines. **Its floor plan is still not found as walls** (hatching and
+cabinet lines out to a foot from each wall): on a sheet drawn that way the program
+says so and the person traces.
 **Call 184 step 2 (the light), as built, and call 171 item 1 in the window (2026-11-23).**
 Built by the window builder, each piece measured against a before picture and kept
 only where it was better.
