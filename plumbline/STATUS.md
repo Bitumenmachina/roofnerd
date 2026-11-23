@@ -9727,6 +9727,22 @@ beyond (call 183, as built); one speed test takes 12 s alone and can pass its 20
 limit only on a quiet machine. **It has still seen only made-up scans.** Not judged a
 third time.
 
+## The walls of a drawn plan judged (2026-11-23)
+
+`research/judgment-call181-drawn-plan.md`; DECISIONS.md call 186 has each finding and
+what is decided. **Nothing below is fixed yet.** Held on about sixty sheets the judge
+drew: poché, filled walls, hatching, dimension strings, grid lines, lettering,
+furniture, turned sheets, four scales; a 60 by 40 house by hand; everything laid
+Assumed.
+
+Found: a beam shown dashed laid as a 15 ft wall (150.00 LF where 135.00), not in doubt,
+"the walls close"; a ledge and a closet shelf laid as walls; a wall section beside the
+plan laid as a wall; a door beside a window with a short pier between them dropped
+without a word (a front door lost); "nothing else was left out" over a sheet half
+picture; no word on a scale no drawing is made at; a door 1 in high from a head of 0;
+walls laid at the page's own offsets unsaid; layered walls as dozens "in doubt"; lines
+overshooting jambs shattering a plan.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **As of 2026-11-23 (the lead, after the merge of that day). Read this block first; what

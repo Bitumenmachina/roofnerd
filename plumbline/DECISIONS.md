@@ -6893,3 +6893,53 @@ The builder fixed items 1 to 8 (4 and 7 in part) and left one reading to the lea
 - **Item 1** is fixed at the rule (after the find, two walls whose bodies share a
   length: one is put in doubt); the judge's own scan that laid a wall twice could not
   be rebuilt in 72 runs.
+
+### Call 186. What the first judge found in the walls of a drawn plan, and what is decided (2026-11-23)
+
+A judge (Sonnet, cold, as an estimator handed a designer's PDF) wrote about sixty sheets
+of its own, drawn as architects draw, and ran them: `research/judgment-call181-drawn-plan.md`.
+Held: poché, walls as filled shapes, hatching, one giant path, white lines, dimension
+strings, grid lines, lettering, furniture, turned sheets, four scales; a 60 by 40 house's
+434.67 LF, face and net face and rooms by hand; everything laid Assumed and sourced to
+the sheet. What it broke, worst first. The rule over all of it is call 179's.
+
+1. **A beam shown dashed, wall to wall, is laid as a 15 ft wall, not in doubt.** **A
+   wall's lines are solid. Two dashed lines are something overhead or hidden (a beam, a
+   soffit, cabinets above): said as that, with where, and never a wall.**
+2. **A ledge and a closet shelf are laid as walls.** **A line is the face of one wall
+   only** (as a scan's face is: call 183): a line already a wall's face cannot pair
+   again with a line beside it. **And a pair whose thickness no other wall on the sheet
+   has is in doubt** ("12 in where the walls found are 4 1/2 in and 6 in").
+3. **A wall section drawn beside the plan at another scale is laid as a wall.** **The
+   plan is the largest group of walls that meet one another; walls apart from it are
+   "apart from the plan: another plan, a detail or a section", in doubt, said with
+   where.** A framed box left out is called what it may be ("a title block, a key, a
+   schedule or a detail").
+4. **A door beside a window with a pier under 2 ft between them vanishes; in a 60 by 40
+   house the front door was lost.** **The least length of 2 ft is of a wall's whole
+   line, not of a piece between two openings: a pier is part of its wall however
+   short, and both openings are found.**
+5. **"Nothing else on the sheet was left out" is printed over a sheet half of which is
+   a picture; walls cut off by the page's clip are said to close.** **Where part of a
+   sheet is a picture it says so and that nothing was read from it; a wall that runs
+   to the edge of what the page shows is said to be cut off there, and the walls are
+   not said to close.**
+6. **A scale worked from a wrong dimension (1 in = 4 ft 4 3/4 in) draws no word.**
+   **A scale that is not one drawings are made at (the architect's and the engineer's
+   scales and the metric ones, within 1 percent) is said when the sheet is scaled and
+   again when its walls are found, with the nearest ones: a caution, not a refusal** (a
+   sheet printed small is at no scale and still true to its dimension).
+7. **A door's head of 0 ft, or less, is taken and lays a door 1 in high.** **A head is
+   above the floor and above its sill, or it is refused.**
+8. **With the sheet not lined up with the job the walls are laid at the page's own
+   offsets, unsaid; a sheet's name misspelled gets the scan's refusal.** **It says
+   where it lays them and why ("the sheet has not been lined up with the job: its lower
+   left corner is taken as 0, 0"); a name that is no drawing of the job and no scan on
+   hand says so and lists the job's drawings.**
+9. **A wall drawn with several lines a side gives 24 to 36 walls in doubt; a wall drawn
+   as one centre line is told "no two lines 3 in to 14 in apart"; lines that overshoot
+   every jamb shatter the plan into 14 walls with no openings.** **Lines lying between
+   a wall's two outer lines, alongside them, are its layers: one wall, "drawn with N
+   lines", said once. A sheet whose walls are single lines is told so ("walls here are
+   drawn as single lines: a thickness cannot be read"). A line across a wall that runs
+   past its faces by less than the wall's thickness is still a line across.**
