@@ -9279,6 +9279,37 @@ gates and `portmap.sh` pass.
   run on that (`draww.sh` moves a partition).
 - Not judged.
 
+## Call 179 part D built: the plan set a judge read (2026-11-23)
+
+The sheets now carry what a drawing carries: a sheet number (A-101, A-102, A-103 and
+"sheet n of 3"), a north arrow, a key of the line types drawn as they are drawn, and an
+overall dimension outside the strings on each side. A new door in an existing wall is
+on the proposed plan alone. Lettering is never under 3/32 in, over other lettering or
+out of its box: a long title goes to two lines and is cut at a word; a room too small
+to letter takes a circled mark and a row in a room schedule. Cabinets and fixtures set
+in place are outlined on the proposed plan, and every sheet's notes say what it does
+not show. The file's name ends as a PDF's does or is refused; writing over a plan set
+is said. `research/worker-report-call179D.md`; the pages are in
+`demos/captured/planset/` and the lead read `page3.png`: it reads as a drawing.
+
+**Moved, by call 179 D1:** `crates/cli/tests/call168.rs`: an unmarked door is counted
+on 1 page, not 3 (moved by the lead; the worker rightly left it).
+
+**Run on the integration copy with parts A, B, C and D together:** 628 tests pass in
+the six command-line crates, 0 fail; all 44 command-line demonstrations pass; the
+three gates and `portmap.sh` pass. `tools/committed.sh` has not been run on it, and
+the window's crate has not been built or tested on it: that waits on the window
+builder's work being merged with it.
+
+**Still not right on the sheets** (the worker's reading and the lead's): openings are
+not dimensioned and there are no door swings; where a side has one string its figure
+is printed twice (the string and the overall are the same length); partition strings
+hang into the rooms; on an L-shaped plan the strings will not add to the overall,
+which is the walls' whole extent; wall boxes are unnamed and things are outlines only;
+sheet numbers start again at A-101 on every level and the demolition sheet is not in
+the standard's own series; lettering is checked from where it is drawn, not by reading
+the PDF back. Not judged again.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **Since this was written (2026-11-18): a second builder, Opus 5.5, under call 129.**

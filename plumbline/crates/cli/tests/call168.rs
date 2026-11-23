@@ -87,7 +87,9 @@ fn a_door_is_its_gap_with_no_swing_and_a_level_with_no_mark_has_one_page() {
     let t = id(&ok(&d, &[&["type", "job.json", "door", "door 3 ft", "--width", "3 ft", "--height", "7 ft"], &K[..]].concat()), "type-");
     ok(&d, &[&["door", "job.json", &south, &t, "--offset", "12 ft", "--sill", "0 ft"], &K[..]].concat());
     let said = ok(&d, &["plan-set", "job.json", &s, "set.pdf", "--date", "x", "--list"]);
-    assert_eq!(said.matches(": door, gap 3'-0\"").count(), 3, "{said}");
+    // An unmarked door is new work: it is on the proposed plan alone, not on the existing
+    // or the demolition plan (call 179, D1; it was drawn on all three).
+    assert_eq!(said.matches(": door, gap 3'-0\"").count(), 1, "{said}");
     assert!(said.contains(", no swing") && said.contains("DOOR SWINGS ARE NOT SET."));
     let p = folder("planset-plain");
     ok(&p, &["new", "j.json", "Plain (not a real job)"]);

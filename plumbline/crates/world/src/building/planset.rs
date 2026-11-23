@@ -52,10 +52,25 @@ pub struct LevelOpening {
     /// Its sill and its head above the wall's base.
     pub sill: f64,
     pub head: f64,
-    /// The place it is in: its own mark if it has one, else its wall's.
+    /// The place its own mark puts it in; with no mark it is new (call 179 D1).
     pub place: WorkPlace,
     pub status: Status,
 }
+
+/// A cabinet, fixture, piece of equipment or furnishing set in place, as its outline (call 179 D3).
+#[derive(Clone, Debug)]
+pub struct LevelThing {
+    pub path: String,
+    pub name: String,
+    /// The four corners of its footprint on the plan, feet, in order round it.
+    pub ring: [V2; 4],
+    pub place: WorkPlace,
+    /// Whether it hangs wholly above the height the walls are cut at (a wall box): drawn
+    /// dashed, as what is above the cut is.
+    pub above_cut: bool,
+}
+
+type V2 = crate::skeleton::P2;
 
 /// A room, with its area at the walls' faces.
 #[derive(Clone, Debug)]
@@ -79,6 +94,10 @@ pub struct LevelPlan {
     /// The walls that stand at the cut, in the order they were drawn into the job.
     pub walls: Vec<LevelWall>,
     pub openings: Vec<LevelOpening>,
+    /// What is set in place on the level, each as its outline (call 179 D3).
+    pub things: Vec<LevelThing>,
+    /// Things set in place that cannot be drawn, each with why.
+    pub things_left_off: Vec<(String, String)>,
     /// The rooms the work leaves: the model's own figures.
     pub rooms_left: Vec<LevelRoom>,
     /// The rooms as they stand: found among the walls that stand today.
@@ -181,8 +200,9 @@ pub fn level_plan(job: &mut Job, storey: &str) -> Result<LevelPlan, String> {
             openings_left_off.push((path, format!("it does not reach {} above the floor, where the walls are cut", plumbline_roofing::drawing::feet_written(cut))));
             continue;
         }
-        let own = job.world.get::<Work>(e).is_some();
-        let place = if own { crate::view::work_place(&job.world, e) } else { walls[wi].place };
+        // An opening is on the sheets its own mark puts it on, and one with no mark is new
+        // (call 179 D1): a new door in an existing wall is not on the existing plan.
+        let place = crate::view::work_place(&job.world, e);
         openings.push(LevelOpening { path, name, door: kind == Kind::Door, wall: wi, span: [s0, s1], sill, head, place, status: hole.status });
     }
 
@@ -244,5 +264,27 @@ pub fn level_plan(job: &mut Job, storey: &str) -> Result<LevelPlan, String> {
     } else {
         rooms_stand_missing = rq.iter().map(|(_, n, ..)| n.clone()).collect();
     }
-    Ok(LevelPlan { title, storey: storey.to_string(), level: level_name, cut, walls, openings, rooms_left, rooms_stand, rooms_stand_missing, walls_left_off, openings_left_off })
+    // What is set in place: cabinets, fixtures, equipment and furnishings, each as the outline
+    // of its footprint (the model's own size and place, turned as it is turned).
+    let mut things = Vec::new();
+    let (drawn, not_drawn) = super::placements(job);
+    for p in drawn {
+        if !matches!(p.kind, Kind::Furnishing | Kind::Equipment | Kind::Fixture) || p.storey.as_deref() != Some(storey) {
+            continue;
+        }
+        let super::Shape::Box { at, size, angle } = p.shape else { continue };
+        let (sin, cos) = angle.to_radians().sin_cos();
+        let ring = [(-1.0, -1.0), (1.0, -1.0), (1.0, 1.0), (-1.0, 1.0)].map(|(sx, sy)| {
+            let (lx, ly) = (sx * size[0] / 2.0, sy * size[1] / 2.0);
+            V(at[0] + lx * cos - ly * sin, at[1] + lx * sin + ly * cos)
+        });
+        let place = job.find(&p.path).map_or(0, |e| crate::view::work_place(&job.world, e));
+        things.push(LevelThing { path: p.path, name: p.name, ring, place, above_cut: at[2] >= elevation + cut });
+    }
+    let things_left_off: Vec<(String, String)> = {
+        let mut q = job.world.query::<(&Node, &Kind)>();
+        let ours: Vec<String> = q.iter(&job.world).filter(|(n, k)| matches!(**k, Kind::Furnishing | Kind::Equipment | Kind::Fixture) && tree.storey_of(&n.path) == Some(storey)).map(|(n, _)| n.path.clone()).collect();
+        not_drawn.into_iter().filter(|(p, _)| ours.contains(p)).collect()
+    };
+    Ok(LevelPlan { title, storey: storey.to_string(), level: level_name, cut, walls, openings, things, things_left_off, rooms_left, rooms_stand, rooms_stand_missing, walls_left_off, openings_left_off })
 }

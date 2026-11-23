@@ -1056,6 +1056,36 @@ priced with it is said to be priced and not drawn. Where a wall's end corners wi
 another wall's end, it is drawn past its center line's end to where the two center
 lines cross and half the other wall's thickness on.
 
+### 5.20 The plan set on paper (calls 168 and 179)
+
+`plan-set` writes a level's plan as it stands, its demolition plan and its proposed plan as
+a PDF of line work. What a sheet carries, and what it does not:
+
+- **Which sheets a thing is on** is its own work mark (a thing with no mark is new): a new
+  door in an existing wall is on the proposed plan only; one marked existing is on all three,
+  heavy where it stands, light where it stays; one to demolish is dashed on the demolition
+  plan and not on the proposed.
+- **Each sheet has** its number (the National CAD Standard's form: A for architectural, 1 for
+  plans, then its order in the set: A-101, A-102, A-103) and "sheet n of m" in the title box;
+  a north arrow (plan north, up the sheet; true north is not in the model, and the notes say
+  so); a key of the line types the sheet draws, each as the sheet draws it; and, outside the
+  dimension strings on each of the four sides, the overall dimension: the extent of the
+  walls' lines as drawn, written as the strings are, with VIF when any length on the sheet is
+  not Known.
+- **Lettering** is strokes, not text: no font, so no font licence and the same sheet on every
+  machine; a reader cannot search it. It is never under 3/32 in (the standard's least
+  capital), never over other lettering and never across a box's edge: a title that does not fit
+  goes to two lines and is then cut at a word with an ellipsis; a room too small for its name
+  and area at that height takes a numbered mark and a row in the room schedule at the side of
+  the sheet; a dimension too long for its string is set past its end. `--list` says, page by
+  page, the smallest piece, and every piece under the least, over another or out of its box.
+- **Cabinets and fixtures set in place** are drawn on the proposed plan (and on a level with
+  no mark) as the outlines of their footprints, dashed where they hang above the cut. What a
+  sheet does not show (pipes, ducts, wiring, the frame; cabinets and fixtures on the sheets
+  that do not draw them) is said in its notes.
+- The plan set's name ends `.pdf`; a plan set already there is written over and it says so;
+  a file there that is not a PDF is not.
+
 ## 6. Cost code scheme
 
 Which scheme is primary is an open question (QUESTIONS.md Q1). Every code stores its
