@@ -7021,3 +7021,45 @@ Tests 510 to 760 in the command-line crates.
    usage limit does not stop it again; a check-in resumes a stopped agent.
 5. **Records are kept short**: a call is written where a meaning or an expectation
    moves, a section of STATUS where something was run; neither for its own sake.
+
+### Call 188. What real files showed, and what is fixed first (2026-11-23)
+
+The first run of real files through the two wall-finders is
+`research/real-files-first-run.md`. By call 187, command-line work now fixes only what
+real files show wrong. In this order:
+
+**The scan first**, because it is what Patrick brings (a phone's LiDAR), and it failed
+worst: no wall found in a room with four clear walls.
+1. **A real wall is not flat.** A phone's scan bows and is rough: a wall face is fitted
+   along its whole length with a tolerance worked from the scan's own roughness (the
+   spread of its floor's points about a flat floor is the measure of it), not a fixed
+   one from made-up scans. A stretch that is a wall but for a bow is found, and **its
+   bow is said** ("bowed 1 1/2 in over 12 ft"), Assumed like the rest. What is still
+   left out and is 6 ft or longer is offered by its number as "likely a wall", to be
+   taken or not.
+2. **One wall is found once.** Faces within a wall's thickness of one another, alongside
+   and facing the same way, are one face (a rough wall scanned in passes); it says how
+   many were joined.
+3. **Which way is up is checked by shape**: the floor and the ceiling are the two
+   largest flat level things; where the other way up fits better, it says so first and
+   lays nothing without the person's word, as with the wrong measure.
+4. **It says how it is going and stops in good time**: a line of progress on a large
+   scan; where a scan would take over a minute it is thinned first, and that is said.
+5. **The made-up scans learn from the real ones**: `tools/made-up-scan.py` gains a
+   scene made as a phone's mesh is (rough, bowed, uneven, scanned in passes), its
+   measures taken from real scans and written beside it; the demonstration walks it.
+   No real scan enters the repository.
+
+**Then the plan** (it is nearer right):
+6. **More than one drawing on a sheet.** Where the walls found fall into more than one
+   group of like size, it says so ("2 drawings on this sheet: about 125 ft and 150 ft
+   of wall") and lays none until the person says which (`--plan <n>`), and a person can
+   bound the plan (`--within` two corners on the sheet). A roof plan's lines are not
+   walls: this is how a person says so.
+7. **One wall is found once**: pairs whose bodies overlap are one wall; how many were
+   joined is said.
+8. **Openings**: glass and shower lines inside a room are not windows (a window is in
+   a wall that has a face to the outside or is cut clean through); a tag is not an
+   opening.
+9. **The sheet's own dimensions**: where the page holds its words as words, the
+   dimension strings are read and offered to scale the sheet by, each with where it is.

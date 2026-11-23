@@ -9815,6 +9815,27 @@ short strokes is not seen as dashed; stacked dimension strings with arrowheads. 
 worker wrote the layers' tests after their code and says so. **No architect's sheet
 has been through it.** Not judged a second time.
 
+## Real files through the wall-finders, for the first time (2026-11-23)
+
+`research/real-files-first-run.md`: three cities' public plan sheets (vector PDFs) and
+four real scans (three from a phone's LiDAR), run by an agent on the program as
+committed at 0677db0. **Nothing below is fixed yet**; DECISIONS.md call 188 has the order.
+
+- **Drawn plans: mostly right on a clean sheet.** Two single-plan sheets: outside walls,
+  thicknesses, partitions, doors and windows right, overall lengths matching the
+  sheets' own dimension strings (24 ft 2 in, 20 ft 2 in, 22 ft 2 in, 30 ft 2 in). A
+  sheet with a floor plan and a roof plan: the floor plan mostly right, **the roof
+  plan's lines laid as walls, unsaid: 181.33 LF taken off where about 125 is there.**
+  One wall is found two to four times (56 "walls" for about 14, most in doubt).
+- **Scans from a phone: it fails.** A small room with four clear walls: **no wall
+  found** (said: "not straight along the whole length"). A long room: its two long
+  walls right, but 11 walls where about 4, one of them three times. A large room: five
+  short pieces. A file with no ceiling: rightly refused. The wrong way up is not
+  caught.
+
+So: what was built on made-up scans does not yet work on a real phone scan, and what
+was built on made-up sheets mostly works on a real clean sheet.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **As of 2026-11-23 (the lead, after the merge of that day). Read this block first; what
