@@ -17,6 +17,9 @@
 //!   its mask) are not taken: a plan set has none.
 //! * A line's width and a dash's lengths are in points, written as they are.
 //! * The same drawings give the same bytes: nothing here reads a clock.
+//! * A document information dictionary (`/Info`, a title and a subject, as UTF-16 hex
+//!   strings) is added by `pdf_titled` (ours, call 182): a plan set's file carries the job's
+//!   title, so a reader's window and a file list name it.
 
 use std::fmt::Write as _;
 use std::io::Write as _;
@@ -69,8 +72,23 @@ pub(crate) fn contents(d: &Drawing) -> String {
     s
 }
 
+/// A text as a PDF string: UTF-16 big endian, in hex, with its byte order mark.
+fn text_string(t: &str) -> String {
+    let mut s = String::from("<FEFF");
+    for u in t.encode_utf16() {
+        let _ = write!(s, "{u:04X}");
+    }
+    s.push('>');
+    s
+}
+
 /// The pages, each a drawing the size of its paper, as a PDF file.
 pub fn pdf(pages: &[Drawing]) -> Vec<u8> {
+    pdf_titled(pages, "", "")
+}
+
+/// The same, with its own title and subject in the file's information (none when both are empty).
+pub fn pdf_titled(pages: &[Drawing], title: &str, subject: &str) -> Vec<u8> {
     let mut out: Vec<u8> = b"%PDF-1.4\n%\xe2\xe3\xcf\xd3\n".to_vec();
     let mut offsets = vec![0usize; 3];
     let object = |out: &mut Vec<u8>, offsets: &mut Vec<usize>, n: usize, dict: &str, stream: Option<&[u8]>| {
@@ -102,13 +120,22 @@ pub fn pdf(pages: &[Drawing]) -> Vec<u8> {
     }
     object(&mut out, &mut offsets, 1, "<< /Type /Catalog /Pages 2 0 R >>", None);
     object(&mut out, &mut offsets, 2, &format!("<< /Type /Pages /Kids [{}] /Count {} >>", kids.join(" "), kids.len()), None);
+    let info = if title.is_empty() && subject.is_empty() {
+        None
+    } else {
+        let n = next;
+        next += 1;
+        object(&mut out, &mut offsets, n, &format!("<< /Title {} /Subject {} /Producer {} >>", text_string(title), text_string(subject), text_string("plumbline")), None);
+        Some(n)
+    };
     let start = out.len();
     let mut xref = format!("xref\n0 {next}\n0000000000 65535 f \n");
     for n in 1..next {
         // Twenty bytes an entry: the space before the line feed is the PDF's.
         let _ = writeln!(xref, "{:010} 00000 n ", offsets.get(n).copied().unwrap_or(0));
     }
-    let _ = write!(xref, "trailer\n<< /Size {next} /Root 1 0 R >>\nstartxref\n{start}\n%%EOF\n");
+    let info = info.map_or(String::new(), |n| format!(" /Info {n} 0 R"));
+    let _ = write!(xref, "trailer\n<< /Size {next} /Root 1 0 R{info} >>\nstartxref\n{start}\n%%EOF\n");
     out.extend(xref.bytes());
     out
 }

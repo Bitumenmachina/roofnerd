@@ -11,11 +11,12 @@
 //! lettered: a wall's length is its `plan_length` and a room's area its `floor_area`
 //! (`building::planset`), and the drawing never measures its own lines to letter a figure.
 
-use crate::building::planset::{level_named, level_plan, LevelPlan, LevelRoom};
+use crate::building::planset::{level_named, level_plan, levels_from_the_lowest, LevelPlan, LevelRoom};
 use crate::building::rooms;
 use crate::building::walls::{self, PlanWall};
 use crate::job::Job;
 use crate::paper::letters::{self, Letter, MIN_CAP};
+use crate::paper::strings::{self, Axis, Side};
 use crate::paper::{self, cut, font, pen, size, Drawing, Prim, FAINT, INK, PAPER, POCHE};
 use crate::skeleton::P2 as V;
 use crate::value::Status;
@@ -92,6 +93,22 @@ impl Show {
     }
 }
 
+/// What a line of the key is a sample of: a wall's line in a weight, or a room line.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Swatch {
+    Line(Weight),
+    RoomLine,
+}
+
+impl Swatch {
+    pub fn said(self) -> &'static str {
+        match self {
+            Swatch::Line(w) => w.said(),
+            Swatch::RoomLine => "long dashes, thin",
+        }
+    }
+}
+
 /// A wall as a page draws it.
 #[derive(Clone, Debug)]
 pub struct DrawnWall {
@@ -151,10 +168,28 @@ pub struct ScheduleRow {
     pub area: String,
 }
 
-/// A room's label as it is lettered.
+/// A room's label as it is lettered, and when it has no area, why in the model's words.
 #[derive(Clone, Debug)]
 pub struct RoomLabel {
     pub name: String,
+    pub text: String,
+    pub why: String,
+}
+
+/// A dimension string as it is lettered: where it is, what it measures, each part (with whether
+/// it carries VIF) and the whole the parts add to (call 182).
+#[derive(Clone, Debug)]
+pub struct DrawnString {
+    pub place: String,
+    pub kind: String,
+    pub parts: Vec<(String, bool)>,
+    pub whole: String,
+}
+
+/// An angle lettered where two walls meet off square.
+#[derive(Clone, Debug)]
+pub struct DrawnAngle {
+    pub corner: String,
     pub text: String,
 }
 
@@ -167,6 +202,16 @@ pub struct PlanPage {
     pub things: Vec<DrawnThing>,
     pub dimensions: Vec<DrawnDimension>,
     pub overall: DrawnOverall,
+    /// The dimension strings as drawn: outside the plan three on a side at the most, then those
+    /// along a wall off square and those inside the plan (call 182).
+    pub strings: Vec<DrawnString>,
+    /// Sides with no overall, each with why.
+    pub no_overall: Vec<(String, String)>,
+    pub angles: Vec<DrawnAngle>,
+    /// How many room lines the page draws.
+    pub room_lines: usize,
+    /// The graphic scale: how long its bar is, as written.
+    pub scale_bar: String,
     pub rooms: Vec<RoomLabel>,
     /// Rooms too small for their name and area at the printed scale: each a mark on the plan
     /// and a row of the room schedule at the side of the sheet (mark, then what it says).
@@ -174,8 +219,10 @@ pub struct PlanPage {
     /// The sheet's number, by the National CAD Standard's form: the discipline letter, a
     /// dash, the sheet type (1, plans) and the order in the set: A-101.
     pub sheet: String,
+    /// Its place in the whole set of sheets (all levels, lowest first) and how many sheets there are.
+    pub position: (usize, usize),
     /// The key: each kind of line this page draws, with how it is drawn.
-    pub key: Vec<(String, Weight)>,
+    pub key: Vec<(String, Swatch)>,
     /// The boxes the page frames (title box, key, schedule), x0, y0, x1, y1 in points.
     pub frames: Vec<[f32; 4]>,
     /// The job's title as the title box letters it: one line, or two (the second cut at a word with an ellipsis).
@@ -212,16 +259,23 @@ pub struct Options {
 const MARGIN: f32 = 36.0;
 const BORDER_AT: f32 = 18.0;
 /// The dimension string's distance from the wall's outer face, and its ticks.
-const DIM_OFF: f32 = 24.0;
+const DIM_OFF: f32 = 18.0;
+/// How far apart the strings on one side of the plan lie.
+const STRING_PITCH: f32 = 16.0;
+/// A room line's dash and gap, points: long dashes, thin.
+const ROOM_LINE_DASH: f32 = 14.0;
+const ROOM_LINE_GAP: f32 = 4.0;
+/// The width of the graphic scale in the band along the top.
+const SCALE_W: f32 = 190.0;
 /// A dimension's figures: over 3/32 in (`letters::MIN_CAP`).
 const DIM_TEXT: f32 = 7.2;
 /// The overall dimension's figures.
 const OVERALL_TEXT: f32 = 9.0;
-/// How far outside everything the plan has drawn on a side its overall dimension lies.
-const OVERALL_GAP: f32 = 9.0;
 const ROOM_NAME: f32 = 9.0;
 const NOTE_TEXT: f32 = 6.75;
-const NOTE_PITCH: f32 = 10.0;
+const NOTE_PITCH: f32 = 9.5;
+/// The same where a line carries a mark over a capital.
+const ACCENT_PITCH: f32 = 11.0;
 const TITLE_TEXT: f32 = 12.0;
 const BOX_W: f32 = 252.0;
 const BOX_H: f32 = 90.0;
@@ -294,6 +348,18 @@ fn count(n: usize, one: &str, many: &str) -> String {
 pub fn plan_set(job: &mut Job, level: &str, opts: &Options) -> Result<PlanSet, String> {
     let storey = level_named(job, level)?;
     let plan = level_plan(job, &storey)?;
+    // The sheets are numbered through the whole set: the levels from the lowest up (call 182).
+    let (before, total) = {
+        let (mut before, mut total) = (0usize, 0usize);
+        for other in levels_from_the_lowest(job) {
+            let n = if other == storey { shows_of(&plan).0.len() } else { level_plan(job, &other).map_or(0, |q| if q.walls.is_empty() { 0 } else { shows_of(&q).0.len() }) };
+            if other == storey {
+                before = total;
+            }
+            total += n;
+        }
+        (before, total)
+    };
     if plan.walls.is_empty() {
         let mut why = format!("{} has no wall on its plan to draw", plan.level);
         for (path, because) in &plan.walls_left_off {
@@ -304,37 +370,21 @@ pub fn plan_set(job: &mut Job, level: &str, opts: &Options) -> Result<PlanSet, S
     let tol = crate::check::FIT_TOLERANCE_FT;
 
     // Which pages, and why not the others.
-    let any = |places: &[usize]| plan.walls.iter().any(|w| places.contains(&w.place)) || plan.openings.iter().any(|o| places.contains(&o.place));
-    let marked = any(&[1, 2]);
-    let mut shows: Vec<Show> = Vec::new();
-    let mut not_written: Vec<(Show, String)> = Vec::new();
-    if !marked {
-        shows.push(Show::Floor);
-    } else {
-        shows.push(Show::Existing);
-        if any(&[2]) {
-            shows.push(Show::Demolition);
-        } else {
-            not_written.push((Show::Demolition, "nothing is marked to demolish".to_string()));
-        }
-        if any(&[0, 1]) {
-            shows.push(Show::Proposed);
-        } else {
-            not_written.push((Show::Proposed, "nothing is left or new to show".to_string()));
-        }
-    }
+    let (shows, not_written) = shows_of(&plan);
 
     // What each page holds, as data.
     let mut pages: Vec<(PlanPage, Layer)> = Vec::new();
     for (i, show) in shows.iter().enumerate() {
-        pages.push(page_data(&plan, *show, tol, i + 1));
+        pages.push(page_data(&plan, *show, tol, before + i + 1));
     }
 
     // The scale and the paper: the plan with its dimensions and the notes fit the paper in
     // its margins.
-    let date = opts.date.clone().unwrap_or_else(|| crate::job::now()[..10].to_string());
-    let total = shows.len();
-    let try_fit = |scale: (u32, u32), paper: size::Paper| -> Option<Vec<Laid>> { layout(&plan, &pages, scale, paper, &date, total) };
+    let date = match &opts.date {
+        Some(d) => day(d)?,
+        None => crate::job::now()[..10].to_string(),
+    };
+    let try_fit = |scale: (u32, u32), paper: size::Paper| -> Option<Vec<Laid>> { layout(&plan, &pages, scale, paper, &date, before, total) };
     let (scale, paper_used, laid) = match (opts.scale, opts.paper) {
         (s, Some(paper)) => {
             let scale = s.unwrap_or((1, 4));
@@ -366,15 +416,71 @@ pub fn plan_set(job: &mut Job, level: &str, opts: &Options) -> Result<PlanSet, S
         }
     };
     let mut out = Vec::new();
-    for ((mut page, _), laid) in pages.into_iter().zip(laid) {
+    for (i, ((mut page, _), laid)) in pages.into_iter().zip(laid).enumerate() {
+        page.position = (before + i + 1, total);
         page.drawing = laid.drawing;
         page.notes = laid.notes;
         page.schedule = laid.schedule;
         page.frames = laid.frames;
         page.title_lines = laid.title_lines;
+        page.strings = laid.strings;
+        page.angles = laid.angles;
+        page.no_overall = laid.no_overall;
+        page.scale_bar = laid.scale_bar;
         out.push(page);
     }
     Ok(PlanSet { title: plan.title.clone(), level: plan.level.clone(), paper: paper_used, scale, date, pages: out, not_written })
+}
+
+/// Which pages a level gets, and why not the others (call 168): one FLOOR PLAN when nothing is
+/// marked; else the existing plan, and the demolition plan and the proposed plan when there is
+/// something to show on them.
+fn shows_of(plan: &LevelPlan) -> (Vec<Show>, Vec<(Show, String)>) {
+    let any = |places: &[usize]| plan.walls.iter().any(|w| places.contains(&w.place)) || plan.openings.iter().any(|o| places.contains(&o.place));
+    let mut shows: Vec<Show> = Vec::new();
+    let mut not_written: Vec<(Show, String)> = Vec::new();
+    if !any(&[1, 2]) {
+        shows.push(Show::Floor);
+    } else {
+        shows.push(Show::Existing);
+        if any(&[2]) {
+            shows.push(Show::Demolition);
+        } else {
+            not_written.push((Show::Demolition, "nothing is marked to demolish".to_string()));
+        }
+        if any(&[0, 1]) {
+            shows.push(Show::Proposed);
+        } else {
+            not_written.push((Show::Proposed, "nothing is left or new to show".to_string()));
+        }
+    }
+    (shows, not_written)
+}
+
+/// A date as it is lettered on the title box: a day of the calendar, as 2026-11-22 or as it is
+/// written in the States, 11/22/2026, or refused with why (call 182).
+pub fn day(text: &str) -> Result<String, String> {
+    let t = text.trim();
+    let parts: Vec<&str> = if t.contains('-') { t.split('-').collect() } else { t.split('/').collect() };
+    let nums: Vec<Option<u32>> = parts.iter().map(|p| if !p.is_empty() && p.len() <= 4 && p.bytes().all(|b| b.is_ascii_digit()) { p.parse().ok() } else { None }).collect();
+    let refuse = || Err(format!("--date is the day to letter on the title box, as 2026-11-22 or 11/22/2026: {t:?} is not a day of the calendar"));
+    let (y, m, d) = match (nums.as_slice(), t.contains('-')) {
+        ([Some(y), Some(m), Some(d)], true) if parts[0].len() == 4 => (*y, *m, *d),
+        ([Some(m), Some(d), Some(y)], false) if parts[2].len() == 4 => (*y, *m, *d),
+        _ => return refuse(),
+    };
+    let leap = (y % 4 == 0 && y % 100 != 0) || y % 400 == 0;
+    let longest = match m {
+        1 | 3 | 5 | 7 | 8 | 10 | 12 => 31,
+        4 | 6 | 9 | 11 => 30,
+        2 if leap => 29,
+        2 => 28,
+        _ => return refuse(),
+    };
+    if y < 1000 || d < 1 || d > longest {
+        return refuse();
+    }
+    Ok(t.to_string())
 }
 
 /// What a page draws, in feet: the rings of its walls (joined among the walls on the page),
@@ -383,13 +489,23 @@ struct Layer {
     /// For each wall on the page: its place in the level's list, its weight, its outline, and
     /// its centre line's two ends.
     walls: Vec<(usize, Weight, Vec<V>, PlanWall)>,
-    /// Openings: the wall (a place in `walls` above), its span, and its weight.
-    openings: Vec<(usize, [f64; 2], bool, Weight)>,
+    /// Openings: the wall (a place in `walls` above), its span, whether a door, its weight, and
+    /// whether its place is Known.
+    openings: Vec<(usize, [f64; 2], bool, Weight, bool)>,
     /// Which side of each wall is outward: a unit vector.
     outward: Vec<V>,
-    rooms: Vec<(String, [f64; 2], String)>,
-    /// Things set in place: the weight, the outline's corners, and whether it hangs above the cut.
-    things: Vec<(Weight, Vec<V>, bool, String)>,
+    /// Whether each wall is on the outside of the plan (one side of it indoors).
+    edge: Vec<bool>,
+    /// Each wall's length as the model has it, and how sure that is; and its path.
+    lengths: Vec<(Option<f64>, Status)>,
+    paths: Vec<String>,
+    /// A room: its name, its point, the area as lettered, and why there is none when there is none.
+    rooms: Vec<(String, [f64; 2], String, String)>,
+    /// Things set in place: the weight, the outline's corners, whether it hangs above the cut,
+    /// its name, and how sure its place is.
+    things: Vec<(Weight, Vec<V>, bool, String, Status)>,
+    /// The room lines drawn on the page, in feet.
+    room_lines: Vec<(V, V)>,
 }
 
 /// One page laid on the paper.
@@ -399,18 +515,26 @@ struct Laid {
     schedule: Vec<ScheduleRow>,
     frames: Vec<[f32; 4]>,
     title_lines: Vec<String>,
+    strings: Vec<DrawnString>,
+    angles: Vec<DrawnAngle>,
+    no_overall: Vec<(String, String)>,
+    scale_bar: String,
 }
 
 fn page_data(plan: &LevelPlan, show: Show, tol: f64, number: usize) -> (PlanPage, Layer) {
     let on: Vec<usize> = (0..plan.walls.len()).filter(|&i| show.weight(plan.walls[i].place).is_some()).collect();
     let page_walls: Vec<PlanWall> = on.iter().map(|&i| plan.walls[i].wall.clone()).collect();
     let mut drawn = Vec::new();
-    let mut layer = Layer { walls: Vec::new(), openings: Vec::new(), outward: Vec::new(), rooms: Vec::new(), things: Vec::new() };
+    let mut places_drawn: Vec<usize> = Vec::new();
+    let mut layer = Layer { walls: Vec::new(), openings: Vec::new(), outward: Vec::new(), edge: Vec::new(), lengths: Vec::new(), paths: Vec::new(), rooms: Vec::new(), things: Vec::new(), room_lines: Vec::new() };
     for (k, &i) in on.iter().enumerate() {
         let w = &plan.walls[i];
         let weight = show.weight(w.place).unwrap_or(Weight::Heavy);
         drawn.push(DrawnWall { path: w.path.clone(), name: w.name.clone(), weight, filled: weight == Weight::Heavy });
         layer.walls.push((i, weight, walls::outline(&page_walls, k, tol), w.wall.clone()));
+        places_drawn.push(w.place);
+        layer.lengths.push((w.length, w.length_status));
+        layer.paths.push(w.path.clone());
     }
     // Which way is out, wall by wall: the side the walls of the page do not close round.
     let lines: Vec<(V, V)> = (0..page_walls.len()).map(|k| walls::centre_line(&page_walls, k, tol)).map(|[a, b]| (a, b)).collect();
@@ -424,6 +548,8 @@ fn page_data(plan: &LevelPlan, show: Show, tol: f64, number: usize) -> (PlanPage
         let (l_in, r_in) = (indoors(mid + left * reach), indoors(mid - left * reach));
         // The wall's own exterior side is its left; that is kept where neither side or both are indoors.
         layer.outward.push(if r_in && !l_in { left } else if l_in && !r_in { left * -1.0 } else { left });
+        // A wall with a room on both sides is a partition; any other is on the outside of the plan.
+        layer.edge.push(!(l_in && r_in));
     }
     let mut openings = Vec::new();
     for o in &plan.openings {
@@ -438,14 +564,16 @@ fn page_data(plan: &LevelPlan, show: Show, tol: f64, number: usize) -> (PlanPage
         }
         // An opening is drawn in the weight its own mark gives it on this sheet.
         let weight = show.weight(o.place).unwrap_or(Weight::Heavy);
-        layer.openings.push((k, o.span, o.door, weight));
+        places_drawn.push(o.place);
+        layer.openings.push((k, o.span, o.door, weight, o.status == Status::Known));
         openings.push(DrawnOpening { path: o.path.clone(), door: o.door, wall: plan.walls[o.wall].path.clone(), gap: o.span[1] - o.span[0], weight });
     }
     // Things set in place, drawn on the proposed plan (and a level with no mark) as outlines.
     let mut things = Vec::new();
     for t in &plan.things {
         let Some(weight) = show.thing_weight(t.place) else { continue };
-        layer.things.push((weight, t.ring.to_vec(), t.above_cut, t.name.to_uppercase()));
+        places_drawn.push(t.place);
+        layer.things.push((weight, t.ring.to_vec(), t.above_cut, t.name.to_uppercase(), t.status));
         things.push(DrawnThing { path: t.path.clone(), name: t.name.clone(), weight, above_cut: t.above_cut });
     }
     // Dimensions: the model's own length for each wall.
@@ -466,10 +594,16 @@ fn page_data(plan: &LevelPlan, show: Show, tol: f64, number: usize) -> (PlanPage
         let area = match (r.area, r.status) {
             (Some(a), Status::Known) => format!("{} SF", a.round()),
             (Some(a), _) => format!("{} SF VIF", a.round()),
-            (None, _) => "? SF".to_string(),
+            (None, _) => "AREA NOT KNOWN".to_string(),
         };
-        layer.rooms.push((r.name.to_uppercase(), r.point, area.clone()));
-        labels.push(RoomLabel { name: r.name.clone(), text: format!("{} {area}", r.name.to_uppercase()) });
+        layer.rooms.push((r.name.to_uppercase(), r.point, area.clone(), r.why.clone()));
+        labels.push(RoomLabel { name: r.name.clone(), text: format!("{} {area}", r.name.to_uppercase()), why: r.why.clone() });
+    }
+    // The room lines: those that part the rooms this page letters.
+    for l in &plan.room_lines {
+        if !show.as_it_stands() || !l.stands_for_demolished {
+            layer.room_lines.push((l.a, l.b));
+        }
     }
     // What comes down.
     let under_title = (show == Show::Demolition).then(|| {
@@ -504,25 +638,50 @@ fn page_data(plan: &LevelPlan, show: Show, tol: f64, number: usize) -> (PlanPage
         if hi >= lo { hi - lo } else { 0.0 }
     };
     let overall = DrawnOverall { across: lf(span(|q| q.0)), up: lf(span(|q| q.1)), vif: dimensions.iter().any(|d| d.vif || d.unknown) };
-    // The key: each kind of line this page draws, as this page draws it.
-    let mut key = Vec::new();
+    // The key: each kind of line this page draws, as this page draws it, and nothing else.
+    let mut key: Vec<(String, Swatch)> = Vec::new();
     if show == Show::Floor {
-        key.push(("NEW (NO MARK)".to_string(), Weight::Heavy));
+        key.push(("NEW (NO MARK)".to_string(), Swatch::Line(Weight::Heavy)));
     } else {
+        let drawn_in = |place: usize| places_drawn.contains(&place);
         for (place, name) in [(1usize, "EXISTING"), (2, "TO DEMOLISH"), (0, "NEW")] {
             if let Some(w) = show.weight(place) {
-                key.push((name.to_string(), w));
+                if drawn_in(place) {
+                    key.push((name.to_string(), Swatch::Line(w)));
+                }
             }
         }
     }
-    let page = PlanPage { show, walls: drawn, openings, things, dimensions, overall, rooms: labels, schedule: Vec::new(), sheet: format!("A-1{number:02}"), key, frames: Vec::new(), title_lines: Vec::new(), under_title, notes: Vec::new(), drawing: Drawing::new(0.0, 0.0) };
+    if !layer.room_lines.is_empty() {
+        key.push(("ROOM LINE".to_string(), Swatch::RoomLine));
+    }
+    let room_lines = layer.room_lines.len();
+    let page = PlanPage { show, walls: drawn, openings, things, dimensions, overall, strings: Vec::new(), no_overall: Vec::new(), angles: Vec::new(), room_lines, scale_bar: String::new(), rooms: labels, schedule: Vec::new(), sheet: format!("A-1{number:02}"), position: (number, number), key, frames: Vec::new(), title_lines: Vec::new(), under_title, notes: Vec::new(), drawing: Drawing::new(0.0, 0.0) };
     (page, layer)
 }
 
 /// The notes of a page, in words, before they are wrapped.
-fn notes_of(plan: &LevelPlan, page: &PlanPage) -> Vec<String> {
-    let mut notes = vec!["PLAN NORTH IS UP THE PAGE; TRUE NORTH IS NOT SET.".to_string(), "DOOR SWINGS ARE NOT SET. OPENINGS ARE NOT DIMENSIONED.".to_string(), "DIMENSIONS ARE TO THE WALLS' LINES AS DRAWN.".to_string()];
+fn notes_of(plan: &LevelPlan, page: &PlanPage, art: &Art) -> Vec<String> {
+    let crowded = faults_in(&art.d, &[]).len();
+    let mut notes = vec!["PLAN NORTH IS UP THE PAGE; TRUE NORTH IS NOT SET.".to_string(), "DOOR SWINGS ARE NOT SET.".to_string(), "DIMENSIONS ARE TO THE WALLS' LINES AS DRAWN. OPENINGS ARE TO THEIR CENTERS.".to_string()];
+    if !art.no_overall.is_empty() {
+        let sides: Vec<String> = art.no_overall.iter().map(|(s, _)| s.to_uppercase()).collect();
+        let off_square = art.angles.iter().len() > 0 || art.strings.iter().any(|s| s.kind == "along its wall");
+        notes.push(format!("NO OVERALL ON THE {} SIDE{}: {} SO THE STRINGS DO NOT ADD TO IT.", sides.join(", "), if sides.len() == 1 { "" } else { "S" }, if off_square { "A WALL OFF SQUARE MAKES THE PLAN RUN PAST THE WALLS THERE," } else { "THE WALLS THERE DO NOT REACH ACROSS THE WHOLE PLAN," }));
+    }
+    if !art.angles.is_empty() || art.strings.iter().any(|s| s.kind == "along its wall") {
+        notes.push("A WALL OFF SQUARE IS DIMENSIONED ALONG ITSELF; THE ANGLE BETWEEN WALLS IS LETTERED AT THE CORNER.".to_string());
+    }
+    if art.run_strings {
+        notes.push("A STRING ALONG A WALL INSIDE THE PLAN GIVES, FROM THE WALL'S FIRST END, THE START OF A RUN OF CABINETS OR FIXTURES, ITS LENGTH, AND WHAT IS LEFT.".to_string());
+    }
+    if page.room_lines > 0 {
+        notes.push("A ROOM LINE (LONG DASHES) PARTS ROOMS WHERE NO WALL STANDS; IT IS NO WALL.".to_string());
+    }
     notes.push("THIS SHEET DOES NOT SHOW PIPES, DUCTS, WIRING OR THE FRAME.".to_string());
+    if crowded > 0 {
+        notes.push(format!("{} ON THIS SHEET RUN OVER EACH OTHER OR OVER A LINE AND CANNOT BE READ: THE WRITER OF THE SET HAS THEIR LIST.", count(crowded, "FIGURE OR NAME", "FIGURES OR NAMES")));
+    }
     // What is set in place: drawn as an outline here, or on another sheet, or not at all.
     let all = plan.things.len();
     if !page.things.is_empty() {
@@ -546,15 +705,37 @@ fn notes_of(plan: &LevelPlan, page: &PlanPage) -> Vec<String> {
         notes.push(format!("{} TO VERIFY IN FIELD (VIF).", count(vif, "LENGTH IS", "LENGTHS ARE")));
     }
     if unknown > 0 {
-        notes.push(format!("{} NOT KNOWN, LETTERED ?.", count(unknown, "LENGTH IS", "LENGTHS ARE")));
+        notes.push(format!("{} NO FIGURE IN THE JOB: THEIR STRINGS ARE FROM THE LINES AS DRAWN AND CARRY VIF.", count(unknown, "WALL HAS", "WALLS HAVE")));
     }
     let vif_areas = page.rooms.iter().filter(|r| r.text.ends_with(" VIF")).count();
     if vif_areas > 0 {
         notes.push(format!("{} TO VERIFY IN FIELD (VIF).", count(vif_areas, "AREA IS", "AREAS ARE")));
     }
     notes.push(format!("WALLS ARE CUT {} ABOVE THE FLOOR. {}", lf(plan.cut), if page.show.as_it_stands() { "ROOMS ARE AS THEY STAND TODAY." } else { "ROOMS ARE AS THE WORK LEAVES THEM." }));
-    if page.show.as_it_stands() && !plan.rooms_stand_missing.is_empty() {
-        notes.push(format!("NOT LETTERED, NOTHING THAT STANDS CLOSES ROUND THEIR POINTS: {}.", plan.rooms_stand_missing.join(", ")));
+    if page.show.as_it_stands() {
+        let open: Vec<String> = plan.rooms_stand_missing.iter().filter(|(_, why)| why.is_empty()).map(|(n, _)| n.to_uppercase()).collect();
+        if !open.is_empty() {
+            notes.push(format!("NOT LETTERED, NOTHING THAT STANDS CLOSES ROUND THEIR POINTS: {}.", open.join(", ")));
+        }
+        for (_, why) in plan.rooms_stand_missing.iter().filter(|(_, why)| !why.is_empty()) {
+            notes.push(format!("NOT LETTERED: {}.", why.to_uppercase().trim_end_matches('.')));
+        }
+    }
+    // A room with no area says why, in the model's own words.
+    // (A reason that does not name the room is said once for the rooms it is the reason of.)
+    let mut shared: Vec<(String, Vec<String>)> = Vec::new();
+    for r in page.rooms.iter().filter(|r| !r.why.is_empty()) {
+        if r.why.to_lowercase().contains(&r.name.to_lowercase()) {
+            notes.push(r.why.to_uppercase());
+        } else {
+            match shared.iter_mut().find(|(w, _)| *w == r.why) {
+                Some(g) => g.1.push(r.name.to_uppercase()),
+                None => shared.push((r.why.clone(), vec![r.name.to_uppercase()])),
+            }
+        }
+    }
+    for (why, names) in shared {
+        notes.push(format!("{} HAVE NO AREA: {}.", names.join(", "), why.to_uppercase().trim_end_matches('.')));
     }
     if !plan.walls_left_off.is_empty() {
         notes.push(format!("{} NOT DRAWN: {}.", count(plan.walls_left_off.len(), "WALL IS", "WALLS ARE"), plan.walls_left_off.iter().map(|(p, why)| format!("{p}, {why}")).collect::<Vec<_>>().join("; ")));
@@ -567,7 +748,7 @@ fn notes_of(plan: &LevelPlan, page: &PlanPage) -> Vec<String> {
 
 /// Each page drawn at `scale` on `paper`, with its notes wrapped, or none if what is drawn
 /// does not fit inside the margins.
-fn layout(plan: &LevelPlan, pages: &[(PlanPage, Layer)], scale: (u32, u32), paper: size::Paper, date: &str, total: usize) -> Option<Vec<Laid>> {
+fn layout(plan: &LevelPlan, pages: &[(PlanPage, Layer)], scale: (u32, u32), paper: size::Paper, date: &str, before: usize, total: usize) -> Option<Vec<Laid>> {
     let (w, h) = paper.points();
     let (w, h) = (w as f32, h as f32);
     let k = 72.0 * size::inches_to_the_foot(scale);
@@ -585,19 +766,26 @@ fn layout(plan: &LevelPlan, pages: &[(PlanPage, Layer)], scale: (u32, u32), pape
     // page has one); the strip along the bottom.
     let mut all_notes: Vec<Vec<String>> = Vec::new();
     let mut strip = BOX_H;
+    let mut pitch = NOTE_PITCH;
     for ((page, _), art) in pages.iter().zip(&arts) {
         let beside = if art.schedule.is_empty() { 0.0 } else { SCHEDULE_W + 10.0 };
         let notes_w = w - 2.0 * MARGIN - BOX_W - 14.0 - beside;
-        let mut notes = notes_of(plan, page);
+        let mut notes = notes_of(plan, page, art);
         if art.unnamed > 0 {
             notes.push(format!("{} DRAWN WITH NO NAME IN IT: TOO SMALL, OR HUNG OVER THE FLOOR.", count(art.unnamed, "THING IS", "THINGS ARE")));
         }
         let lines: Vec<String> = notes.iter().flat_map(|n| wrap(n, notes_w)).collect();
-        strip = strip.max(lines.len() as f32 * NOTE_PITCH + 6.0);
-        if !art.schedule.is_empty() {
-            strip = strip.max((art.schedule.iter().map(|r| schedule_name_lines(r).len()).sum::<usize>() as f32 + 1.0) * NOTE_PITCH + 12.0);
+        // A mark over a capital (an accented letter) needs more room between lines.
+        if lines.iter().any(|l| font::reach(l).0 > 0.0) || art.schedule.iter().any(|r| font::reach(&r.name).0 > 0.0) {
+            pitch = pitch.max(ACCENT_PITCH);
         }
         all_notes.push(lines);
+    }
+    for ((_, _), (art, lines)) in pages.iter().zip(arts.iter().zip(&all_notes)) {
+        strip = strip.max(lines.len() as f32 * pitch + 6.0);
+        if !art.schedule.is_empty() {
+            strip = strip.max((art.schedule.iter().map(|r| schedule_name_lines(r).len()).sum::<usize>() as f32 + 1.0) * pitch + 12.0);
+        }
     }
     let (x0, y0) = (MARGIN, MARGIN + strip + 12.0);
     let (x1, y1) = (w - MARGIN, h - MARGIN - TOP_BAND);
@@ -607,7 +795,7 @@ fn layout(plan: &LevelPlan, pages: &[(PlanPage, Layer)], scale: (u32, u32), pape
     if bounds.2 - bounds.0 > x1 - x0 || bounds.3 - bounds.1 > y1 - y0 {
         return None;
     }
-    // Centred in what is left.
+    // Centred in what is left, with room under it for its graphic scale.
     let (dx, dy) = ((x0 + x1) / 2.0 - (bounds.0 + bounds.2) / 2.0, (y0 + y1) / 2.0 - (bounds.1 + bounds.3) / 2.0);
     let mut out = Vec::new();
     for (i, ((page, _), art)) in pages.iter().zip(arts).enumerate() {
@@ -621,10 +809,14 @@ fn layout(plan: &LevelPlan, pages: &[(PlanPage, Layer)], scale: (u32, u32), pape
         for l in art.d.letters {
             d.letters.push(Letter { centre: (l.centre.0 + dx, l.centre.1 + dy), ..l });
         }
+        d.unlettered.extend(art.d.unlettered.iter().copied());
+        // The graphic scale in the band along the top, beside the page's name.
+        let scale_bar = graphic_scale(&mut d, scale, k as f32, (w - MARGIN - ARROW_W - 8.0 - KEY_W - 8.0 - SCALE_W, h - MARGIN - 6.0), SCALE_W);
         // The top band: the name and what comes down at the left, the key and the arrow at the right.
         let arrow_x = w - MARGIN - ARROW_W;
         let key_x = arrow_x - 8.0 - KEY_W;
-        let left_w = key_x - MARGIN - 10.0;
+        // The graphic scale takes the right of the band's left part; the name and what comes down keep to the rest.
+        let left_w = key_x - MARGIN - 10.0 - SCALE_W - 10.0;
         let name = letters::cut_to(page.show.name(), TITLE_TEXT, left_w);
         d.text_left(&name, (MARGIN, h - MARGIN - TITLE_TEXT), TITLE_TEXT, INK);
         if let Some(under) = &page.under_title {
@@ -635,14 +827,14 @@ fn layout(plan: &LevelPlan, pages: &[(PlanPage, Layer)], scale: (u32, u32), pape
         let key_h = 6.0 + 12.0 * page.key.len() as f32;
         key_box(&mut d, &mut frames, page, n, (key_x, h - MARGIN - 4.0 - key_h), (KEY_W, key_h));
         north_arrow(&mut d, (arrow_x, h - MARGIN - TOP_BAND + 4.0), TOP_BAND - 4.0);
-        let title_lines = title_box(&mut d, &mut frames, plan, page, scale, date, i + 1, total, (w - MARGIN - BOX_W, MARGIN));
+        let title_lines = title_box(&mut d, &mut frames, plan, page, scale, date, before + i + 1, total, (w - MARGIN - BOX_W, MARGIN));
         for (j, line) in all_notes[i].iter().enumerate() {
-            d.text_left(line, (MARGIN, MARGIN + strip - 8.0 - j as f32 * NOTE_PITCH), NOTE_TEXT, INK);
+            d.text_left(line, (MARGIN, MARGIN + strip - 8.0 - j as f32 * pitch), NOTE_TEXT, INK);
         }
         if !art.schedule.is_empty() {
-            schedule_box(&mut d, &mut frames, &art.schedule, (w - MARGIN - BOX_W - 10.0 - SCHEDULE_W, MARGIN), (SCHEDULE_W, strip));
+            schedule_box(&mut d, &mut frames, &art.schedule, (w - MARGIN - BOX_W - 10.0 - SCHEDULE_W, MARGIN), (SCHEDULE_W, strip), pitch);
         }
-        out.push(Laid { notes: all_notes[i].clone(), drawing: d, schedule: art.schedule, frames, title_lines });
+        out.push(Laid { notes: all_notes[i].clone(), drawing: d, schedule: art.schedule, frames, title_lines, strings: art.strings, angles: art.angles, no_overall: art.no_overall, scale_bar });
     }
     Some(out)
 }
@@ -654,7 +846,7 @@ fn schedule_name_lines(row: &ScheduleRow) -> Vec<String> {
 
 /// The room schedule: the rooms too small to letter on the plan, a row each (mark, name on one
 /// line or two, area), under the heading.
-fn schedule_box(d: &mut Drawing, frames: &mut Vec<[f32; 4]>, rows: &[ScheduleRow], (x0, y0): (f32, f32), (bw, bh): (f32, f32)) {
+fn schedule_box(d: &mut Drawing, frames: &mut Vec<[f32; 4]>, rows: &[ScheduleRow], (x0, y0): (f32, f32), (bw, bh): (f32, f32), pitch: f32) {
     let wide = pen::points(pen::annotation_mm(pen::BORDER));
     let thin = pen::points(pen::annotation_mm(pen::PROJECTION));
     d.line(vec![(x0, y0), (x0 + bw, y0), (x0 + bw, y0 + bh), (x0, y0 + bh)], wide, INK, None, true);
@@ -667,7 +859,7 @@ fn schedule_box(d: &mut Drawing, frames: &mut Vec<[f32; 4]>, rows: &[ScheduleRow
         d.text_left(&letters::cut_to(&row.area, NOTE_TEXT, SCHEDULE_AREA_W - 4.0), (x0 + bw - SCHEDULE_AREA_W, y), NOTE_TEXT, INK);
         for line in schedule_name_lines(row) {
             d.text_left(&line, (x0 + 5.0 + 22.0, y), NOTE_TEXT, INK);
-            y -= NOTE_PITCH;
+            y -= pitch;
         }
     }
 }
@@ -677,8 +869,16 @@ fn key_box(d: &mut Drawing, frames: &mut Vec<[f32; 4]>, page: &PlanPage, n: f64,
     let wide = pen::points(pen::annotation_mm(pen::BORDER));
     d.line(vec![(x0, y0), (x0 + bw, y0), (x0 + bw, y0 + bh), (x0, y0 + bh)], wide, INK, None, true);
     frames.push([x0, y0, x0 + bw, y0 + bh]);
-    for (j, (label, weight)) in page.key.iter().enumerate() {
+    for (j, (label, swatch)) in page.key.iter().enumerate() {
         let y = y0 + bh - 9.0 - j as f32 * 12.0;
+        if *swatch == Swatch::RoomLine {
+            // A bit of room line: thin, in long dashes.
+            let thin = pen::points(pen::annotation_mm(pen::PROJECTION));
+            d.prims.push(Prim::Line { pts: vec![(x0 + 6.0, y + 0.5), (x0 + 34.0, y + 0.5)], width: thin, color: INK, dash: Some(vec![ROOM_LINE_DASH, ROOM_LINE_GAP]), closed: false, round: false });
+            d.text_left(&letters::cut_to(label, NOTE_TEXT, bw - 44.0), (x0 + 40.0, y - 3.0), NOTE_TEXT, INK);
+            continue;
+        }
+        let Swatch::Line(weight) = swatch else { continue };
         let (width, color, dashed) = ink_of(*weight, n);
         // A bit of wall in section: the outline in its pen, filled when the page fills it.
         let ring = vec![(x0 + 6.0, y - 2.0), (x0 + 34.0, y - 2.0), (x0 + 34.0, y + 3.0), (x0 + 6.0, y + 3.0)];
@@ -702,6 +902,33 @@ fn north_arrow(d: &mut Drawing, (x0, y0): (f32, f32), bh: f32) {
     d.text("N", (cx, top + 5.0), NOTE_TEXT + 1.0, 0.0, INK);
     d.text_left("PLAN", (x0, y0 + bh / 2.0 + 1.0), NOTE_TEXT, INK);
     d.text_left("NORTH", (x0, y0 + bh / 2.0 - 9.0), NOTE_TEXT, INK);
+}
+
+/// A graphic scale: a bar of four blocks, a whole number of feet long, with its feet lettered
+/// under it and the scale said under that; it is true only on a sheet printed at full size, and
+/// says so. `(x0, ytop)` is the bar's left end and top; `room` the width it may take. Returns the
+/// length of its bar as written ("16'-0\"").
+fn graphic_scale(d: &mut Drawing, scale: (u32, u32), k: f32, (x0, ytop): (f32, f32), room: f32) -> String {
+    let want = room.min(216.0);
+    let feet = [100.0f32, 80.0, 40.0, 20.0, 16.0, 8.0, 4.0].into_iter().find(|f| f * k <= want - 20.0).unwrap_or(4.0);
+    let block = feet / 4.0 * k;
+    let h = 4.0;
+    let y = ytop - h;
+    let thin = pen::points(pen::annotation_mm(pen::PROJECTION));
+    for i in 0..4 {
+        let ring = vec![(x0 + block * i as f32, y), (x0 + block * (i + 1) as f32, y), (x0 + block * (i + 1) as f32, y + h), (x0 + block * i as f32, y + h)];
+        if i % 2 == 0 {
+            d.fill(vec![ring.clone()], INK);
+        }
+        d.line(ring, thin, INK, None, true);
+    }
+    for (i, label) in [(0.0f32, "0".to_string()), (2.0, format!("{}", (feet / 2.0) as i64)), (4.0, format!("{} FT", feet as i64))] {
+        let x = x0 + block * i;
+        d.line(vec![(x, y - 1.0), (x, y + h + 1.0)], thin, INK, None, false);
+        d.text(&label, (x, y - 7.0), NOTE_TEXT, 0.0, INK);
+    }
+    d.text_left(&format!("{}, PRINTED FULL SIZE", size::scale_said(scale)), (x0, y - 21.0), NOTE_TEXT, INK);
+    strings::written(strings::sixteenths(f64::from(feet)))
 }
 
 fn shifted(pr: Prim, dx: f32, dy: f32) -> Prim {
@@ -753,7 +980,7 @@ fn title_box(d: &mut Drawing, frames: &mut Vec<[f32; 4]>, plan: &LevelPlan, page
     } else {
         let lines = letters::lines_of(&title, 8.0, BOX_W - 10.0, 2);
         for (j, line) in lines.iter().enumerate() {
-            d.text_left(line, (x0 + 5.0, y1 - 13.0 - j as f32 * 11.0), 8.0, INK);
+            d.text_left(line, (x0 + 5.0, y1 - 12.5 - j as f32 * 12.5), 8.0, INK);
         }
         lines
     };
@@ -786,6 +1013,241 @@ struct Art {
     schedule: Vec<ScheduleRow>,
     /// Things set in place drawn as an outline with no name in it.
     unnamed: usize,
+    strings: Vec<DrawnString>,
+    angles: Vec<DrawnAngle>,
+    /// Sides where no overall is drawn, each with why.
+    no_overall: Vec<(String, String)>,
+    /// Whether a string was drawn along a wall inside the plan for a run of things set in place.
+    run_strings: bool,
+}
+
+type Pt = (f32, f32);
+
+/// Everything drawn so far that lettering must keep clear of: the lines (as segments), the cut
+/// walls' fills, and the lettering already laid (and the circles round marks).
+#[derive(Default)]
+struct Ctx {
+    segs: Vec<(Pt, Pt)>,
+    fills: Vec<Vec<Pt>>,
+    placed: Vec<Letter>,
+    blocks: Vec<Letter>,
+    unlettered: Vec<(char, Option<char>)>,
+}
+
+/// Whether `q` is inside the shape the rings make (an even number of edges to its right is out).
+fn inside_rings(rings: &[Vec<Pt>], q: Pt) -> bool {
+    let mut crossings = 0;
+    for ring in rings {
+        for i in 0..ring.len() {
+            let (a, b) = (ring[i], ring[(i + 1) % ring.len()]);
+            if (a.1 > q.1) != (b.1 > q.1) && q.0 < a.0 + (q.1 - a.1) / (b.1 - a.1) * (b.0 - a.0) {
+                crossings += 1;
+            }
+        }
+    }
+    crossings % 2 == 1
+}
+
+impl Ctx {
+    fn line(&mut self, pts: &[Pt], closed: bool) {
+        for w in pts.windows(2) {
+            self.segs.push((w[0], w[1]));
+        }
+        if closed && pts.len() > 2 {
+            self.segs.push((pts[pts.len() - 1], pts[0]));
+        }
+    }
+    /// A piece of lettering is clear when it is over no other, no drawn line runs through it, and it is not on a cut wall.
+    fn clear(&self, l: &Letter) -> bool {
+        !self.placed.iter().chain(&self.blocks).any(|o| l.crosses(o)) && !self.segs.iter().any(|&(a, b)| l.touches_segment(a, b)) && !inside_rings(&self.fills, l.centre)
+    }
+    /// A line is clear when it runs through no lettering laid.
+    fn line_clear(&self, a: Pt, b: Pt) -> bool {
+        !self.placed.iter().chain(&self.blocks).any(|o| o.touches_segment(a, b))
+    }
+}
+
+/// `text` lettered, centred at `c`, into the drawing and the lettering laid.
+fn lettered(out: &mut Vec<Prim>, ctx: &mut Ctx, text: &str, c: Pt, h: f32, angle: f32) {
+    let mut d = Drawing::new(0.0, 0.0);
+    d.text(text, c, h, angle, INK);
+    ctx.placed.extend(d.letters);
+    ctx.unlettered.extend(d.unlettered);
+    out.extend(d.prims);
+}
+
+/// A dimension string on the page: its stations on the line, the extension lines, which way
+/// out of the house is, and each part's figure.
+struct Dim {
+    pts: Vec<Pt>,
+    ext: Vec<(Pt, Pt)>,
+    out: Pt,
+    texts: Vec<(String, f32)>,
+    /// A first or last figure may stand beyond the end of its string; a figure may be turned square to the string.
+    ends_ok: bool,
+    turned_ok: bool,
+}
+
+fn tick_of(s: Pt, t: Pt) -> (Pt, Pt) {
+    let slash = (t.0 * 0.7071 - t.1 * 0.7071, t.1 * 0.7071 + t.0 * 0.7071);
+    ((s.0 - slash.0 * 3.5, s.1 - slash.1 * 3.5), (s.0 + slash.0 * 3.5, s.1 + slash.1 * 3.5))
+}
+
+fn unit_of(a: Pt, b: Pt) -> Pt {
+    let l = (b.0 - a.0).hypot(b.1 - a.1);
+    if l < 1e-6 { (1.0, 0.0) } else { ((b.0 - a.0) / l, (b.1 - a.1) / l) }
+}
+
+/// The lines of a dimension string: the string, its extension lines and a tick at each station.
+fn dim_lines(d: &Dim) -> (Vec<Prim>, Vec<(Pt, Pt)>) {
+    let thin = pen::points(pen::annotation_mm(pen::PROJECTION));
+    let heavy = pen::points(pen::annotation_mm(pen::HEAVY));
+    let line = |pts: Vec<Pt>, width: f32| Prim::Line { pts, width, color: INK, dash: None, closed: false, round: false };
+    let mut prims = Vec::new();
+    let mut segs = Vec::new();
+    let (a, b) = (d.pts[0], d.pts[d.pts.len() - 1]);
+    prims.push(line(vec![a, b], thin));
+    segs.push((a, b));
+    for &(s, e) in &d.ext {
+        prims.push(line(vec![s, e], thin));
+        segs.push((s, e));
+    }
+    let t = unit_of(a, b);
+    for &q in &d.pts {
+        let (s, e) = tick_of(q, t);
+        prims.push(line(vec![s, e], heavy));
+        segs.push((s, e));
+    }
+    (prims, segs)
+}
+
+/// A figure read from below or from the right: the angle of a direction, turned so it is never upside down.
+fn reading_angle(t: Pt) -> f32 {
+    let mut angle = t.1.atan2(t.0);
+    if angle > std::f32::consts::FRAC_PI_2 + 1e-4 {
+        angle -= std::f32::consts::PI;
+    } else if angle <= -std::f32::consts::FRAC_PI_2 + 1e-4 {
+        angle += std::f32::consts::PI;
+    }
+    angle
+}
+
+/// Where each part's figure goes: over the middle of its part of the string on the side away
+/// from the house, or on the other side, at the height asked or at 3/32 in; clear of what is drawn
+/// and of the lines of the string itself. The bool is false when some figure has no clear place
+/// (it is then put where it first would go, and the page's check says so).
+fn dim_texts(d: &Dim, ctx: &Ctx, own: &[(Pt, Pt)]) -> (Vec<(String, Pt, f32, f32)>, bool) {
+    let t = unit_of(d.pts[0], d.pts[d.pts.len() - 1]);
+    let angle = reading_angle(t);
+    let mut chosen: Vec<Letter> = Vec::new();
+    let mut put: Vec<(String, Pt, f32, f32)> = Vec::new();
+    let mut ok = true;
+    for (i, (text, want)) in d.texts.iter().enumerate() {
+        let (a, b) = (d.pts[i], d.pts[i + 1]);
+        let mid = ((a.0 + b.0) / 2.0, (a.1 + b.1) / 2.0);
+        let mut first: Option<(Pt, f32, f32)> = None;
+        let mut found: Option<(Pt, f32, f32)> = None;
+        let turned = reading_angle((-t.1, t.0));
+        'search: for h in [*want, MIN_CAP] {
+            let off = 3.0 + h / 2.0 + 1.0;
+            let tw = font::width(text, h);
+            let reach = tw / 2.0 + 7.0;
+            // Over its part on either side of the string; the first or the last part, too short
+            // for its figure, beyond the end of the string on its own line; or turned square to
+            // the string, standing out from it.
+            let mut spots: Vec<(Pt, f32)> = Vec::new();
+            // Over the middle of its part, then slid along it a step at a time where the part is longer than the figure.
+            let slack = ((b.0 - a.0).hypot(b.1 - a.1) - tw) / 2.0 - 3.0;
+            let mut shifts = vec![0.0f32];
+            let mut sh = 8.0f32;
+            while sh <= slack {
+                shifts.push(sh);
+                shifts.push(-sh);
+                sh += 8.0;
+            }
+            for shift in shifts {
+                let m = (mid.0 + t.0 * shift, mid.1 + t.1 * shift);
+                spots.push(((m.0 + d.out.0 * off, m.1 + d.out.1 * off), angle));
+                spots.push(((m.0 - d.out.0 * off, m.1 - d.out.1 * off), angle));
+            }
+            if d.ends_ok {
+                for extra in [0.0f32, 14.0, 28.0, 42.0] {
+                    if i == 0 {
+                        spots.push(((a.0 - t.0 * (reach + extra), a.1 - t.1 * (reach + extra)), angle));
+                    }
+                    if i + 1 == d.texts.len() {
+                        spots.push(((b.0 + t.0 * (reach + extra), b.1 + t.1 * (reach + extra)), angle));
+                    }
+                }
+            }
+            if d.turned_ok {
+                let o2 = 3.0 + tw / 2.0 + 1.0;
+                spots.push(((mid.0 + d.out.0 * o2, mid.1 + d.out.1 * o2), turned));
+                spots.push(((mid.0 - d.out.0 * o2, mid.1 - d.out.1 * o2), turned));
+            }
+            for (c, ang) in spots {
+                let cand = Letter::centred(text, c, h, ang);
+                first.get_or_insert((c, h, ang));
+                if ctx.clear(&cand) && !chosen.iter().any(|o| cand.crosses(o)) && !own.iter().any(|&(p, q)| cand.touches_segment(p, q)) {
+                    found = Some((c, h, ang));
+                    break 'search;
+                }
+            }
+        }
+        let (c, h, angle) = match found {
+            Some(f) => f,
+            None => {
+                ok = false;
+                first.unwrap_or((mid, *want, angle))
+            }
+        };
+        chosen.push(Letter::centred(text, c, h, angle));
+        put.push((text.clone(), c, h, angle));
+    }
+    (put, ok)
+}
+
+/// Lay a dimension string on the page (its lines, then its figures), whether or not its figures
+/// found a clear place.
+fn commit_dim(out: &mut Vec<Prim>, ctx: &mut Ctx, d: &Dim, texts: Vec<(String, Pt, f32, f32)>, prims: Vec<Prim>, segs: Vec<(Pt, Pt)>) {
+    out.extend(prims);
+    ctx.segs.extend(segs);
+    for (text, c, h, angle) in texts {
+        lettered(out, ctx, &text, c, h, angle);
+    }
+    let _ = d;
+}
+
+/// The first of `cands` whose lines run through no lettering and whose figures all find a clear
+/// place is laid; when none is, the first is laid all the same (and the page's check says what
+/// is wrong). Returns which was laid and whether it was clear.
+fn lay_inside(out: &mut Vec<Prim>, ctx: &mut Ctx, cands: &[Dim]) -> Option<(usize, bool)> {
+    for (i, d) in cands.iter().enumerate() {
+        let (prims, segs) = dim_lines(d);
+        if segs.iter().any(|&(a, b)| !ctx.line_clear(a, b)) {
+            continue;
+        }
+        let (texts, ok) = dim_texts(d, ctx, &segs);
+        if ok {
+            commit_dim(out, ctx, d, texts, prims, segs);
+            return Some((i, true));
+        }
+    }
+    let d = cands.first()?;
+    let (prims, segs) = dim_lines(d);
+    let (texts, _) = dim_texts(d, ctx, &segs);
+    commit_dim(out, ctx, d, texts, prims, segs);
+    Some((0, false))
+}
+
+fn with_vif(text: String, vif: bool) -> String {
+    if vif { format!("{text} VIF") } else { text }
+}
+
+fn seg_cross(p: Pt, q: Pt, a: Pt, b: Pt) -> bool {
+    let d = |u: Pt, v: Pt, w: Pt| (v.0 - u.0) * (w.1 - u.1) - (v.1 - u.1) * (w.0 - u.0);
+    let (d1, d2, d3, d4) = (d(a, b, p), d(a, b, q), d(p, q, a), d(p, q, b));
+    ((d1 > 0.0) != (d2 > 0.0)) && ((d3 > 0.0) != (d4 > 0.0))
 }
 
 /// How far, feet, from `q` along the unit direction `dir` to the nearest edge of any ring.
@@ -819,16 +1281,36 @@ fn room_fit(rings: &[Vec<V>], point: V, k: f64, name: &str, area: &str) -> Optio
     [(ROOM_NAME, DIM_TEXT), (DIM_TEXT, MIN_CAP), (MIN_CAP, MIN_CAP)].into_iter().find(|&(hn, ha)| font::width(name, hn).max(font::width(area, ha)) / 2.0 + 1.0 <= half_w && hn.max(ha) + 5.0 <= half_h)
 }
 
+/// The places a label may be tried at, nearest its point first: the point, then rings of eight
+/// round it every 5 points out to `far`.
+fn nearby(c: Pt, far: f32) -> Vec<Pt> {
+    let mut v = vec![c];
+    let mut r = 5.0;
+    while r <= far {
+        let steps = 8 + (r / 10.0) as usize * 2;
+        for i in 0..steps {
+            let a = i as f32 * std::f32::consts::TAU / steps as f32;
+            v.push((c.0 + r * a.cos(), c.1 + r * a.sin()));
+        }
+        r += 5.0;
+    }
+    v
+}
+
 /// A page's plan in points from the level's origin: its walls (filled and inked), its
-/// openings, what is set in place, its rooms and its dimensions; and the lettering of each,
-/// none over another.
-fn plan_prims(page: &PlanPage, layer: &Layer, k: f64, n: f64) -> Art {
+/// openings, what is set in place, its rooms, its room lines and its dimensions; and the
+/// lettering of each, over no other lettering and over no line.
+fn plan_prims(_page: &PlanPage, layer: &Layer, k: f64, n: f64) -> Art {
+    let tol = crate::check::FIT_TOLERANCE_FT;
     let mut out: Vec<Prim> = Vec::new();
+    let mut ctx = Ctx::default();
     let fine = |mm: f64| pen::points(mm);
     let ink_of = |weight: Weight| ink_of(weight, n);
+    let thin = pen::points(pen::annotation_mm(pen::PROJECTION));
     let heavy_rings: Vec<Vec<V>> = layer.walls.iter().filter(|w| w.1 == Weight::Heavy).map(|w| w.2.clone()).filter(|r| r.len() >= 3).collect();
     // The cut walls filled, as one shape.
     let fills: Vec<Vec<(f32, f32)>> = cut::union(&heavy_rings).iter().map(|r| r.iter().map(|q| p(*q, k)).collect()).collect();
+    ctx.fills.extend(fills.iter().cloned());
     out.push(Prim::Fill { rings: fills, color: POCHE });
     out.retain(|pr| !matches!(pr, Prim::Fill { rings, .. } if rings.is_empty()));
     // Ink: each weight's walls joined among themselves, light first, heavy last.
@@ -843,13 +1325,14 @@ fn plan_prims(page: &PlanPage, layer: &Layer, k: f64, n: f64) -> Art {
             for run in runs {
                 let (pts, closed) = cut::ink_cut(&run);
                 let pts: Vec<(f32, f32)> = pts.iter().map(|q| p(*q, k)).collect();
+                ctx.line(&pts, closed);
                 let dash = if dashed { dash_for(run_len(&pts, closed), closed) } else { None };
                 out.push(Prim::Line { pts, width, color, dash, closed, round: false });
             }
         }
     }
     // Doors and windows: the gap cleared to the paper, jambs, and the leaf or the glass.
-    for (wi, [s0, s1], door, weight) in &layer.openings {
+    for (wi, [s0, s1], door, weight, _) in &layer.openings {
         let w = &layer.walls[*wi].3;
         let t = (w.end - w.start).unit();
         let at = |s: f64, off: f64| w.start + t * s + t.perp() * off;
@@ -860,251 +1343,431 @@ fn plan_prims(page: &PlanPage, layer: &Layer, k: f64, n: f64) -> Art {
         let (jamb, leaf, glass) = if *weight == Weight::Heavy { (pen::HEAVY, pen::MEDIUM, pen::PROJECTION) } else { (pen::PROJECTION, pen::PROJECTION, pen::PROJECTION) };
         let jamb_w = fine(pen::model_mm(jamb, n));
         for s in [*s0, *s1] {
-            out.push(Prim::Line { pts: vec![p(at(s, w.int), k), p(at(s, w.ext), k)], width: jamb_w, color, dash: None, closed: false, round: false });
+            let pts = vec![p(at(s, w.int), k), p(at(s, w.ext), k)];
+            ctx.line(&pts, false);
+            out.push(Prim::Line { pts, width: jamb_w, color, dash: None, closed: false, round: false });
         }
         let mid = (w.ext + w.int) / 2.0;
         let lines: Vec<f64> = if *door { vec![mid] } else { vec![w.int, mid, w.ext] };
         for off in lines {
             let pts = vec![p(at(*s0, off), k), p(at(*s1, off), k)];
+            ctx.line(&pts, false);
             let dash = if dashed { dash_for(run_len(&pts, false), false) } else { None };
             out.push(Prim::Line { pts, width: fine(pen::model_mm(if *door { leaf } else { glass }, n)), color, dash, closed: false, round: false });
         }
     }
+    // Room lines: where no wall stands and a room ends, a thin line of long dashes.
+    for (a, b) in &layer.room_lines {
+        let pts = vec![p(*a, k), p(*b, k)];
+        ctx.line(&pts, false);
+        out.push(Prim::Line { pts, width: thin, color: INK, dash: Some(vec![ROOM_LINE_DASH, ROOM_LINE_GAP]), closed: false, round: false });
+    }
     // What is set in place: the outline of each footprint, in the pen of a door's leaf; dashed
     // where it hangs above the cut. Its name is lettered inside it where it fits there and no
-    // line of another thing's outline runs through it; what stands on the floor is named, on a patch of paper where the dashed outline of
-    // what hangs over it runs under the name; what hangs over the floor is not named (it
-    // stands over what is), and the notes say how many things have no name.
-    let mut lettering = Drawing::new(0.0, 0.0);
-    let mut edges: Vec<((f32, f32), (f32, f32), bool)> = Vec::new();
+    // line runs through it; what hangs over the floor stands over what is named below it and
+    // is not named, and the notes say how many things have no name.
     let mut rings_pts: Vec<Vec<(f32, f32)>> = Vec::new();
-    for (weight, ring, above, _) in &layer.things {
+    for (weight, ring, above, ..) in &layer.things {
         let pts: Vec<(f32, f32)> = ring.iter().map(|q| p(*q, k)).collect();
         let color = if *weight == Weight::Light { FAINT } else { INK };
         let dash = if *above { dash_for(run_len(&pts, true), true) } else { None };
+        ctx.line(&pts, true);
         out.push(Prim::Line { pts: pts.clone(), width: fine(pen::model_mm(pen::MEDIUM, n)), color, dash, closed: true, round: false });
-        edges.extend((0..pts.len()).map(|i| (pts[i], pts[(i + 1) % pts.len()], *above)));
         rings_pts.push(pts);
     }
     let mut unnamed = 0usize;
-    let mut by_height: Vec<usize> = (0..layer.things.len()).collect();
-    by_height.sort_by_key(|&i| layer.things[i].2);
-    for i in by_height {
-        let (_, _, _, name) = &layer.things[i];
+    for (i, (_, _, above, name, _)) in layer.things.iter().enumerate() {
         let pts = &rings_pts[i];
-        // Along its first side, level when that side is near level, else turned to read from below.
         let side = |a: (f32, f32), b: (f32, f32)| ((b.0 - a.0).hypot(b.1 - a.1), (b.1 - a.1).atan2(b.0 - a.0));
         let ((len, mut angle), (wid, _)) = (side(pts[0], pts[1]), side(pts[1], pts[2]));
+        let e1 = unit_of(pts[0], pts[1]);
+        let e2 = unit_of(pts[0], pts[3]);
         if angle > std::f32::consts::FRAC_PI_2 + 1e-4 {
             angle -= std::f32::consts::PI;
         } else if angle <= -std::f32::consts::FRAC_PI_2 + 1e-4 {
             angle += std::f32::consts::PI;
         }
         let c = ((pts[0].0 + pts[2].0) / 2.0, (pts[0].1 + pts[2].1) / 2.0);
-        // What hangs over the floor stands over what is named below it, and is not named.
-        let hgt = if layer.things[i].2 { None } else { [DIM_TEXT, MIN_CAP].into_iter().find(|h| font::width(name, *h) + 4.0 <= len && h + 4.0 <= wid) };
-        let named = hgt.is_some_and(|h| {
-            let l = Letter::centred(name, c, h, angle);
-            !edges.iter().any(|&(a, b, hung)| !hung && l.touches_segment(a, b)) && !lettering.letters.iter().any(|o| l.crosses(o))
-        });
-        match (named, hgt) {
-            (true, Some(h)) => {
-                // The name is set on a patch of paper: a dashed outline of what hangs over this runs under it.
-                let l = Letter::centred(name, c, h, angle);
-                out.push(Prim::Fill { rings: vec![l.corners().to_vec()], color: PAPER });
-                lettering.text(name, c, h, angle, INK);
+        let mut put = false;
+        if !*above {
+            'heights: for h in [DIM_TEXT, MIN_CAP] {
+                let (w, hh) = (font::width(name, h) + 1.0, h + 1.0);
+                if w + 4.0 > len || hh + 4.0 > wid {
+                    continue;
+                }
+                // Along its outline's own axes, from the middle out, a step at a time.
+                let (ru, rv) = ((len - w) / 2.0 - 2.0, (wid - hh) / 2.0 - 2.0);
+                let mut at: Vec<(f32, f32)> = Vec::new();
+                let mut u = -ru;
+                while u <= ru + 0.01 {
+                    let mut v = -rv;
+                    while v <= rv + 0.01 {
+                        at.push((u, v));
+                        v += 3.0;
+                    }
+                    u += 3.0;
+                }
+                at.push((0.0, 0.0));
+                at.sort_by(|a, b| (a.0 * a.0 + a.1 * a.1).partial_cmp(&(b.0 * b.0 + b.1 * b.1)).unwrap_or(std::cmp::Ordering::Equal));
+                for (u, v) in at {
+                    let cc = (c.0 + e1.0 * u + e2.0 * v, c.1 + e1.1 * u + e2.1 * v);
+                    let l = Letter::centred(name, cc, h, angle);
+                    if ctx.clear(&l) {
+                        lettered(&mut out, &mut ctx, name, cc, h, angle);
+                        put = true;
+                        break 'heights;
+                    }
+                }
             }
-            _ => unnamed += 1,
+        }
+        if !put {
+            unnamed += 1;
         }
     }
-    let mut placed: Vec<Letter> = lettering.letters.clone();
-    out.extend(lettering.prims);
-    // Rooms: the name over the area at the room's point; where they do not fit there at their
-    // height (3/32 in at the least) or would lie over lettering, a mark and a row of the schedule.
+    // The rooms' rings, for the walls round each room, in feet.
     let rings: Vec<Vec<V>> = layer.walls.iter().map(|w| w.2.clone()).collect();
+    let rings_pt: Vec<Vec<Pt>> = rings.iter().map(|r| r.iter().map(|q| p(*q, k)).collect()).collect();
+    let mut made: Vec<DrawnString> = Vec::new();
+    let mut angles: Vec<DrawnAngle> = Vec::new();
+    let mut no_overall: Vec<(String, String)> = Vec::new();
+    let mut run_strings = false;
+
+    // ---- The strings outside the plan ----
+    let sw: Vec<strings::W> = layer.walls.iter().enumerate().map(|(i, w)| strings::W { start: w.3.start, end: w.3.end, ext: w.3.ext, int: w.3.int, edge: layer.edge[i], out: layer.outward[i], sure: layer.lengths[i].0.is_some() && layer.lengths[i].1 == Status::Known }).collect();
+    let sops: Vec<strings::Op> = layer.openings.iter().map(|(wi, [s0, s1], _, _, sure)| strings::Op { wall: *wi, s0: *s0, s1: *s1, sure: *sure }).collect();
+    let sides = strings::sides(&sw, &sops, tol);
+    for (side, why) in &sides.no_overall {
+        no_overall.push((side.name().to_string(), why.clone()));
+    }
+    // How far out each side of the house reaches, points.
+    let all_pts: Vec<Pt> = rings_pt.iter().flatten().copied().collect();
+    let reach = |side: Side| -> f32 {
+        let (lo, hi) = all_pts.iter().fold(((f32::MAX, f32::MAX), (f32::MIN, f32::MIN)), |a, q| ((a.0 .0.min(q.0), a.0 .1.min(q.1)), (a.1 .0.max(q.0), a.1 .1.max(q.1))));
+        match side {
+            Side::South => lo.1,
+            Side::North => hi.1,
+            Side::West => lo.0,
+            Side::East => hi.0,
+        }
+    };
+    let mut stack_len: Vec<(Side, usize)> = Vec::new();
+    let mut dims: Vec<(Dim, DrawnString)> = Vec::new();
+    for side in Side::ALL {
+        let mine: Vec<&strings::Chain> = sides.chains.iter().filter(|c| c.side == side).collect();
+        if mine.is_empty() {
+            continue;
+        }
+        stack_len.push((side, mine.len()));
+        let o = side.out();
+        let o = (o.0 as f32, o.1 as f32);
+        let horizontal = side.axis() == Axis::Across;
+        let line_at = |i: usize| reach(side) + (o.0 + o.1) * (DIM_OFF + i as f32 * STRING_PITCH);
+        let pt = |c: f64, cross: f32| if horizontal { ((c * k) as f32, cross) } else { (cross, (c * k) as f32) };
+        // The outermost string a station is on carries its extension line.
+        let outermost = |step: i64| mine.iter().enumerate().rev().find(|(_, c)| c.steps.contains(&step)).map(|(i, _)| i);
+        for (i, chain) in mine.iter().enumerate() {
+            let cross = line_at(i);
+            let pts: Vec<Pt> = chain.stations.iter().map(|s| pt(s.c, cross)).collect();
+            let mut ext = Vec::new();
+            for (s, step) in chain.stations.iter().zip(&chain.steps) {
+                if outermost(*step) == Some(i) {
+                    let a = (s.anchor.0 as f32 * k as f32, s.anchor.1 as f32 * k as f32);
+                    let from = (a.0 + o.0 * 3.0, a.1 + o.1 * 3.0);
+                    let to = pt(s.c, cross + (o.0 + o.1) * 3.0);
+                    ext.push((from, to));
+                }
+            }
+            let want = if chain.kind == strings::Kind::Overall { OVERALL_TEXT } else { DIM_TEXT };
+            let parts = chain.parts();
+            let texts: Vec<(String, f32)> = parts.iter().zip(&chain.vif).map(|(t, v)| (with_vif(t.clone(), *v), want)).collect();
+            let record = DrawnString { place: side.name().to_string(), kind: chain.kind.name().to_string(), parts: parts.iter().cloned().zip(chain.vif.iter().copied()).collect(), whole: chain.whole() };
+            dims.push((Dim { pts, ext, out: o, texts, ends_ok: true, turned_ok: i + 1 == mine.len() }, record));
+        }
+    }
+    // A wall off square is dimensioned along itself, outside the plan on its outer side.
+    for (i, w) in sw.iter().enumerate() {
+        if w.axis() != Axis::Angled || !w.edge {
+            continue;
+        }
+        let (length, status) = layer.lengths[i];
+        let sure = length.is_some() && status == Status::Known;
+        let own = strings::own(i, length.unwrap_or_else(|| w.length()), sure, &sops);
+        let t = (w.end - w.start).unit();
+        let o = (w.out.0 as f32, w.out.1 as f32);
+        let face = w.face();
+        let at_pt = |s: f64| w.start + t * s + w.out * face;
+        let pts: Vec<Pt> = own.at.iter().map(|&s| { let a = at_pt(s); ((a.0 * k) as f32 + o.0 * DIM_OFF, (a.1 * k) as f32 + o.1 * DIM_OFF) }).collect();
+        let ext: Vec<(Pt, Pt)> = own.at.iter().zip(&pts).map(|(&s, q)| { let a = at_pt(s); (((a.0 * k) as f32 + o.0 * 3.0, (a.1 * k) as f32 + o.1 * 3.0), (q.0 + o.0 * 3.0, q.1 + o.1 * 3.0)) }).collect();
+        let parts = own.parts();
+        let texts: Vec<(String, f32)> = parts.iter().zip(&own.vif).map(|(t, v)| (with_vif(t.clone(), *v), DIM_TEXT)).collect();
+        let record = DrawnString { place: layer.paths[i].clone(), kind: "along its wall".to_string(), parts: parts.iter().cloned().zip(own.vif.iter().copied()).collect(), whole: own.whole() };
+        dims.push((Dim { pts, ext, out: o, texts, ends_ok: true, turned_ok: true }, record));
+    }
+    // Lines first, then the figures, so a figure keeps clear of every string's lines.
+    let lines: Vec<(Vec<Prim>, Vec<(Pt, Pt)>)> = dims.iter().map(|(d, _)| dim_lines(d)).collect();
+    for (prims, segs) in &lines {
+        out.extend(prims.iter().cloned());
+        ctx.segs.extend(segs.iter().copied());
+    }
+    for ((d, record), (_, segs)) in dims.iter().zip(&lines) {
+        let (texts, _) = dim_texts(d, &ctx, &[]);
+        let _ = segs;
+        for (text, c, h, angle) in texts {
+            lettered(&mut out, &mut ctx, &text, c, h, angle);
+        }
+        made.push(record.clone());
+    }
+
+    // ---- The rooms ----
     let mut schedule: Vec<ScheduleRow> = Vec::new();
-    for (name, point, area) in &layer.rooms {
-        let c = p(V(point[0], point[1]), k);
-        let mut tried = None;
-        if let Some((hn, ha)) = room_fit(&rings, V(point[0], point[1]), k, name, area) {
-            let mut d = Drawing::new(0.0, 0.0);
-            d.text(name, (c.0, c.1 + hn / 2.0 + 2.5), hn, 0.0, INK);
-            d.text(area, (c.0, c.1 - ha / 2.0 - 2.5), ha, 0.0, INK);
-            if !d.letters.iter().any(|l| placed.iter().any(|o| l.crosses(o))) {
+    for (name, point, area, _) in &layer.rooms {
+        let c0 = p(V(point[0], point[1]), k);
+        let same_space = |c: Pt| !rings_pt.iter().any(|r| (0..r.len()).any(|i| seg_cross(c0, c, r[i], r[(i + 1) % r.len()])));
+        let mut tried: Option<Drawing> = None;
+        for c in nearby(c0, 160.0) {
+            if !same_space(c) {
+                continue;
+            }
+            let Some((hn, ha)) = room_fit(&rings, V(c.0 as f64 / k, c.1 as f64 / k), k, name, area) else { continue };
+            let (ln, la) = (Letter::centred(name, (c.0, c.1 + hn / 2.0 + 2.5), hn, 0.0), Letter::centred(area, (c.0, c.1 - ha / 2.0 - 2.5), ha, 0.0));
+            if ctx.clear(&ln) && ctx.clear(&la) && !ln.crosses(&la) {
+                let mut d = Drawing::new(0.0, 0.0);
+                d.text(name, (c.0, c.1 + hn / 2.0 + 2.5), hn, 0.0, INK);
+                d.text(area, (c.0, c.1 - ha / 2.0 - 2.5), ha, 0.0, INK);
                 tried = Some(d);
+                break;
             }
         }
         match tried {
             Some(d) => {
-                placed.extend(d.letters.clone());
+                ctx.placed.extend(d.letters.clone());
+                ctx.unlettered.extend(d.unlettered);
                 out.extend(d.prims);
             }
             None => {
+                // A numbered mark in a circle, and a row of the schedule at the side of the sheet.
                 let mark = (schedule.len() + 1).to_string();
+                let block = |c: Pt| Letter { text: String::new(), height: MIN_CAP, centre: c, half: (8.4, 8.4), angle: 0.0 };
+                let spot = nearby(c0, 160.0).into_iter().filter(|&c| same_space(c)).find(|&c| {
+                    let b = block(c);
+                    !ctx.placed.iter().chain(&ctx.blocks).any(|o| b.crosses(o)) && !ctx.segs.iter().any(|&(a, z)| b.touches_segment(a, z)) && !inside_rings(&ctx.fills, c)
+                });
+                let c = spot.unwrap_or(c0);
                 let mut d = Drawing::new(0.0, 0.0);
                 d.text(&mark, c, MIN_CAP, 0.0, INK);
                 let circle: Vec<(f32, f32)> = (0..24).map(|i| (c.0 + 8.0 * (i as f32 * std::f32::consts::TAU / 24.0).cos(), c.1 + 8.0 * (i as f32 * std::f32::consts::TAU / 24.0).sin())).collect();
-                d.line(circle, pen::points(pen::annotation_mm(pen::PROJECTION)), INK, None, true);
-                placed.extend(d.letters.clone());
+                d.line(circle.clone(), pen::points(pen::annotation_mm(pen::PROJECTION)), INK, None, true);
+                ctx.line(&circle, true);
+                ctx.blocks.push(block(c));
+                ctx.placed.extend(d.letters.clone());
                 out.extend(d.prims);
                 schedule.push(ScheduleRow { mark, name: name.clone(), area: area.clone() });
             }
         }
     }
-    // Dimensions: one string along each wall, on its outer side; its figure over the middle
-    // of the string, or, where that is too short or taken, beyond its end or stood off.
-    let thin = pen::points(pen::annotation_mm(pen::PROJECTION));
-    let heavy = pen::points(pen::annotation_mm(pen::HEAVY));
-    let tick_at = |out: &mut Vec<Prim>, s: (f32, f32), t: (f32, f32)| {
-        let slash = (t.0 * 0.7071 + -t.1 * 0.7071, t.1 * 0.7071 + t.0 * 0.7071);
-        out.push(Prim::Line { pts: vec![(s.0 - slash.0 * 3.5, s.1 - slash.1 * 3.5), (s.0 + slash.0 * 3.5, s.1 + slash.1 * 3.5)], width: heavy, color: INK, dash: None, closed: false, round: false });
-    };
-    let mut string_ends: Vec<(f32, f32)> = Vec::new();
-    for (((_, _, _, w), dim), out_n) in layer.walls.iter().zip(&page.dimensions).zip(&layer.outward) {
+
+    // ---- The strings inside the plan: along a wall with openings in it that is no outside wall,
+    // from the nearest parallel wall to a partition that meets none, and along a run of things set in place. ----
+    let nrm_of = |w: &strings::W, side: f64| {
         let t = (w.end - w.start).unit();
-        let face = if out_n.dot(t.perp()) > 0.0 { w.ext.max(w.int) } else { -w.ext.min(w.int) };
-        let nrm = (out_n.0 as f32, out_n.1 as f32);
-        let base = |q: V| -> (f32, f32) {
-            let c = p(q, k);
-            (c.0 + nrm.0 * (face * k) as f32, c.1 + nrm.1 * (face * k) as f32)
+        let n = t.perp() * side;
+        (t, n)
+    };
+    let face_on = |w: &strings::W, side: f64| if side > 0.0 { w.ext.max(w.int) } else { -w.ext.min(w.int) };
+    for (i, w) in sw.iter().enumerate() {
+        let has = sops.iter().any(|o| o.wall == i);
+        if w.edge && w.axis() != Axis::Angled {
+            continue; // an outside wall's openings are in its side's string
+        }
+        if w.edge && !has {
+            continue;
+        }
+        if w.edge {
+            continue; // an angled outside wall is dimensioned outside, above
+        }
+        // An interior wall: a string along it from its first end, through each opening's center, to its last
+        // (an angled one with none: its own length).
+        if !has && w.axis() != Axis::Angled {
+            continue;
+        }
+        let (length, status) = layer.lengths[i];
+        let sure = length.is_some() && status == Status::Known;
+        let own = strings::own(i, length.unwrap_or_else(|| w.length()), sure, &sops);
+        let parts = own.parts();
+        let mut cands: Vec<Dim> = Vec::new();
+        for d in [14.0f32, 24.0, 34.0, 46.0] {
+            for side in [1.0f64, -1.0] {
+                let (t, nv) = nrm_of(w, side);
+                let face = face_on(w, side);
+                let on = |s: f64| w.start + t * s + nv * face;
+                let o = (nv.0 as f32, nv.1 as f32);
+                let pts: Vec<Pt> = own.at.iter().map(|&s| { let a = on(s); ((a.0 * k) as f32 + o.0 * d, (a.1 * k) as f32 + o.1 * d) }).collect();
+                let ext: Vec<(Pt, Pt)> = own.at.iter().zip(&pts).map(|(&s, q)| { let a = on(s); (((a.0 * k) as f32 + o.0 * 3.0, (a.1 * k) as f32 + o.1 * 3.0), (q.0 + o.0 * 3.0, q.1 + o.1 * 3.0)) }).collect();
+                let texts = parts.iter().zip(&own.vif).map(|(t, v)| (with_vif(t.clone(), *v), DIM_TEXT)).collect();
+                cands.push(Dim { pts, ext, out: o, texts, ends_ok: false, turned_ok: true });
+            }
+        }
+        lay_inside(&mut out, &mut ctx, &cands);
+        made.push(DrawnString { place: format!("{}, along it inside the plan", layer.paths[i]), kind: if has { "openings" } else { "wall" }.to_string(), parts: parts.iter().cloned().zip(own.vif.iter().copied()).collect(), whole: own.whole() });
+    }
+    for l in strings::locate(&sw, &sides.located, tol) {
+        let (t_axis, vif) = (l.axis, l.vif);
+        let text = with_vif(strings::written(l.steps[1]), vif);
+        // Square to the two walls, at a few places along the part they share.
+        let w = &sw[l.wall];
+        let (lo, hi) = {
+            let a = |q: &strings::W| { let (x, y) = (strings::along(q.start, t_axis), strings::along(q.end, t_axis)); (x.min(y), x.max(y)) };
+            let (a1, a2) = (a(w), a(&sw[l.from]));
+            (a1.0.max(a2.0), a1.1.min(a2.1))
         };
-        let beyond = |b: (f32, f32), by: f32| (b.0 + nrm.0 * by, b.1 + nrm.1 * by);
-        let (a, b) = (base(w.start), base(w.end));
-        let (sa, sb) = (beyond(a, DIM_OFF), beyond(b, DIM_OFF));
-        string_ends.extend([sa, sb]);
-        out.push(Prim::Line { pts: vec![sa, sb], width: thin, color: INK, dash: None, closed: false, round: false });
-        // Extension lines from just off the wall to a little past the string, and a tick at each end.
-        let tick = (t.0 as f32, t.1 as f32);
-        for (e, s) in [(a, sa), (b, sb)] {
-            out.push(Prim::Line { pts: vec![beyond(e, 3.0), beyond(s, 3.0)], width: thin, color: INK, dash: None, closed: false, round: false });
-            tick_at(&mut out, s, tick);
+        let mut cands: Vec<Dim> = Vec::new();
+        for f in [0.5, 0.35, 0.65, 0.2, 0.8, 0.1, 0.9] {
+            let at = lo + (hi - lo) * f;
+            let (p0, p1) = if t_axis == Axis::Across { ((at * k, l.from_cross * k), (at * k, l.to_cross * k)) } else { ((l.from_cross * k, at * k), (l.to_cross * k, at * k)) };
+            let o = if t_axis == Axis::Across { (1.0f32, 0.0) } else { (0.0, 1.0) };
+            cands.push(Dim { pts: vec![(p0.0 as f32, p0.1 as f32), (p1.0 as f32, p1.1 as f32)], ext: Vec::new(), out: o, texts: vec![(text.clone(), DIM_TEXT)], ends_ok: false, turned_ok: true });
         }
-        // Its length, turned to read from below or from the right.
-        let mut angle = (t.1).atan2(t.0) as f32;
-        if angle > std::f32::consts::FRAC_PI_2 + 1e-4 {
-            angle -= std::f32::consts::PI;
-        } else if angle <= -std::f32::consts::FRAC_PI_2 + 1e-4 {
-            angle += std::f32::consts::PI;
+        lay_inside(&mut out, &mut ctx, &cands);
+        made.push(DrawnString { place: format!("{}, from {}", layer.paths[l.wall], layer.paths[l.from]), kind: "located".to_string(), parts: vec![(strings::written(l.steps[1]), vif)], whole: strings::written(l.steps[1]) });
+    }
+    // Runs of things set in place against a wall, located by their start from the wall's first end.
+    let thing_rings: Vec<([V; 4], bool)> = layer.things.iter().map(|t| ([t.1[0], t.1[1], t.1[2], t.1[3]], t.2)).collect();
+    for run in strings::runs(&sw, &thing_rings) {
+        let w = &sw[run.wall];
+        let length = w.length();
+        let stations: Vec<f64> = vec![0.0, run.s0.max(0.0), run.s1.min(length), length];
+        let mut steps: Vec<i64> = Vec::new();
+        let mut at: Vec<f64> = Vec::new();
+        for s in stations {
+            let n = strings::sixteenths(s);
+            if steps.last() != Some(&n) {
+                steps.push(n);
+                at.push(s);
+            }
         }
-        let mid = ((sa.0 + sb.0) / 2.0, (sa.1 + sb.1) / 2.0);
-        let len = (sb.0 - sa.0).hypot(sb.1 - sa.1);
-        let mut chosen: Option<Letter> = None;
-        let mut first: Option<Letter> = None;
-        'search: for h in [DIM_TEXT, MIN_CAP] {
-            let text_w = font::width(&dim.text, h);
-            let off = 3.0 + h / 2.0 + 1.0;
-            let mut spots: Vec<(f32, f32)> = Vec::new();
-            if text_w + 6.0 <= len {
-                spots.push(beyond(mid, off));
-            }
-            // Too short for it, or taken: past either end on the string's own line, then stood
-            // off from the string a line of lettering at a time.
-            let along = |s: (f32, f32), by: f32| (s.0 + tick.0 * by, s.1 + tick.1 * by);
-            spots.push(along(sb, text_w / 2.0 + 6.0));
-            spots.push(along(sa, -(text_w / 2.0 + 6.0)));
-            for step in 1..=2 {
-                spots.push(beyond(mid, off + step as f32 * (h + 2.0)));
-            }
-            for c in spots {
-                let cand = Letter::centred(&dim.text, c, h, angle);
-                first.get_or_insert_with(|| cand.clone());
-                if !placed.iter().any(|o| cand.crosses(o)) {
-                    chosen = Some(cand);
-                    break 'search;
+        if steps.len() < 3 {
+            continue;
+        }
+        let unsure = !w.sure || run.things.iter().any(|&ti| layer.things[ti].4 != Status::Known);
+        let parts: Vec<String> = steps.windows(2).map(|s| strings::written(s[1] - s[0])).collect();
+        let (t, _) = nrm_of(w, run.side);
+        let mut cands: Vec<Dim> = Vec::new();
+        for d in [12.0f32, 22.0, 32.0] {
+            let nv = t.perp() * run.side;
+            let face = face_on(w, run.side);
+            let on = |s: f64| w.start + t * s + nv * (face + run.depth);
+            let o = (nv.0 as f32, nv.1 as f32);
+            let pts: Vec<Pt> = at.iter().map(|&s| { let a = on(s); ((a.0 * k) as f32 + o.0 * d, (a.1 * k) as f32 + o.1 * d) }).collect();
+            let ext: Vec<(Pt, Pt)> = at.iter().zip(&pts).map(|(&s, q)| { let a = on(s); (((a.0 * k) as f32 + o.0 * 3.0, (a.1 * k) as f32 + o.1 * 3.0), (q.0 + o.0 * 3.0, q.1 + o.1 * 3.0)) }).collect();
+            let texts = parts.iter().map(|t| (with_vif(t.clone(), unsure), DIM_TEXT)).collect();
+            cands.push(Dim { pts, ext, out: o, texts, ends_ok: false, turned_ok: true });
+        }
+        lay_inside(&mut out, &mut ctx, &cands);
+        run_strings = true;
+        made.push(DrawnString { place: format!("{}, along it inside the plan", layer.paths[run.wall]), kind: "run".to_string(), parts: parts.iter().cloned().map(|t| (t, unsure)).collect(), whole: strings::written(*steps.last().unwrap_or(&0)) });
+    }
+
+    // ---- Where walls meet off square: the angle, lettered at the corner ----
+    for c in strings::corners(&sw, tol) {
+        let text = strings::degrees_written(c.degrees);
+        let at = p(c.at, k);
+        let b = (c.bisector.0 as f32, c.bisector.1 as f32);
+        let mut first: Option<(Pt, f32)> = None;
+        let mut put = false;
+        'angle: for h in [DIM_TEXT, MIN_CAP] {
+            for far in [16.0f32, 24.0, 34.0, 46.0, 62.0] {
+                // In the sector the angle is measured in, then in the one across the corner from it.
+                for sign in [1.0f32, -1.0] {
+                    let spot = (at.0 + b.0 * far * sign, at.1 + b.1 * far * sign);
+                    first.get_or_insert((spot, h));
+                    if ctx.clear(&Letter::centred(&text, spot, h, 0.0)) {
+                        lettered(&mut out, &mut ctx, &text, spot, h, 0.0);
+                        put = true;
+                        break 'angle;
+                    }
                 }
             }
         }
-        // None is free: it goes where it first would, and the page's lettering check says so.
-        let cand = chosen.or(first).unwrap_or_else(|| Letter::centred(&dim.text, mid, DIM_TEXT, angle));
-        let mut d = Drawing::new(0.0, 0.0);
-        d.text(&dim.text, cand.centre, cand.height, angle, INK);
-        placed.extend(d.letters.clone());
-        out.extend(d.prims);
-    }
-    // The overall dimension on each side, outside everything drawn so far, with extension
-    // lines from the nearest string's end: the extent of the walls' lines as drawn.
-    let ends: Vec<(f32, f32)> = layer.walls.iter().flat_map(|w| [p(w.3.start, k), p(w.3.end, k)]).collect();
-    if !ends.is_empty() {
-        let (xlo, xhi) = ends.iter().fold((f32::MAX, f32::MIN), |a, e| (a.0.min(e.0), a.1.max(e.0)));
-        let (ylo, yhi) = ends.iter().fold((f32::MAX, f32::MIN), |a, e| (a.0.min(e.1), a.1.max(e.1)));
-        let mut drawn_box = extent(&out);
-        for l in &placed {
-            for (x, y) in l.corners() {
-                drawn_box = (drawn_box.0.min(x), drawn_box.1.min(y), drawn_box.2.max(x), drawn_box.3.max(y));
+        if !put {
+            if let Some((spot, h)) = first {
+                lettered(&mut out, &mut ctx, &text, spot, h, 0.0);
             }
         }
-        let vif = if page.overall.vif { " VIF" } else { "" };
-        let (across, up) = (format!("{}{vif}", page.overall.across), format!("{}{vif}", page.overall.up));
-        let near = |a: f32, b: f32| (a - b).abs() < 1.0;
-        // Each side: where its string lies, the two ends it measures between, and which way is out.
-        // (kind, line position, from, to, direction out, text)
-        let sides: [(bool, f32, f32, f32, f32, &str); 4] = [
-            (true, drawn_box.3 + OVERALL_GAP, xlo, xhi, 1.0, &across),
-            (true, drawn_box.1 - OVERALL_GAP, xlo, xhi, -1.0, &across),
-            (false, drawn_box.0 - OVERALL_GAP, ylo, yhi, -1.0, &up),
-            (false, drawn_box.2 + OVERALL_GAP, ylo, yhi, 1.0, &up),
-        ];
-        for (horizontal, at, from, to, dir, text) in sides {
-            let pt = |s: f32, along: f32| if horizontal { (along, s) } else { (s, along) };
-            let (pa, pb) = (pt(at, from), pt(at, to));
-            out.push(Prim::Line { pts: vec![pa, pb], width: thin, color: INK, dash: None, closed: false, round: false });
-            // Extension lines run out from the string end that stands at each end of the extent,
-            // on this side; where none does, from the plan's own corner.
-            for along in [from, to] {
-                let on_side = |e: &&(f32, f32)| {
-                    let (a_ok, s_ok) = if horizontal { (near(e.0, along), (e.1 - if dir > 0.0 { yhi } else { ylo }) * dir > -0.5) } else { (near(e.1, along), (e.0 - if dir > 0.0 { xhi } else { xlo }) * dir > -0.5) };
-                    a_ok && s_ok
-                };
-                let from_s = string_ends.iter().filter(on_side).map(|e| if horizontal { e.1 } else { e.0 }).fold(None::<f32>, |m, v| Some(m.map_or(v, |m| if dir > 0.0 { m.max(v) } else { m.min(v) })));
-                let start = from_s.unwrap_or(if horizontal { if dir > 0.0 { yhi } else { ylo } } else if dir > 0.0 { xhi } else { xlo });
-                // From a little past the string's end to a little past the overall string.
-                let (s0, s1) = (start + dir * 3.0, at + dir * 3.0);
-                out.push(Prim::Line { pts: vec![pt(s0, along), pt(s1, along)], width: thin, color: INK, dash: None, closed: false, round: false });
-            }
-            let tick = if horizontal { (1.0, 0.0) } else { (0.0, 1.0) };
-            tick_at(&mut out, pa, tick);
-            tick_at(&mut out, pb, tick);
-            let mid = (from + to) / 2.0;
-            let off = dir * (3.0 + OVERALL_TEXT / 2.0 + 1.0);
-            let c = pt(at + off, mid);
-            let mut d = Drawing::new(0.0, 0.0);
-            d.text(text, c, OVERALL_TEXT, if horizontal { 0.0 } else { std::f32::consts::FRAC_PI_2 }, INK);
-            placed.extend(d.letters.clone());
-            out.extend(d.prims);
-        }
+        angles.push(DrawnAngle { corner: format!("{} and {} at {},{}", layer.paths[c.a], layer.paths[c.b], crate::view::num(crate::value::round4(c.at.0)), crate::view::num(crate::value::round4(c.at.1))), text });
     }
+    let _ = stack_len;
     let mut d = Drawing::new(0.0, 0.0);
     d.prims = out;
-    d.letters = placed;
-    Art { d, schedule, unnamed }
+    d.letters = ctx.placed;
+    d.unlettered = ctx.unlettered;
+    Art { d, schedule, unnamed, strings: made, angles, no_overall, run_strings }
 }
 
 impl PlanPage {
     /// What is wrong with the page's lettering, each said: a piece under 3/32 in, a piece
     /// lying over another, a piece outside the sheet's frame, a piece across the edge of a
-    /// box (the title box, the key, the schedule). Measured on the lettering as it is written
-    /// on the page, after it is laid.
+    /// box (the title box, the key, the schedule), and (call 182) a piece with any line of the
+    /// sheet drawn through it (a wall, a string, an outline, a room line) or lying on a cut
+    /// wall. Measured on the lettering as it is written on the page, after it is laid.
     pub fn lettering_faults(&self) -> Vec<String> {
+        faults_in(&self.drawing, &self.frames)
+    }
+}
+
+/// What is wrong with the lettering of a drawing (see `PlanPage::lettering_faults`); `frames` are
+/// the boxes lettering must not cross the edge of.
+fn faults_in(drawing: &Drawing, frames: &[[f32; 4]]) -> Vec<String> {
+    {
         let mut out = Vec::new();
-        let frame = [BORDER_AT, BORDER_AT, self.drawing.width - BORDER_AT, self.drawing.height - BORDER_AT];
-        let ls = &self.drawing.letters;
+        let frame = if drawing.width > 0.0 { [BORDER_AT, BORDER_AT, drawing.width - BORDER_AT, drawing.height - BORDER_AT] } else { [f32::MIN, f32::MIN, f32::MAX, f32::MAX] };
+        let ls = &drawing.letters;
+        let mut flagged = vec![false; ls.len()];
         for (i, l) in ls.iter().enumerate() {
             if l.height < MIN_CAP - 1e-3 {
-                out.push(format!("{:?} is {:.2} pt high, under 3/32 in", l.text, l.height));
+                out.push(format!("the lettering {:?} is {:.2} pt high, under 3/32 in", l.text, l.height));
             }
             if !l.within(frame) {
-                out.push(format!("{:?} is outside the sheet's frame", l.text));
+                out.push(format!("the lettering {:?} runs outside the sheet's frame", l.text));
             }
-            for fr in &self.frames {
+            for fr in frames {
                 let inside = l.corners().iter().filter(|&&(x, y)| x >= fr[0] && x <= fr[2] && y >= fr[1] && y <= fr[3]).count();
                 if inside != 0 && inside != 4 {
-                    out.push(format!("{:?} is across the edge of a box", l.text));
+                    out.push(format!("the lettering {:?} runs across the edge of a box", l.text));
+                    flagged[i] = true;
                 }
             }
             for o in &ls[i + 1..] {
                 if l.crosses(o) {
-                    out.push(format!("{:?} is over {:?}", l.text, o.text));
+                    out.push(format!("the lettering {:?} lies over {:?}", l.text, o.text));
+                    flagged[i] = true;
                 }
+            }
+        }
+        // Lines through lettering: every drawn line but the strokes of the lettering itself.
+        for pr in &drawing.prims {
+            match pr {
+                Prim::Line { pts, closed, round: false, .. } => {
+                    let mut segs: Vec<((f32, f32), (f32, f32))> = pts.windows(2).map(|w| (w[0], w[1])).collect();
+                    if *closed && pts.len() > 2 {
+                        segs.push((pts[pts.len() - 1], pts[0]));
+                    }
+                    for (i, l) in ls.iter().enumerate() {
+                        if !flagged[i] && segs.iter().any(|&(a, b)| l.touches_segment(a, b)) {
+                            out.push(format!("the lettering {:?} has a line drawn through it", l.text));
+                            flagged[i] = true;
+                        }
+                    }
+                }
+                Prim::Fill { rings, color } if *color == POCHE => {
+                    let rings_pt: Vec<Vec<(f32, f32)>> = rings.clone();
+                    for (i, l) in ls.iter().enumerate() {
+                        if !flagged[i] && inside_rings(&rings_pt, l.centre) {
+                            out.push(format!("the lettering {:?} lies on a cut wall", l.text));
+                            flagged[i] = true;
+                        }
+                    }
+                }
+                _ => {}
             }
         }
         out
@@ -1112,10 +1775,57 @@ impl PlanPage {
 }
 
 impl PlanSet {
-    /// The set as a PDF: a page of line work for each, the same bytes for the same set.
+    /// Everything the program knows is not right on the pages as written, each in plain
+    /// words with its page: said whenever the set is written, whether or not the list was
+    /// asked for (call 182 item 4).
+    pub fn faults(&self) -> Vec<String> {
+        let mut out = Vec::new();
+        for (i, page) in self.pages.iter().enumerate() {
+            for f in page.lettering_faults() {
+                out.push(format!("page {} of {}, {}: {f}", i + 1, self.pages.len(), page.show.name()));
+            }
+        }
+        out
+    }
+
+    /// The set as a PDF: a page of line work for each, the same bytes for the same set; its own
+    /// title is the job's title (call 182).
     pub fn pdf(&self) -> Vec<u8> {
         let drawings: Vec<Drawing> = self.pages.iter().map(|p| p.drawing.clone()).collect();
-        paper::pdf::pdf(&drawings)
+        paper::pdf::pdf_titled(&drawings, &self.title, &format!("{}, {}", self.level, self.date))
+    }
+
+    /// The letters written that are not lettered as written: each with what it is lettered as
+    /// (its plain letter, or the question mark), and how many of it a page carries at the most.
+    pub fn unlettered(&self) -> Vec<(char, Option<char>, usize)> {
+        let mut out: Vec<(char, Option<char>, usize)> = Vec::new();
+        for page in &self.pages {
+            let mut here: Vec<(char, Option<char>, usize)> = Vec::new();
+            for &(c, plain) in &page.drawing.unlettered {
+                match here.iter_mut().find(|h| h.0 == c) {
+                    Some(h) => h.2 += 1,
+                    None => here.push((c, plain, 1)),
+                }
+            }
+            for h in here {
+                match out.iter_mut().find(|o| o.0 == h.0) {
+                    Some(o) => o.2 = o.2.max(h.2),
+                    None => out.push(h),
+                }
+            }
+        }
+        out
+    }
+
+    /// What of the lettering could not be lettered as written, said: how many letters, and which.
+    pub fn unlettered_said(&self) -> String {
+        let u = self.unlettered();
+        if u.is_empty() {
+            return "unlettered: 0 letters".to_string();
+        }
+        let n: usize = u.iter().map(|x| x.2).sum();
+        let which: Vec<String> = u.iter().map(|(c, p, _)| format!("{c} as {}", p.map_or("?".to_string(), |p| p.to_string()))).collect();
+        format!("unlettered: {n} letters could not be lettered as written ({})", which.join(", "))
     }
 
     /// What is on each page, in words and figures, so a figure on paper can be checked without
@@ -1125,14 +1835,16 @@ impl PlanSet {
         let mut s = String::new();
         let _ = writeln!(s, "PLAN SET: {}, {}", self.title, self.level);
         let _ = writeln!(s, "{}, {} paper ({} by {} in), {}, {}", count(self.pages.len(), "page", "pages"), self.paper.name, crate::view::num(self.paper.width_in), crate::view::num(self.paper.height_in), size::scale_said(self.scale), self.date);
+        let _ = writeln!(s, "{}", self.unlettered_said());
         for (show, why) in &self.not_written {
             let _ = writeln!(s, "not written: {}: {why}", show.name());
         }
         for (i, page) in self.pages.iter().enumerate() {
             let _ = writeln!(s, "\npage {} of {}: {}", i + 1, self.pages.len(), page.show.name());
-            let _ = writeln!(s, "  sheet: {}, sheet {} of {}", page.sheet, i + 1, self.pages.len());
+            let _ = writeln!(s, "  sheet: {}, sheet {} of {}", page.sheet, page.position.0, page.position.1);
             let _ = writeln!(s, "  north arrow: plan north, up the page (true north is not set)");
             let _ = writeln!(s, "  key: {}", page.key.iter().map(|(name, w)| format!("{name}, {}", w.said())).collect::<Vec<_>>().join("; "));
+            let _ = writeln!(s, "  graphic scale: {} bar, true at full size", if page.scale_bar.is_empty() { "none".to_string() } else { page.scale_bar.clone() });
             let _ = writeln!(s, "  overall: across {}, up the page {}", page.overall.across, page.overall.up);
             if let Some(u) = &page.under_title {
                 let _ = writeln!(s, "  under the title: {u}");
@@ -1153,6 +1865,19 @@ impl PlanSet {
             for d in &page.dimensions {
                 let _ = writeln!(s, "    {}  {}", d.wall, d.text);
             }
+            let _ = writeln!(s, "  strings: {}", page.strings.len());
+            for st in &page.strings {
+                let parts: Vec<String> = st.parts.iter().map(|(t, v)| if *v { format!("{t} VIF") } else { t.clone() }).collect();
+                let _ = writeln!(s, "    {}, {}: {} (adds to {})", st.place, st.kind, parts.join(" "), st.whole);
+            }
+            for (side, why) in &page.no_overall {
+                let _ = writeln!(s, "    no overall on the {side} side: {why}");
+            }
+            let _ = writeln!(s, "  angles: {}", page.angles.len());
+            for a in &page.angles {
+                let _ = writeln!(s, "    {}: {}", a.corner, a.text);
+            }
+            let _ = writeln!(s, "  room lines: {}", page.room_lines);
             let _ = writeln!(s, "  rooms: {}", page.rooms.len());
             for r in &page.rooms {
                 let _ = writeln!(s, "    {}", r.text);
@@ -1175,5 +1900,74 @@ impl PlanSet {
             }
         }
         s
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn bare(d: Drawing) -> PlanPage {
+        PlanPage { show: Show::Floor, walls: Vec::new(), openings: Vec::new(), things: Vec::new(), dimensions: Vec::new(), overall: DrawnOverall { across: String::new(), up: String::new(), vif: false }, strings: Vec::new(), no_overall: Vec::new(), angles: Vec::new(), room_lines: 0, scale_bar: String::new(), rooms: Vec::new(), schedule: Vec::new(), sheet: "A-101".into(), position: (1, 1), key: Vec::new(), frames: Vec::new(), title_lines: Vec::new(), under_title: None, notes: Vec::new(), drawing: d }
+    }
+
+    #[test]
+    fn a_date_is_a_day_of_the_calendar_or_it_is_refused() {
+        for good in ["2026-11-22", "2028-02-29", "11/22/2026", " 2026-12-31 "] {
+            assert!(day(good).is_ok(), "{good}");
+        }
+        for bad in ["yesterday", "2026-13-45", "2026-02-30", "2027-02-29", "2100-02-29", "11/31/2026", "", "26-11-22", "2026-11", "0-0-0000"] {
+            assert!(day(bad).is_err_and(|e| e.contains("is not a day of the calendar")), "{bad}");
+        }
+    }
+
+    #[test]
+    fn a_line_drawn_through_lettering_is_a_fault_and_a_line_beside_it_is_not() {
+        // A sheet of 200 by 100 points: the lettering "12'-0\"" with a line through it; the same lettering with the line clear.
+        let mut through = Drawing::new(200.0, 100.0);
+        through.text("12'-0\"", (100.0, 50.0), 7.2, 0.0, INK);
+        through.line(vec![(60.0, 50.0), (140.0, 50.0)], 0.5, INK, None, false);
+        let faults = bare(through).lettering_faults();
+        assert_eq!(faults.len(), 1, "{faults:?}");
+        assert!(faults[0].contains("has a line drawn through it"), "{faults:?}");
+        let mut beside = Drawing::new(200.0, 100.0);
+        beside.text("12'-0\"", (100.0, 50.0), 7.2, 0.0, INK);
+        beside.line(vec![(60.0, 70.0), (140.0, 70.0)], 0.5, INK, None, false);
+        assert!(bare(beside).lettering_faults().is_empty());
+        // Lettering on a cut wall is a fault too.
+        let mut on_wall = Drawing::new(200.0, 100.0);
+        on_wall.fill(vec![vec![(60.0, 40.0), (140.0, 40.0), (140.0, 60.0), (60.0, 60.0)]], POCHE);
+        on_wall.text("BED", (100.0, 50.0), 9.0, 0.0, INK);
+        assert!(bare(on_wall).lettering_faults().iter().any(|f| f.contains("lies on a cut wall")));
+    }
+
+    #[test]
+    fn what_is_wrong_is_said_with_its_page_whether_or_not_the_list_is_asked_for() {
+        let mut d = Drawing::new(200.0, 100.0);
+        d.text("ISLAND", (100.0, 50.0), 7.2, 0.0, INK);
+        d.text("1", (100.0, 52.0), 6.75, 0.0, INK);
+        let set = PlanSet { title: "T".into(), level: "L".into(), paper: size::PAPERS[0], scale: (1, 4), date: "2026-11-22".into(), pages: vec![bare(d)], not_written: Vec::new() };
+        let said = set.faults();
+        assert_eq!(said.len(), 1, "{said:?}");
+        assert!(said[0].starts_with("page 1 of 1, FLOOR PLAN: the lettering "), "{said:?}");
+    }
+
+    #[test]
+    fn letters_no_glyph_is_made_for_are_counted_by_page_and_the_file_carries_the_title() {
+        let mut d = Drawing::new(200.0, 100.0);
+        d.text("Łódź & Ω", (100.0, 50.0), 7.2, 0.0, INK);
+        d.text_left("Ł", (10.0, 10.0), 7.2, INK);
+        let set = PlanSet { title: "Henderson & Sons Résidence".into(), level: "Première étage".into(), paper: size::PAPERS[0], scale: (1, 4), date: "2026-11-22".into(), pages: vec![bare(d)], not_written: Vec::new() };
+        assert_eq!(set.unlettered(), vec![('Ł', Some('L'), 2), ('Ź', Some('Z'), 1), ('Ω', None, 1)]);
+        assert!(set.unlettered_said().starts_with("unlettered: 4 letters could not be lettered as written (Ł as L, Ź as Z, Ω as ?)"), "{}", set.unlettered_said());
+        let bytes = set.pdf();
+        let text: String = bytes.iter().map(|&b| b as char).collect();
+        // "Henderson & Sons Résidence" in UTF-16 hex: the ampersand is 0026, the é is 00E9.
+        assert!(text.contains("/Title <FEFF"), "{text}");
+        assert!(text.contains("00200026002000530"), "the ampersand is in the file's title");
+        assert!(text.contains("00E9"), "the é is in the file's title");
+        assert!(text.contains("/Info "));
+        // The same set, the same bytes.
+        assert_eq!(bytes, set.pdf());
     }
 }

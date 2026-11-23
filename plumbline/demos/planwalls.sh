@@ -125,11 +125,21 @@ import re, sys
 L = [tuple(map(float, re.findall(r"-?\d+\.\d+", l)[:4])) for l in sys.stdin if l.startswith("line ")]
 H = [l for l in L if abs(l[1] - l[3]) < 1e-6 and abs(abs(l[2] - l[0]) - 648) < 0.01]
 n = max(H, key=lambda l: l[1]); print("%s,%s %s,%s" % (n[0], n[1], n[2], n[3]))'; }
+# The house's southwest corner on the page, worked from the sheet's own lines, not from where the plan sits on the page:
+# x is the west end of the overall dimension, y the middle of the lowest pair of long level lines 6 in apart (9 points at
+# 1/4 in to the foot: the two faces of the south wall, whose walls are 6 in thick).
+corner() { "$P" page "$1" --page "${2:-3}" --lines | python3 -c '
+import re, sys
+L = [tuple(map(float, re.findall(r"-?\d+\.\d+", l)[:4])) for l in sys.stdin if l.startswith("line ")]
+H = [l for l in L if abs(l[1] - l[3]) < 1e-6 and abs(l[2] - l[0]) >= 200]
+top = max([l for l in H if abs(abs(l[2] - l[0]) - 648) < 0.01], key=lambda l: l[1])
+x = min(top[0], top[2])
+ys = sorted(set(round((a[1] + b[1]) / 2, 3) for a in H for b in H if abs(abs(a[1] - b[1]) - 9) < 0.01 and a[1] < b[1] and min(a[0], a[2]) < max(b[0], b[2]) and min(b[0], b[2]) < max(a[0], a[2])))
+print("%s,%s" % (x, ys[0]))'; }
 scale_it() { # $1 job, $2 drawing, $3 sheet file
   read -r FROM TO <<<"$(overall "$3" "${4:-3}")"
   "$P" calibrate "$1" "$2" --from "$FROM" --to "$TO" --distance "36 ft" --status Assumed --source "read off the drawing" >/dev/null
-  # The house's southwest corner, the middle of the south wall at the west wall's line: (108, 208) on this page.
-  "$P" lineup "$1" "$2" --page-point "108,208" --plan-point "0,0" --status Assumed --source "the house's southwest corner" >/dev/null
+  "$P" lineup "$1" "$2" --page-point "$(corner "$3" "${4:-3}")" --plan-point "0,0" --status Assumed --source "the house's southwest corner" >/dev/null
 }
 
 echo
@@ -144,7 +154,7 @@ echo "== 2. Scaled from one dimension: the overall dimension along the north sid
 read -r FROM TO <<<"$(overall "$T/sheet.pdf")"
 OUT="$("$P" calibrate "$JB" "$DB" --from "$FROM" --to "$TO" --distance "36 ft" --status Assumed --source "read off the drawing")"
 says "the scale" "36 ft is 648 on its page: 1/4\" = 1'-0\"" "$OUT"
-"$P" lineup "$JB" "$DB" --page-point "108,208" --plan-point "0,0" --status Assumed --source "the house's southwest corner" >/dev/null
+"$P" lineup "$JB" "$DB" --page-point "$(corner "$T/sheet.pdf")" --plan-point "0,0" --status Assumed --source "the house's southwest corner" >/dev/null
 cp "$JB" "$T/b-scaled.json"
 
 echo
@@ -256,7 +266,10 @@ echo "    the job's file is byte for byte the same"
 refused "a window with its head under its sill" "the head is above the sill" "$P" find-walls "$JB" "$DB" --lay --windows "6 ft" "3 ft"
 refused "heights without laying" "they go with --lay" "$P" find-walls "$JB" "$DB" --doors "6 ft 8 in"
 # A stair: twelve treads 10 in apart (13 lines), 3 ft long, inside the house. 10 in is 15 points at 1/4 in.
-STAIR=(); for i in $(seq 0 12); do y=$(python3 -c "print(250 + $i * 15)"); STAIR+=("400,$y,454,$y"); done
+# Placed from the house's southwest corner on the page (CX, CY), so that it does not depend on where the plan sits: the stair 16 ft 3 in
+# east of it and 2 ft 4 in north, the beam 10 ft 8 in east and 5 ft 1 in north.
+IFS=, read -r CX CY <<<"$(corner "$T/sheet.pdf")"
+STAIR=(); for i in $(seq 0 12); do STAIR+=("$(python3 -c "print('%s,%s,%s,%s' % ($CX + 292, $CY + 42 + $i * 15, $CX + 346, $CY + 42 + $i * 15))")"); done
 python3 "$T/mkpdf.py" "$P" "$T/sheet.pdf" 3 "$T/stair.pdf" "${STAIR[@]}"
 JS="$T/s.json"; DS="$(new_job "$JS" "$T/stair.pdf" 1)"; scale_it "$JS" "$DS" "$T/stair.pdf" 1
 OUT="$("$P" find-walls "$JS" "$DS")"
@@ -264,7 +277,7 @@ says "still 6 walls" "walls found: 6 (everything found is Assumed" "$OUT"
 says "the stair is a set" "1 set of 13 evenly spaced lines, 0' 10\" apart" "$OUT"
 lacks "no wall in doubt from the stair" "in doubt" "$OUT"
 # A beam shown, or a counter's two edges: two free lines 8 ft long and 4 in apart in the middle of a room.
-python3 "$T/mkpdf.py" "$P" "$T/sheet.pdf" 3 "$T/beam.pdf" "300,300,444,300" "300,306,444,306"
+python3 "$T/mkpdf.py" "$P" "$T/sheet.pdf" 3 "$T/beam.pdf" "$(python3 -c "print('%s,%s,%s,%s' % ($CX + 192, $CY + 92, $CX + 336, $CY + 92))")" "$(python3 -c "print('%s,%s,%s,%s' % ($CX + 192, $CY + 98, $CX + 336, $CY + 98))")"
 JM="$T/m.json"; DM="$(new_job "$JM" "$T/beam.pdf" 1)"; scale_it "$JM" "$DM" "$T/beam.pdf" 1
 OUT="$("$P" find-walls "$JM" "$DM")"
 says "one in doubt" "walls found: 7, 1 of them in doubt" "$OUT"

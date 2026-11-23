@@ -29,6 +29,7 @@ pub mod letters;
 pub mod pdf;
 pub mod pen;
 pub mod size;
+pub mod strings;
 
 /// A colour, 0 to 255 each of red, green and blue.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -61,11 +62,14 @@ pub struct Drawing {
     pub prims: Vec<Prim>,
     /// Where each piece of lettering lies, as it was drawn (`letters`).
     pub letters: Vec<letters::Letter>,
+    /// Each letter written that is not lettered as it is (its plain letter, or the
+    /// question mark), as `font::unlike` has it (call 182).
+    pub unlettered: Vec<(char, Option<char>)>,
 }
 
 impl Drawing {
     pub fn new(width: f32, height: f32) -> Drawing {
-        Drawing { width, height, prims: Vec::new(), letters: Vec::new() }
+        Drawing { width, height, prims: Vec::new(), letters: Vec::new(), unlettered: Vec::new() }
     }
 
     pub fn fill(&mut self, rings: Vec<Vec<(f32, f32)>>, color: Rgb) {
@@ -86,6 +90,7 @@ impl Drawing {
     pub fn text(&mut self, text: &str, (x, y): (f32, f32), height: f32, angle: f32, color: Rgb) {
         let (s, c) = angle.sin_cos();
         let w = font::width(text, height);
+        self.unlettered.extend(font::unlike(text));
         if !text.trim().is_empty() {
             self.letters.push(letters::Letter::centred(text, (x, y), height, angle));
         }
@@ -97,6 +102,7 @@ impl Drawing {
 
     /// `text` with its left end at `(x, y)` on the baseline, level.
     pub fn text_left(&mut self, text: &str, (x, y): (f32, f32), height: f32, color: Rgb) {
+        self.unlettered.extend(font::unlike(text));
         if !text.trim().is_empty() {
             self.letters.push(letters::Letter::centred(text, (x + font::width(text, height) / 2.0, y + height / 2.0), height, 0.0));
         }

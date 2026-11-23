@@ -29,7 +29,12 @@ impl Letter {
     /// A piece of `text` with its capitals `height` tall, centred on `centre`, turned `angle`.
     pub fn centred(text: &str, centre: (f32, f32), height: f32, angle: f32) -> Letter {
         let stroke = (height / 10.0).max(0.5);
-        Letter { text: text.to_string(), height, centre, half: (font::width(text, height) / 2.0 + stroke / 2.0, height / 2.0 + stroke / 2.0), angle }
+        // A mark above a capital or a cedilla below the line is part of the box (call 182).
+        let (up, down) = font::reach(text);
+        // The box runs from the lowest mark to the highest: its centre is moved along the text's up by half the difference.
+        let lift = (up - down) * height / 2.0;
+        let (s, c) = angle.sin_cos();
+        Letter { text: text.to_string(), height, centre: (centre.0 - s * lift, centre.1 + c * lift), half: (font::width(text, height) / 2.0 + stroke / 2.0, height / 2.0 + (up + down) * height / 2.0 + stroke / 2.0), angle }
     }
 
     /// The four corners.

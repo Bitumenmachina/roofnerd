@@ -879,12 +879,23 @@ pub fn find(lines: &[[[f64; 2]; 2]], feet_per_unit: Option<f64>, page: [f64; 2],
             if dot(g.u, fa.u).abs() > CROSS_ANGLE {
                 continue;
             }
-            for &(x, y) in &g.iv {
+            // The pieces of this line that lie between the pair's two lines, none reaching past either, joined:
+            // a cap drawn in halves is one cap, and a room line or a grid line that runs on through the wall
+            // (and a dashed one) is none, by itself or in company with the cap it crosses.
+            let (lo, hi) = (0.0_f64.min(*d) - CAP_TOL, 0.0_f64.max(*d) + CAP_TOL);
+            let mut inside: Vec<(f64, f64)> = Vec::new();
+            let mut at_t = 0.0;
+            for &(x, y) in &g.raw {
                 let (p, q) = g.ends(x, y);
                 let (e0, e1) = (dot(fa.n, p) - fa.c, dot(fa.n, q) - fa.c);
-                if (e0.abs() <= CAP_TOL && (e1 - d).abs() <= CAP_TOL) || (e1.abs() <= CAP_TOL && (e0 - d).abs() <= CAP_TOL) {
-                    crosses.push((dot(fa.u, p) + dot(fa.u, q)) / 2.0);
+                if e0 >= lo && e0 <= hi && e1 >= lo && e1 <= hi {
+                    inside.push((e0.min(e1), e0.max(e1)));
+                    at_t = (dot(fa.u, p) + dot(fa.u, q)) / 2.0;
                 }
+            }
+            let across = merged(inside, CAP_TOL);
+            if across.iter().any(|&(e0, e1)| e0 <= 0.0_f64.min(*d) + CAP_TOL && e1 >= 0.0_f64.max(*d) - CAP_TOL) {
+                crosses.push(at_t);
             }
         }
         crosses.sort_by(|x, y| x.total_cmp(y));

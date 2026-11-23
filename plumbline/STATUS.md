@@ -9523,6 +9523,54 @@ hatch that reads as evenly spaced lines, on curved walls (said), on several plan
 details at other scales on one sheet, and a window drawn with one line reads as a
 door. A level with no height refuses to lay. Not judged. No window half.
 
+## Call 182 built: the plan set after its second judgment, and where it met call 181 (2026-11-23)
+
+Every side of a plan now carries its strings, each a chain adding to the sixteenth to
+the one outside it: the openings to their centers, the partitions to their lines, the
+overall; a partition's door is located inside the plan; a wall off square is
+dimensioned along itself with its angle lettered, and a side whose strings cannot add
+has no overall and the notes say why. The ampersand and accented letters are lettered
+(what cannot be is said). Lettering is tested against every line on the sheet and
+names move to clear them; every fault the program knows is said by `plan-set`. A room
+with no area is lettered so, with the model's reason; a room line is drawn in long
+dashes and is in the key; the key shows only what the sheet draws; sheets are numbered
+through the set; a date is a date or refused; a graphic scale; the file's title.
+`research/worker-report-call182.md`. The lead read `hand-house.png` and `page3.png`:
+they read as drawings a builder could lay out from.
+
+By hand, on the 36 by 16 house (a door centered 6 ft and a window centered 30 ft along
+the south wall, a partition at 24 ft with a door centered 8 ft up it): the south side
+reads 6'-0", 24'-0", 6'-0"; then 24'-0", 12'-0"; then 36'-0"; the partition's door
+8'-0" and 8'-0". The sheet reads the same.
+
+**Moved, by call 182** (`crates/cli/tests/call168.rs`, by the lead, each with its
+reason beside it): the longest line on the sheet is the 36 ft overall, 648 points
+(was the 24 ft string, 432); "24'-0\" VIF" is lettered 6 times across the three pages
+(was 3: the wall's own string and the partitions' string); a test's date "x" is a
+real date (anything but a date is now refused). In `demos/planset.sh`: the counts of
+648-point and 288-point lines, and the notes' two sentences.
+
+**Where it met call 181, and what that found.** With the new sheet the drawn-plan
+finder's demonstration failed: 4 walls where 6, every wall 5 in off. Two causes, one on
+each side: the demonstration scaled and placed the sheet by page numbers written for
+the old layout (now worked from the sheet's own lines); and **the finder was wrong**: a
+room line drawn through the joint where new work meets existing merged with the wall's
+end line, and the wall was no longer ended there. A line across a wall is now judged
+from its pieces between the wall's two lines; a room line, grid line or dashed line
+running on through a wall never ends it and never stops the line beside it ending it
+(test written first, run red). No hand figure moved.
+
+**Run on the integration copy with both:** 700 tests pass in the six command-line
+crates, 0 fail; all 45 command-line demonstrations pass; the three gates and
+`portmap.sh` pass.
+
+**Still not right on the sheets:** no door swings, no opening sizes or tags, no wall
+tags, no schedule of doors and windows; a stub wall's own length and a partition's
+thickness are not dimensioned; in a crowded stack of strings a figure can still have a
+station line through it (said as a fault, not cleared: there are no leaders); a cabinet
+run's string carries VIF because the things set are Assumed; a title cut in its box is
+whole only in the file's own title. Not judged again.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **Since this was written (2026-11-18): a second builder, Opus 5.5, under call 129.**

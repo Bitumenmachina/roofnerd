@@ -115,3 +115,21 @@ door has one leaf line). Ends sorted: first end = west of a wall running east-we
 - Level height is required to lay (it is not Unknown-tolerant): a level without a height refuses with a sentence.
 - `inch_said` (quarter inch) and the CLI's `inch` (inch) differ in rounding for places in notes vs walls (both builder's words).
 - Disk was at 1.7 GB free at the end (shared machine); I did not need `cargo clean`.
+
+## After call 182's sheet
+Two differences, one on each side.
+(a) The 5 in (really 8 points, 5 1/3 in at 1/4 in) was the DEMONSTRATION's: it scaled/placed the sheet from page coordinates written for the old layout
+(house southwest corner at page (108,208); call 182's sheet has it at (100,216)). Neither the finder nor the sheet's place was wrong: the
+lineup the script told the program was 8 points off. Fixed in demos/planwalls.sh: the corner is now worked from the sheet's own lines (x = west end
+of the overall dimension, the 648-point level line highest on the page; y = middle of the lowest pair of long level lines 9 points = 6 in apart, the south wall's two faces),
+used in step 2 and `scale_it`; the stair and beam of step 6 are placed from that corner, not at page numbers.
+(b) The 4 walls where 6 was the FINDER's. The sheet still draws the line across the wall where new meets existing (caps at 24 ft, 211.5-216-220.5 on the south wall, drawn in two halves), but call 182
+also draws the room line as ONE long line at 24 ft from wall centre to wall centre (216 to 504). It runs through the joint of the two halves, so all three lines are one
+collinear face from 211.5 to 508.5; my cross-line test took the merged line's two ends and they are not on the wall's two faces, so no cap was seen and the south and north walls ran 36 ft.
+Fix at the cause (drawn.rs): a line across is now judged from the pieces of that line that lie BETWEEN the pair's two lines (none reaching past either), joined; they must reach from one face to the
+other. So a cap in halves is a cap; a room line, grid line or dashed line that runs on through the wall is no cap, by itself or when the cap sits on it, and it does not stop the cap beside it ending the wall.
+Test written first, run red against the old code (walls [16, 16, 30, 30], wanted [12, 12, 16, 16, 18, 18]), then green: `a_room_line_through_a_wall_does_not_end_it_and_does_not_stop_the_solid_line_beside_it_ending_it`
+(room line alone: no split; room line + caps in halves: split at 12 ft; turned 0 and 33 degrees).
+No hand figure moves. Not touched: plan_set.rs, paper/, building/planset.rs, demos/planset.sh, any plan-set test, any file but demos/planwalls.sh, drawn.rs, drawn_tests.rs.
+Results in wtA: planwalls.sh, planset.sh, findwalls.sh pass; `cargo test -p plumbline-plans drawn`: 28 + 1 passed.
+Still true: a solid line alone across a wall that ends exactly on both faces ends it; a dashed room line alone never does.

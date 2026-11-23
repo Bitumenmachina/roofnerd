@@ -2954,8 +2954,7 @@ fn plan_set_verb(args: &[String]) -> Result<(), String> {
         },
         date: match date {
             None => None,
-            Some(t) if t.trim().is_empty() || t.chars().count() > 24 => return Err("--date is the day to letter on the title box: a few characters, like 2026-11-22".into()),
-            Some(t) => Some(t.trim().to_string()),
+            Some(t) => Some(plumbline_world::plan_set::day(&t)?),
         },
     };
     // A plan set is a PDF, and its name ends as a PDF's does (call 179 D6).
@@ -2986,6 +2985,18 @@ fn plan_set_verb(args: &[String]) -> Result<(), String> {
     say!("wrote {out}: {}, {}, {} paper, {}", count(set.pages.len(), "page", "pages"), set.pages.iter().map(|p| p.show.name()).collect::<Vec<_>>().join(", "), set.paper.name, plumbline_world::paper::size::scale_said(set.scale));
     for (show, why) in &set.not_written {
         say!("not written: {}: {why}", show.name());
+    }
+    let unlettered = set.unlettered();
+    if !unlettered.is_empty() {
+        let n: usize = unlettered.iter().map(|u| u.2).sum();
+        say!("{} could not be lettered as written: {}", count(n, "letter", "letters"), unlettered.iter().map(|(c, p, _)| format!("{c} as {}", p.map_or("?".to_string(), |p| p.to_string()))).collect::<Vec<_>>().join(", "));
+    }
+    let faults = set.faults();
+    if !faults.is_empty() {
+        say!("{} not right on the pages as written:", count(faults.len(), "thing is", "things are"));
+        for f in &faults {
+            say!("  {f}");
+        }
     }
     if list {
         say!();

@@ -563,3 +563,31 @@ fn a_curve_drawn_in_short_straight_pieces_is_said_and_no_wall_is_made_of_it() {
     assert_eq!(d.curved.len(), 2, "the two lines of the bay: {:?}", d.curved);
     assert!(d.curved.iter().all(|c| c.0 >= 20 && c.1 > 20.0), "{:?}", d.curved);
 }
+
+#[test]
+fn a_room_line_through_a_wall_does_not_end_it_and_does_not_stop_the_solid_line_beside_it_ending_it() {
+    // Call 182's sheet draws a room line, one long line from wall centre to wall centre across the plan. Where
+    // new work meets existing, the cap across the wall is drawn in two halves and the room line runs through
+    // their joint, so the three lines are one line on one line.
+    let ring = || {
+        let mut s = Sheet::default();
+        s.ring(0.0, 0.0, 30.0, 16.0, 0.5);
+        s
+    };
+    // The room line alone: no wall is ended by it, and it is no wall.
+    let mut alone = ring();
+    alone.line([12.0, 0.0], [12.0, 16.0]);
+    let d = alone.found(Q4);
+    assert_lengths(&d, &[16.0, 16.0, 30.0, 30.0], 1.0 / 24.0);
+    // The room line with the caps drawn in halves, south and north: both walls end at 12 ft.
+    let mut s = ring();
+    s.line([12.0, 0.0], [12.0, 16.0]);
+    for y in [0.0, 16.0] {
+        s.line([12.0, y - 0.25], [12.0, y]).line([12.0, y], [12.0, y + 0.25]);
+    }
+    for turn in [0.0, 33.0] {
+        let d = s.turned(turn).found(Q4);
+        assert_lengths(&d, &[12.0, 12.0, 16.0, 16.0, 18.0, 18.0], 1.0 / 24.0);
+        assert!(d.walls.iter().all(|w| w.doubt.is_none()), "{d:#?}");
+    }
+}
