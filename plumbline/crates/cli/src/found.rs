@@ -1,7 +1,7 @@
 //! `plumbline find-walls`: the walls, doors, windows and standing things a scan shows,
 //! said in full, and laid on the person's word (DECISIONS.md call 173).
 //!
-//!   plumbline find-walls <file> <scan.ply> --level <level> [--units m|ft] [--up z|y]
+//!   plumbline find-walls <file> <scan.ply> --level <level> [--units m|ft] [--up z|y] [--by-ceiling]
 //!   plumbline find-walls <file> <scan.ply> --level <level> --lay [--outside "<wall type>"]
 //!
 //! Without --lay nothing is written: the job is not touched. With it, what is found is
@@ -255,7 +255,7 @@ pub fn run(args: &[String]) -> Result<(), String> {
             }
         }
     }
-    let usage = "find-walls takes the job's file, a scan (a PLY point cloud) and --level <level>: plumbline find-walls <file> <scan.ply> --level <level> [--units m|ft] [--up z|y] [--lay [--outside \"<wall type>\"] [--take <n>] [--anyway]]";
+    let usage = "find-walls takes the job's file, a scan (a PLY point cloud) and --level <level>: plumbline find-walls <file> <scan.ply> --level <level> [--units m|ft] [--up z|y] [--by-ceiling] [--lay [--outside \"<wall type>\"] [--take <n>] [--anyway]]";
     let (mut plain, mut flags): (Vec<&str>, Vec<(&str, Option<&str>)>) = (Vec::new(), Vec::new());
     let mut i = 1;
     while i < args.len() {
@@ -267,6 +267,7 @@ pub fn run(args: &[String]) -> Result<(), String> {
                 i += 1;
             }
             "--anyway" => flags.push(("--anyway", None)),
+            "--by-ceiling" => flags.push(("--by-ceiling", None)),
             f @ ("--level" | "--units" | "--up" | "--outside") => {
                 let v = args.get(i + 1).ok_or_else(|| format!("{f} needs a value after it"))?;
                 if flags.iter().any(|(known, _)| *known == f) {
@@ -321,7 +322,9 @@ pub fn run(args: &[String]) -> Result<(), String> {
     let wanted = if found::levels(&scan).len() >= 2 { level_elevation(&mut job, &level).zip(lowest_elevation(&mut job)).map(|(e, low)| e - low) } else { None };
     // A large scan says how it is going, a line at a time, as it goes (to the error channel, so that what is said at the end is whole).
     found::set_progress(Some(|line| eprintln!("  ... {line}")));
-    let found = found::find_level(&scan, wanted);
+    // Which finder (call 189): the walls by the points near the ceiling, where furniture does not reach, when asked.
+    let method = if flags.iter().any(|(f, _)| *f == "--by-ceiling") { found::Method::Ceiling } else { found::Method::Lines };
+    let found = found::find_level_by(&scan, wanted, method);
     found::set_progress(None);
     // Where the level says it is another height than the scan reads, that is said (call 179, A8).
     let level_name = name_of(&mut job, &level);

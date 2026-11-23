@@ -7113,3 +7113,69 @@ scanner could see.
    would rely on is lost, not as the test.
 4. **Until it is right on real scans, the window offers tracing over the cut scan
    first** (which works today) and the finder second, as an offer to be looked at.
+
+**Call 189, as built (2026-11-23).** The published method is ported
+(`crates/plans/src/found_189.rs`; Cloud2BIM, MIT, method ported and no code copied;
+`NOTICE`, `LICENSES.md`) and reached with `plumbline find-walls ... --by-ceiling`.
+**It does not replace the first finder**, because the condition written above (better
+on all three real scans) is not met. On the three real phone scans, against what a
+person reads in each one's pictures, written down before any code:
+
+| scan | first finder lays | by ceiling lays |
+|---|---|---|
+| small room | 1 wall, 5 ft too long; 1 missed | the 2 sure walls, right size and place; the other two sides in 2 ft pieces |
+| long room | 10 walls, 3 of them not there | 3 walls, all there; the alcove's walls in pieces or missed |
+| large room | 5 walls, 2 not there, 1 run across a notch | 2 walls, both there |
+
+By ceiling never laid a wall that is not there and takes a quarter of the time; it is
+incomplete, and on the made-up houses it is the same on 28 of 65 and worse on the
+rest (a wall's top broken into pieces; it depends on the angle the house lies at). No
+expectation moved: the default is the code it was. Its own demonstration step is
+`demos/findwalls.sh` step 25.
+
+**Call 190. The scan in the window: the person traces, the scan helps (2026-11-23).**
+Three rounds of finding walls in a scan with nobody looking (173, 183 and 188 on the
+lead's design; 189 on the published one) and none is right on a real phone scan.
+A fourth round is not started. What the real scans did show is which half of the job
+a machine does well and which a person does: a person sees in one look which lines
+are walls and which are a wardrobe; the scan knows to the half inch where the face
+is. So:
+
+1. **Tracing over the cut scan is the path**, and it is the first thing offered when
+   a scan is brought in. It works today.
+2. **A wall drawn over a scan is set by the scan's face.** Two things, and the second
+   is a fault in what tracing a scan does today:
+   - *The click lands on the scan.* The lines the scan's points make where it is cut
+     are read from the sheet's own picture (so they are there again when the job is
+     opened without the scan's file) and are places to pick, exactly as a drawn
+     plan's lines are. Only a line at least 2 ft long is one.
+   - *The line clicked is the wall's face, not its centre.* A scan shows the face of a
+     wall. Today a wall traced over it is laid with its centre on that face, so a
+     room 12 ft by 14 ft inside comes out 11 ft 6 in by 13 ft 6 in with 6 in walls:
+     155.25 SF where there are 168. Over a scan the Wall tool draws by the face: the
+     wall's body lies on the side away from the room (the side with fewer of the
+     scan's points), its centre half its thickness beyond the line, corners carried
+     out both ways. The window says which side it took and offers "Other side".
+     Where the scan shows both faces of a wall the centre goes between them and the
+     distance between them is said beside the type's thickness. The saved wall is
+     what it always was (a centre line and a type): no file changes. It arrives
+     Assumed, "traced by its face over the scan <name>".
+   The same choice ("Centerline" or "Face") is on the Wall tool over a drawn plan,
+   where it stays on Centerline unless the person changes it: nothing drawn today
+   over a plan moves. A click with no scan line near stays where the hand put it and
+   says "the scan shows no face here".
+3. **The walls the by-ceiling finder is sure of are shown as pale lines to take**, one
+   click each, never laid unasked in the window. Only those it would lay by itself
+   (two ends met, or both faces seen): on the real scans that set held no wall that
+   was not there. A taken wall is Assumed, sourced to the scan, as today.
+4. **The verb keeps both finders**; the first is the default; `--lay` is as it was.
+5. **What is said of it**: the README and the help say that a scan is traced over
+   with the scan's help, and that the finder is an offer. Nothing says a scan is
+   turned into walls by itself.
+
+One arithmetic: the line the scan's points make near a place, and the thickness
+between two faces, are worked out in `crates/plans` (the finders' own code) and the
+window only asks; a line of clicks carried out by half a thickness is worked out in
+`crates/world`. The 2 ft in point 2 is the lead's and Assumed: a named constant that
+moves only by a written call. Point 3 is built after point 2 has been tried on the
+real scans.

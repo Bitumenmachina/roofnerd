@@ -18,12 +18,15 @@ mod drawn_tests;
 pub mod found;
 pub(crate) mod found_183;
 pub(crate) mod found_188;
+pub(crate) mod found_189;
 #[cfg(test)]
 mod found_179;
 #[cfg(test)]
 mod found_183_tests;
 #[cfg(test)]
 mod found_188_tests;
+#[cfg(test)]
+mod found_189_tests;
 #[cfg(test)]
 mod found_scenes;
 pub mod scan;

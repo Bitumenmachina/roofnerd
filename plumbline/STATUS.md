@@ -9858,6 +9858,96 @@ first. Made-up houses: 60 of 65 the same; three better; one adds two offers in d
 one says "1 end meets nothing" where it said the walls close (a closet wall's end
 moved 3 in).
 
+## Call 189 built: the scan's finder on the published method (2026-11-23)
+
+Built by a Sonnet worker in a second working copy; accepted by the lead on the
+integration copy: the six command-line crates' tests, 786 passed and none failed (770
+before, 16 new); the lead's own run of the three real scans with each finder agrees
+with the worker's table (the small room's two clear walls within 2 in of where they
+read on the scan); the command-line demonstrations and the gates are in the commit's
+message.
+`plumbline find-walls <job> <scan> --level <level> --by-ceiling` uses the published
+method (the top of the room, where furniture does not reach). **The first finder is
+still the verb's**: the new one is not better on all three real scans (DECISIONS.md,
+"Call 189, as built", has the table). What it is: safe (on three real scans it laid no
+wall that is not there) and incomplete (a wall's top broken into pieces is offered in
+doubt, not laid).
+
+What is not right: neither finder turns a real phone scan into the room's walls by
+itself. Call 190 says what is done about that: the person traces over the cut scan,
+each wall takes the scan's face, and the sure walls are offered to take with a click.
+That is a window job and is next in the window builder's list.
+
+## A wall traced over a scan, set by its face: a demonstration, written before it is built (call 190; 2026-11-23)
+
+`demos/tracew.sh`, in the window. The scan is made up (`tools/made-up-scan.py --scene
+house`): a house 30 ft by 16 ft inside and 8 ft high, one face of each outside wall
+seen from indoors, and a partition 4 1/2 in thick with both faces seen, 18 ft from
+the west wall. Wall types: 6 in for the outside walls, 4 1/2 in for the partition.
+
+Worked by hand:
+
+- **Brought in**, the message says the sheet's lines are read: 6 (four outside faces,
+  two partition faces).
+- **The outside walls**, Wall tool, 6 in type, the choice on Face (it is, over a
+  scan). Four clicks, each 3 in or so off an inside corner, then back to the first.
+  Each lands on the corner of the scan's faces: (0, 0), (30, 0), (30, 16), (0, 16)
+  in the scan's own feet. The walls' centres are 3 in outside those: corners at
+  (-0.25, -0.25), (30.25, -0.25), (30.25, 16.25), (-0.25, 16.25). Centre lines
+  30.5 + 16.5 + 30.5 + 16.5 = **94.00 LF**. Inside the faces: 30 x 16 = **480 SF**.
+  The message says the body is outside the line and offers "Other side".
+- **What it was before** (the choice on Centerline, the same clicks): centres on the
+  faces, the inside 29.5 x 15.5 = 457.25 SF, **22.75 SF short**. The demonstration
+  draws it that way once, on a second level, and checks that figure, so that the
+  choice is seen to be what makes the difference.
+- **The partition**, 4 1/2 in type, a click on either of its faces at the south wall
+  and at the north: the centre goes between the two faces and its ends are on the
+  inside faces of the outside walls: **16.00 LF**. The message says the scan shows
+  4 1/2 in between the faces and the type is 4 1/2 in. Drawn again with the 6 in
+  type (after Undo): the message says the scan shows 4 1/2 in and the type is 6 in;
+  it is laid, not refused.
+- **All walls: 110.00 LF.** The two rooms, inside their walls: 480 - 0.375 x 16 =
+  **474.00 SF** together.
+- **No face near**: a click 3 ft inside the room, away from every line, stays where
+  the hand put it, and the message says the scan shows no face here.
+- **Saved, closed, opened again** with the scan's file taken away: the sheet's lines
+  are read again from its picture and a wall drawn then lands on the face as before.
+- Every wall is Assumed, its source "traced by its face over the scan house".
+
+If the program's own rule for a wall's length is not its centre line end to end, the
+builder says which figure moves and why before anything is built; the hand figures
+above are then set right here, with the reason.
+
+## The drawn plan after real sheets: a demonstration, written before it is built (call 188 items 6 to 9; 2026-11-23)
+
+`demos/planwalls.sh`, new steps, each on a made-up sheet at 1/4 in to the foot. A
+wall's length is counted as the steps before count it (a 30 by 20 ft house is 100 LF).
+The causes of items 7 and 8 are not known to the lead: the builder reads them off the
+real sheets first and draws them into the made-up ones; the figures below are what
+the made-up sheets must come to whatever the cause.
+
+- **Two drawings on a sheet.** A house 30 by 20 ft of 6 in walls with a 4 1/2 in
+  partition across it (100 + 20 = 120 LF, 5 walls), and 50 ft east of it a roof plan:
+  an eave 32 by 22 ft with a second line 6 in inside it all round (32 + 22 + 32 + 22
+  = 108 LF of what reads as 6 in wall, 4 pieces). 108 is over half of 120, so they
+  are of like size. It says there are 2 drawings, about 120 ft and about 108 ft of
+  wall, and lays none. With `--plan 1`: 5 walls, 120.00 LF. With `--within` two
+  corners round the house: the same 5 walls, 120.00 LF. `--plan 3`: refused, there
+  are 2. (A section beside a plan, under half its length, is still set apart without
+  asking: the step that checks that is as it was.)
+- **One wall once.** The 30 by 20 ft house drawn the way the real sheets draw a wall
+  that was found twice: 4 walls, 100.00 LF, and each says how many were joined.
+- **Glass and a tag.** The house with one 5 ft window in the south wall, a 3 ft door,
+  a shower's glass 3 ft long inside a room, drawn as the real sheet draws it, and a
+  tag beside the door: 1 window, 1 door.
+- **The sheet's own dimensions.** "30'-0"" written by a dimension line 540 points
+  long (7 1/2 in of paper) and "20'-0"" by one 360 points long (5 in): both make the
+  sheet 1/4 in to the foot (18 points to the foot); they are listed with where each
+  is, and scaling by the first gives the house 30 by 20 ft, 100.00 LF, the scale
+  Assumed and sourced to the string. A third, "12'-0"" by a line 180 points long
+  (10 ft by the other two): said not to agree, with the 10'-0" it measures, and
+  never used unasked.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **As of 2026-11-23 (the lead, after the merge of that day). Read this block first; what

@@ -37,7 +37,7 @@ pub(crate) type P2 = [f64; 2];
 
 /// The cell of plan an upright face is looked for in: 0.1 ft (1 1/4 in), finer than a wall
 /// is thick and coarser than the scatter of a phone's points (1.5 cm).
-const CELL: f64 = 0.1;
+pub(crate) const CELL: f64 = 0.1;
 /// A cell of fewer points than this is nothing seen: a stray, not a face.
 const CELL_POINTS: u32 = 4;
 /// Upright: points at this many heights, 6 in apart, in one cell (1 1/2 ft of face at least).
@@ -67,7 +67,7 @@ const MIN_VOTES: u32 = 20;
 const MOST_LINES: usize = 120;
 /// The strongest lines the roughness of a scan's walls is measured on, and how far from each (feet) its points are taken (call 188, 1).
 /// What is left out and is this long or longer is offered as "likely a wall" (call 188, 1), and how much of the ceiling's height a face that stops short stands for it to be.
-const LIKELY_LEAST: f64 = 6.0;
+pub(crate) const LIKELY_LEAST: f64 = 6.0;
 /// Faces within this far (16 in, the thickest wall found as one, and not the 2 ft a bank of cabinets is deep) across, alongside one another for this share of the shorter's length, and seen from the same side, are one face scanned in passes (call 188, 2).
 const PASS_APART: f64 = PAIR_MOST;
 const PASS_ALONGSIDE: f64 = 0.5;
@@ -78,7 +78,7 @@ const FLOOR_REACH: f64 = 0.25;
 /// How far from its line a point is still on a face, each side: 3 sigma of 1.5 cm of
 /// scatter. Two faces nearer than this to each other cannot be told apart (the call's
 /// least wall is 2 in = 0.167 ft; a face of 1.5 cm scatter keeps within 0.15).
-const BAND: f64 = 0.15;
+pub(crate) const BAND: f64 = 0.15;
 /// A face with fewer than this fraction (one in this many) of the usual points to the
 /// square foot is a line through other things' points, not a face.
 const SPARSE: f64 = 4.0;
@@ -89,7 +89,7 @@ const CROSSES: f64 = 0.17;
 /// the vote is told to 0.5 degree and 0.1 ft, which on a 30 ft wall is 0.13 ft at the far end.
 const SEED_BAND: f64 = 0.2;
 /// The width of the columns a face is looked at in, along it, and the height of the rows.
-const SQUARE: f64 = 0.25;
+pub(crate) const SQUARE: f64 = 0.25;
 /// A column needs this many points to be there at all (a stray or two are not a wall).
 const COLUMN_POINTS: usize = 3;
 /// An upright stretch at least this long that is not a face (too short, or not straight) is counted and said (call 179, A5).
@@ -98,10 +98,10 @@ const SHORT_FACE: f64 = 1.0;
 /// along a line ends the face (the least opening, so that a doorway is inside a wall and
 /// not between two).
 pub(crate) const MIN_FACE: f64 = 2.0;
-const GAP: f64 = 1.5;
+pub(crate) const GAP: f64 = 1.5;
 /// The floor's and the ceiling's own scatter, set aside: no wall's point is taken from
 /// the lowest or the highest 3 in.
-const SET_ASIDE: f64 = 0.25;
+pub(crate) const SET_ASIDE: f64 = 0.25;
 /// A wall's face has points within 6 in of the ceiling over this share of its length, and
 /// within 6 in of the floor over this share (what a door, a window's sill below nothing,
 /// or something standing against it leaves out). On a grid of 3 in squares the one
@@ -113,7 +113,7 @@ const WALL_REACHES_FLOOR: f64 = 0.5;
 /// A2), and the rest of it is hidden: a sofa's back reaches it over none.
 const SOME_REACHES_CEILING: f64 = 0.3;
 /// Square: within 1 degree of a main direction (call 173).
-const SQUARE_DEGREES: f64 = 1.0;
+pub(crate) const SQUARE_DEGREES: f64 = 1.0;
 /// Parallel, for two faces of one wall: within 1 degree; apart 2 in to 16 in; side by
 /// side for at least this much of their length.
 pub(crate) const PAIR_DEGREES: f64 = 1.0;
@@ -122,31 +122,31 @@ pub(crate) const PAIR_MOST: f64 = 16.0 / 12.0;
 /// ... and up to this far apart where no floor is seen between them (call 179, A6): of the floor a gap would
 /// show, less than this share is seen, not counting 3 in each side of it.
 pub(crate) const PAIR_MOST_BARE: f64 = 24.0 / 12.0;
-const FLOOR_BETWEEN: f64 = 0.1;
+pub(crate) const FLOOR_BETWEEN: f64 = 0.1;
 const FLOOR_MARGIN: f64 = 0.25;
 const PAIR_ALONGSIDE: f64 = MIN_FACE;
 /// An opening is at least this long (call 173), less what the edges are measured to (3 in
 /// of 1/2 inch = this slack): a 1 ft 6 in doorway is not lost for being measured 1 ft 5 3/4 in.
-const MIN_OPENING: f64 = 1.5;
-const MIN_OPENING_SLACK: f64 = 0.04;
+pub(crate) const MIN_OPENING: f64 = 1.5;
+pub(crate) const MIN_OPENING_SLACK: f64 = 0.04;
 /// Something that stands within this of a stretch of wall, on the side the scan saw it
 /// from, hides it (call 173).
-const IN_FRONT: f64 = 3.0;
+pub(crate) const IN_FRONT: f64 = 3.0;
 /// Something stands in front of a stretch only if it is this far or more from the wall's
 /// own scatter.
-const IN_FRONT_LEAST: f64 = 0.2;
+pub(crate) const IN_FRONT_LEAST: f64 = 0.2;
 /// A found face's end is carried to the line of another wall's face it comes up to, when
 /// it is this near: the faces end at the faces they meet, not at the centre of the scatter.
-const SNAP: f64 = 0.5;
+pub(crate) const SNAP: f64 = 0.5;
 /// Openings within this of one another in width and in head are one type (call 179, A9): an inch.
-const ONE_TYPE: f64 = 1.0 / 12.0;
+pub(crate) const ONE_TYPE: f64 = 1.0 / 12.0;
 /// A found wall's end is carried to another's line where it comes within this of it (call 173).
 pub(crate) const CORNER: f64 = 1.0;
 /// Two walls this nearly parallel (sine of the angle between) do not meet at a corner.
 const NOT_PARALLEL: f64 = 0.5;
 /// How far from its end the solid of an edge is looked at to count its density, and how
 /// far the edge is expected to lie from the first empty square: see `edge`.
-const EDGE_BACK: f64 = 0.4;
+pub(crate) const EDGE_BACK: f64 = 0.4;
 const EDGE_LOOK: f64 = 0.5;
 /// The count puts an edge no further than the farthest point counted, unless the solid there is no thicker than where the density was counted: where
 /// what is counted is more than this many times as thick (and this much over, in feet), the count says only that the solid changed (see `edge`).
@@ -154,13 +154,13 @@ const EDGE_THICKER: f64 = 1.5;
 const EDGE_OVERSHOOT: f64 = 0.1;
 /// The foot of a wall nearest its end is not counted for the density of an edge: the
 /// points of a wall that crosses it were taken off there.
-const NEAR_END: f64 = 0.3;
+pub(crate) const NEAR_END: f64 = 0.3;
 /// Parts of the scan joined into one thing standing short: ends within this (call 173's
 /// corners, 1 ft).
 const THING_JOIN: f64 = 1.0;
 /// A floor cell is 1 ft square; a side of a wall is where the scan saw it from if this
 /// many floor cells are on it within 6 ft.
-const FLOOR_CELL: f64 = 1.0;
+pub(crate) const FLOOR_CELL: f64 = 1.0;
 const SEEN_FLOOR_CELLS: usize = 5;
 /// ... and if it shows at least a third as much floor as the other side does (the foot of
 /// floor nearest a wall is not counted, for the wall's own base scatters into it).
@@ -171,7 +171,7 @@ const SEEN_REACH: f64 = 6.0;
 const FLOOR_LIKE: f64 = 0.3;
 /// A wall face stands behind a face, for the face to be "a wall or something tall standing at the
 /// wall", when it lies this far behind it or nearer, on the side the scan did not see it from (call 179, A3).
-const BEHIND: f64 = 3.0;
+pub(crate) const BEHIND: f64 = 3.0;
 /// How far from a crossing wall's line a column of a face is inside that wall's body: half the thickest wall (a foot) is generous; a quarter of a
 /// foot would miss the band the finder takes off at a corner (BAND + 0.05, 0.2 ft); this is a little over that (call 183, 4).
 /// A stretch left out lies at a wall's open end when it comes within this of it (two corners).
@@ -210,7 +210,7 @@ const STANDS_ALONG: f64 = 0.9;
 
 /// The side of a square of plan the ceiling is looked for in (3 ft apart or more on a thin scan, as the
 /// squares of the walls are).
-const CEIL_CELL: f64 = 1.0;
+pub(crate) const CEIL_CELL: f64 = 1.0;
 /// Nothing under this high above the floor is a ceiling.
 const LEAST_CEILING: f64 = 5.0;
 /// A surface is a ceiling over a cell when this share of the points a flat surface of that cell would hold lie
@@ -227,22 +227,22 @@ const SLOPE_BETTER: f64 = 0.5;
 /// A cell of ceiling is a surface where its points fill at least this share of the nine parts of the cell (call 183, 6).
 const CEIL_FILL: f64 = 0.8;
 /// How far out from a wall, each side, the ceiling over it is looked at.
-const CEIL_OUT: f64 = 1.5;
+pub(crate) const CEIL_OUT: f64 = 1.5;
 
 /// The ceiling over the plan, as its height above the floor.
-struct Ceil {
+pub(crate) struct Ceil {
     /// One height over the whole house: the usual, and what the scan's own floor and ceiling say.
-    flat: Option<f64>,
-    cells: HashMap<(i64, i64), f64>,
-    side: f64,
+    pub(crate) flat: Option<f64>,
+    pub(crate) cells: HashMap<(i64, i64), f64>,
+    pub(crate) side: f64,
     /// Where no cell is known near.
-    middle: f64,
-    lowest: f64,
-    highest: f64,
+    pub(crate) middle: f64,
+    pub(crate) lowest: f64,
+    pub(crate) highest: f64,
 }
 
 impl Ceil {
-    fn at(&self, p: P2) -> f64 {
+    pub(crate) fn at(&self, p: P2) -> f64 {
         if let Some(h) = self.flat {
             return h;
         }
@@ -268,7 +268,7 @@ impl Ceil {
         self.middle
     }
     /// Whether the ceiling was read near a place (a cell of it within a cell either way), or is one height everywhere.
-    fn reads(&self, p: P2) -> bool {
+    pub(crate) fn reads(&self, p: P2) -> bool {
         if self.flat.is_some() {
             return true;
         }
@@ -276,7 +276,7 @@ impl Ceil {
         (-1..=1).any(|dx| (-1..=1).any(|dy| self.cells.contains_key(&(cx + dx, cy + dy))))
     }
     /// The ceiling over a wall at `p` whose normal is `n`: the lower of what is over either side of it.
-    fn over(&self, p: P2, n: P2) -> f64 {
+    pub(crate) fn over(&self, p: P2, n: P2) -> f64 {
         if let Some(h) = self.flat {
             return h;
         }
@@ -286,7 +286,7 @@ impl Ceil {
 
 /// What the ceiling is, from the points over the floor: the ceiling to use (None where none shows), and a
 /// sentence where it is not one height. `side` is the cell's side, `rho` how thick the scan is.
-fn ceiling_of(scan: &Scan, floor: f64, scan_ceiling: Option<f64>, rho: Option<f64>, side: f64) -> (Option<Ceil>, Option<String>) {
+pub(crate) fn ceiling_of(scan: &Scan, floor: f64, scan_ceiling: Option<f64>, rho: Option<f64>, side: f64) -> (Option<Ceil>, Option<String>) {
     let key = |p: &[f64; 3]| ((p[0] / side).floor() as i64, (p[1] / side).floor() as i64);
     // (sorted by cell, then taken cell by cell: a map with a list for each cell costs more than this on a
     // scan of a few hundred thousand points)
@@ -389,22 +389,22 @@ fn ceiling_of(scan: &Scan, floor: f64, scan_ceiling: Option<f64>, rho: Option<f6
 /// much thinner it is, so that each holds as many points as it did, and the least a face is voted for by is
 /// made fewer. Under the least that has been tried and found to tell a wall (the thinnest scan of a house
 /// this found every wall of, tried at several sizes and angles) nothing is found, and that is said.
-const REFERENCE_DENSITY: f64 = 80.0;
-const LEAST_DENSITY: f64 = 8.0;
+pub(crate) const REFERENCE_DENSITY: f64 = 80.0;
+pub(crate) const LEAST_DENSITY: f64 = 8.0;
 /// A scan under this share of the reference thickness is said to be thin, and what that does to what it finds.
-const THIN_NOTE_BELOW: f64 = 0.7;
+pub(crate) const THIN_NOTE_BELOW: f64 = 0.7;
 /// A line is voted for by at least this many upright cells however thin the scan.
 const MOST_THIN_VOTES: u32 = 8;
 
 /// A number of points, in words.
-fn figure(x: f64) -> String {
+pub(crate) fn figure(x: f64) -> String {
     format!("{} points", x.round() as i64)
 }
 
 /// Points to the square foot of the scan's floor: of the 1 ft squares that hold two or more points within 3 in
 /// of the floor, the middle one's count. (The floor shows much as a wall does, at the same spacing; a square
 /// at a wall's foot or under furniture holds fewer and does not set it.)
-fn density(scan: &Scan, floor: f64) -> Option<f64> {
+pub(crate) fn density(scan: &Scan, floor: f64) -> Option<f64> {
     let mut at: Vec<(i64, i64)> = scan.points.iter().filter(|p| (p[2] - floor).abs() <= SET_ASIDE).map(|p| (p[0].floor() as i64, p[1].floor() as i64)).collect();
     at.sort_unstable();
     let held: Vec<f64> = at.chunk_by(|a, b| a == b).map(|r| r.len()).filter(|n| *n >= 2).map(|n| n as f64).collect();
@@ -643,7 +643,7 @@ fn along_span(f: &Face, d: P2) -> (f64, f64) {
     (a.min(b), a.max(b))
 }
 
-fn median(mut v: Vec<f64>) -> f64 {
+pub(crate) fn median(mut v: Vec<f64>) -> f64 {
     if v.is_empty() {
         return 0.0;
     }
@@ -660,7 +660,7 @@ fn median(mut v: Vec<f64>) -> f64 {
 /// the points in the strip, `room` how far the solid runs beyond `x0`, and `hollow_end`
 /// how far into the hollow the counting goes (1 ft at most). Where the solid is too short
 /// to count the density in, `None`.
-fn edge(v: &[f64], x0: f64, up: bool, room: f64, hollow_end: f64) -> Option<f64> {
+pub(crate) fn edge(v: &[f64], x0: f64, up: bool, room: f64, hollow_end: f64) -> Option<f64> {
     let look = EDGE_LOOK.min(room);
     if look < 0.2 {
         return None;
@@ -686,9 +686,9 @@ fn edge(v: &[f64], x0: f64, up: bool, room: f64, hollow_end: f64) -> Option<f64>
 }
 
 /// A grid of 3 in squares along a wall and up it, with the count of points in each.
-struct Grid {
-    cols: usize,
-    rows: usize,
+pub(crate) struct Grid {
+    pub(crate) cols: usize,
+    pub(crate) rows: usize,
     n: Vec<u32>,
     /// The count a square needs to be there: a quarter of what the middling square that
     /// has any holds, at least 2.
@@ -701,7 +701,7 @@ struct Grid {
 impl Grid {
     /// `tops(s)` is the ceiling's height over the way along `s`: squares from there up are not part of the wall
     /// (they are marked full, so that no hole is found above a lower ceiling).
-    fn new(pts: &[[f64; 2]], s0: f64, s1: f64, high: f64, sq: f64, tops: &dyn Fn(f64) -> f64) -> Grid {
+    pub(crate) fn new(pts: &[[f64; 2]], s0: f64, s1: f64, high: f64, sq: f64, tops: &dyn Fn(f64) -> f64) -> Grid {
         let cols = (((s1 - s0) / sq).ceil() as usize).max(1);
         let rows = (((high - SET_ASIDE) / sq + 1e-9).floor() as usize).max(1);
         let mut n = vec![0u32; cols * rows];
@@ -723,10 +723,10 @@ impl Grid {
         }
         Grid { cols, rows, n, need, s0, sq }
     }
-    fn full(&self, c: usize, r: usize) -> bool {
+    pub(crate) fn full(&self, c: usize, r: usize) -> bool {
         self.n[r * self.cols + c] >= self.need
     }
-    fn col_range(&self, c: usize) -> f64 {
+    pub(crate) fn col_range(&self, c: usize) -> f64 {
         self.s0 + c as f64 * self.sq
     }
 }
@@ -1200,7 +1200,7 @@ fn plan_size(scan: &Scan) -> (f64, f64) {
 
 /// Whether this is likely a house at all, from the scan's own size (call 179, A7): the sentence
 /// when it is not.
-fn unlikely(scan: &Scan, heights: Option<(f64, f64)>) -> Option<String> {
+pub(crate) fn unlikely(scan: &Scan, heights: Option<(f64, f64)>) -> Option<String> {
     let ft_in = |x: f64| plumbline_units(x);
     let check = "this is not likely the house: check the measure and which way is up";
     if let Some((lowest, highest)) = heights {
@@ -1322,15 +1322,33 @@ pub fn find(scan: &Scan) -> Found {
 /// is asked for. A scan of one level is found as it is. More than one is said, "the scan holds two levels: floors at 0' 0" and 9' 3"", and the points of the
 /// others are not looked at: each level is found alone, so that the walls of one are not found twice and a door of the upper floor is not a window of the lower.
 pub fn find_level(scan: &Scan, wanted: Option<f64>) -> Found {
+    find_level_by(scan, wanted, Method::Lines)
+}
+
+/// Which finder reads a scan (call 189): the first, built on lines voted for by the points the whole height of the room, or the one built on the
+/// published method, the points near the ceiling laid on the plan (`found_189`). Everything said and laid after is the same.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Method {
+    Lines,
+    Ceiling,
+}
+
+/// The walls of a scan by the points near its ceiling (call 189).
+pub fn find_by_ceiling(scan: &Scan) -> Found {
+    find_level_by(scan, None, Method::Ceiling)
+}
+
+/// `find_level`, by the finder named.
+pub fn find_level_by(scan: &Scan, wanted: Option<f64>, method: Method) -> Found {
     // A scan too large to be read in good time is thinned first, and that is said (call 188, 4).
     if scan.points.len() > crate::found_188::MOST_POINTS {
         let (thin, kept) = crate::found_188::thin(scan);
-        let mut out = find_level(&thin, wanted);
+        let mut out = find_level_by(&thin, wanted, method);
         out.thinned = Some((scan.points.len(), kept));
         return out;
     }
     // Which way is up, told by shape, before anything is found (call 188, 3): said first, and nothing is laid without the person's word.
-    let mut out = find_level_inner(scan, wanted);
+    let mut out = find_level_inner(scan, wanted, method);
     if let Some(up) = crate::found_188::which_way_up(&scan.points) {
         // The shape says it first; what the reading of the floor to the ceiling says is kept, as what it read.
         out.not_likely = Some(match out.not_likely.take() {
@@ -1344,13 +1362,13 @@ pub fn find_level(scan: &Scan, wanted: Option<f64>) -> Found {
     out
 }
 
-fn find_level_inner(scan: &Scan, wanted: Option<f64>) -> Found {
+fn find_level_inner(scan: &Scan, wanted: Option<f64>, method: Method) -> Found {
     if scan.points.len() >= crate::found_188::PROGRESS_FROM {
         crate::found_188::progress(&format!("reading {} points for walls", plumbline_world_figure(scan.points.len())));
     }
     let lv = levels(scan);
     if lv.len() < 2 {
-        return find_one(scan);
+        return find_one(scan, method);
     }
     let base = lv[0].floor;
     let at: Vec<f64> = lv.iter().map(|l| l.floor - base).collect();
@@ -1359,7 +1377,7 @@ fn find_level_inner(scan: &Scan, wanted: Option<f64>) -> Found {
     let hi_cut = if k + 1 == lv.len() { f64::MAX } else { (lv[k].ceiling + lv[k + 1].floor) / 2.0 };
     let shift = lv[k].floor - base;
     let sub = Scan { points: scan.points.iter().filter(|p| p[2] > lo_cut && p[2] < hi_cut).map(|p| [p[0], p[1], p[2] - shift]).collect(), lost: Vec::new() };
-    let mut out = find_one(&sub);
+    let mut out = find_one(&sub, method);
     let list = at.iter().map(|h| plumbline_units(*h)).collect::<Vec<_>>();
     let list = match list.as_slice() {
         [a, b] => format!("{a} and {b}"),
@@ -1385,12 +1403,16 @@ pub fn set_progress(f: Option<fn(&str)>) {
 
 /// Find the walls of a scan of one level (levelled by its floor), by how thick the scan is where: where one part is thinner than another by 2 1/2 times or
 /// more, each part is read by its own thickness and what each finds is one find, and the parts are said, with where (call 183, 7).
-fn find_one(scan: &Scan) -> Found {
-    let Some((floor, _)) = scan.floor_and_ceiling().0.map(|f| (f, ())) else { return find_core(scan) };
-    let Some(z) = crate::found_183::zones(scan, floor) else { return find_core(scan) };
+fn find_one(scan: &Scan, method: Method) -> Found {
+    let core: fn(&Scan) -> Found = match method {
+        Method::Lines => find_core,
+        Method::Ceiling => crate::found_189::find_core,
+    };
+    let Some((floor, _)) = scan.floor_and_ceiling().0.map(|f| (f, ())) else { return core(scan) };
+    let Some(z) = crate::found_183::zones(scan, floor) else { return core(scan) };
     let (thick_scan, thin_scan) = (crate::found_183::part_of(scan, &z.thick, &z.thin), crate::found_183::part_of(scan, &z.thin, &z.thick));
-    let thick = find_core(&thick_scan);
-    let thin = find_core(&thin_scan);
+    let thick = core(&thick_scan);
+    let thin = core(&thin_scan);
     let describe = |blocks: &HashSet<(i64, i64)>| {
         let (x0, x1) = (blocks.iter().map(|b| b.0).min().unwrap_or(0), blocks.iter().map(|b| b.0).max().unwrap_or(0) + 1);
         let (y0, y1) = (blocks.iter().map(|b| b.1).min().unwrap_or(0), blocks.iter().map(|b| b.1).max().unwrap_or(0) + 1);
@@ -2374,7 +2396,7 @@ fn find_core(scan: &Scan) -> Found {
 }
 
 /// Which end of a wall is its first, in words (west or south).
-fn end_word(w: &Wall) -> &'static str {
+pub(crate) fn end_word(w: &Wall) -> &'static str {
     let (dx, dy) = (w.to[0] - w.from[0], w.to[1] - w.from[1]);
     if dx.abs() >= dy.abs() { "west" } else { "south" }
 }
@@ -2388,7 +2410,7 @@ pub(crate) fn distance_to(p: P2, a: P2, b: P2) -> f64 {
 
 /// Where the walls found do not close (call 179, A2): each end of a wall that comes within a foot
 /// (CORNER) of no other wall's line. What is missing there is said, not guessed.
-fn open_ends(walls: &[Wall]) -> Vec<(usize, P2)> {
+pub(crate) fn open_ends(walls: &[Wall]) -> Vec<(usize, P2)> {
     let mut out = Vec::new();
     for (i, w) in walls.iter().enumerate().filter(|(_, w)| w.doubt.is_none()) {
         for p in [w.from, w.to] {

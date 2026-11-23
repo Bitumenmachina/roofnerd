@@ -1172,4 +1172,41 @@ FT24="$("$P" find-walls "$J24B" "$T/hung.ply" --level "$L24B" --lay --take "$N24
 says "one taken on the person's word is laid" "laid on $L24B: 5 walls" "$FT24"
 
 echo
+echo "== Step 25 (call 189). The same phone's scan found the way the published method finds it, by the points near the ceiling (--by-ceiling) =="
+# By hand: the room of step 21, 12 ft by 14 ft and 8 ft high, every wall leaning a degree and 2.5 cm rough, the south wall bowed 1 1/2 in, the west wall scanned twice 10 in apart.
+# The points in the top tenth of the height (7 ft 2 in up) and not within 3 in of the ceiling are laid on the plan as how dense they are; furniture does not reach them. Their
+# outlines are made straight (to the scan's own roughness: a bow of 1 in 96 is not a corner), the two sides of each thin outline are one face, and a face is a wall seen from one
+# side: four walls, none given a thickness (the two passes of the west wall are joined into one face: said), none in doubt. The south and the north are 12 ft (144 in), the east
+# 14 ft (168 in); the west is 14 ft too, but its top is thin in this scan and it is found over 11 ft 6 in of it (138 in, to a foot): the walls then do not close at its north end,
+# and that is said with where.
+# The south wall's bow (1 1/2 in by hand) is said where the face has points enough to show it (the unit test `a_bowed_wall_is_one_wall_and_its_bow_is_said` has it at 300 to the square
+# foot); this south wall is scanned at an eighth of the density of the north and east, and its bow is under the inch said, so here it is said at most once, and of no other wall.
+# The two finders are not asked to agree to the inch.
+J25="$T/d25.json"; L25="$(new_job "$J25")"
+F25="$("$P" find-walls "$J25" "$T/phone.ply" --level "$L25" --by-ceiling)"
+echo "$F25" | sed -n '/walls found/,/squared/p' | sed 's/^/    | /'
+says "the walls were found by their tops" "walls found by their tops" "$("$P" find-walls "$J25" "$T/phone.ply" --level "$L25" --by-ceiling 2>&1)"
+says "a wall scanned twice is one wall, and how many were joined is said" "faces of this wall were joined into one" "$F25"
+python3 - "$T" <<PY25
+import re, sys
+sys.path.insert(0, sys.argv[1])
+from said import *
+said = """$F25"""
+w = walls_said(said)
+check("walls found", len(w), 4, 0, "walls")
+assert all(x["thick"] is None for x in w), ("a thickness was told that the scan does not give", w)
+assert "in doubt" not in said.split("walls found")[1].split("\n")[0], said
+check("walls about 12 ft long (the south, the north, the west found over 11 ft 6 in of its 14)", len([x for x in w if abs(x["long"] - 144) <= 12]), 3, 0, "walls")
+check("the east wall 14 ft", len([x for x in w if abs(x["long"] - 168) <= 12]), 1, 0, "walls")
+assert "the walls found do not close" in said, "the west wall's top is thin in this scan and it stops short of the north-west corner: that is said, and not hidden"
+assert len(re.findall(r"bowed", said)) <= 1, "only the south wall bows"
+assert "everything found is Assumed" in said, said
+done()
+PY25
+W25="$(made "$("$P" type "$J25" wall "Existing outside wall" --thickness "6 in" --status Assumed --source "to be checked on site")")"
+FS25="$("$P" find-walls "$J25" "$T/phone.ply" --level "$L25" --by-ceiling --lay --outside "$W25")"
+says "all four laid, Assumed" "laid on $L25: 4 walls" "$FS25"
+refused "a second laying is refused" "already has 4 walls found in scan" "$P" find-walls "$J25" "$T/phone.ply" --level "$L25" --by-ceiling --lay --outside "$W25"
+
+echo
 echo "PASS: walls, doors, windows and what stands short found in a scan, said in full and laid on the word, to the figures worked by hand"
