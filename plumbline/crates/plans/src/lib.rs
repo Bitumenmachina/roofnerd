@@ -12,6 +12,9 @@
 //! under a point long, lines in white, dashed lines and lines under a mask are each
 //! counted and said. The edges of filled shapes are lines, as strokes are.
 
+pub mod drawn;
+#[cfg(test)]
+mod drawn_tests;
 pub mod found;
 #[cfg(test)]
 mod found_179;

@@ -9416,7 +9416,7 @@ ft, between its two ends as drawn.
 | openings | 2: a door or doorway 3 ft 0 in wide in the east wall, 6 ft 6 in to 9 ft 6 in from its south end; a window 5 ft 0 in wide in the south wall, 8 ft to 13 ft from its west end | 1 in |
 | in doubt | none | exactly |
 | not taken as walls | the dimension lines, the lettering, the border and title block, the key: said by kind, none laid | |
-| the room line | not a wall (one line, dashed): not found | |
+| the room line | the plan set does not draw a room line at all (the lead assumed it did): no stray wall where it lies | |
 
 The job holds no wall after this step.
 
@@ -9447,9 +9447,9 @@ are set; net face 936 SF.
 **Step 7. A real sheet, with no hand figure.** The public farmhouse plan (USDA plan
 7213, public domain, fetched by `tools/fetch-plans.sh`; skipped with a word if it is
 not on the machine): scaled from the dimension `demos/first.sh` already scales it by,
-its walls asked for. The demonstration prints what was found (walls, openings, in
-doubt, left out, whether they close) and asserts only that it finishes, finds at least
-one wall and lays nothing Known. **Nobody has worked that sheet by hand: what it
+its walls asked for. **The lead was wrong about this sheet: it is a scan of paper with
+no drawn lines.** The program says so, finds nothing and lays nothing, and the
+demonstration asserts that. **Nobody has worked that sheet by hand: what it
 prints is to be looked at, and says so.**
 
 ## The plan set judged a second time (2026-11-23)
@@ -9487,6 +9487,41 @@ kept; two storeys in one scan giving duplicate walls and a door laid as a window
 up.
 
 The finder has still seen only made-up scans.
+
+## Call 181 built: walls found on a drawn plan (2026-11-23)
+
+`plumbline find-walls <job> <sheet> [--lay [--take n] [--doors "<head>"] [--windows
+"<sill>" "<head>"]]`: one verb for a scan and for a sheet (a second word that names a
+drawing of the job is a sheet). From a scaled sheet's own lines it says the walls,
+each opening, what is in doubt, what was not taken as walls by kind, and whether the
+walls close; laid on the word, everything Assumed, source "found on sheet <name>".
+`crates/plans/src/drawn.rs`; the worker's account, its ten more sheets and where it
+will fail: `research/worker-report-call181.md`.
+
+`demos/planwalls.sh`, on a sheet the program wrote (A-103 at 1/4 in), by the hand
+figures above: 6 walls, 104.00 LF, each 6 in, closing; a door or doorway 3 ft 0 in at 6
+ft 6 in to 9 ft 6 in; a window 5 ft 0 in at 8 ft to 13 ft; laid with heights given, 1
+door and 1 window, the room 550.25 SF, wall face 936.00 gross and 897.67 net; with no
+heights, the walls laid solid across 2 openings and that said; a stair's 13 lines not
+walls; two free lines in doubt and laid only when taken.
+
+**Ten more sheets the worker made**: an L, a 1/8 in house with 3 1/2 in partitions, a
+house turned 20 degrees, a 1/2 in cabin with a stair and a deck, hatched walls,
+lettering over a wall, a detail box: right. Two it got wrong and fixed (a curved bay,
+silent, now said; two houses on one sheet, a "19 ft 6 in door", now two houses). One
+left wrong: walls drawn with six lines each for their layers find no wall and say "in
+doubt" 36 times.
+
+**Run on the integration copy:** 686 tests pass in the six command-line crates, 0
+fail; all 45 command-line demonstrations pass; the three gates and `portmap.sh` pass.
+
+**Not right.** The worker wrote the finder before its tests, against its contract, and
+says so. It has seen only sheets the program or the worker drew: **no architect's
+sheet has been through it**, and the one public plan on hand is a scan with no lines.
+By the worker's account it will fail on walls drawn with several lines a side, on
+hatch that reads as evenly spaced lines, on curved walls (said), on several plans or
+details at other scales on one sheet, and a window drawn with one line reads as a
+door. A level with no height refuses to lay. Not judged. No window half.
 
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 

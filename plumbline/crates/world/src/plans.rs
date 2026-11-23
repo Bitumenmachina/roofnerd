@@ -515,14 +515,22 @@ pub fn wall_type_feet(job: &mut Job, type_path: &str) -> Result<f64, String> {
 /// refusal leaves the job as it was. Laying a second time from the same scan onto the
 /// same level is refused.
 pub fn lay_found(job: &mut Job, level: &str, scan_name: &str, height_ft: f64, outside: Option<&str>, found: &[FoundWall]) -> Result<FoundLaid, String> {
-    let source = format!("found in scan {scan_name}");
-    let how = Entered { status: Status::Assumed, source: &source };
+    lay_found_as(job, level, &format!("found in scan {scan_name}"), None, height_ft, outside, found)
+}
+
+/// The same, with the source the walls carry said in full, and, where the doors and windows' heights are
+/// not the sheet's or the scan's but the person's, their own source (DECISIONS.md call 181: a drawn plan
+/// gives no head or sill, and the person's are "said when the walls were found"). Walls found on a drawn
+/// sheet are laid with source "found on sheet <name>"; there is no second way to make a wall.
+pub fn lay_found_as(job: &mut Job, level: &str, source: &str, opening_source: Option<&str>, height_ft: f64, outside: Option<&str>, found: &[FoundWall]) -> Result<FoundLaid, String> {
+    let how = Entered { status: Status::Assumed, source };
+    let how_open = Entered { status: Status::Assumed, source: opening_source.unwrap_or(source) };
     all_or_nothing(job, |job| {
         // The scan's walls already on this level: laying twice would make two of each.
         let mut q = job.world.query::<(&crate::Node, &crate::Wall)>();
         let already = q.iter(&job.world).filter(|(n, w)| n.parent.as_deref() == Some(level) && w.line.source == source).count();
         if already > 0 {
-            return Err(format!("{level} already has {already} wall{} found in scan {scan_name}: laying it again would make two of each. Take those away first if it is to be laid again", if already == 1 { "" } else { "s" }));
+            return Err(format!("{level} already has {already} wall{} {source}: laying it again would make two of each. Take those away first if it is to be laid again", if already == 1 { "" } else { "s" }));
         }
         let had: std::collections::BTreeSet<String> = {
             let mut t = job.world.query::<(&crate::Node, &crate::components::Kind)>();
@@ -547,14 +555,14 @@ pub fn lay_found(job: &mut Job, level: &str, scan_name: &str, height_ft: f64, ou
                 for o in &w.openings {
                     let across = format!("{} in", (((o.to - o.from) * 12.0).round()).max(1.0));
                     let (kind_of, type_path, sill) = if o.window {
-                        let t = crate::editing::opening_type_for(job, Kind::Window, &across, &format!("{} in", ((o.head - o.sill) * 12.0).round().max(1.0)), how)?;
+                        let t = crate::editing::opening_type_for(job, Kind::Window, &across, &format!("{} in", ((o.head - o.sill) * 12.0).round().max(1.0)), how_open)?;
                         (Kind::Window, t, format!("{} in", (o.sill * 12.0).round()))
                     } else {
-                        let t = crate::editing::opening_type_for(job, Kind::Door, &across, &format!("{} in", (o.head * 12.0).round().max(1.0)), how)?;
+                        let t = crate::editing::opening_type_for(job, Kind::Door, &across, &format!("{} in", (o.head * 12.0).round().max(1.0)), how_open)?;
                         (Kind::Door, t, "0 in".to_string())
                     };
                     let at = format!("{:.4} ft", (o.from + o.to) / 2.0);
-                    let path = crate::editing::opening(job, &wall, kind_of, &type_path, crate::editing::OnWall::Offset(&at), &sill, how)?;
+                    let path = crate::editing::opening(job, &wall, kind_of, &type_path, crate::editing::OnWall::Offset(&at), &sill, how_open)?;
                     if o.window { windows.push(path) } else { doors.push(path) }
                 }
                 Ok((wall, doors, windows))
@@ -652,6 +660,23 @@ mod found_tests {
         let mut q = job.world.query::<(&crate::Node, &crate::Wall)>();
         assert_eq!(q.iter(&job.world).count(), 3);
         assert_eq!((made.doors.len(), made.windows.len()), (1, 1));
+        crate::building::check_whole(&mut job).unwrap();
+    }
+
+    #[test]
+    fn walls_found_on_a_sheet_are_laid_with_their_own_source_and_the_persons_heights() {
+        // Call 181: the walls say "found on sheet A-103"; the door's and window's heights are the person's.
+        let (mut job, level) = job_with_a_level();
+        let found = vec![FoundWall { from: [0.0, 0.0], to: [30.0, 0.0], thickness: 0.5, measured: true, height: None, openings: vec![FoundOpening { window: true, from: 8.0, to: 13.0, sill: 3.0, head: 6.0 + 8.0 / 12.0 }] }];
+        let made = lay_found_as(&mut job, &level, "found on sheet A-103", Some("said when the walls were found"), 8.0, None, &found).unwrap();
+        assert_eq!((made.walls.len(), made.windows.len()), (1, 1));
+        let mut q = job.world.query::<(&crate::Node, &crate::Wall)>();
+        let all: Vec<(Status, String)> = q.iter(&job.world).map(|(_, w)| (w.line.status, w.line.source.clone())).collect();
+        assert_eq!(all, vec![(Status::Assumed, "found on sheet A-103".to_string())]);
+        let before = crate::file::save(&mut job);
+        let why = lay_found_as(&mut job, &level, "found on sheet A-103", Some("said when the walls were found"), 8.0, None, &found).unwrap_err();
+        assert!(why.contains("already has 1 wall found on sheet A-103"), "{why}");
+        assert_eq!(crate::file::save(&mut job), before);
         crate::building::check_whole(&mut job).unwrap();
     }
 
