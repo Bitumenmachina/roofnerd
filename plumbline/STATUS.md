@@ -10049,6 +10049,45 @@ What is not right:
 - `roomlinew`'s colour check sits on its bound.
 - The look: the light is a little better and the house still reads as a model.
 
+## Where each piece of outside trim lies: a demonstration, written before it is built (call 184 step 1, the model's half; 2026-11-23)
+
+`demos/trim.sh`, new steps, on the house of "The outside trim priced" above (a box 24
+by 16 ft on the walls' lines, walls 6 in thick and 9 ft high, a gable roof 1 ft
+outside the lines all round with its ridge east-west at 6 in 12, a window 3 ft by
+5 ft and a door 3 ft by 6 ft 8 in in the south wall), with its starter lines given.
+`plumbline trim <job> --pieces` lists every piece; the window will draw what this
+lists and work nothing out.
+
+Worked by hand (the pieces of a kind add up to the priced quantity of the line):
+
+- **Fascia**: 2 pieces, one on each eave, each 26.00 ft long from (-1, -1) to (25, -1)
+  on the south and from (-1, 17) to (25, 17) on the north, looking out (south; north).
+  2 x 26 = 52.00 LF, the priced 52.00.
+- **Rake fascia**: 4 pieces, each 10.0623 ft up the slope from an eave's end to the
+  ridge's end (on plan from north -1 to north 8 at east -1 and at east 25, and from
+  17 to 8), rising 4.5 ft over the 9 ft run. 4 x 10.0623 = 40.25 LF, the priced 40.25.
+- **Soffit**: 2 pieces under the eaves, each 26.00 ft long and 0.75 ft wide (the
+  overhang), looking down: 2 x 26 x 0.75 = 39.00 SF, the priced 39.00. **Rake
+  soffit**: 4 pieces, each 10.0623 ft by 0.75 ft: 30.19 SF, the priced 30.19.
+- **Corner boards**: 8 pieces, 2 at each of the 4 outside corners (one on each face),
+  each 9.00 ft from the wall's foot to its top, at the corner of the outside faces
+  (the southwest at east -0.25, north -0.25). 8 x 9 = 72.00 LF, the priced 72.00.
+- **Casing**: the window 4 pieces (head 3 ft, sill 3 ft, two sides 5 ft: 16.00 LF);
+  the door 3 pieces (head 3 ft, two sides 6 ft 8 in: 16.33 LF, none across its
+  foot), each on the south wall's outside face (north -0.25).
+- 23 pieces in all. Each is Assumed (the house was drawn with Assumed values) and
+  says where its size came from; a size the line does not name is a drawing size
+  only, says so, and is in no quantity.
+- **The L-shaped house** (step 4 above): 10 corner boards, 90.00 LF; none at the
+  inside corner.
+- **An eave with no fascia line** has no fascia piece; **the roof drawn alone** (no
+  wall under an edge) has no soffit piece there and the list says why.
+- Without `--pieces` the verb prints what it printed, byte for byte.
+
+Not worked by hand, and to be said by the builder from what the model holds before
+anything is built: how high the roof's edge is, and so how high each fascia and
+soffit lies.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **As of 2026-11-23 (the lead, after the merge of that day). Read this block first; what
