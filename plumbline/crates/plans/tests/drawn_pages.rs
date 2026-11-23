@@ -58,3 +58,56 @@ fn the_pictures_a_page_shows_are_counted() {
     let page = read(&pdf("0.5 w 100 100 m 300 100 l S", false), 1).unwrap();
     assert_eq!(page.pictures, 0);
 }
+
+/// A one-page PDF 600 by 400 points of strings of words in Helvetica, each set by its own text matrix (a b c d e f).
+fn text_pdf(pieces: &[(&str, f64, [f64; 6])]) -> Vec<u8> {
+    let mut content = String::from("BT\n");
+    for (text, size, m) in pieces {
+        let escaped = text.replace('\\', "\\\\").replace('(', "\\(").replace(')', "\\)");
+        content.push_str(&format!("/F1 {size} Tf\n{} {} {} {} {} {} Tm\n({escaped}) Tj\n", m[0], m[1], m[2], m[3], m[4], m[5]));
+    }
+    content.push_str("ET");
+    let objects = [
+        "<< /Type /Catalog /Pages 2 0 R >>".to_string(),
+        "<< /Type /Pages /Kids [3 0 R] /Count 1 >>".to_string(),
+        "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 600 400] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>".to_string(),
+        format!("<< /Length {} >>\nstream\n{content}\nendstream", content.len()),
+        "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>".to_string(),
+    ];
+    let mut out = b"%PDF-1.4\n".to_vec();
+    let mut at = Vec::new();
+    for (i, body) in objects.iter().enumerate() {
+        at.push(out.len());
+        out.extend_from_slice(format!("{} 0 obj\n{body}\nendobj\n", i + 1).as_bytes());
+    }
+    let xref = out.len();
+    out.extend_from_slice(format!("xref\n0 {}\n0000000000 65535 f \n", objects.len() + 1).as_bytes());
+    for offset in at {
+        out.extend_from_slice(format!("{offset:010} 00000 n \n").as_bytes());
+    }
+    out.extend_from_slice(format!("trailer\n<< /Size {} /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF\n", objects.len() + 1).as_bytes());
+    out
+}
+
+#[test]
+fn the_strings_a_page_draws_are_read_each_where_it_stands_and_which_way_it_reads() {
+    // A level string, one that reads upward (a vertical dimension), one with a word gap and a plain one; the page's lower-left is its corner.
+    let page = text_pdf(&[
+        ("30'-0\"", 9.0, [1.0, 0.0, 0.0, 1.0, 200.0, 300.0]),
+        ("20'-0\"", 9.0, [0.0, 1.0, -1.0, 0.0, 100.0, 120.0]),
+        ("5'-8 1/2\"", 9.0, [1.0, 0.0, 0.0, 1.0, 300.0, 150.0]),
+        ("ENTRY DOOR", 12.0, [1.0, 0.0, 0.0, 1.0, 50.0, 50.0]),
+    ]);
+    let got = plumbline_plans::strings(&page, 1).unwrap();
+    let said: Vec<&str> = got.iter().map(|t| t.text.as_str()).collect();
+    assert_eq!(said, ["30'-0\"", "20'-0\"", "5'-8 1/2\"", "ENTRY DOOR"], "{got:?}");
+    let level = &got[0];
+    assert!((level.at[0] - 200.0).abs() < 0.5 && (level.at[1] - 300.0).abs() < 0.5, "{level:?}");
+    assert!(level.dir[0] > 0.99 && level.dir[1].abs() < 0.01 && (level.tall - 9.0).abs() < 0.5, "{level:?}");
+    let up = &got[1];
+    assert!((up.at[0] - 100.0).abs() < 0.5 && (up.at[1] - 120.0).abs() < 0.5, "{up:?}");
+    assert!(up.dir[0].abs() < 0.01 && up.dir[1] > 0.99, "reads upward: {up:?}");
+    // A picture is not read; a page with no words has none.
+    assert!(plumbline_plans::strings(b"not a pdf", 1).is_err());
+    assert!(plumbline_plans::strings(&pdf("0.5 w 100 100 m 300 100 l S", false), 1).unwrap().is_empty());
+}

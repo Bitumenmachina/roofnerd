@@ -565,6 +565,8 @@ pub struct Words {
 struct Letters {
     /// The letter, where it starts (x to the right, y down), and how tall it is.
     all: Vec<(String, f64, f64, f64)>,
+    /// The same letters in the order the page draws them, each with the way its baseline runs on the page (x, y down).
+    drawn: Vec<(String, f64, f64, f64, [f64; 2])>,
 }
 
 impl<'a> Device<'a> for Letters {
@@ -583,6 +585,7 @@ impl<'a> Device<'a> for Letters {
                 Some(hayro_cmap::BfString::String(s)) => s,
                 None => continue,
             };
+            self.drawn.push((said.clone(), at.x, at.y, tall, [c[0], c[1]]));
             self.all.push((said, at.x, at.y, tall));
         }
     }
@@ -664,5 +667,69 @@ pub fn words(bytes: &[u8], page: usize) -> Result<Vec<Words>, String> {
             out.push(Words { text, size });
         }
     }
+    Ok(out)
+}
+
+/// A string of letters on a PDF page, where it stands and which way it reads (call 188 item 9).
+#[derive(Clone, Debug, PartialEq)]
+pub struct Text {
+    pub text: String,
+    /// Where the string starts (its first letter's left end on the baseline), in page units from the lower-left corner.
+    pub at: [f64; 2],
+    /// How tall its letters are, in points.
+    pub tall: f64,
+    /// The way it reads: a unit step along its baseline, up and to the right being positive. (1, 0) is level.
+    pub dir: [f64; 2],
+}
+
+/// The strings a PDF page draws as words, each where it is and which way it reads, in the order the page draws them. Letters
+/// the page draws one after another along one baseline, no further apart than a letter and a half, are one string; a gap wider
+/// than that is a space the page did not draw. A page whose words are drawn as shapes, or are a picture, has none, and that is
+/// for the caller to say.
+pub fn strings(bytes: &[u8], page: usize) -> Result<Vec<Text>, String> {
+    if sort_of(bytes) != Some(Sort::Pdf) {
+        return Err("only a PDF has words that can be read; a picture of a sheet is read by eye".into());
+    }
+    let pdf = Pdf::new(bytes.to_vec()).map_err(|_| "the PDF could not be read: it is damaged, cut short, locked with a password, or not a PDF at all. Print it to a new PDF, or send it again".to_string())?;
+    let pages = pdf.pages();
+    let (width, height) = page_size(pages, page)?;
+    let p = &pages[page - 1];
+    let mut letters = Letters::default();
+    let mut context = Context::new(p.initial_transform(true).to_kurbo(), Rect::new(0.0, 0.0, f64::from(width), f64::from(height)), &hayro::hayro_interpret::InterpreterCache::new(), p.xref(), InterpreterSettings::default());
+    interpret_page(p, &mut context, &mut letters);
+    let h = f64::from(height);
+    // Page units: y up from the lower-left corner; a baseline's direction turned the same way.
+    let unit = |v: [f64; 2]| {
+        let n = v[0].hypot(v[1]).max(1e-12);
+        [v[0] / n, -v[1] / n]
+    };
+    let mut out: Vec<Text> = Vec::new();
+    let mut last: Option<([f64; 2], f64)> = None;
+    for (said, x, y, tall, base) in letters.drawn {
+        let (here, dir) = ([x, h - y], unit(base));
+        let joined = match (out.last(), last) {
+            (Some(cur), Some((before, _))) => {
+                let step = [here[0] - before[0], here[1] - before[1]];
+                let along = step[0] * cur.dir[0] + step[1] * cur.dir[1];
+                let across = (-step[0] * cur.dir[1] + step[1] * cur.dir[0]).abs();
+                let same_way = dir[0] * cur.dir[0] + dir[1] * cur.dir[1] > 0.98;
+                same_way && along > -0.1 * cur.tall && across <= 0.3 * cur.tall && (tall - cur.tall).abs() <= 0.3 * cur.tall.max(tall) && along <= 3.0 * cur.tall.max(tall)
+            }
+            _ => false,
+        };
+        if joined {
+            let cur = out.last_mut().unwrap();
+            let before = last.unwrap().0;
+            let along = (here[0] - before[0]) * cur.dir[0] + (here[1] - before[1]) * cur.dir[1];
+            if along > 1.2 * cur.tall && !cur.text.ends_with(' ') && said != " " {
+                cur.text.push(' ');
+            }
+            cur.text.push_str(&said);
+        } else {
+            out.push(Text { text: said, at: here, tall, dir });
+        }
+        last = Some((here, tall));
+    }
+    out.retain(|t| !t.text.trim().is_empty());
     Ok(out)
 }

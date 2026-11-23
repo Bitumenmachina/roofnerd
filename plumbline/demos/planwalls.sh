@@ -326,7 +326,7 @@ import math, sys
 K, O = 18.0, 126.0
 
 class S:
-    def __init__(s): s.l = []
+    def __init__(s): s.l = []; s.t = []
     def line(s, a, b, dash=False): s.l.append((tuple(a), tuple(b), dash))
     def rect(s, x0, y0, x1, y1):
         for a, b in (((x0, y0), (x1, y0)), ((x1, y0), (x1, y1)), ((x1, y1), (x0, y1)), ((x0, y1), (x0, y0))): s.line(a, b)
@@ -352,19 +352,43 @@ class S:
         for h in (t / 2, -t / 2): s.cut(pt(0, h), pt(L, h), lo + over, hi - over)
         for x in (lo, hi): s.line(pt(x, -t / 2), pt(x, t / 2))
         for o in ((0.0,) if kind == "door" else (t / 6, -t / 6)): s.line(pt(lo, o), pt(hi, o))
-    def save(s, fn, clip=None, image=None):
+    def tick_dim(s, a, b, off, text, side=1):
+        """A dimension line on the page's points from a to b, `off` points outside, a slash tick across each end, extension lines, and
+        `text` written beside it (level, or reading upward when the line is upright)."""
+        L = math.hypot(b[0] - a[0], b[1] - a[1]); u = ((b[0] - a[0]) / L, (b[1] - a[1]) / L); n = (-u[1], u[0])
+        pa = (a[0] + n[0] * off, a[1] + n[1] * off); pb = (b[0] + n[0] * off, b[1] + n[1] * off)
+        s.pts.append((pa, pb))
+        for e in (pa, pb):
+            s.pts.append(((e[0] - (u[0] + n[0]) * 4, e[1] - (u[1] + n[1]) * 4), (e[0] + (u[0] + n[0]) * 4, e[1] + (u[1] + n[1]) * 4)))
+        for e, f in ((a, pa), (b, pb)):
+            s.pts.append(((e[0] + n[0] * 8, e[1] + n[1] * 8), (f[0] + n[0] * 8, f[1] + n[1] * 8)))
+        mid = ((pa[0] + pb[0]) / 2, (pa[1] + pb[1]) / 2)
+        c = (mid[0] + n[0] * 4 * side, mid[1] + n[1] * 4 * side)
+        s.t.append((text, 9, c[0] - u[0] * 14, c[1] - u[1] * 14, u))
+    pts = None
+    def save(s, fn, clip=None, image=None, page=(1224, 792)):
         body = ("%s re W n\n" % clip if clip else "") + "0.5 w\n"
         for dash in (False, True):
             if dash: body += "[6 3] 0 d\n"
             for p, q, d in s.l:
                 if d == dash: body += "%.4f %.4f m %.4f %.4f l S\n" % (O + p[0] * K, O + p[1] * K, O + q[0] * K, O + q[1] * K)
+        body += "[] 0 d\n"
+        for p, q in (s.pts or []): body += "%.4f %.4f m %.4f %.4f l S\n" % (p[0], p[1], q[0], q[1])
+        if s.t:
+            body += "BT\n/F1 9 Tf\n" + "".join("%.4f %.4f %.4f %.4f %.4f %.4f Tm (%s) Tj\n" % (u[0], u[1], -u[1], u[0], x, y, t.replace("(", "\\(").replace(")", "\\)")) for t, sz, x, y, u in s.t) + "ET\n"
         if image: body += "q %.1f 0 0 %.1f %.1f %.1f cm /Im1 Do Q\n" % tuple(image)
+        res = b"/XObject << /Im1 5 0 R >>" if image else b""
+        if s.t: res += b" /Font << /F1 6 0 R >>"
         objs = [b"<< /Type /Catalog /Pages 2 0 R >>", b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-                b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 1224 792] /Contents 4 0 R /Resources << %s >> >>" % (b"/XObject << /Im1 5 0 R >>" if image else b""),
+                b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 %d %d] /Contents 4 0 R /Resources << %s >> >>" % (page[0], page[1], res),
                 b"<< /Length %d >>\nstream\n%s\nendstream" % (len(body), body.encode())]
         if image:
             hexed = "".join("C8" if (i // 8 + i % 8) % 2 == 0 else "78" for i in range(64)) + ">"
             objs.append(b"<< /Type /XObject /Subtype /Image /Width 8 /Height 8 /ColorSpace /DeviceGray /BitsPerComponent 8 /Filter /ASCIIHexDecode /Length %d >>\nstream\n%s\nendstream" % (len(hexed), hexed.encode()))
+        elif s.t:
+            objs.append(b"<< /Type /XObject /Subtype /Form /BBox [0 0 1 1] /Length 0 >>\nstream\n\nendstream")
+        if s.t:
+            objs.append(b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>")
         out = b"%PDF-1.4\n"; offs = []
         for i, o in enumerate(objs, 1):
             offs.append(len(out)); out += b"%d 0 obj\n" % i + o + b"\nendobj\n"
@@ -374,7 +398,7 @@ class S:
         open(fn, "wb").write(out)
 
 name, out = sys.argv[1:3]
-s = S(); clip = None; image = None
+s = S(); s.pts = []; clip = None; image = None; page = (1224, 792)
 if name == "piers":   # 30 x 16 ft, 6 in walls: south wall a door 10-13 ft and a window 14 ft 6 in to 19 ft 6 in (a pier 1 ft 6 in between); a partition 4 1/2 in at 6 ft with a door 9 in from the south wall
     s.ring(0, 0, 30, 16, 0.5)
     s.opening((0, 0), (30, 0), 0.5, 10, 13, "door"); s.opening((0, 0), (30, 0), 0.5, 14.5, 19.5, "window")
@@ -401,13 +425,45 @@ elif name == "shelf":   # 30 x 16 ft, 6 in walls, a 4 1/2 in partition at 18 ft,
     s.cut((0, 0.25), (30, 0.25), 17.8, 18.2); s.cut((0, 15.75), (30, 15.75), 17.8, 18.2)
     s.line((18 - 0.1875, 0.25), (18 - 0.1875, 15.75)); s.line((18 + 0.1875, 0.25), (18 + 0.1875, 15.75))
     s.line((0.25, 8), (17.8125, 8)); s.line((0.25, 9), (17.8125, 9))
+elif name == "twoplans":   # the house 30 x 20 ft, 6 in walls, a partition 4 1/2 in at 12 ft; 50 ft east of it a roof plan: an eave 32 x 22 ft (centre lines) with a second line 6 in inside it all round
+    page = (2600, 792)
+    s.ring(0, 0, 30, 20, 0.5)
+    s.cut((0, 0.25), (30, 0.25), 11.81, 12.19); s.cut((0, 19.75), (30, 19.75), 11.81, 12.19)
+    s.line((12 - 0.1875, 0.25), (12 - 0.1875, 19.75)); s.line((12 + 0.1875, 0.25), (12 + 0.1875, 19.75))
+    s.ring(80, 0, 112, 22, 0.5)
+elif name == "doubled":   # 30 x 20 ft; each wall drawn with four lines as the real sheets draw one: the outer faces 7, 6 1/2, 7 1/2 and 8 in apart, a second line 1 in inside one face and 0.6 in inside the other
+    def doubled(a, b, span):
+        L = math.hypot(b[0] - a[0], b[1] - a[1]); u = ((b[0] - a[0]) / L, (b[1] - a[1]) / L); n = (-u[1], u[0])
+        for o in (-span / 2, -span / 2 + 1 / 12, span / 2 - 0.05, span / 2):
+            s.line((a[0] + n[0] * o, a[1] + n[1] * o), (b[0] + n[0] * o, b[1] + n[1] * o))
+    doubled((-0.2, 0), (30.2, 0), 7 / 12); doubled((30, -0.2), (30, 20.2), 6.5 / 12); doubled((30.2, 20), (-0.2, 20), 7.5 / 12); doubled((0, 20.2), (0, -0.2), 8 / 12)
+elif name == "glass":   # 30 x 20 ft, 6 in walls, a window 5 ft wide in the south wall (8 to 13 ft), a door 3 ft wide in the east wall (6 ft 6 in to 9 ft 6 in), a partition 4 1/2 in at 12 ft with a shower's glass 3 ft long in it (6 to 9 ft: both faces run on, a line across at each end, two lines of glass inside), and two tags
+    s.ring(0, 0, 30, 20, 0.5)
+    s.cut((0, 0.25), (30, 0.25), 11.81, 12.19); s.cut((0, 19.75), (30, 19.75), 11.81, 12.19)
+    s.line((12 - 0.1875, 0.25), (12 - 0.1875, 19.75)); s.line((12 + 0.1875, 0.25), (12 + 0.1875, 19.75))
+    s.opening((0, 0), (30, 0), 0.5, 8, 13, "window"); s.opening((30, 0), (30, 20), 0.5, 6.5, 9.5, "door")
+    for y in (6, 9): s.line((12 - 0.1875, y), (12 + 0.1875, y))
+    for x in (12 - 0.0625, 12 + 0.0625): s.line((x, 6), (x, 9))
+    for c, r in (((30.9, 8.0), 0.35), ((30.0, 15.0), 0.2)):
+        pts = [(c[0] + r * math.cos(math.radians(60 * i)), c[1] + r * math.sin(math.radians(60 * i))) for i in range(6)]
+        for i in range(6): s.line(pts[i], pts[(i + 1) % 6])
+elif name == "dims":   # the house 30 x 20 ft with its own dimension strings: "30'-0\"" by a line 540 points long, "20'-0\"" by one 360 points long, and "12'-0\"" by one 180 points long (10 ft at the scale the others give)
+    s.ring(0, 0, 30, 20, 0.5)
+    s.tick_dim((O, O), (O + 540, O), -50, "30'-0\"")
+    s.tick_dim((O, O), (O, O + 360), 50, "20'-0\"")
+    s.tick_dim((O, O + 360), (O + 180, O + 360), 50, "12'-0\"")
+elif name == "doubtful":   # four separate pairs of lines for a house (24, 24, 14 and 14 ft, 6 in thick, the corners open 3 ft: each meets nothing, so each is in doubt), and 50 ft east a clean roof plan, an eave 32 x 22 ft (centre lines) with a second line 6 in inside it
+    page = (2600, 792)
+    s.line((3, -0.25), (27, -0.25)); s.line((3, 0.25), (27, 0.25)); s.line((3, 19.75), (27, 19.75)); s.line((3, 20.25), (27, 20.25))
+    s.line((-0.25, 3), (-0.25, 17)); s.line((0.25, 3), (0.25, 17)); s.line((29.75, 3), (29.75, 17)); s.line((30.25, 3), (30.25, 17))
+    s.ring(80, 0, 112, 22, 0.5)
 elif name == "picture":   # the west 15 ft as lines (south, north, west, and a partition at 15 ft), the east half a picture
     for y in (0.25, -0.25): s.line((-0.25, y), (15.1875, y))
     for y in (15.75, 16.25): s.line((-0.25, y), (15.1875, y))
     for x in (0.25, -0.25): s.line((x, -0.25), (x, 16.25))
     for x in (14.8125, 15.1875): s.line((x, 0.25), (x, 15.75))
     image = (306.0, 306.0, O + 15.5 * K, O - 9.0)
-s.save(out, clip=clip, image=image)
+s.save(out, clip=clip, image=image, page=page)
 PY
 sheet_of() { python3 "$T/hl.py" "$1" "$T/$1.pdf"; }
 # A sheet's scale and place from its one dimension: the outside width of the house from face to face, and its corner.
@@ -576,5 +632,149 @@ LAID="$("$P" find-walls "$JH" "$DH" --lay)"
 says "the 5 walls laid, the shelf not" "laid on ground: 5 walls" "$LAID"
 TAKE="$("$P" takeoff "$JH")"
 grep -E "walls [0-9]+ +108\.00 LF" <<<"$TAKE" >/dev/null && echo "    takeoff: walls 108.00 LF (the 4 1/2 in partition found, the shelf not)" || { echo "FAIL: not 108.00 LF"; echo "$TAKE" | head; exit 1; }
+
+echo
+echo "== 9. What real city sheets showed wrong in the finder (call 188 items 6 to 9): each made-up sheet is drawn with the cause found on a real one =="
+# The causes, found on three public city sheets (kept out of this repository): a wall face is drawn twice (a second line 0.6 in to
+# 1 in inside it), so each wall's lines pair four ways and it was found two to four times; the lines of a thin leaf drawn inside a
+# partition whose faces run on, with a cap line at each end of it, read as a window with glass; a plan and a roof plan stand on one
+# sheet; and a sheet's dimension figures are its own words. The figures below are worked by hand in STATUS.md, "The drawn plan after
+# real sheets".
+
+echo
+echo "-- 9.1 More than one drawing on a sheet: said, none laid until the person says which --"
+# By hand: the house is 30 + 30 + 20 + 20 + the partition 20 = 120 LF in 5 walls; the roof plan's eave is 32 + 22 + 32 + 22 = 108 LF in 4
+# pieces. 108 is over half of 120: of like size. Said as 2 drawings, about 120 ft and about 108 ft; nothing laid. --plan 1: 5 walls, 120.00 LF.
+sheet_of twoplans
+J2="$T/t2.json"; D2="$(new_job "$J2" "$T/twoplans.pdf" 1)"; scale_wide "$J2" "$D2" 121.5 670.5 "30 ft 6 in"
+OUT="$("$P" find-walls "$J2" "$D2")"
+echo "$OUT" | sed 's/^/    | /' | grep -E "drawing|walls found" | head -8
+says "9 walls found" "walls found: 9 (everything found is Assumed" "$OUT"
+says "2 drawings and their sizes" "2 drawings on this sheet: about 120 ft and about 108 ft of wall" "$OUT"
+says "and what to say" "nothing is laid until you say which is the plan (--plan <1 to 2>)" "$OUT"
+says "the roof plan's lines are not walls" "a roof plan's lines are not walls, and this is how you say so" "$OUT"
+says "drawing 1" "drawing 1: 5 walls, about 120 ft of wall, from 0' 0\" east, 0' 0\" north" "$OUT"
+says "drawing 2" "drawing 2: 4 walls, about 108 ft of wall" "$OUT"
+cp "$J2" "$T/t2-before.json"
+refused "laying with no word on which" "nothing is laid: 2 drawings on this sheet" "$P" find-walls "$J2" "$D2" --lay
+cmp -s "$J2" "$T/t2-before.json" || { echo "FAIL: a refused laying changed the job's file"; exit 1; }
+OUT="$("$P" find-walls "$J2" "$D2" --plan 1)"
+says "plan 1: 5 walls" "walls found: 5 (everything found is Assumed" "$OUT"
+says "taken, and what was left out" "taking drawing 1 of the sheet's 2" "$OUT"
+lacks "no wall of the roof plan" "wall 6:" "$OUT"
+lacks "no word that it is still waiting for a choice" "nothing is laid until you say which" "$OUT"
+OUT="$("$P" find-walls "$J2" "$D2" --plan 2)"
+says "plan 2: 4 walls" "walls found: 4 (everything found is Assumed" "$OUT"
+refused "a drawing that is not there" "--plan 3: this sheet has 2 drawings, numbered 1 to 2" "$P" find-walls "$J2" "$D2" --plan 3
+refused "drawing 0" "--plan 0: this sheet has 2 drawings" "$P" find-walls "$J2" "$D2" --plan 0
+OUT="$("$P" find-walls "$J2" "$D2" --within "-1,-1" "31,21")"
+says "bounded by two corners: 5 walls" "walls found: 5 (everything found is Assumed" "$OUT"
+says "and said" "looked at inside the box from " "$OUT"
+lacks "one drawing in the box" "drawings on this sheet" "$OUT"
+LAID="$("$P" find-walls "$J2" "$D2" --within "-1,-1" "31,21" --lay)"
+says "laid with the box" "laid on ground: 5 walls" "$LAID"
+TAKE="$("$P" takeoff "$J2")"
+grep -E "walls +[0-9]+ +120\.00 LF" <<<"$TAKE" >/dev/null && echo "    takeoff: walls 120.00 LF" || { echo "FAIL: the walls are not 120.00 LF"; echo "$TAKE" | head; exit 1; }
+cp "$T/t2-before.json" "$J2"
+LAID="$("$P" find-walls "$J2" "$D2" --plan 1 --lay)"
+says "laid with --plan 1" "laid on ground: 5 walls" "$LAID"
+TAKE="$("$P" takeoff "$J2")"
+grep -E "walls +[0-9]+ +120\.00 LF" <<<"$TAKE" >/dev/null && echo "    takeoff: walls 120.00 LF" || { echo "FAIL: the walls are not 120.00 LF"; echo "$TAKE" | head; exit 1; }
+
+echo
+echo "-- 9.2 One wall is found once, and says how many pairs of lines were joined --"
+# By hand: 30 by 20 ft, each wall four lines; four walls, 30 + 20 + 30 + 20 = 100 LF, none in doubt, each made of 4 pairs, the outer faces 7, 6 1/2, 7 1/2, 8 in apart.
+sheet_of doubled
+JQ="$T/q.json"; DQ="$(new_job "$JQ" "$T/doubled.pdf" 1)"; scale_wide "$JQ" "$DQ" 120.75 671.25 "30 ft 7 in"
+OUT="$("$P" find-walls "$JQ" "$DQ")"
+echo "$OUT" | sed 's/^/    | /' | head -16
+says "4 walls" "walls found: 4 (everything found is Assumed" "$OUT"
+lacks "none in doubt" "in doubt" "$OUT"
+[ "$(grep -c 'found once: 4 pairs of lines lay over this one wall' <<<"$OUT")" = 4 ] && echo "    each wall says it joined 4 pairs" || { echo "FAIL: not 4 walls each joining 4 pairs"; exit 1; }
+says "said once, as a sheet" "4 walls were found once: 16 pairs of lines that lay over them" "$OUT"
+LAID="$("$P" find-walls "$JQ" "$DQ" --lay)"
+says "laid" "laid on ground: 4 walls" "$LAID"
+TAKE="$("$P" takeoff "$JQ")"
+grep -E "walls +[0-9]+ +100\.00 LF" <<<"$TAKE" >/dev/null && echo "    takeoff: walls 100.00 LF" || { echo "FAIL: the walls are not 100.00 LF"; echo "$TAKE" | head; exit 1; }
+
+echo
+echo "-- 9.3 A shower's glass inside a room is no window, and a tag is no opening --"
+# By hand: a window 5 ft in the south wall and a door 3 ft in the east wall are the 2 openings; the shower's glass is 3 ft long in a partition
+# whose faces run on, with a room both sides: not a window. Two tags (a hexagon beside the door and one on a wall) are no opening.
+sheet_of glass
+JG2="$T/g2.json"; DG2="$(new_job "$JG2" "$T/glass.pdf" 1)"; scale_wide "$JG2" "$DG2" 121.5 670.5 "30 ft 6 in"
+OUT="$("$P" find-walls "$JG2" "$DG2")"
+echo "$OUT" | sed 's/^/    | /' | grep -E "walls found|window|door|tag|glass|openings" | cut -c1-200 | head -10
+says "found, none in doubt" "walls found: 5 (everything found is Assumed" "$OUT"
+lacks "none in doubt" "in doubt" "$OUT"
+says "2 openings, a door and a window" "a plan gives no head or sill: 2 openings were found" "$OUT"
+[ "$(grep -c '      window:' <<<"$OUT")" = 1 ] && [ "$(grep -c 'door or open doorway:' <<<"$OUT")" = 1 ] && echo "    1 window, 1 door" || { echo "FAIL: not 1 window and 1 door"; exit 1; }
+says "the glass is said, with where" "wide of a wall at 12' 0\" east, 7' 6\" north, and lines inside it, are not read as a window" "$OUT"
+says "the tags are said" "2 tags (a window's or a door's mark" "$OUT"
+
+echo
+echo "-- 9.4 The sheet's own dimension strings are read, listed, and offered to scale by; ones that disagree are said --"
+# By hand: "30'-0\"" by a line 540 points long and "20'-0\"" by one 360 points long are each 18 points to the foot (1/4 in to the foot); "12'-0\""
+# by one 180 points long is 15 points to the foot: at 18 it is 10 ft. The first two agree; the third does not, and is never used unasked.
+sheet_of dims
+JD2="$T/d2.json"; DD2="$(new_job "$JD2" "$T/dims.pdf" 1)"
+cp "$JD2" "$T/d2-before.json"
+OUT="$("$P" find-walls "$JD2" "$DD2" --dimensions)"
+echo "$OUT" | sed 's/^/    | /' | cut -c1-220
+says "3 strings read" "the sheet's own dimension strings, 3 read from its words" "$OUT"
+says "string 1" "string 1: 30'-0\" at " "$OUT"
+says "string 2" "string 2: 20'-0\" at " "$OUT"
+says "string 3" "string 3: 12'-0\" at " "$OUT"
+says "2 of 3 agree, 1/4 in" "2 of the 3 agree: 1/4\" = 1'-0\"" "$OUT"
+says "the one that does not, with what it measures" "string 3, 12'-0\", does not agree with the others: its line measures 10' 0\" at the scale they give" "$OUT"
+says "7 1/2 in of paper" "its line 7 1/2 in of paper long (540 points)" "$OUT"
+cmp -s "$JD2" "$T/d2-before.json" || { echo "FAIL: listing the strings changed the job's file"; exit 1; }
+echo "    the job's file is byte for byte the same (nothing is scaled unasked)"
+refused "no scale yet, without --scale-by" "has no scale yet: nothing is found on a sheet that is not scaled" "$P" find-walls "$JD2" "$DD2"
+refused "a string that is not there" "--scale-by 4: 3 dimension strings were read on this sheet, numbered 1 to 3" "$P" find-walls "$JD2" "$DD2" --scale-by 4
+OUT="$("$P" find-walls "$JD2" "$DD2" --scale-by 1)"
+echo "$OUT" | sed 's/^/    | /' | grep -E "scaled by|walls found" | cut -c1-200
+says "scaled by string 1" "scaled by string 1, 30'-0\": 1/4\" = 1'-0\", Assumed, its source the string" "$OUT"
+says "4 walls" "walls found: 4 (everything found is Assumed" "$OUT"
+grep -q "the sheet's own dimension 30'-0" "$JD2" && echo "    the job holds the scale with its source, the string" || { echo "FAIL: the scale's source is not the string"; exit 1; }
+python3 - "$JD2" <<'PY'
+import json, sys
+d = json.load(open(sys.argv[1]))["data"]
+sc = [e["attributes"]["pl::drawing"]["scale"]["distance"] for e in d if "pl::drawing" in e["attributes"]][0]
+assert sc["status"] == "Assumed", sc
+print("    the scale is Assumed, source: " + sc["source"])
+PY
+LAID="$("$P" find-walls "$JD2" "$DD2" --lay)"
+says "laid" "laid on ground: 4 walls" "$LAID"
+TAKE="$("$P" takeoff "$JD2")"
+grep -E "walls +[0-9]+ +100\.00 LF" <<<"$TAKE" >/dev/null && echo "    takeoff: walls 100.00 LF (the house 30 by 20 ft)" || { echo "FAIL: the walls are not 100.00 LF"; echo "$TAKE" | head; exit 1; }
+cp "$T/d2-before.json" "$JD2"
+OUT="$("$P" find-walls "$JD2" "$DD2" --scale-by 3)"
+says "asked for, a string that disagrees is cautioned" "caution: string 3 does not agree with the others" "$OUT"
+
+echo
+echo "-- 9.5 A plan all in doubt beside a clean roof plan: two drawings, told from every wall found, and none laid until the person says which --"
+# By hand: the house is four pairs of lines, 24 + 24 + 14 + 14 = 76 LF, each meeting nothing, so all 76 ft in doubt; the roof plan is 108 LF, clean.
+# 76 is over half of 108, so two drawings, counted over every wall found, in doubt or not: 1, the roof, about 108 ft; 2, the house, about 76 ft, all of it in doubt.
+# --lay alone lays nothing. --plan 1 (the roof) lays its 4 pieces on the word: 108.00 LF. --plan 2 (the house) lays none of the doubtful and says so.
+sheet_of doubtful
+J5="$T/t5.json"; D5="$(new_job "$J5" "$T/doubtful.pdf" 1)"; scale_wide "$J5" "$D5" 121.5 670.5 "30 ft 6 in"
+OUT="$("$P" find-walls "$J5" "$D5")"
+echo "$OUT" | sed 's/^/    | /' | grep -E "drawing" | cut -c1-200 || true
+says "8 walls found, 4 in doubt" "walls found: 8, 4 of them in doubt" "$OUT"
+says "2 drawings, the doubt said" "2 drawings on this sheet: about 108 ft and about 76 ft (76 ft of it in doubt) of wall" "$OUT"
+cp "$J5" "$T/t5-before.json"
+refused "laying with no word on which" "nothing is laid: 2 drawings on this sheet" "$P" find-walls "$J5" "$D5" --lay
+cmp -s "$J5" "$T/t5-before.json" || { echo "FAIL: a refused laying changed the job's file"; exit 1; }
+LAID="$("$P" find-walls "$J5" "$D5" --plan 1 --lay)"
+says "the roof's pieces laid on the word" "laid on ground: 4 walls" "$LAID"
+TAKE="$("$P" takeoff "$J5")"
+grep -E "walls +[0-9]+ +108\.00 LF" <<<"$TAKE" >/dev/null && echo "    takeoff: walls 108.00 LF" || { echo "FAIL: the walls are not 108.00 LF"; echo "$TAKE" | head; exit 1; }
+cp "$T/t5-before.json" "$J5"
+LAID="$("$P" find-walls "$J5" "$D5" --plan 2 --lay)"
+says "none of the doubtful laid" "nothing is laid" "$LAID"
+says "and it says so" "not laid: wall 1 of what was found, in doubt" "$LAID"
+lacks "no wall laid" "laid on ground" "$LAID"
+cmp -s "$J5" "$T/t5-before.json" || { echo "FAIL: laying the doubtful drawing changed the job"; exit 1; }
 echo
 echo "PASS: the walls, doors and windows of a drawn plan were found as worked by hand, said in full, laid only on the word, all Assumed and sourced to the sheet, and what is not a wall was left out and counted"

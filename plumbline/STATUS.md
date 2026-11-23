@@ -9948,6 +9948,35 @@ the made-up sheets must come to whatever the cause.
   (10 ft by the other two): said not to agree, with the 10'-0" it measures, and
   never used unasked.
 
+## Call 188 items 6 to 9 built: the drawn plan after real sheets (2026-11-23)
+
+Built by a Sonnet worker in a second working copy; accepted by the lead on the
+integration copy (the runs are in the commit's message). `demos/planwalls.sh` steps
+9.1 to 9.5 walk it: two drawings on a sheet said and none laid until `--plan` or
+`--within`; a wall drawn with doubled faces found once; a door leaf in a partition
+not read as a window; the sheet's dimension strings listed and used to scale; a
+house all in doubt beside a clean roof plan of like size said as 2 drawings with
+the doubt of each. DECISIONS.md, "Call 188 items 6 to 9, as built", has the causes
+read off the real sheets and the figures.
+
+Changed: on a sheet whose long lines are all parallel, neighbouring faces are
+listed once where they were listed twice. Hand figures set right: the roof plan of
+the demonstration is 108 LF by its centre line; the glass sheet has 5 walls.
+
+What is not right:
+- A floor plan drawn with hatching and cabinet lines close to every wall is still
+  not found as walls; it is listed as a drawing all in doubt and nothing is laid.
+- A sliding or pocket door is no longer a window and is not yet a door.
+- `--plan <n>` cuts its drawing a foot outside its walls and can take a few more or
+  fewer walls than the listing counted (seen on a real sheet: 4 of 6, 33 for 27).
+- Dimension strings are read only where the page holds them as words.
+- None of this is in the window yet.
+
+The lead's own change on top of the worker's: where the verb has read dimension
+strings from a sheet's words it says so ("the sheet's own dimensions: 9 dimension
+strings are read from its words") in place of the page reader's line that a
+dimension is typed by whoever reads it, which the same run then contradicted.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **As of 2026-11-23 (the lead, after the merge of that day). Read this block first; what

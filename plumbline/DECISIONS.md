@@ -7179,3 +7179,42 @@ window only asks; a line of clicks carried out by half a thickness is worked out
 `crates/world`. The 2 ft in point 2 is the lead's and Assumed: a named constant that
 moves only by a written call. Point 3 is built after point 2 has been tried on the
 real scans.
+
+**Call 188 items 6 to 9, as built (2026-11-23).** Built by a worker that read the
+three real city sheets first and wrote down why each fault happens before any code.
+
+- *Why a wall was found two to four times*: the sheet draws each face of a wall as
+  two lines about an inch apart, so one wall is four pairs. A stack whose lines all
+  lie within 1 1/2 in of its two outermost is one wall, the outermost pair; it says
+  how many pairs were joined. A stack nothing claims is one wall in doubt.
+- *The "shower glass" was not one.* It is a door leaf drawn inside a partition whose
+  faces run on. A window whose wall is not cut through and has a room on both sides
+  is not a window: it is said, with where. **It is not yet found as a door**: owed.
+- *More than one drawing on a sheet*: walls within 15 ft of one another are one
+  drawing, and **a drawing's size is all the wall found in it, in doubt or not** (the
+  lead's ruling when the first build laid a roof plan's lines because the floor
+  plan beside it was all in doubt). Drawings of at least half the largest are
+  listed, each with how much of it is in doubt, and none is laid until the person
+  says which (`--plan <n>`) or bounds it (`--within`). Call 186's rule for a group
+  under half is as it was.
+- *The sheet's own dimension strings*: read where the page holds them as words,
+  listed with where each is and which agree (`--dimensions`); `--scale-by <n>` sets
+  the scale by one, Assumed, its source the string; one that disagrees is said with
+  what its line measures. "Dimension string" is the trade's own word and is kept.
+- *A tag* (a closed shape of short straight pieces) is left out and counted. No tag
+  made an opening on any of the three real sheets: the rule is checked on made-up
+  tags only.
+
+Changed behaviour, named: on a sheet whose long lines are all parallel, each pair of
+neighbouring faces was listed twice and is now listed once (found by a test of this
+work; no existing expectation moved). Two of the lead's hand figures were set right
+by the worker: the roof plan's 108 LF is its centre line 32 by 22 ft; the sheet with
+glass has 5 walls.
+
+On the three real sheets (they are not in the repository): the clean single-plan
+sheet lost its 2 false windows and nothing else moved; the second is unchanged; the
+sheet with a floor plan and a roof plan now says there are 2 drawings, about 150 ft
+(all of it in doubt) and about 129 ft, and lays nothing unasked, where it laid 181 LF
+of the wrong lines. **Its floor plan is still not found as walls** (hatching and
+cabinet lines out to a foot from each wall): on a sheet drawn that way the program
+says so and the person traces.

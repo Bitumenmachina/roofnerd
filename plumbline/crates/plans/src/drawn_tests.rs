@@ -1020,3 +1020,314 @@ fn a_thin_partition_a_pair_of_thick_walls_and_a_lone_wall_are_not_in_doubt_for_t
     s.line([0.0, 0.0], [20.0, 0.0]).line([0.0, 1.0], [20.0, 1.0]);
     assert_eq!(thick_doubts(&s.found(Q4)), 0);
 }
+
+// ---- call 188, items 6 to 9: what real sheets showed wrong in the finder ----
+//
+// Items 7 and 8 are drawn with the causes found on the real sheets (a face drawn twice; lines of a thin leaf or a shower's
+// glass inside a partition whose faces run on); each figure is worked by hand beside its test.
+
+impl Sheet {
+    /// A wall along a to b (its centre line) drawn the way a real sheet drew one that was found two to four times: its two
+    /// outer faces `span` apart, and a second line 1 in inside one face and 0.6 in inside the other. The lines run the
+    /// whole length asked, corner to corner as `ring`'s do.
+    fn doubled(&mut self, a: P, b: P, span: f64) -> &mut Self {
+        let len = ((b[0] - a[0]).powi(2) + (b[1] - a[1]).powi(2)).sqrt();
+        let u = [(b[0] - a[0]) / len, (b[1] - a[1]) / len];
+        let n = [-u[1], u[0]];
+        for off in [-span / 2.0, -span / 2.0 + IN, span / 2.0 - 0.6 * IN, span / 2.0] {
+            self.line([a[0] + n[0] * off, a[1] + n[1] * off], [b[0] + n[0] * off, b[1] + n[1] * off]);
+        }
+        self
+    }
+    /// A hexagon `r` from its centre to a corner: a tag (a window's or a door's mark on a plan).
+    fn tag(&mut self, c: P, r: f64) -> &mut Self {
+        let pts: Vec<P> = (0..6).map(|i| [c[0] + r * (i as f64 * 60.0_f64).to_radians().cos(), c[1] + r * (i as f64 * 60.0_f64).to_radians().sin()]).collect();
+        for i in 0..6 {
+            self.line(pts[i], pts[(i + 1) % 6]);
+        }
+        self
+    }
+}
+
+/// A 30 by 20 ft house of 6 in walls with a 4 1/2 in partition at 12 ft, and 50 ft east of it a roof plan: an eave 32 by 22 ft
+/// (centre lines) with a second line 6 in inside it all round.
+fn plan_and_roof() -> Sheet {
+    let mut s = Sheet::default();
+    s.ring(0.0, 0.0, 30.0, 20.0, 0.5);
+    s.cut([0.0, 0.25], [30.0, 0.25], 12.0 - 0.19, 12.0 + 0.19);
+    s.cut([0.0, 19.75], [30.0, 19.75], 12.0 - 0.19, 12.0 + 0.19);
+    s.partition(12.0, 0.25, 19.75, 0.375);
+    s.ring(80.0, 0.0, 112.0, 22.0, 0.5);
+    s
+}
+
+fn feet_of_walls(d: &Drawn) -> f64 {
+    d.walls.iter().map(|w| w.length()).sum()
+}
+
+#[test]
+fn a_sheet_with_a_plan_and_a_roof_plan_of_like_size_says_there_are_two_and_lists_them_largest_first() {
+    // By hand: the house is 30 + 30 + 20 + 20 + the partition 20 = 120 LF in 5 walls; the eave is 32 + 22 + 32 + 22 = 108 LF in
+    // 4 pieces. 108 is over half of 120: of like size, both drawings. Numbered largest first: 1 the house, 2 the roof.
+    for turn in [0.0, 33.0] {
+        let d = plan_and_roof().turned(turn).found(Q4);
+        assert_eq!(d.drawings.len(), 2, "turned {turn}: {d:#?}");
+        let (a, b) = (&d.drawings[0], &d.drawings[1]);
+        assert!(near(a.length, 120.0, 1.0 / 12.0) && a.walls.len() == 5, "turned {turn}: {a:?}");
+        assert!(near(b.length, 108.0, 1.0 / 12.0) && b.walls.len() == 4, "turned {turn}: {b:?}");
+        // Nothing is dropped: every wall is found and listed, and none is in doubt for being of the other drawing.
+        assert_eq!(d.walls.len(), 9);
+        assert!(d.chosen.is_none());
+    }
+    // One plan alone, or a section far under half its size beside it (call 186, kept), is not two drawings.
+    assert!(house().found(Q4).drawings.is_empty());
+    let mut s = house();
+    s.line([50.0, 3.75], [50.0, 16.0]).line([50.0 + 0.75, 3.75], [50.0 + 0.75, 16.0]);
+    s.line([44.0, 4.0], [50.375, 4.0]).line([44.0, 3.5], [50.375, 3.5]);
+    let d = s.found(Q4);
+    assert!(d.drawings.is_empty(), "{d:#?}");
+    assert!(d.walls.iter().filter(|w| w.doubt.as_deref().is_some_and(|x| x.contains("apart from the plan"))).count() >= 2);
+}
+
+#[test]
+fn a_plan_is_taken_by_its_number_or_by_a_box_round_it_and_a_number_that_is_not_there_is_refused() {
+    let s = plan_and_roof();
+    let lo = s.lowest();
+    let page = s.page(Q4);
+    let k = Q4;
+    let origin = [0.0, 0.0];
+    let extra = Extra::default();
+    let want = [(1usize, 5usize, 120.0), (2, 4, 108.0)];
+    for (n, walls, lf) in want {
+        let d = find_in(&page, Some(k), [3000.0, 2400.0], origin, &extra, &Pick { plan: Some(n), ..Pick::default() }).unwrap();
+        assert_eq!(d.walls.len(), walls, "plan {n}: {d:#?}");
+        assert!(near(feet_of_walls(&d), lf, 1.0 / 6.0), "plan {n}: {}", feet_of_walls(&d));
+        assert_eq!(d.chosen, Some(n));
+        assert_eq!(d.drawings.len(), 2, "the sheet's drawings are still said");
+    }
+    // A box round the house: corners in feet on the plan. The page's corner is the plan's (0, 0) here, and the sheet's own
+    // lowest line stands 126 points in from it, so the house's south-west corner is at (126 pt * k) = 7 ft.
+    let pad = 126.0 * k - (-0.25 - 0.0) - 0.0;
+    let _ = (lo, pad);
+    let house_box = [[126.0 * k - 1.0, 126.0 * k - 1.0], [126.0 * k + 31.0, 126.0 * k + 21.0]];
+    let d = find_in(&page, Some(k), [3000.0, 2400.0], origin, &extra, &Pick { within: Some(house_box), ..Pick::default() }).unwrap();
+    assert_eq!(d.walls.len(), 5, "{d:#?}");
+    assert!(near(feet_of_walls(&d), 120.0, 1.0 / 6.0));
+    assert!(d.drawings.is_empty(), "a box with one drawing in it holds one: {:?}", d.drawings);
+    // The corners given either way round are the same box.
+    let flipped = [house_box[1], house_box[0]];
+    let d2 = find_in(&page, Some(k), [3000.0, 2400.0], origin, &extra, &Pick { within: Some(flipped), ..Pick::default() }).unwrap();
+    assert_eq!(d2.walls.len(), 5);
+    // 3 is refused where there are 2, 0 too.
+    for n in [3usize, 0] {
+        let e = find_in(&page, Some(k), [3000.0, 2400.0], origin, &extra, &Pick { plan: Some(n), ..Pick::default() }).unwrap_err();
+        assert!(e.contains("2 drawings"), "{e}");
+    }
+}
+
+#[test]
+fn each_wall_drawn_with_its_faces_twice_is_found_once_and_says_how_many_pairs_were_joined() {
+    // By hand: a 30 by 20 ft house whose four walls are each drawn with four lines (the two outer faces 7 in, 6 1/2 in, 7 1/2 in and
+    // 8 in apart, a second line 1 in inside one face and 0.6 in inside the other), as a real sheet draws them: four pairs of lines
+    // over each wall, and no two walls of one span. Four walls, 30 + 20 + 30 + 20 = 100 LF, none in doubt, each says it joined 4 pairs.
+    for turn in [0.0, 33.0] {
+        let mut s = Sheet::default();
+        s.doubled([-0.2, 0.0], [30.2, 0.0], 7.0 * IN);
+        s.doubled([30.0, -0.2], [30.0, 20.2], 6.5 * IN);
+        s.doubled([30.2, 20.0], [-0.2, 20.0], 7.5 * IN);
+        s.doubled([0.0, 20.2], [0.0, -0.2], 8.0 * IN);
+        let d = s.turned(turn).found(Q4);
+        assert_eq!(d.walls.len(), 4, "turned {turn}: {d:#?}");
+        assert!(d.walls.iter().all(|w| w.doubt.is_none()), "turned {turn}: {d:#?}");
+        assert_lengths(&d, &[20.0, 20.0, 30.0, 30.0], 1.0 / 12.0);
+        assert!(d.walls.iter().all(|w| w.joined == 4), "turned {turn}: {:?}", d.walls.iter().map(|w| w.joined).collect::<Vec<_>>());
+        let mut spans: Vec<f64> = d.walls.iter().map(|w| w.thickness * 12.0).collect();
+        spans.sort_by(|a, b| a.total_cmp(b));
+        for (got, want) in spans.iter().zip([6.5, 7.0, 7.5, 8.0]) {
+            assert!(near(*got, want, 1.0 / 8.0), "{spans:?}");
+        }
+    }
+    // A wall found once says it was one pair; the shared house has no wall joined.
+    assert!(house().found(Q4).walls.iter().all(|w| w.joined == 1));
+}
+
+#[test]
+fn a_fixture_drawn_with_lines_beside_one_another_is_one_thing_in_doubt_and_says_how_many_pairs_made_it() {
+    // By hand: four lines 4 1/2 ft long, 3 3/4 in, 6 in and 4 1/4 in apart (not evenly spaced, so no set), nothing else on the
+    // sheet: the pairs 3 3/4, 9 3/4, 6, 10, 4 1/4 and 14 in (all between 3 in and 14 in) are six pairs of one stack. One thing, in doubt,
+    // from the outermost line to the outermost (14 in), joined from 6 pairs.
+    let mut s = Sheet::default();
+    for y in [0.0, 3.75 * IN, 9.75 * IN, 14.0 * IN] {
+        s.line([0.0, y], [4.5, y]);
+    }
+    let d = s.found(Q4);
+    assert_eq!(d.walls.len(), 1, "{d:#?}");
+    assert_eq!(d.walls[0].joined, 6, "{d:#?}");
+    assert!(d.walls[0].doubt.as_deref().is_some_and(|x| x.contains("another line lies beside it")), "{d:#?}");
+}
+
+/// The house of the lead's figures: 30 by 20 ft, 6 in walls, a window 5 ft wide in the south wall (8 to 13 ft), a door 3 ft wide
+/// in the east wall (6 ft 6 in to 9 ft 6 in north), and across it at 12 ft a partition 4 1/2 in thick.
+fn house_with_a_window_and_a_door() -> Sheet {
+    let mut s = Sheet::default();
+    s.ring(0.0, 0.0, 30.0, 20.0, 0.5);
+    s.cut([0.0, 0.25], [30.0, 0.25], 12.0 - 0.19, 12.0 + 0.19);
+    s.cut([0.0, 19.75], [30.0, 19.75], 12.0 - 0.19, 12.0 + 0.19);
+    s.partition(12.0, 0.25, 19.75, 0.375);
+    s.opening([0.0, 0.0], [30.0, 0.0], 0.5, 8.0, 13.0, true);
+    s.opening([30.0, 0.0], [30.0, 20.0], 0.5, 6.5, 9.5, false);
+    s
+}
+
+fn openings(d: &Drawn) -> (usize, usize) {
+    let all: Vec<&Opening> = d.walls.iter().filter(|w| w.doubt.is_none()).flat_map(|w| w.openings.iter()).collect();
+    (all.iter().filter(|o| o.window).count(), all.iter().filter(|o| !o.window).count())
+}
+
+#[test]
+fn glass_lines_inside_a_partition_whose_faces_run_on_are_not_a_window() {
+    // A shower's glass 3 ft long in the partition: its faces run on past it, a line across at each end (a cap) and two lines
+    // of glass inside its thickness, as the real sheet draws a leaf in a partition. A person reads no window there: a window is in
+    // a wall with a face to the outside, or one cut clean through. By hand: the house has 1 window and 1 door, as without it.
+    for turn in [0.0, 33.0] {
+        let mut s = house_with_a_window_and_a_door();
+        for y in [6.0, 9.0] {
+            s.line([12.0 - 0.1875, y], [12.0 + 0.1875, y]);
+        }
+        for x in [12.0 - 0.0625, 12.0 + 0.0625] {
+            s.line([x, 6.0], [x, 9.0]);
+        }
+        let d = s.turned(turn).found(Q4);
+        assert_eq!(openings(&d), (1, 1), "turned {turn}: {d:#?}");
+        assert!(d.counts.glass_inside >= 1 || d.notes.iter().any(|n| n.contains("glass")), "what was left out is said: {d:#?}");
+    }
+    // Without the glass, the same: the lead's house has one window and one door.
+    assert_eq!(openings(&house_with_a_window_and_a_door().found(Q4)), (1, 1));
+}
+
+#[test]
+fn a_window_in_an_outside_wall_drawn_with_its_faces_running_on_is_still_a_window() {
+    // The faces run on across the window (a white box hides them on paper), jambs across, glass between: in the south wall, which
+    // has a face to the outside. A window all the same (the call 181 test of this stays).
+    let mut s = Sheet::default();
+    s.ring(0.0, 0.0, 30.0, 16.0, 0.5);
+    s.line([8.0, -0.25], [8.0, 0.25]).line([13.0, -0.25], [13.0, 0.25]);
+    for y in [-0.25, 0.0, 0.25] {
+        s.line([8.0, y], [13.0, y]);
+    }
+    s.partition(18.0, 0.25, 15.75, 0.375);
+    s.cut([0.0, 0.25], [30.0, 0.25], 17.8, 18.2);
+    s.cut([0.0, 15.75], [30.0, 15.75], 17.8, 18.2);
+    let d = s.found(Q4);
+    assert_eq!(openings(&d), (1, 0), "{d:#?}");
+}
+
+#[test]
+fn a_tag_beside_a_door_or_over_a_wall_is_not_an_opening() {
+    // A hexagon tag 0.35 ft to a corner, beside the door in the east wall; and another sitting on a wall with its centre on the wall's
+    // line, small enough to lie within its thickness. By hand: still 1 window and 1 door.
+    for turn in [0.0, 33.0] {
+        let mut s = house_with_a_window_and_a_door();
+        s.tag([30.9, 8.0], 0.35);
+        s.tag([30.0, 15.0], 0.2);
+        s.tag([15.0, -0.0], 0.2);
+        let d = s.turned(turn).found(Q4);
+        assert_eq!(openings(&d), (1, 1), "turned {turn}: {d:#?}");
+        assert!(d.walls.iter().all(|w| w.doubt.is_none()), "turned {turn}: {d:#?}");
+        assert_lengths(&d, &[20.0, 20.0, 30.0, 30.0, 20.0].iter().copied().filter(|_| true).collect::<Vec<_>>(), 1.0 / 12.0);
+        assert!(d.counts.tags >= 3, "the tags are counted and said: {d:#?}");
+    }
+}
+
+// ---- call 188, item 9: the sheet's own dimension strings ----
+
+fn text(s: &str, at: P, tall: f64, dir: P) -> crate::Text {
+    crate::Text { text: s.to_string(), at, tall, dir }
+}
+
+/// A dimension line from a to b on the page (points) with a slash tick across each end and an extension line at each.
+fn dim_line(lines: &mut Vec<[[f64; 2]; 2]>, a: P, b: P) {
+    lines.push([a, b]);
+    let len = ((b[0] - a[0]).powi(2) + (b[1] - a[1]).powi(2)).sqrt();
+    let u = [(b[0] - a[0]) / len, (b[1] - a[1]) / len];
+    let n = [-u[1], u[0]];
+    for e in [a, b] {
+        let t0 = [e[0] + (u[0] + n[0]) * 4.0, e[1] + (u[1] + n[1]) * 4.0];
+        let t1 = [e[0] - (u[0] + n[0]) * 4.0, e[1] - (u[1] + n[1]) * 4.0];
+        lines.push([t0, t1]);
+        lines.push([[e[0] + n[0] * 8.0, e[1] + n[1] * 8.0], [e[0] - n[0] * 40.0, e[1] - n[1] * 40.0]]);
+    }
+}
+
+#[test]
+fn the_dimension_strings_of_a_page_are_read_each_with_its_line_and_the_scale_they_give_and_the_ones_that_disagree() {
+    // By hand: "30'-0\"" by a line 540 points long: 30/540 = 1/18 ft to the point (1/4 in to the foot); "20'-0\"" by a line 360 points
+    // long: 20/360 = 1/18. They agree. "12'-0\"" by a line 180 points long: 12/180 = 1/15; at 1/18 that line is 10 ft: it does not agree,
+    // and it measures 10'-0" at the scale the other two give. A level one and a rotated one (the vertical dimension reads upward).
+    let mut lines: Vec<[[f64; 2]; 2]> = Vec::new();
+    dim_line(&mut lines, [126.0, 600.0], [666.0, 600.0]);
+    dim_line(&mut lines, [100.0, 130.0], [100.0, 490.0]);
+    dim_line(&mut lines, [300.0, 700.0], [480.0, 700.0]);
+    let texts = vec![
+        text("30'-0\"", [370.0, 604.0], 9.0, [1.0, 0.0]),
+        text("20'-0\"", [96.0, 290.0], 9.0, [0.0, 1.0]),
+        text("12'-0\"", [370.0, 704.0], 9.0, [1.0, 0.0]),
+        text("A101", [500.0, 500.0], 9.0, [1.0, 0.0]),
+        text("6\"", [500.0, 520.0], 9.0, [1.0, 0.0]),
+        text("8'-0\"", [800.0, 300.0], 9.0, [1.0, 0.0]),
+    ];
+    let d = dimension_strings(&lines, &[], &texts);
+    assert_eq!(d.strings.len(), 3, "{d:#?}");
+    let (a, b, c) = (&d.strings[0], &d.strings[1], &d.strings[2]);
+    assert!(near(a.feet, 30.0, 1e-9) && near(b.feet, 20.0, 1e-9) && near(c.feet, 12.0, 1e-9), "{d:#?}");
+    assert!(near(a.paper, 540.0, 1.0) && near(b.paper, 360.0, 1.0) && near(c.paper, 180.0, 1.0), "{d:#?}");
+    assert!(near(d.scale.unwrap(), 1.0 / 18.0, 1e-6), "{d:#?}");
+    assert_eq!(d.agree, vec![0, 1], "{d:#?}");
+    assert_eq!(d.off.len(), 1, "{d:#?}");
+    assert!(d.off[0].0 == 2 && near(d.off[0].1, 10.0, 0.05), "{d:#?}");
+    // A string that reads as a dimension with no dimension line beside it is said, and is not used.
+    assert_eq!(d.loose.len(), 1, "{d:#?}");
+    assert_eq!(d.loose[0].0, "8'-0\"");
+    // Inches and feet written the ways sheets write them.
+    for (said, feet) in [("5'-8 1/2\"", 5.0 + 8.5 / 12.0), ("2'-11\"", 2.0 + 11.0 / 12.0), ("30' 0\"", 30.0), ("16'-5\"", 16.0 + 5.0 / 12.0), ("10'-0 1/4\"", 10.0 + 0.25 / 12.0)] {
+        let mut l: Vec<[[f64; 2]; 2]> = Vec::new();
+        dim_line(&mut l, [100.0, 100.0], [100.0 + feet * 18.0, 100.0]);
+        let d = dimension_strings(&l, &[], &[text(said, [100.0 + feet * 9.0 - 10.0, 104.0], 9.0, [1.0, 0.0])]);
+        assert!(d.strings.len() == 1 && near(d.strings[0].feet, feet, 1e-9), "{said}: {d:#?}");
+    }
+    // Two strings that disagree with nothing to say which is right: no scale is offered.
+    let mut l: Vec<[[f64; 2]; 2]> = Vec::new();
+    dim_line(&mut l, [100.0, 100.0], [640.0, 100.0]);
+    dim_line(&mut l, [100.0, 300.0], [640.0, 300.0]);
+    let d = dimension_strings(&l, &[], &[text("30'-0\"", [300.0, 104.0], 9.0, [1.0, 0.0]), text("25'-0\"", [300.0, 304.0], 9.0, [1.0, 0.0])]);
+    assert_eq!(d.strings.len(), 2);
+    assert!(d.scale.is_none() && d.agree.is_empty(), "{d:#?}");
+}
+
+// ---- call 188, sent back: a drawing is told from every wall found, in doubt or not ----
+
+/// A house whose walls are all in doubt, as the real floor plan's were (each of four pairs of lines meets nothing, the corners open by 3 ft),
+/// and 50 ft east of it a clean roof plan of like size.
+fn doubtful_house_and_clean_roof() -> Sheet {
+    let mut s = Sheet::default();
+    // South and north 24 ft, west and east 14 ft, each 6 in thick, none meeting another.
+    s.line([3.0, -0.25], [27.0, -0.25]).line([3.0, 0.25], [27.0, 0.25]);
+    s.line([3.0, 19.75], [27.0, 19.75]).line([3.0, 20.25], [27.0, 20.25]);
+    s.line([-0.25, 3.0], [-0.25, 17.0]).line([0.25, 3.0], [0.25, 17.0]);
+    s.line([29.75, 3.0], [29.75, 17.0]).line([30.25, 3.0], [30.25, 17.0]);
+    s.ring(80.0, 0.0, 112.0, 22.0, 0.5);
+    s
+}
+
+#[test]
+fn a_house_all_in_doubt_beside_a_clean_roof_plan_of_like_size_is_two_drawings_each_with_its_doubt_said() {
+    // By hand: the house's pieces are 24 + 24 + 14 + 14 = 76 LF, every one in doubt (each meets nothing); the roof plan is 108 LF, clean.
+    // 76 is over half of 108: of like size, counted over every wall found. Largest first: 1 the roof (108, none in doubt), 2 the house (76, all in doubt).
+    for turn in [0.0, 33.0] {
+        let d = doubtful_house_and_clean_roof().turned(turn).found(Q4);
+        assert_eq!(d.drawings.len(), 2, "turned {turn}: {d:#?}");
+        let (a, b) = (&d.drawings[0], &d.drawings[1]);
+        assert!(near(a.length, 108.0, 1.0 / 6.0) && a.in_doubt < 0.01 && a.walls.len() == 4, "{a:?}");
+        assert!(near(b.length, 76.0, 1.0 / 6.0) && near(b.in_doubt, 76.0, 1.0 / 6.0) && b.walls.len() == 4, "{b:?}");
+    }
+}
