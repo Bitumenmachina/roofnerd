@@ -54,7 +54,7 @@ open_window "$J"
 sleep 8; park
 shot                                     # 01 the house in 3D as opened: nothing marked
 on "Plan"; sleep 8; park
-echo "\$(plan_px 12 4) \$(plan_px 6 0) \$(plan_px 3 0) \$(plan_px 9 0) \$(plan_px 12 3) \$(plan_px 12 13) \$(plan_line)" > "$T/px.txt"
+echo "\$(plan_px 12 4) \$(plan_px 6 0) \$(plan_px 3 0) \$(plan_px 9 0) \$(plan_px 12 3) \$(plan_px 12 13) \$(plan_line) \$(plan_px 6 16)" > "$T/px.txt"
 shot                                     # 02 the plan as opened: nothing marked
 at 12 4; sleep 3                         # the partition
 on "To demolish"; sleep 4; park
@@ -76,7 +76,10 @@ on "Show Demolition"; sleep 4
 click 1000 800; sleep 3
 shot                                     # 09 Demolition on again: the ghost is back
 on "3D"; sleep 8; park
-shot                                     # 10 the same house in 3D: the south wall light, the ghost
+shot                                     # 10 the same house in 3D: the south wall in halftone, the ghost
+on "Show Existing, shown pale"; sleep 4; park
+shot                                     # 11 its switch off: existing drawn as new work is
+on "Show Existing, shown pale"; sleep 4; park
 xdotool key F2; sleep 3                  # save
 close_window
 SESSION
@@ -84,10 +87,10 @@ chmod +x "$T/session.sh"
 timeout 1500 xvfb-run -a -s "-screen 0 2500x980x24" "$T/session.sh" || true
 if [ -s "$T/missing.txt" ]; then echo "FAIL: the session stopped: a control it was to click was not on screen"; cat "$T/missing.txt"; exit 1; fi
 if grep -q "panicked" "$T/app.log"; then echo "FAIL: the program panicked"; grep -A3 panicked "$T/app.log" | head; exit 1; fi
-for n in 01 02 03 04 05 06 07 08 09 10; do
+for n in 01 02 03 04 05 06 07 08 09 10 11; do
   [ "$OUT/$n-model.png" -nt "$T/before.json" ] && [ "$OUT/$n-sheet.png" -nt "$T/before.json" ] || { echo "FAIL: no picture $n of both windows from this run"; exit 1; }
 done
-echo "  20 pictures saved to $OUT (model and sheet, after each of 10 steps)"
+echo "  22 pictures saved to $OUT (model and sheet, after each of 11 steps)"
 
 echo
 echo "== What the window said =="
@@ -105,8 +108,8 @@ if grep -qE -- '--clear|--keep' "$T/said.txt"; then echo "FAIL: the window gave 
 if grep -qE '([Ww]all [0-9]+) \(([Ww]all [0-9]+)\)' "$T/said.txt"; then echo "FAIL: a wall is named twice in what the window said"; grep -E '([Ww]all [0-9]+) \(([Ww]all [0-9]+)\)' "$T/said.txt"; exit 1; fi
 # The two key rows under Show, once anything is marked (call 161), from the map at picture 07:
 # "Existing, shown pale" and, with its switch, "Demolition, shown red".
-grep -q $'^model\tKey Existing\t' "$T/map-keys.txt" && grep -q $'^model\tShow Demolition\t' "$T/map-keys.txt" || { echo "FAIL: the two key rows (Existing, Demolition) are not under Show"; grep -E 'Show|Key' "$T/map-keys.txt"; exit 1; }
-echo "    under Show: the key rows Existing (shown pale) and Demolition (shown red, with its switch)"
+grep -q $'^model\tShow Existing, shown pale\t' "$T/map-keys.txt" && grep -q $'^model\tShow Demolition\t' "$T/map-keys.txt" || { echo "FAIL: the two key rows (Existing, Demolition) are not under Show"; grep -E 'Show|Key' "$T/map-keys.txt"; exit 1; }
+echo "    under Show: Existing, shown pale and Demolition, shown red, each with its switch (call 178)"
 
 echo
 echo "== What the session left in the saved job =="
@@ -205,7 +208,7 @@ SAID2="$T/map.txt.said"
 says "$SAID2" "Added wall "
 says "$SAID2" " things are selected."
 says "$SAID2" "Marked 3 things: existing to remain"
-says "$SAID2" "Undone: Mark work."
+says "$SAID2" "Undone: marked existing"
 says "$SAID2" "Living is now 364.25 SF (was 178.25), and needs 7 receptacles (was 5)"
 says "$SAID2" " is bearing. Assumed: entered on screen"
 says "$SAID2" ": a 2 in drain. Assumed: entered on screen"
@@ -217,10 +220,10 @@ says "$SAID2" "Its quantity, 60 SF, is Assumed: entered on screen"
 # "Existing, shown pale" is under Show only once something is marked existing; the Demolition
 # switch only once something comes down.
 key() { grep -q $'^model\t'"$2"$'\t' "$1"; }
-! key "$T/map-0.txt" "Key Existing" && ! key "$T/map-0.txt" "Show Demolition" || { echo "FAIL: a key row is there with nothing marked"; exit 1; }
-key "$T/map-1.txt" "Key Existing" || { echo "FAIL: no Existing key row with three marked existing"; exit 1; }
-! key "$T/map-2.txt" "Key Existing" || { echo "FAIL: the Existing key row is still there after Undo"; exit 1; }
-key "$T/map-3.txt" "Show Demolition" && ! key "$T/map-3.txt" "Key Existing" || { echo "FAIL: with only a demolition marked, the Demolition switch should show and Existing should not"; exit 1; }
+! key "$T/map-0.txt" "Show Existing, shown pale" && ! key "$T/map-0.txt" "Show Demolition" || { echo "FAIL: a key row is there with nothing marked"; exit 1; }
+key "$T/map-1.txt" "Show Existing, shown pale" || { echo "FAIL: no Existing key row with three marked existing"; exit 1; }
+! key "$T/map-2.txt" "Show Existing, shown pale" || { echo "FAIL: the Existing key row is still there after Undo"; exit 1; }
+key "$T/map-3.txt" "Show Demolition" && ! key "$T/map-3.txt" "Show Existing, shown pale" || { echo "FAIL: with only a demolition marked, the Demolition switch should show and Existing should not"; exit 1; }
 echo "    under Show: no key rows with nothing marked; Existing once three are existing, gone with Undo; only Demolition with a demolition alone"
 "$P" show "$T/after-undo.json" > "$T/show-undo.txt"
 if grep -q "existing to remain" "$T/show-undo.txt"; then echo "FAIL: one Undo left a wall marked existing"; exit 1; fi
@@ -264,50 +267,9 @@ echo "== The pictures, measured =="
 #     Demolition off (08) (248, 248, 248); on again (09) (233, 182, 183)
 # Each test was run against a picture from before the step (01 for the wall's second
 # figure; 02 for the partition's ghost) and each failed there.
-python3 -I - "$OUT" "$T/px.txt" <<'PY'
-import sys
-from PIL import Image
-out, pxfile = sys.argv[1], sys.argv[2]
-v = [float(x) for x in open(pxfile).read().split()]
-(qx0, qy0), (qx1, qy1), k = (v[8], v[9]), (v[10], v[11]), v[14]
-def mean(name, box):
-    im = Image.open(f"{out}/{name}-model.png").convert("RGB").crop(tuple(int(round(b)) for b in box))
-    px = list(im.getdata())
-    return tuple(round(sum(p[i] for p in px) / len(px)) for i in range(3))
-# The partition between 3 ft and 13 ft up, on the plan.
-part = (qx0 - k * 0.12, qy1, qx0 + k * 0.12, qy0)
-# The south wall in 3D: a patch of its face as the house is first seen, the same patch
-# once it is marked existing (the eye is where it was: the view comes home).
-south3d = (800, 500, 1100, 650)
-lum = lambda c: sum(c) / 3
-ok = True
-def report(what, a, b, test, want):
-    global ok
-    good = test(a, b)
-    ok = ok and good
-    print("    %-58s %s -> %s  %s" % (what, a, b, "as wanted" if good else "FAIL: wanted " + want))
-report("south wall in 3D, unmarked (01), existing (10)", mean("01", south3d), mean("10", south3d), lambda a, b: lum(b) > lum(a) + 10, "lighter by over 10")
-# Existing brick keeps its pattern (call 161): the spread of brightness over the wall's patch
-# (the standard deviation of luminance, 300 by 150 pixels) is that of brick, not of a flat wash.
-#   brick unmarked (01): spread 24.45; brick existing (10): 14.22 (the wall washed pale, 0.15 of a pale light added over it); a plain wall's patch
-#   (the west wall, cream; 120 by 100 pixels at (450, 500)): 0.30.
-#   The picture from before this change (demos/captured/renow/10-model.png at the commit before
-#   call 161, the brick washed to flat gray): spread 6.68, which this check fails (it wants over 10).
-def spread(name, box):
-    im = Image.open(f"{out}/{name}-model.png").convert("RGB").crop(box)
-    lums = [(p[0] * 299 + p[1] * 587 + p[2] * 114) / 1000 for p in im.getdata()]
-    m = sum(lums) / len(lums)
-    return (sum((x - m) ** 2 for x in lums) / len(lums)) ** 0.5
-plain_west = (450, 500, 570, 600)
-s_brick, s_existing, s_plain = spread("01", south3d), spread("10", south3d), spread("10", plain_west)
-print("    spread of brightness over the south wall: brick unmarked (01) %.2f; existing (10) %.2f; a plain wall (10) %.2f" % (s_brick, s_existing, s_plain))
-good = s_existing > 10 and s_existing > 10 * max(s_plain, 0.5) and s_existing > 0.4 * s_brick
-ok = ok and good
-print("    existing brick still has its pattern (its spread over 10, over ten times a plain wall's, over 0.4 of the unmarked brick's): %s" % ("as wanted" if good else "FAIL"))
-report("partition, ghost on (04) against Demolition off (08)", mean("04", part), mean("08", part), lambda a, b: sum(abs(x - y) for x, y in zip(a, b)) > 40, "a different place by over 40")
-report("partition, ghost on again (09) as it was on (04)", mean("04", part), mean("09", part), lambda a, b: sum(abs(x - y) for x, y in zip(a, b)) < 15, "the same to within 15")
-report("partition, as opened (02) against ghost (04): redder", mean("02", part), mean("04", part), lambda a, b: (b[0] - b[2]) > (a[0] - a[2]) + 5, "redder over blue by 5")
-sys.exit(0 if ok else 1)
-PY
+python3 -W ignore -I "$PWD/demos/renow-pictures.py" "$OUT" "$T/px.txt"
 echo
+echo
+echo "== A question is blue (call 178) =="
+python3 -W ignore -I "$PWD/demos/cardcolour.py" "$OUT/05-model.png" blue
 echo "  PASS: in the window, on the plan, the partition was marked to demolish and a south wall existing, each lit in its WORK row and said in words; Demolition off took the ghost away and on brought it back; the saved job has the partition to demolish and the room it leaves at 364.25 SF; the pictures show the existing wall lighter and the partition a red ghost"

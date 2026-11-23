@@ -246,7 +246,8 @@ mod place_words {
 }
 
 /// How many letters the bar along the bottom holds beside where the pointer is.
-const BAR_HOLDS: usize = 150;
+const CARD_LINES: usize = 4;
+pub const BAR_HOLDS: usize = 110;
 
 /// A message cut to what a one-line bar can hold. The whole of it is in the card over
 /// the model whenever it is more than a plain "done".
@@ -255,14 +256,29 @@ pub fn one_line(message: &str, most: usize) -> String {
     if first.chars().count() <= most {
         return first.to_string();
     }
+    // Ended at the last whole word, never inside one (call 178).
     let cut: String = first.chars().take(most.saturating_sub(1)).collect();
-    format!("{}…", cut.trim_end())
+    let whole = match cut.rfind(' ') {
+        Some(at) if at * 2 > cut.len() => cut[..at].to_string(),
+        _ => cut,
+    };
+    format!("{}…", whole.trim_end_matches(|c: char| c.is_whitespace() || c == ',' || c == ';' || c == ':'))
+}
+
+/// What the bar along the foot says: nothing while a card says it in full, and nothing once
+/// the card has been put away (call 178). A short plain "done" is the bar's alone.
+pub fn bar_message(doc: &Doc, most: usize) -> String {
+    if doc.card_away || message_card_up(doc) {
+        return String::new();
+    }
+    pretty(&one_line(&doc.message, most))
 }
 
 pub fn tone_ink(tone: Tone) -> (Color, Color) {
     match tone {
         Tone::Done => (theme::green(), theme::ink_soft()),
         Tone::Warned => (theme::amber(), theme::amber()),
+        Tone::Ask => (theme::accent(), theme::accent()),
         Tone::Refused => (theme::red(), theme::red()),
     }
 }
@@ -416,7 +432,7 @@ fn top_bar(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
             _ => ("nothing priced yet".to_string(), Status::Known),
         };
         bar.spawn(Node { align_items: AlignItems::Baseline, column_gap: px(7.0), flex_shrink: 0.0, ..default() }).with_children(|b| {
-            b.spawn((text(fonts, "PRICE", 10.0, Weight::Semibold, theme::ink_faint()), TextLayout::no_wrap()));
+            b.spawn((text(fonts, "PRICE", 11.0, Weight::Semibold, theme::ink_faint()), TextLayout::no_wrap()));
             b.spawn((text(fonts, price, if priced { 16.0 } else { 12.0 }, if priced { Weight::Semibold } else { Weight::Regular }, if priced { theme::status_ink(status) } else { theme::ink_faint() }), TextLayout::no_wrap()));
         });
         // How sure the price is, in a word, unless what follows says why in more: the
@@ -488,8 +504,8 @@ fn top_bar(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
 
 /// Along the bottom: what the last action did, where the pointer is, and the view.
 fn status_line(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc) {
-    let first = pretty(&one_line(&doc.message, BAR_HOLDS));
-    let (dot, ink) = tone_ink(doc.tone);
+    let first = bar_message(doc, BAR_HOLDS);
+    let (dot, ink) = if first.is_empty() { (theme::ink_faint(), theme::ink_soft()) } else { tone_ink(doc.tone) };
     // What was done, on a card as long as its words; where the pointer is and the view,
     // on another at the right. The model is seen between them (J22B-3, A1).
     let card = |shrinks: bool| glass_card(Node { height: percent(100.0), padding: UiRect::horizontal(px(12.0)), align_items: AlignItems::Center, column_gap: px(9.0), overflow: Overflow::clip(), flex_shrink: if shrinks { 1.0 } else { 0.0 }, min_width: px(0.0), ..default() });
@@ -624,7 +640,7 @@ fn pick_list(f: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, entry: Entr
     files.sort_by_key(|n| n.to_lowercase());
     let called = |p: &std::path::Path| p.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_else(|| "this computer".to_string());
     let said = called(&here);
-    f.spawn((text(fonts, if here == home { "THIS JOB'S FOLDER".to_string() } else { format!("IN {}", said.to_uppercase()) }, 9.5, Weight::Semibold, theme::ink_faint()), TextLayout::no_wrap()));
+    f.spawn((text(fonts, if here == home { "THIS JOB'S FOLDER".to_string() } else { format!("IN {}", said.to_uppercase()) }, 11.0, Weight::Semibold, theme::ink_faint()), TextLayout::no_wrap()));
     // A row of the list: a mark for what it is (a folder's tab, or nothing), its name as
     // a person reads it, and at the right what kind of thing it is, in a word. A
     // file's name is shown without its ending, and nothing is a path (VISUAL.md A8;
@@ -642,7 +658,7 @@ fn pick_list(f: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, entry: Entr
             }
             r.spawn((Node { flex_grow: 1.0, flex_basis: px(0.0), min_width: px(0.0), overflow: Overflow::clip(), ..default() }, Pickable::IGNORE)).with_child((text(fonts, shown, 12.0, Weight::Medium, ink), TextLayout::no_wrap(), Pickable::IGNORE));
             if !kind.is_empty() {
-                r.spawn((text(fonts, kind, 10.5, Weight::Regular, theme::ink_faint()), TextLayout::no_wrap(), Pickable::IGNORE));
+                r.spawn((text(fonts, kind, 11.0, Weight::Regular, theme::ink_faint()), TextLayout::no_wrap(), Pickable::IGNORE));
             }
         });
     };
@@ -708,10 +724,10 @@ fn pick_list(f: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, entry: Entr
         }));
     }
     if files.is_empty() {
-        f.spawn(text(fonts, format!("No {what} here. Look in a folder{}.", if here.parent().is_some() { ", or go back" } else { "" }), 10.5, Weight::Regular, theme::ink_faint()));
+        f.spawn(text(fonts, format!("No {what} here. Look in a folder{}.", if here.parent().is_some() { ", or go back" } else { "" }), 11.0, Weight::Regular, theme::ink_faint()));
     }
     if files.len() > 40 || folders.len() > 30 {
-        f.spawn(text(fonts, "More than fit in this list: type the start of the name, or go into a folder.", 10.5, Weight::Regular, theme::ink_faint()));
+        f.spawn(text(fonts, "More than fit in this list: type the start of the name, or go into a folder.", 11.0, Weight::Regular, theme::ink_faint()));
     }
 }
 
@@ -747,7 +763,7 @@ fn picker(c: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc) {
     let type_it = |f: &mut ChildSpawnerCommands, typed: &str, more: &str| {
         f.spawn(Node { height: px(4.0), ..default() });
         theme::field(f, fonts, "Or type its name", typed, "", 1, LEFT_W - 30.0);
-        f.spawn(text(fonts, format!("{more}Enter brings it in. Esc cancels."), 10.5, Weight::Regular, theme::ink_faint()));
+        f.spawn(text(fonts, format!("{more}Enter brings it in. Esc cancels."), 11.0, Weight::Regular, theme::ink_faint()));
     };
     match doc.entry {
         Some((Entry::Drawing, _)) => {
@@ -761,7 +777,7 @@ fn picker(c: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc) {
                 match pages {
                     Some((file, n)) => {
                         let stem = plain_name(file.rsplit('/').next().unwrap_or(&file)).0;
-                        f.spawn(text(fonts, format!("{stem} has {n} pages. Pick the one to trace over."), 10.5, Weight::Regular, theme::ink_faint()));
+                        f.spawn(text(fonts, format!("{stem} has {n} pages. Pick the one to trace over."), 11.0, Weight::Regular, theme::ink_faint()));
                         for page in 1..=n.min(80) {
                             let file = file.clone();
                             row(f, false, format!("Page {page}"), move |doc| {
@@ -773,12 +789,12 @@ fn picker(c: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc) {
                             });
                         }
                         if n > 80 {
-                            f.spawn(text(fonts, "More pages than fit in this list: type the page's number after the comma in the field below, then Enter.", 10.5, Weight::Regular, theme::ink_faint()));
+                            f.spawn(text(fonts, "More pages than fit in this list: type the page's number after the comma in the field below, then Enter.", 11.0, Weight::Regular, theme::ink_faint()));
                         }
-                        f.spawn((text(fonts, "OR ANOTHER PLAN", 9.5, Weight::Semibold, theme::ink_faint()), TextLayout::no_wrap()));
+                        f.spawn((text(fonts, "OR ANOTHER PLAN", 11.0, Weight::Semibold, theme::ink_faint()), TextLayout::no_wrap()));
                     }
                     None => {
-                        f.spawn(text(fonts, "Pick the plan (a PDF or a picture of it), or drop it on this window.", 10.5, Weight::Regular, theme::ink_faint()));
+                        f.spawn(text(fonts, "Pick the plan (a PDF or a picture of it), or drop it on this window.", 11.0, Weight::Regular, theme::ink_faint()));
                     }
                 }
                 pick_list(f, fonts, doc, Entry::Drawing, &[".pdf", ".png", ".jpg", ".jpeg"], ", 1", "plan");
@@ -795,7 +811,7 @@ fn picker(c: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc) {
                     crate::model::Bring::Scan => "Click the scan of the house to bring it in, or drop it on this window. It is laid under the plan on show, to trace over.",
                     _ => "Click it (a table or a workbook) to bring it in, or drop it on this window.",
                 };
-                f.spawn(text(fonts, hint, 10.5, Weight::Regular, theme::ink_faint()));
+                f.spawn(text(fonts, hint, 11.0, Weight::Regular, theme::ink_faint()));
                 // A scan does not say what it was measured in: two choices at the head of
                 // its list, meters to begin with. Which way is up is read from the scan.
                 if what == crate::model::Bring::Scan {
@@ -914,10 +930,10 @@ fn steps(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot
     let next = all.iter().position(|s| !s.done);
     let mut head = p.spawn((Node { align_items: AlignItems::Center, column_gap: px(6.0), margin: UiRect { top: px(4.0), bottom: px(4.0), ..default() }, padding: UiRect::bottom(px(3.0)), border: UiRect::bottom(px(1.0)), flex_shrink: 0.0, ..default() }, BorderColor::all(theme::hairline()), Named { name: "Next steps".into(), scrolls: true }));
     head.with_children(|h| {
-        h.spawn((text(fonts, "NEXT STEPS", 10.0, Weight::Semibold, theme::ink_soft()), Pickable::IGNORE));
+        h.spawn((text(fonts, "NEXT STEPS", 11.0, Weight::Semibold, theme::ink_soft()), Pickable::IGNORE));
         h.spawn(Node { flex_grow: 1.0, ..default() });
-        h.spawn((text(fonts, format!("{done} of {} done", all.len()), 10.5, Weight::Regular, theme::ink_faint()), Pickable::IGNORE));
-        h.spawn((text(fonts, if doc.steps_open { "Hide" } else { "Show" }, 10.5, Weight::Medium, theme::accent()), Pickable::IGNORE));
+        h.spawn((text(fonts, format!("{done} of {} done", all.len()), 11.0, Weight::Regular, theme::ink_faint()), Pickable::IGNORE));
+        h.spawn((text(fonts, if doc.steps_open { "Hide" } else { "Show" }, 11.0, Weight::Medium, theme::accent()), Pickable::IGNORE));
     });
     on_click(&mut head, |doc| {
         doc.steps_open = !doc.steps_open;
@@ -1034,7 +1050,7 @@ fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot,
                         }
                     });
                 }
-                f.spawn(text(fonts, "Tab or Enter to the next. Enter on the last adds it. Esc cancels.", 10.5, Weight::Regular, theme::ink_faint()));
+                f.spawn(text(fonts, "Tab or Enter to the next. Enter on the last adds it. Esc cancels.", 11.0, Weight::Regular, theme::ink_faint()));
             });
         } else {
             c.spawn(Node { padding: UiRect::axes(px(6.0), px(3.0)), flex_shrink: 0.0, ..default() }).with_children(|b| {
@@ -1117,13 +1133,10 @@ fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot,
         // "Existing, shown pale" is there only where something is marked existing, and the
         // demolition switch only where something comes down (call 169).
         if standing > 0 {
-            row(c, false, "Key Existing".to_string(), |doc| {
-                doc.say(Tone::Done, "Existing, shown pale: work that is there and stays is drawn washed pale, in its own finish.");
-            }, |r| {
-                r.spawn((theme::rounded(Node { width: px(11.0), height: px(11.0), border: UiRect::all(px(1.0)), flex_shrink: 0.0, ..default() }, 6.0), BackgroundColor(Color::srgb(0.80, 0.75, 0.72)), BorderColor::all(theme::ink_faint()), Pickable::IGNORE));
-                r.spawn((text(fonts, "Existing, shown pale", 12.0, Weight::Medium, theme::ink()), Pickable::IGNORE));
-                r.spawn((text(fonts, standing.to_string(), 11.0, Weight::Regular, theme::ink_faint()), Pickable::IGNORE));
-            });
+            layer(c, "Existing, shown pale", "", theme::existing_tone(), doc.show.existing, Some(standing), Box::new(|doc| {
+                doc.show.existing = !doc.show.existing;
+                doc.redraw();
+            }));
         }
         if coming_down > 0 {
             layer(c, "Demolition", "", theme::red(), doc.show.demolition, Some(coming_down), Box::new(|doc| {
@@ -1358,7 +1371,7 @@ fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot,
                         }
                     });
                 }
-                f.spawn(text(fonts, "Tab or Enter to the next. Enter on the last adds it. Esc cancels.", 10.5, Weight::Regular, theme::ink_faint()));
+                f.spawn(text(fonts, "Tab or Enter to the next. Enter on the last adds it. Esc cancels.", 11.0, Weight::Regular, theme::ink_faint()));
             });
         } else {
             c.spawn(Node { padding: UiRect::axes(px(6.0), px(3.0)), flex_shrink: 0.0, ..default() }).with_children(|b| {
@@ -1375,7 +1388,7 @@ fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot,
                 if trade != Some(*division) {
                     trade = Some(*division);
                     let said = plumbline_world::Division::of_number(*division).map(|d| format!("{} {}", d.number(), d.title())).unwrap_or_else(|| "No trade said".to_string());
-                    c.spawn(Node { padding: UiRect { left: px(6.0), right: px(6.0), top: px(5.0), bottom: px(1.0) }, flex_shrink: 0.0, ..default() }).with_child((text(fonts, said.to_uppercase(), 9.5, Weight::Semibold, theme::ink_faint()), TextLayout::no_wrap()));
+                    c.spawn(Node { padding: UiRect { left: px(6.0), right: px(6.0), top: px(5.0), bottom: px(1.0) }, flex_shrink: 0.0, ..default() }).with_child((text(fonts, said.to_uppercase(), 11.0, Weight::Semibold, theme::ink_faint()), TextLayout::no_wrap()));
                 }
                 let (item, called) = (path.clone(), name.clone());
                 let in_hand = doc.placing.as_deref() == Some(path.as_str());
@@ -1399,13 +1412,13 @@ fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot,
                     spot(r, if *kind == Kind::Furnishing { theme::casework() } else if *kind == Kind::Equipment { theme::equipment() } else { theme::porcelain() });
                     r.spawn(Node { flex_direction: FlexDirection::Column, flex_grow: 1.0, flex_basis: px(0.0), min_width: px(0.0), ..default() }).with_children(|t| {
                         t.spawn((text(fonts, name.clone(), 12.0, Weight::Medium, theme::ink()), Pickable::IGNORE));
-                        t.spawn((text(fonts, format!("{}, {size}", kind.said()), 10.5, Weight::Regular, theme::ink_faint()), Pickable::IGNORE));
+                        t.spawn((text(fonts, format!("{}, {size}", kind.said()), 11.0, Weight::Regular, theme::ink_faint()), Pickable::IGNORE));
                     });
                     // The item itself, opened on the right to be changed: its sizes,
                     // its trade, what it is drawn as. (The row takes it in hand.)
                     let open = path.clone();
                     r.spawn((theme::rounded(Node { padding: UiRect::axes(px(7.0), px(2.0)), border: UiRect::all(px(1.0)), flex_shrink: 0.0, ..default() }, theme::SMALL_RADIUS), BackgroundColor(theme::control()), BorderColor::all(theme::control_edge()), Named { name: format!("Change item {name}"), scrolls: true }))
-                        .with_child((text(fonts, "Change", 10.5, Weight::Medium, theme::ink_soft()), Pickable::IGNORE))
+                        .with_child((text(fonts, "Change", 11.0, Weight::Medium, theme::ink_soft()), Pickable::IGNORE))
                         .observe(move |mut press: On<PointerClick>, mut doc: ResMut<Doc>| {
                             press.propagate(false);
                             if press.button == PointerButton::Primary {
@@ -1534,9 +1547,9 @@ fn tool_button<'a>(p: &'a mut ChildSpawnerCommands, fonts: &Fonts, label: &str, 
     ));
     e.with_children(|b| {
         mark(b, label, ink);
-        b.spawn((text(fonts, label, 10.5, Weight::Medium, ink), TextLayout::no_wrap(), Pickable::IGNORE));
+        b.spawn((text(fonts, label, 11.0, Weight::Medium, ink), TextLayout::no_wrap(), Pickable::IGNORE));
         if !key.is_empty() {
-            b.spawn((Node { position_type: PositionType::Absolute, top: px(1.0), right: px(3.0), ..default() }, Pickable::IGNORE)).with_child((text(fonts, key, 9.5, Weight::Medium, theme::ink_faint()), Pickable::IGNORE));
+            b.spawn((Node { position_type: PositionType::Absolute, top: px(1.0), right: px(3.0), ..default() }, Pickable::IGNORE)).with_child((text(fonts, key, 11.0, Weight::Medium, theme::ink_faint()), Pickable::IGNORE));
         }
     });
     e
@@ -1553,7 +1566,7 @@ fn cabinets_card(p: &mut ChildSpawnerCommands, fonts: &Fonts, snap: &Snapshot) {
     p.spawn(docked(Node { left: px(LEFT_W), right: px(RIGHT_W), bottom: px(STATUS_H + BUILD_H + 10.0), flex_direction: FlexDirection::Column, row_gap: px(3.0), padding: UiRect::axes(px(12.0), px(8.0)), ..default() })).with_children(|c| {
         let line = |c: &mut ChildSpawnerCommands, head: &str, body: String| {
             c.spawn(Node { column_gap: px(8.0), ..default() }).with_children(|r| {
-                r.spawn(Node { width: px(96.0), flex_shrink: 0.0, ..default() }).with_child((text(fonts, head.to_uppercase(), 9.0, Weight::Semibold, theme::ink_faint()), TextLayout::no_wrap()));
+                r.spawn(Node { width: px(96.0), flex_shrink: 0.0, ..default() }).with_child((text(fonts, head.to_uppercase(), 11.0, Weight::Semibold, theme::ink_faint()), TextLayout::no_wrap()));
                 r.spawn(Node { flex_grow: 1.0, flex_basis: px(0.0), min_width: px(0.0), ..default() }).with_child(text(fonts, body, 11.0, Weight::Regular, theme::ink()));
             });
         };
@@ -1631,7 +1644,7 @@ fn build_bar(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snap
                     }
                 }
                 strip.spawn(Node { flex_direction: FlexDirection::Column, row_gap: px(2.0), flex_shrink: 0.0, ..default() }).with_children(|c| {
-                    c.spawn((text(fonts, "COUNTERTOP", 9.5, Weight::Semibold, theme::ink_faint()), TextLayout::no_wrap(), Pickable::IGNORE));
+                    c.spawn((text(fonts, "COUNTERTOP", 11.0, Weight::Semibold, theme::ink_faint()), TextLayout::no_wrap(), Pickable::IGNORE));
                     switch_at(c, !doc.draw.without_top, "Countertop".to_string(), false, |doc| {
                         doc.draw.without_top = !doc.draw.without_top;
                         doc.touch();
@@ -1665,7 +1678,7 @@ fn build_bar(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snap
                 // the buttons shrink to fit the bar instead of pushing the last of them off its
                 // end: with the Cabinets tool the bar's Delete was pushed off (call 156).
                 all.spawn(Node { flex_direction: FlexDirection::Column, row_gap: px(1.0), flex_shrink: 1.0, min_width: px(0.0), ..default() }).with_children(|g| {
-                    g.spawn((text(fonts, name.to_uppercase(), 9.0, Weight::Semibold, theme::ink_faint()), TextLayout::no_wrap()));
+                    g.spawn((text(fonts, name.to_uppercase(), 11.0, Weight::Semibold, theme::ink_faint()), TextLayout::no_wrap()));
                     g.spawn(Node { column_gap: px(2.0), min_width: px(0.0), ..default() }).with_children(|r| {
                         for tool in tools.iter().copied() {
                             on_click(&mut tool_button(r, fonts, tool.name(), tool.key(), in_hand == Some(tool)), move |doc| tools::start(doc, tool));
@@ -1925,7 +1938,7 @@ fn size_tags(o: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snap
         ))
         .with_children(|l| {
             l.spawn((Node { width: px(6.0), height: px(6.0), border_radius: BorderRadius::all(px(3.0)), flex_shrink: 0.0, ..default() }, BackgroundColor(colour), Pickable::IGNORE));
-            quiet(l, fonts, theme::spoken(&words), 10.5, Weight::Medium, theme::ink());
+            quiet(l, fonts, theme::spoken(&words), 11.0, Weight::Medium, theme::ink());
         });
     }
 }
@@ -1982,7 +1995,7 @@ fn overlay(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
                         Pickable::IGNORE,
                         Label { at: to_view(doc.origin, mid), facing: None, rank: 3 },
                     ))
-                    .with_children(|l| quiet(l, fonts, units::feet_as_ft_in(length, 16), 10.5, Weight::Regular, theme::status_ink(placed.status)));
+                    .with_children(|l| quiet(l, fonts, units::feet_as_ft_in(length, 16), 11.0, Weight::Regular, theme::status_ink(placed.status)));
                 }
             }
         }
@@ -2010,7 +2023,7 @@ fn overlay(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
                         Label { at: to_view(doc.origin, [at[0], at[1], z]), facing: None, rank: 1 },
                         Fit { corners },
                     ))
-                    .with_children(|l| quiet(l, fonts, plan_mark(&placed.name), 9.5, Weight::Semibold, theme::ink()));
+                    .with_children(|l| quiet(l, fonts, plan_mark(&placed.name), 11.0, Weight::Semibold, theme::ink()));
                 }
             }
         }
@@ -2085,7 +2098,7 @@ fn overlay(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
                     ))
                     .with_children(|l| {
                         l.spawn((Node { width: px(6.0), height: px(6.0), border_radius: BorderRadius::all(px(3.0)), flex_shrink: 0.0, ..default() }, BackgroundColor(colour), Pickable::IGNORE));
-                        quiet(l, fonts, theme::spoken(&words), 10.5, Weight::Medium, theme::ink());
+                        quiet(l, fonts, theme::spoken(&words), 11.0, Weight::Medium, theme::ink());
                     });
                 }
             }
@@ -2109,7 +2122,7 @@ fn overlay(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
                     Label { at: to_view(doc.origin, [c[0], c[1], *top + 0.2]), facing: None, rank: 1 },
                     Named { name: format!("Tag {words}"), scrolls: false },
                 ))
-                .with_children(|l| quiet(l, fonts, words, 10.5, Weight::Medium, theme::amber()));
+                .with_children(|l| quiet(l, fonts, words, 11.0, Weight::Medium, theme::amber()));
             }
         }
         // The selected element of the rest of the building: its name on it.
@@ -2148,7 +2161,8 @@ fn overlay(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
                 let ink = match doc.tone {
                     Tone::Refused => theme::red(),
                     Tone::Done => theme::green(),
-                    _ => theme::amber(),
+                    Tone::Ask => theme::accent(),
+                    Tone::Warned => theme::amber(),
                 };
                 let (frosted, tinted) = match crate::glass::panel() {
                     Some(glass) => (MaterialNode(glass), BackgroundColor(Color::NONE)),
@@ -2165,15 +2179,31 @@ fn overlay(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
                 .with_children(|card| {
                     card.spawn((Node { width: px(4.0), flex_shrink: 0.0, border_radius: BorderRadius::all(px(2.0)), ..default() }, BackgroundColor(ink), Pickable::IGNORE));
                     card.spawn((Node { flex_direction: FlexDirection::Column, row_gap: px(3.0), flex_shrink: 1.0, ..default() }, Pickable::IGNORE)).with_children(|c| {
-                        for (i, line) in doc.message.lines().enumerate() {
+                        // Four lines, the first being what happened; More opens the rest (call 178).
+                        let total = doc.message.lines().count();
+                        let shown = if doc.card_more { total } else { total.min(CARD_LINES) };
+                        for (i, line) in doc.message.lines().take(shown).enumerate() {
                             c.spawn((text(fonts, if i == 0 { pretty(line) } else { line.to_string() }, 12.5, if i == 0 { Weight::Semibold } else { Weight::Regular }, if i == 0 { ink } else { theme::ink() }), Pickable::IGNORE));
+                        }
+                        if total > CARD_LINES {
+                            let word = if doc.card_more { "Less" } else { "More" };
+                            c.spawn(Node::default()).with_children(|row| {
+                                let mut e = button(row, fonts, word, "", false);
+                                e.insert((Named { name: format!("Card {word}"), scrolls: false }, BackgroundColor(theme::accent_glass()), BorderColor::all(theme::accent())));
+                                on_click(&mut e, |doc| {
+                                    doc.card_more = !doc.card_more;
+                                    doc.touch();
+                                });
+                            });
                         }
                         // A scan that came in with its way up in doubt: one button, under the
                         // message, brings it in again turned (call 161).
                         if doc.scan_side.as_ref().is_some_and(|(_, _, step)| *step == doc.draw.edits) {
-                            let mut e = button(c, fonts, "It is lying on its side: stand it up", "", false);
-                            e.insert(Named { name: "It is lying on its side: stand it up".to_string(), scrolls: false });
-                            on_click(&mut e, crate::bring::stand_it_up);
+                            c.spawn(Node::default()).with_children(|row| {
+                                let mut e = button(row, fonts, "It is lying on its side: stand it up", "", false);
+                                e.insert((Named { name: "It is lying on its side: stand it up".to_string(), scrolls: false }, BackgroundColor(theme::accent_glass()), BorderColor::all(theme::accent())));
+                                on_click(&mut e, crate::bring::stand_it_up);
+                            });
                         }
                     });
                     // The mark at the card's corner that puts it away (call 169).
@@ -2199,7 +2229,7 @@ pub fn message_card_up(doc: &Doc) -> bool {
 
 pub fn stat(p: &mut ChildSpawnerCommands, fonts: &Fonts, label: &str, value: String, unit: &str, status: Status) {
     p.spawn(Node { flex_direction: FlexDirection::Column, row_gap: px(2.0), flex_grow: 1.0, flex_basis: px(0.0), ..default() }).with_children(|s| {
-        s.spawn(text(fonts, label.to_uppercase(), 9.5, Weight::Semibold, theme::ink_faint()));
+        s.spawn(text(fonts, label.to_uppercase(), 11.0, Weight::Semibold, theme::ink_faint()));
         s.spawn(Node { align_items: AlignItems::Baseline, column_gap: px(4.0), ..default() }).with_children(|v| {
             v.spawn(text(fonts, value, 17.0, Weight::Semibold, theme::status_ink(status)));
             if !unit.is_empty() {
@@ -2212,7 +2242,7 @@ pub fn stat(p: &mut ChildSpawnerCommands, fonts: &Fonts, label: &str, value: Str
 /// A small figure under a label, three to a row: what the price is made of.
 fn small_stat(p: &mut ChildSpawnerCommands, fonts: &Fonts, label: &str, value: String, status: Status) {
     p.spawn(Node { flex_direction: FlexDirection::Column, row_gap: px(1.0), flex_grow: 1.0, flex_basis: px(0.0), min_width: px(0.0), ..default() }).with_children(|s| {
-        s.spawn((text(fonts, label.to_uppercase(), 9.0, Weight::Semibold, theme::ink_faint()), TextLayout::no_wrap()));
+        s.spawn((text(fonts, label.to_uppercase(), 11.0, Weight::Semibold, theme::ink_faint()), TextLayout::no_wrap()));
         s.spawn((text(fonts, value, 12.5, Weight::Semibold, theme::status_ink(status)), TextLayout::no_wrap()));
     });
 }
@@ -2252,16 +2282,16 @@ fn property<'a>(p: &'a mut ChildSpawnerCommands, fonts: &Fonts, label: &str, val
         }
         if !basis.is_empty() || !act.is_empty() {
             r.spawn((Node { align_items: AlignItems::FlexStart, column_gap: px(8.0), ..default() }, Pickable::IGNORE)).with_children(|foot| {
-                foot.spawn(Node { flex_grow: 1.0, flex_basis: px(0.0), min_width: px(0.0), ..default() }).with_child((text(fonts, basis, 10.5, Weight::Regular, theme::ink_faint()), Pickable::IGNORE));
+                foot.spawn(Node { flex_grow: 1.0, flex_basis: px(0.0), min_width: px(0.0), ..default() }).with_child((text(fonts, basis, 11.0, Weight::Regular, theme::ink_faint()), Pickable::IGNORE));
                 if !act.is_empty() {
                     // A small round button, washed in the accent: not a hard hairline box
                     // (VISUAL.md A4; J22B-1).
-                    foot.spawn((theme::rounded(Node { flex_shrink: 0.0, padding: UiRect::axes(px(8.0), px(1.5)), ..default() }, 9.0), BackgroundColor(theme::accent_wash()), Pickable::IGNORE)).with_child((text(fonts, act, 10.5, Weight::Semibold, theme::accent()), TextLayout::no_wrap(), Pickable::IGNORE));
+                    foot.spawn((theme::rounded(Node { flex_shrink: 0.0, padding: UiRect::axes(px(8.0), px(1.5)), ..default() }, 9.0), BackgroundColor(theme::accent_wash()), Pickable::IGNORE)).with_child((text(fonts, act, 11.0, Weight::Semibold, theme::accent()), TextLayout::no_wrap(), Pickable::IGNORE));
                 }
             });
         }
         if !note.is_empty() {
-            r.spawn((text(fonts, note, 10.5, Weight::Regular, theme::status_ink(status)), Pickable::IGNORE));
+            r.spawn((text(fonts, note, 11.0, Weight::Regular, theme::status_ink(status)), Pickable::IGNORE));
         }
     });
     row
@@ -2312,7 +2342,7 @@ fn actions(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
         let now = snap.work.get(&el.path).copied().unwrap_or(WorkStatus::New);
         let asked = doc.marking.as_ref().filter(|(path, _)| *path == el.path).map(|(_, status)| *status);
         p.spawn(Node { margin: UiRect::top(px(8.0)), column_gap: px(4.0), row_gap: px(4.0), flex_wrap: FlexWrap::Wrap, align_items: AlignItems::Center, flex_shrink: 0.0, ..default() }).with_children(|r| {
-            r.spawn((text(fonts, "WORK", 9.5, Weight::Semibold, theme::ink_faint()), TextLayout::no_wrap(), Pickable::IGNORE));
+            r.spawn((text(fonts, "WORK", 11.0, Weight::Semibold, theme::ink_faint()), TextLayout::no_wrap(), Pickable::IGNORE));
             match asked {
                 Some(status) => {
                     on_click(&mut button(r, fonts, "Take its lines off", "", false), move |doc| crate::tools::mark_work(doc, status, ItsLines::Clear));
@@ -2373,7 +2403,7 @@ fn actions(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
                     }
                 });
             }
-            f.spawn(text(fonts, "Priced by is one of its own figures (below), a formula, or a measure you type, like 60 SF, which is Assumed until it is measured. A cost type is material, subcontract or general; or in-house work with how fast it goes: labor at 40 SF/hr, fabrication, supervision. Tab or Enter to the next; Enter on the last adds the line. Esc cancels.", 10.5, Weight::Regular, theme::ink_faint()));
+            f.spawn(text(fonts, "Priced by is one of its own figures (below), a formula, or a measure you type, like 60 SF, which is Assumed until it is measured. A cost type is material, subcontract or general; or in-house work with how fast it goes: labor at 40 SF/hr, fabrication, supervision. Tab or Enter to the next; Enter on the last adds the line. Esc cancels.", 11.0, Weight::Regular, theme::ink_faint()));
         });
         if !figures.is_empty() {
             heading(p, fonts, "Priced by: its own takeoff");
@@ -2474,7 +2504,7 @@ fn right(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot
             }
             None => summary(c, fonts, doc, snap),
         }
-        c.spawn(Node { margin: UiRect::top(px(12.0)), flex_shrink: 0.0, ..default() }).with_child(text(fonts, "Drag slides the ground with your hand. Right-drag turns the view about what is under the pointer. The wheel closes on what is under the pointer. Double-click flies to a thing.", 10.5, Weight::Regular, theme::ink_faint()));
+        c.spawn(Node { margin: UiRect::top(px(12.0)), flex_shrink: 0.0, ..default() }).with_child(text(fonts, "Drag slides the ground with your hand. Right-drag turns the view about what is under the pointer. The wheel closes on what is under the pointer. Double-click flies to a thing.", 11.0, Weight::Regular, theme::ink_faint()));
     });
     more_below(card, fonts, 0);
     });
@@ -2503,7 +2533,7 @@ fn item_bench(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Sna
             match plumbline_world::editing::remove(&mut doc.job, &path) {
                 Ok(_) => {
                     doc.job.derive();
-                    doc.edit("Delete item");
+                    doc.edit("deleted an item");
                     doc.selected = None;
                     doc.say(Tone::Warned, format!("Took the item {called:?} out of the job. Undo brings it back."));
                 }
@@ -2533,7 +2563,7 @@ fn item_bench(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Sna
             match plumbline_world::editing::item_drawn_as(&mut doc.job, &path, pick.as_deref()) {
                 Ok(()) => {
                     doc.job.derive();
-                    doc.edit("Drawn as");
+                    doc.edit("changed how it is drawn");
                     doc.say(Tone::Done, match &pick {
                         Some(name) => format!("{called} is drawn as a {name}, wherever one stands."),
                         None => format!("{called} is drawn as its name says, wherever one stands."),
@@ -2559,7 +2589,7 @@ fn item_bench(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Sna
             match plumbline_world::editing::item_trade(&mut doc.job, &path, Some(d)) {
                 Ok(()) => {
                     doc.job.derive();
-                    doc.edit("Trade");
+                    doc.edit("changed its trade");
                     doc.say(Tone::Done, format!("{called} is an item of Division {at}."));
                 }
                 Err(why) => crate::tools::cant(doc, "change its trade", why),
@@ -2622,7 +2652,7 @@ fn drawing(p: &mut ChildSpawnerCommands, fonts: &Fonts, snap: &Snapshot, plans: 
         line(p, format!("from a dimension of {} ({})", s.distance.value.as_ref().map(|d| units::show_length(d, &s.distance.unit)).unwrap_or_default(), s.distance.source), theme::ink_soft());
     }
     heading(p, fonts, "File");
-    line(p, format!("{}, page {}", l.drawing.file.value.clone().unwrap_or_default(), l.drawing.page), theme::ink_soft());
+    line(p, format!("{}, page {}", plain_stem(&l.drawing.file.value.clone().unwrap_or_default()), l.drawing.page), theme::ink_soft());
     if plans.is_reading(&l.path) {
         line(p, "Its page is being read.".to_string(), theme::ink_soft());
     }
@@ -2644,7 +2674,7 @@ fn drawing(p: &mut ChildSpawnerCommands, fonts: &Fonts, snap: &Snapshot, plans: 
 }
 
 fn title_block(p: &mut ChildSpawnerCommands, fonts: &Fonts, kind: &str, name: &str, under: String) {
-    p.spawn(text(fonts, kind.to_uppercase(), 10.0, Weight::Semibold, theme::ink_faint()));
+    p.spawn(text(fonts, kind.to_uppercase(), 11.0, Weight::Semibold, theme::ink_faint()));
     p.spawn(Node { margin: UiRect::top(px(2.0)), ..default() }).with_child(theme::name(fonts, name, 17.0, Weight::Semibold, theme::ink()));
     if !under.is_empty() {
         p.spawn(Node { margin: UiRect::top(px(2.0)), ..default() }).with_child(text(fonts, under, 11.5, Weight::Regular, theme::ink_faint()));
@@ -2680,7 +2710,7 @@ fn summary(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
     if let Some(est) = snap.estimate.as_ref().filter(|e| !e.lines.is_empty() || !e.allowance_on.is_empty()) {
         let (price, status) = crate::sheet::dollars(Some(&est.price));
         p.spawn(Node { flex_direction: FlexDirection::Column, row_gap: px(1.0), margin: UiRect::top(px(10.0)), flex_shrink: 0.0, ..default() }).with_children(|s| {
-            s.spawn(text(fonts, "PRICE", 9.5, Weight::Semibold, theme::ink_faint()));
+            s.spawn(text(fonts, "PRICE", 11.0, Weight::Semibold, theme::ink_faint()));
             s.spawn(Node { align_items: AlignItems::Center, column_gap: px(8.0), ..default() }).with_children(|v| {
                 v.spawn((text(fonts, price, 26.0, Weight::Semibold, theme::status_ink(status)), TextLayout::no_wrap()));
                 status_chip(v, fonts, status);
@@ -2738,7 +2768,8 @@ fn summary(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
         }
         listed(p, fonts, None, "Floor", storey.floors.members.to_string(), total_plain(&storey.floors), if storey.floors.members == 0 { Status::Known } else { storey.floors.status });
         if storey.rooms.members > 0 {
-            listed(p, fonts, None, "Rooms, inside their walls", storey.rooms.members.to_string(), total_plain(&storey.rooms), storey.rooms.status);
+            listed(p, fonts, None, "Rooms", storey.rooms.members.to_string(), total_plain(&storey.rooms), storey.rooms.status);
+            p.spawn(Node { padding: UiRect::bottom(px(3.0)), ..default() }).with_child(text(fonts, "measured inside their walls", 11.0, Weight::Regular, theme::ink_faint()));
         }
         // Each counted with its own word: "1 and 0" left the reader to work out which.
         let some = view::so_many;
@@ -2790,7 +2821,7 @@ fn summary(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
                 // The mark says how sure; the words are in ink. (In the mark's colour
                 // the list was a column of red and amber sentences: J24B-22, A6.)
                 r.spawn(text(fonts, what.clone(), 12.0, Weight::Medium, theme::ink()));
-                r.spawn(text(fonts, why.clone(), 10.5, Weight::Regular, theme::ink_faint()));
+                r.spawn(text(fonts, why.clone(), 11.0, Weight::Regular, theme::ink_faint()));
             });
         }
     }
@@ -2975,6 +3006,48 @@ fn selection(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snap
     // A cost line's own values are named "what: line"; everything else is the element's.
     let (own, costed): (Vec<&view::Row>, Vec<&view::Row>) = el.rows.iter().partition(|r| !r.label.contains(": "));
     let behind = |r: &&&view::Row| r.label == plumbline_world::hidden::BEARING || r.label == plumbline_world::hidden::IN_THE_WALL;
+    if !costed.is_empty() {
+        heading(p, fonts, "Cost lines");
+        let mut lines: Vec<&str> = Vec::new();
+        for row in &costed {
+            let line = row.label.split_once(": ").map(|x| x.1).unwrap_or("");
+            if !lines.contains(&line) {
+                lines.push(line);
+            }
+        }
+        for line in lines {
+            p.spawn((Node { flex_direction: FlexDirection::Column, padding: UiRect::axes(px(8.0), px(6.0)), margin: UiRect::bottom(px(6.0)), row_gap: px(4.0), border: UiRect::all(px(1.0)), flex_shrink: 0.0, ..default() }, BackgroundColor(theme::panel_alt()), BorderColor::all(theme::rule()))).with_children(|c| {
+                // The line's name, and at the end of its row "Take off" (call 178).
+                let (path, name, description) = (el.path.clone(), el.name.clone(), line.to_string());
+                c.spawn(Node { align_items: AlignItems::Center, column_gap: px(8.0), margin: UiRect::bottom(px(2.0)), ..default() }).with_children(|head| {
+                    head.spawn((text(fonts, line, 12.5, Weight::Semibold, theme::ink()), Node { flex_grow: 1.0, flex_shrink: 1.0, ..default() }));
+                    let mut e = button(head, fonts, "Take off", "", false);
+                    e.insert(Named { name: format!("Take line off: {line}"), scrolls: true });
+                    on_click(&mut e, move |doc| crate::tools::take_line_off(doc, &path, &name, &description));
+                });
+                for row in costed.iter().filter(|r| r.label.split_once(": ").is_some_and(|x| x.1 == line)) {
+                    let what = row.label.split_once(": ").map(|x| x.0).unwrap_or("");
+                    // Each step keeps its flag, and under it what it rests on.
+                    c.spawn(Node { align_items: AlignItems::Center, column_gap: px(8.0), ..default() }).with_children(|r| {
+                        r.spawn(text(fonts, pretty(what), 12.0, if row.derived { Weight::Medium } else { Weight::Regular }, if row.derived { theme::ink() } else { theme::ink_soft() }));
+                        status_chip(r, fonts, row.status);
+                        r.spawn(Node { flex_grow: 1.0, ..default() });
+                        // A quantity is shown to the places it is priced at: 2.9630 CY
+                        // at $450.00 is $1,333.35, and 2.96 is not (J21-18).
+                        let said = match row.number {
+                            Some(x) if view::priced_places(x, &row.unit) == 4 => format!("{} {}", view::figure(x, 4), row.unit),
+                            _ => shown(row),
+                        };
+                        r.spawn(text(fonts, said, 12.0, Weight::Medium, theme::status_ink(row.status)));
+                    });
+                    let basis = if row.note.is_empty() { row.basis.clone() } else { format!("{}  ({})", row.basis, row.note) };
+                    if !basis.is_empty() {
+                        c.spawn(text(fonts, basis, 11.0, Weight::Regular, theme::ink_faint()));
+                    }
+                }
+            });
+        }
+    }
     // A wall the work opens: whether it is bearing and what is in it, asked here, with
     // what a bearing wall needs (call 160).
     if el.kind == Kind::Wall && own.iter().any(|r| behind(&r)) {
@@ -3010,47 +3083,6 @@ fn selection(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snap
             property(p, fonts, &pretty(&row.label), shown(row), row.status, &row.basis, &row.note, "");
         }
     }
-    if !costed.is_empty() {
-        heading(p, fonts, "Cost lines");
-        let mut lines: Vec<&str> = Vec::new();
-        for row in &costed {
-            let line = row.label.split_once(": ").map(|x| x.1).unwrap_or("");
-            if !lines.contains(&line) {
-                lines.push(line);
-            }
-        }
-        for line in lines {
-            p.spawn((Node { flex_direction: FlexDirection::Column, padding: UiRect::axes(px(8.0), px(6.0)), margin: UiRect::bottom(px(6.0)), row_gap: px(4.0), border: UiRect::all(px(1.0)), flex_shrink: 0.0, ..default() }, BackgroundColor(theme::panel_alt()), BorderColor::all(theme::rule()))).with_children(|c| {
-                c.spawn(Node { margin: UiRect::bottom(px(2.0)), ..default() }).with_child(text(fonts, line, 12.5, Weight::Semibold, theme::ink()));
-                for row in costed.iter().filter(|r| r.label.split_once(": ").is_some_and(|x| x.1 == line)) {
-                    let what = row.label.split_once(": ").map(|x| x.0).unwrap_or("");
-                    // Each step keeps its flag, and under it what it rests on.
-                    c.spawn(Node { align_items: AlignItems::Center, column_gap: px(8.0), ..default() }).with_children(|r| {
-                        r.spawn(text(fonts, pretty(what), 12.0, if row.derived { Weight::Medium } else { Weight::Regular }, if row.derived { theme::ink() } else { theme::ink_soft() }));
-                        status_chip(r, fonts, row.status);
-                        r.spawn(Node { flex_grow: 1.0, ..default() });
-                        // A quantity is shown to the places it is priced at: 2.9630 CY
-                        // at $450.00 is $1,333.35, and 2.96 is not (J21-18).
-                        let said = match row.number {
-                            Some(x) if view::priced_places(x, &row.unit) == 4 => format!("{} {}", view::figure(x, 4), row.unit),
-                            _ => shown(row),
-                        };
-                        r.spawn(text(fonts, said, 12.0, Weight::Medium, theme::status_ink(row.status)));
-                    });
-                    let basis = if row.note.is_empty() { row.basis.clone() } else { format!("{}  ({})", row.basis, row.note) };
-                    if !basis.is_empty() {
-                        c.spawn(text(fonts, basis, 10.5, Weight::Regular, theme::ink_faint()));
-                    }
-                }
-                // One line off this thing, with what was entered on it (call 166); the
-                // thing's other lines stay. One step to undo.
-                let (path, name, description) = (el.path.clone(), el.name.clone(), line.to_string());
-                let mut e = button(c, fonts, "Take line off", "", false);
-                e.insert(Named { name: format!("Take line off: {line}"), scrolls: true });
-                on_click(&mut e, move |doc| crate::tools::take_line_off(doc, &path, &name, &description));
-            });
-        }
-    }
 }
 
 /// Keep each label at its point of the model as the view moves. Where two would lie over
@@ -3066,7 +3098,7 @@ pub fn place_labels(doc: Res<Doc>, camera: Query<(&Camera, &GlobalTransform), Wi
         }
         let (lo, hi) = xs.iter().fold((f32::MAX, f32::MIN), |(lo, hi), x| (lo.min(*x), hi.max(*x)));
         let wide = computed.size.x * computed.inverse_scale_factor;
-        let k = if wide > 0.0 { ((hi - lo) * 0.92 / wide).clamp(0.4, 1.0) } else { 1.0 };
+        let k = if wide > 0.0 { ((hi - lo) * 0.92 / wide).clamp(0.92, 1.0) } else { 1.0 };
         if (transform.scale.x - k).abs() > 0.01 {
             transform.scale = Vec2::splat(k);
         }
@@ -3161,7 +3193,7 @@ pub fn more_below(card: &mut ChildSpawnerCommands, fonts: &Fonts, which: usize) 
         Named { name: "More below".to_string(), scrolls: false },
     ));
     strip.with_children(|m| {
-        m.spawn((text(fonts, "more below", 10.5, Weight::Semibold, theme::ink_soft()), Pickable::IGNORE));
+        m.spawn((text(fonts, "more below", 11.0, Weight::Semibold, theme::ink_soft()), Pickable::IGNORE));
         // A small arrowhead, drawn: two strokes.
         m.spawn((Node { width: px(6.0), height: px(6.0), border: UiRect { right: px(1.5), bottom: px(1.5), ..default() }, margin: UiRect::bottom(px(3.0)), ..default() }, BorderColor::all(theme::ink_soft()), UiTransform { rotation: Rot2::degrees(45.0), ..default() }, Pickable::IGNORE));
     });

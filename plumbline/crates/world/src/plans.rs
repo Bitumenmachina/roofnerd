@@ -588,7 +588,7 @@ mod found_tests {
         assert_eq!(all.len(), 2);
         assert!(all.iter().all(|(_, s, src)| *s == Status::Assumed && src == "found in scan house"), "{all:?}");
         // The partition's type is one the program made, 4 1/2 in.
-        assert!(made.types.iter().any(|(_, name)| name == "wall 4.5 in"), "{:?}", made.types);
+        assert!(made.types.iter().any(|(_, name)| name == "4.5 in wall"), "{:?}", made.types);
         crate::building::check_whole(&mut job).unwrap();
     }
 

@@ -226,7 +226,7 @@ print("    all %d rows are the command line's rows, word for word" % len(kept))
 # 2. Two layouts with one title: each column headed by its title and its file's name.
 head = heading(t + "/table-alike.txt")
 print("    three layouts: " + head)
-want = "Addition 12 ft (addition-12.json) | Addition 12 ft B (addition-12-ft-b.json) | Addition 12 ft (addition-12-ft.json) | Addition 12 ft (addition-12-ft.json) less Addition 12 ft (addition-12.json)"
+want = "Addition 12 ft (addition-12) | Addition 12 ft B (addition-12-ft-b) | Addition 12 ft (addition-12-ft) | Addition 12 ft (addition-12-ft) less Addition 12 ft (addition-12)"
 if head != want:
     sys.exit("FAIL: the heading under like titles is not each title and its file's name: wanted\n  " + want)
 print("    where two layouts have one title, each column carries its file's name")
@@ -281,7 +281,11 @@ def stem_ink(name, y):
     return sum(1 for x in range(130, 260) for yy in range(y - 8, y + 9) if im.getpixel((x, yy)) < 200)
 print("    the title's darkest pixel: no changes (07) %d, changes not saved (09) %d" % (darkest("07", sixteen7), darkest("09", sixteen)))
 print("    a stem beside the title: Addition 16 ft %d pixels, Addition 12 ft %d pixels" % (stem_ink("09", sixteen), stem_ink("09", twelve)))
-ok = darkest("07", sixteen7) < 90 and darkest("09", sixteen) > 100 and stem_ink("09", sixteen) == 0 and stem_ink("09", twelve) > 10
+# Grey is told against the same title when it can be opened, not against a fixed number: call
+# 178 (item 8: nothing fainter than can be read) darkened the faintest ink, and the grey title's
+# darkest pixel went from 133 to 100. It must still be lighter than the open title by 60 or more
+# (25 against 100 now; 25 against 25 where the list is not grey, which fails).
+ok = darkest("07", sixteen7) < 90 and darkest("09", sixteen) >= darkest("07", sixteen7) + 60 and stem_ink("09", sixteen) == 0 and stem_ink("09", twelve) > 10
 print("    grey when nothing can be opened, a file's name only beside a title that is not alone: %s" % ("as wanted" if ok else "FAIL"))
 sys.exit(0 if ok else 1)
 PY
@@ -291,4 +295,7 @@ echo "== No file was written over: A and the two others are byte for byte as the
 for f in addition-12 addition-16 nothing-yet; do cmp "$T/jobs/$f.json" "$T/$f.before"; done
 echo "    addition-12.json, addition-16.json and nothing-yet.json are unchanged (the kept copy was written by the window, and saved again with the starter items: its own to change)"
 echo
+echo
+echo "== A thing to do first is blue (call 178) =="
+python3 -W ignore -I "$PWD/demos/cardcolour.py" "$OUT/09-model.png" blue
 echo "  PASS: in the window, the Layouts tab kept A as another layout under a title it offered (a copy of A with that title, written beside it by the window and set beside A), and again under A's own title (each column headed by its file's name too); Set beside another layout listed the jobs in the folder by their titles and not notes.json, and set Addition 16 ft beside A: Kitchen 182.125 SF and 244.125 SF (+62 SF), job cost \$5,777.00 and \$7,137.00 (+\$1,360.00), the row 'left out of the job cost' there, every row the command line's; Open another layout opened the kept copy in the window, said Save first (Ctrl+S) with a change not saved and opened A when saved; no job file but the copies changed"

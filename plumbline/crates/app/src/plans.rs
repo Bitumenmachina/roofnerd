@@ -173,8 +173,16 @@ pub fn read(mut doc: ResMut<Doc>, mut plans: ResMut<Plans>, mut images: ResMut<A
                 // The sheet with its smaller copies after it, so a whole page seen small
                 // keeps its thin lines.
                 let (width, height) = (page.picture.width, page.picture.height);
-                let (smaller, levels) = smaller_copies(&page.picture.rgba, width, height);
-                let mut image = Image::new(Extent3d { width, height, depth_or_array_layers: 1 }, TextureDimension::D2, page.picture.rgba, TextureFormat::Rgba8UnormSrgb, RenderAssetUsages::RENDER_WORLD);
+                // A scan of a big house is a few points to a square foot of a sheet that is
+                // hundreds of feet across: each point is thickened with the sheet's size, so
+                // that what was brought in is seen and not an empty sheet (call 178).
+                let mut rgba = page.picture.rgba;
+                let size_ft = laid(&mut doc.job).iter().find(|l| l.path == path && l.drawing.file.source.starts_with("scan ")).map(|l| l.drawing.size[0].max(l.drawing.size[1]));
+                if let Some(ft) = size_ft {
+                    thicken(&mut rgba, width as usize, height as usize, ((ft / 12.0).floor() as usize).min(16));
+                }
+                let (smaller, levels) = smaller_copies(&rgba, width, height);
+                let mut image = Image::new(Extent3d { width, height, depth_or_array_layers: 1 }, TextureDimension::D2, rgba, TextureFormat::Rgba8UnormSrgb, RenderAssetUsages::RENDER_WORLD);
                 if let Some(data) = image.data.as_mut() {
                     data.extend_from_slice(&smaller);
                     image.texture_descriptor.mip_level_count = levels;
@@ -293,7 +301,7 @@ pub fn add(doc: &mut Doc, text: &str) {
     })();
     match made {
         Ok(said) => {
-            doc.edit("Add drawing");
+            doc.edit("added a drawing");
             doc.framed = false;
             doc.frame_on = laid(&mut doc.job).last().map(|l| l.path.clone()).and_then(|path| corners_of(&mut doc.job, &path));
             doc.say(Tone::Done, said);
@@ -349,5 +357,23 @@ pub fn source_for(doc: &mut Doc, storey: &str, at: [f64; 2]) -> Result<String, S
     match here.iter().rev().find(|l| l.holds(at)) {
         Some(l) => world_plans::traced_from(&mut doc.job, &l.path),
         None => Ok(crate::model::SOURCE.to_string()),
+    }
+}
+
+/// Each dark point of a picture made `r` dots thicker each way.
+fn thicken(rgba: &mut [u8], width: usize, height: usize, r: usize) {
+    if r == 0 {
+        return;
+    }
+    // One stamp for each dot: at its upper left corner.
+    let is_dark = |rgba: &[u8], x: usize, y: usize| rgba[(y * width + x) * 4] < 128;
+    let dark: Vec<(usize, usize)> = (0..height).flat_map(|y| (0..width).map(move |x| (x, y))).filter(|(x, y)| is_dark(rgba, *x, *y) && (*x == 0 || !is_dark(rgba, x - 1, *y)) && (*y == 0 || !is_dark(rgba, *x, y - 1))).collect();
+    for (x, y) in dark {
+        for yy in y.saturating_sub(r)..=(y + r).min(height - 1) {
+            for xx in x.saturating_sub(r)..=(x + r).min(width - 1) {
+                let at = (yy * width + xx) * 4;
+                rgba[at..at + 3].copy_from_slice(&[40, 40, 40]);
+            }
+        }
     }
 }

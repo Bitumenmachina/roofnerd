@@ -168,6 +168,7 @@ pub fn build_doc(path: String, roof_arg: Option<String>) -> Result<Doc, String> 
         selected: None,
         together: Vec::new(),
         card_away: false,
+        card_more: false,
         hover: None,
         message,
         tone,
@@ -204,7 +205,7 @@ pub fn build_doc(path: String, roof_arg: Option<String>) -> Result<Doc, String> 
         before_trade: None,
         also: None,
         walk: false,
-        show: Show { architecture: true, roof: true, mechanical: true, electrical: true, plumbing: true, ghost: false, storey: None, certainty: false, clashes: false, ground: true, framing: false, finishes: true, demolition: true, off_levels: Default::default(), off_systems: Default::default(), away: [false; 3], sizes: false },
+        show: Show { architecture: true, roof: true, mechanical: true, electrical: true, plumbing: true, ghost: false, storey: None, certainty: false, clashes: false, ground: true, framing: false, finishes: true, demolition: true, existing: true, off_levels: Default::default(), off_systems: Default::default(), away: [false; 3], sizes: false },
         // The sheet opens on the estimate once anything is priced; before that, on what
         // has been taken off.
         tab: if has_lines { Tab::Estimate } else if has_roof { Tab::Roof } else { Tab::Building },
@@ -408,7 +409,7 @@ fn closing(mut commands: Commands, mut asked: MessageReader<bevy::window::Window
     }
     if doc.edited && *warned != Some(doc.draw.edits) {
         *warned = Some(doc.draw.edits);
-        doc.say(Tone::Refused, "Not closed: the job has changes that are not saved. Save (Ctrl+S), or close again to leave without saving them.");
+        doc.say(Tone::Ask, "Not closed: the job has changes that are not saved. Save (Ctrl+S), or close again to leave without saving them.");
         doc.touch();
     } else {
         for window in &windows {
@@ -639,24 +640,24 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
                             // Enter that cannot finish says why (J18-2).
                             if event.logical_key == Key::Enter && text.is_empty() {
                                 if let Entry::Settings(tool) = field {
-                                    doc.say(Tone::Refused, format!("{}: {} is still to be typed. Then Enter, and click on the plan.", tool.name(), tool.fields()[i].0));
+                                    doc.say(Tone::Ask, format!("{}: {} is still to be typed. Then Enter, and click on the plan.", tool.name(), tool.fields()[i].0));
                                 }
                                 if field == Entry::Line {
                                     let name = ["What it is", "What it is priced by", "Its cost type"].get(i).copied().unwrap_or("A field");
-                                    doc.say(Tone::Refused, format!("Cost line: {name} is still to be typed. Enter adds the line once all three are in."));
+                                    doc.say(Tone::Ask, format!("Cost line: {name} is still to be typed. Enter adds the line once all three are in."));
                                 }
                                 if field == Entry::NewItem {
                                     let name = ["Its name", "Its kind", "Its width", "Its depth", "Its height"].get(i).copied().unwrap_or("A field");
-                                    doc.say(Tone::Refused, format!("New item: {name} is still to be typed. Enter adds the item once all five are in."));
+                                    doc.say(Tone::Ask, format!("New item: {name} is still to be typed. Enter adds the item once all five are in."));
                                 }
                                 if field == Entry::Cabinets {
                                     let name = ["Where the run starts along the wall", "The boxes' codes, like B18 SB36 B24"].get(i).copied().unwrap_or("A field");
-                                    doc.say(Tone::Refused, format!("Cabinets: {name} is still to be typed. Enter sets the run once both are in."));
+                                    doc.say(Tone::Ask, format!("Cabinets: {name} is still to be typed. Enter sets the run once both are in."));
                                 }
                                 // A level's form said nothing (J22B-34).
                                 if field == Entry::Storey {
                                     let name = ["Its name", "The elevation of its floor", "Floor-to-floor"].get(i).copied().unwrap_or("A field");
-                                    doc.say(Tone::Refused, format!("Add level: {name} is still to be typed. Enter adds the level once all three are in."));
+                                    doc.say(Tone::Ask, format!("Add level: {name} is still to be typed. Enter adds the level once all three are in."));
                                 }
                             }
                         }
@@ -839,7 +840,7 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
                         (Some(sel), Ok(division)) => match doc.job.set_division(&sel, line.as_deref(), division) {
                             Ok(()) => {
                                 doc.job.derive();
-                                doc.edit("Division");
+                                doc.edit("changed its division");
                                 doc.say(Tone::Done, format!("{sel}: {} is in {}.", line.map(|l| format!("{l:?}")).unwrap_or_else(|| "its line".to_string()), division.said()));
                             }
                             Err(why) => tools::cant(doc, "set the division", why),
@@ -1079,14 +1080,14 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
                 match plumbline_world::editing::turn(&mut doc.job, &sel, 90.0, plumbline_world::editing::Entered { status: Status::Assumed, source: "turned by hand in the model" }) {
                     Ok(now) => {
                         doc.job.derive();
-                        doc.edit("Turn");
+                        doc.edit("turned it a quarter");
                         let faces = match now.rem_euclid(360.0).round() as i32 {
                             0 => "its width runs east and west, as it was set down",
                             90 | 270 => "its width runs north and south",
                             _ => "its width runs east and west, turned about",
                         };
                         match scene::in_what_now(doc, &sel) {
-                            Some(what) => doc.say(Tone::Refused, format!("Turned {name} a quarter: {faces}. It is in the same space as {what}.")),
+                            Some(what) => doc.say(Tone::Warned, format!("Turned {name} a quarter: {faces}. It is in the same space as {what}.")),
                             None => doc.say(Tone::Done, format!("Turned {name} a quarter: {faces}. It is clear of everything.")),
                         }
                         doc.redraw();
@@ -1107,7 +1108,7 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
                     [(line, off)] => match doc.job.set_off(&sel, Some(line), !off) {
                         Ok(()) => {
                             doc.job.derive();
-                            doc.edit("Labor on or off");
+                            doc.edit("switched labor");
                             doc.say(Tone::Done, format!("{sel}: {line:?} switched {}.", if *off { "on" } else { "off" }));
                         }
                         Err(why) => tools::cant(doc, "switch labor", why),
@@ -1226,7 +1227,7 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
                     doc.job.derive();
                     // What the lines that came off took out of the job cost (J23-5).
                     let money = plumbline_world::view::came_off_said(&priced_before, &mut doc.job).filter(|s| s.contains('$')).and_then(|s| s.split_once(": ").map(|(_, rest)| format!(" {}{}", rest[..1].to_uppercase(), &rest[1..]))).unwrap_or_default();
-                    doc.edit("Assembly");
+                    doc.edit("applied an assembly");
                     // Its lines are on the estimate: the sheet turns to it.
                     doc.tab = model::Tab::Estimate;
                     let lines = |n: usize| plumbline_world::view::so_many(n, "cost line");
@@ -1248,7 +1249,7 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
                     }
                     if !too.is_empty() {
                         doc.job.derive();
-                        doc.edit("Assembly");
+                        doc.edit("applied an assembly");
                     }
                     let roof = match (too.is_empty(), left.is_empty()) {
                         (true, true) => String::new(),

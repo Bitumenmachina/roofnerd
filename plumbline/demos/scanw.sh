@@ -383,4 +383,8 @@ if max(moved) > 0.5:
 if bad:
     print("FAIL: the sheet's walls are not on the plan where the room's walls are (or the check passes where it should not)"); sys.exit(1)
 PY
+echo
+echo "== Colour says what a message is, and a message put away is put away (call 178) =="
+python3 -W ignore -I "$PWD/demos/cardcolour.py" "$OUT/04-model.png" green "$OUT/11-model.png" red "$OUT/13-model.png" amber "$OUT/14-model.png" amber
+python3 -W ignore -I "$PWD/demos/barempty.py" "$OUT/11-model.png" "$OUT/12-model.png" "$OUT/15-model.png"
 echo "  PASS: in the window, Scan file listed the scans in this job's folder with its two choices (meters, feet), a click on a row brought the scan in as a sheet under the plan, to scale and in its own place, said how big it came in, that which way is up was read from it and what was not kept, with no tmp, .ply, y up or z up said or on the map; Undo took it back and Redo laid it again; a wall traced over it is saved Assumed from it; a second scan, on its side as far as the program could tell, said so, and the button It is lying on its side: stand it up brought it in again turned (24 ft by 10 ft, 9 ft high), once"

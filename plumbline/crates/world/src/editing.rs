@@ -1469,7 +1469,7 @@ pub fn remove(job: &mut Job, path: &str) -> Result<Vec<String>, String> {
     })
 }
 
-/// The wall type of this thickness with no layers, or a new one named for it ("wall 6 in").
+/// The wall type of this thickness with no layers, or a new one named for it ("6 in wall").
 /// A window draws with a thickness the person typed; this is the type that thickness is.
 pub fn wall_type_for(job: &mut Job, thickness: &str, how: Entered) -> Result<String, String> {
     let wanted = how.length(thickness)?.feet().ok_or("the thickness is not a length this program converts")?;
@@ -1478,7 +1478,7 @@ pub fn wall_type_for(job: &mut Job, thickness: &str, how: Entered) -> Result<Str
     found.sort();
     match found.into_iter().next() {
         Some(path) => Ok(path),
-        None => wall_type(job, &format!("wall {}", thickness.trim()), thickness, how),
+        None => wall_type(job, &format!("{} wall", thickness.trim()), thickness, how),
     }
 }
 

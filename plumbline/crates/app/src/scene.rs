@@ -359,6 +359,12 @@ struct Builder<'a, 'w, 's> {
     /// What the work does to the thing being built (call 149): existing is drawn light,
     /// what comes down as a faint red ghost; new and temporary as they are.
     work: Option<plumbline_world::WorkStatus>,
+    /// Existing work drawn pale (the switch "Existing, shown pale", call 178): off, it is
+    /// drawn as new work is.
+    pale: bool,
+    /// On a plan with work marked: the fill of the wall being built, by its path. New work
+    /// is filled solid, existing in light gray, and what comes down not at all (call 178).
+    plan_fill: Option<(String, Color)>,
     /// The piece spawned last, so that a caller can add to it.
     last: Option<Entity>,
 }
@@ -370,18 +376,23 @@ impl Builder<'_, '_, '_> {
         let see_through = ghosted && self.ghost;
         // Shown by how sure it is, a thing is one flat color whatever it is dressed in.
         use plumbline_world::WorkStatus;
-        let (existing, coming_down) = (self.work == Some(WorkStatus::Existing), self.work == Some(WorkStatus::Demolish));
+        let (existing, coming_down) = (self.work == Some(WorkStatus::Existing) && self.pale, self.work == Some(WorkStatus::Demolish));
+        let fill = self.plan_fill.as_ref().filter(|f| f.0 == path).map(|f| f.1);
         // Existing work keeps its pattern, washed pale: brick still reads as brick (call 161).
-        let pattern = self.pattern.take().filter(|_| self.wash.is_none() && !coming_down);
+        let pattern = self.pattern.take().filter(|_| self.wash.is_none() && !coming_down && fill.is_none());
         let colour = self.wash.map(|w| w.with_alpha(colour.alpha())).unwrap_or(colour);
         let (roughness, metallic) = if self.wash.is_some() || existing || coming_down { (0.95, 0.0) } else { (roughness, metallic) };
         // Existing work is its own colours washed toward pale gray: the house that is
         // there. Work to demolish is a faint red ghost, seen through.
-        let colour = if existing && pattern.is_some() {
-            // In its pattern it keeps its own colour: the wash is the light added below.
+        let colour = if let Some(f) = fill {
+            // On a plan with work marked: a wall is filled as drafting fills it.
+            f.with_alpha(if f.alpha() < 0.01 { 0.0 } else { colour.alpha() })
+        } else if existing && pattern.is_some() {
+            // In its pattern it keeps its own colour: the pattern itself was mixed half-way
+            // to pale gray where it was made (call 178).
             colour
         } else if existing {
-            mix(colour, theme::existing_tone(), 0.65)
+            mix(colour, theme::existing_tone(), 0.5)
         } else if coming_down {
             theme::demolition_tone()
         } else {
@@ -391,7 +402,7 @@ impl Builder<'_, '_, '_> {
         // A pattern is the light it reflects times its colour: it can only be darkened by
         // a base colour. Existing work in its pattern is washed pale by a light of its own
         // added over it, so brick reads as pale brick and not as gray (call 161).
-        let emissive = if existing && pattern.is_some() { LinearRgba::from(theme::existing_tone().to_linear()) * 0.15 } else { LinearRgba::BLACK };
+        let emissive = LinearRgba::BLACK;
         let blend = colour.alpha() < 0.999;
         let handle = self.materials.add(StandardMaterial {
             base_color: colour,
@@ -654,7 +665,7 @@ pub fn rebuild(
     drawing.frames.clear();
     drawing.surfaces.clear();
     let drawing = &mut *drawing;
-    let mut build = Builder { commands: &mut commands, materials: &mut materials, drawing, ghost: show.ghost, wash: None, on_plan: None, pattern: None, flat: on_plan_view, work: None, last: None };
+    let mut build = Builder { commands: &mut commands, materials: &mut materials, drawing, ghost: show.ghost, wash: None, on_plan: None, pattern: None, flat: on_plan_view, work: None, pale: show.existing, plan_fill: None, last: None };
     let has_walls = snap.drawn.iter().any(|p| p.kind == Kind::Wall);
     // Each outside wall as the roof's edge sees it: its line, the way its outside face
     // looks, half its thickness and its top. An eave that hangs past one gets a soffit.
@@ -721,6 +732,7 @@ pub fn rebuild(
     // The foundation's view (call 177): the house as glass and the ground away leaves
     // what is under it solid.
     let under_solid = show.ghost && !show.ground;
+    let marked = snap.work.values().any(|w| matches!(w, plumbline_world::WorkStatus::Existing | plumbline_world::WorkStatus::Demolish));
     for p in &snap.drawn {
         // Its trade's switch, the level on show, its level's own switch, its system's.
         if !show.discipline(p.discipline) || show.storey.as_ref().is_some_and(|s| p.storey.as_ref() != Some(s)) || p.storey.as_ref().is_some_and(|s| show.off_levels.contains(s)) || p.system.as_ref().is_some_and(|s| show.off_systems.contains(s)) {
@@ -736,6 +748,19 @@ pub fn rebuild(
         build.work = snap.work.get(&p.path).copied();
         if build.work == Some(plumbline_world::WorkStatus::Demolish) && !show.demolition {
             continue;
+        }
+        // On a plan with work marked a wall is filled as drafting fills it (call 178): new
+        // work solid, existing in light gray, what comes down not at all (its outline is
+        // red and dashed).
+        build.plan_fill = None;
+        if on_plan_view && marked && p.kind == Kind::Wall {
+            use plumbline_world::WorkStatus as W;
+            let fill = match build.work {
+                Some(W::Demolish) => Color::srgba(0.0, 0.0, 0.0, 0.0),
+                Some(W::Existing) if show.existing => theme::plan_existing_fill(),
+                _ => theme::plan_new_fill(),
+            };
+            build.plan_fill = Some((p.path.clone(), fill));
         }
         let colour = theme::system_colour(snap.classification(p.system.as_ref()));
         build.wash = show.certainty.then(|| theme::certainty(p.status));
@@ -799,8 +824,9 @@ pub fn rebuild(
                 // A wall with both faces outdoors, or with no outline to say which face is
                 // out, is dressed on both.
                 let both = wd.is_some_and(|d| d.both()) && (clad.is_some() || low.is_some());
-                let upper = clad.map(|c| patterns.get(&mut images, dress::Look::of_cladding(c.what), c.tone.map(|t| t.rgb)));
-                let lower = low.map(|(c, to, _)| (patterns.get(&mut images, dress::Look::of_cladding(c.what), c.tone.map(|t| t.rgb)), *to as f32));
+                let halftone = show.existing && build.work == Some(plumbline_world::WorkStatus::Existing);
+                let upper = clad.map(|c| patterns.of(&mut images, dress::Look::of_cladding(c.what), c.tone.map(|t| t.rgb), halftone));
+                let lower = low.map(|(c, to, _)| (patterns.of(&mut images, dress::Look::of_cladding(c.what), c.tone.map(|t| t.rgb), halftone), *to as f32));
                 let masonry = clad.is_some_and(|c| c.what.masonry());
                 let part = dress::Part { o: va, x: along, y: Vec3::Y, z: out };
                 if has_out {
@@ -933,11 +959,27 @@ pub fn rebuild(
                 }
                 let half = turn * Vec3::Z * (t / 2.0);
                 let up = Vec3::Y * h;
-                build.drawing.frames.push((p.path.clone(), box_edges([va - half, vb - half, vb + half, va + half, va - half + up, vb - half + up, vb + half + up, va + half + up])));
+                let edges = box_edges([va - half, vb - half, vb + half, va + half, va - half + up, vb - half + up, vb + half + up, va + half + up]);
+                build.drawing.frames.push((p.path.clone(), edges.clone()));
                 // On plan a wall is its two faces and its ends, in ink: a wall traced over
                 // a drawing has to read against the sheet.
                 let over = up + Vec3::Y * 0.05;
-                build.drawing.walls.push([va - half + over, vb - half + over, vb + half + over, va + half + over]);
+                let outline = [va - half + over, vb - half + over, vb + half + over, va + half + over];
+                if build.work == Some(plumbline_world::WorkStatus::Demolish) {
+                    // What comes down is dashed in red, as drafting draws it (call 178): on
+                    // the plan its outline, in 3D the edges of its body.
+                    if on_plan_view {
+                        for i in 0..4 {
+                            build.drawing.lines.push((outline[i], outline[(i + 1) % 4], theme::red(), true));
+                        }
+                    } else {
+                        for (a, b) in edges {
+                            build.drawing.lines.push((a, b, theme::red(), true));
+                        }
+                    }
+                } else {
+                    build.drawing.walls.push(outline);
+                }
             }
             Shape::Floor { boundary, top, thickness } => {
                 let tris = triangles(boundary);
@@ -1156,7 +1198,7 @@ pub fn rebuild(
             let said = snap.dress.roofs.get(&info.path).filter(|_| info.area.is_some());
             match said {
                 Some(r) => {
-                    let pattern = patterns.get(&mut images, dress::Look::of_roofing(r.what), r.tone.map(|t| t.rgb));
+                    let pattern = patterns.of(&mut images, dress::Look::of_roofing(r.what), r.tone.map(|t| t.rgb), show.existing && build.work == Some(plumbline_world::WorkStatus::Existing));
                     // The pattern runs level across the plane, its top up the slope.
                     let across = Vec3::Y.cross(normal).normalize_or(Vec3::X);
                     let mut up = normal.cross(across);
@@ -1736,7 +1778,7 @@ pub fn carry(mut carry: ResMut<Carry>, mut doc: ResMut<Doc>, snap: Res<Snapshot>
         };
         match made {
             Ok(path) => {
-                doc.edit("Place");
+                doc.edit("set a thing down");
                 doc.placing = None;
                 doc.selected = Some(path.clone());
                 // One with a size that is not all known has no shape: that is said at
@@ -1747,7 +1789,7 @@ pub fn carry(mut carry: ResMut<Carry>, mut doc: ResMut<Doc>, snap: Res<Snapshot>
                     // Set down into a wall or another thing, it says so, as a move does
                     // (J25A-4: only a move did).
                     None => match in_what_now(&mut doc, &path) {
-                        Some(what) => doc.say(Tone::Refused, format!("Set one down on {level_name}. It is in the same space as {what}. Pick it up to move it: press on it and carry it. Q turns it a quarter.")),
+                        Some(what) => doc.say(Tone::Warned, format!("Set one down on {level_name}. It is in the same space as {what}. Pick it up to move it: press on it and carry it. Q turns it a quarter.")),
                         None => doc.say(Tone::Done, format!("Set one down on {level_name}. Pick it up to move it: press on it and carry it. Q turns it a quarter.")),
                     },
                 }
@@ -1834,7 +1876,7 @@ pub fn carry(mut carry: ResMut<Carry>, mut doc: ResMut<Doc>, snap: Res<Snapshot>
     } else {
         // Let go: one step, however far it was carried.
         if carry.gone != [0.0, 0.0] {
-            doc.edit("Move");
+            doc.edit("moved it");
             let (east, north) = (carry.gone[0], carry.gone[1]);
             let went = format!("{} {}, {} {}", plumbline_world::units::feet_as_ft_in(east.abs(), 16), if east >= 0.0 { "east" } else { "west" }, plumbline_world::units::feet_as_ft_in(north.abs(), 16), if north >= 0.0 { "north" } else { "south" });
             let said = match in_what(&snap, &path) {

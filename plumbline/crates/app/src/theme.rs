@@ -40,6 +40,8 @@ pub fn sky_overhead() -> Color { hex(0x86AEDB) }
 
 /// How far a panel floats from the window's edge and from the next panel.
 pub const GAP: f32 = 10.0;
+/// Nothing is lettered smaller than this, in points (call 178).
+pub const MIN_TYPE: f32 = 11.0;
 /// A floating panel's corners; a button's; a field's or a key's.
 pub const PANEL_RADIUS: f32 = 16.0;
 pub const BUTTON_RADIUS: f32 = 8.0;
@@ -89,7 +91,9 @@ pub fn rule() -> Color { hex(0xE7E9E6) }
 pub fn hairline() -> Color { hex(0xC9CDD0) }
 pub fn ink() -> Color { hex(0x16191D) }
 pub fn ink_soft() -> Color { hex(0x4E5661) }
-pub fn ink_faint() -> Color { hex(0x7E8791) }
+/// The faintest ink for words a person must read (call 178): a contrast of over 5 to 1 on
+/// the panels, not the 3.6 to 1 of the hint ink it was.
+pub fn ink_faint() -> Color { hex(0x5C6570) }
 pub fn accent() -> Color { hex(0x1D4ED8) }
 pub fn accent_wash() -> Color { hex(0xE8F0FE) }
 pub fn amber() -> Color { hex(0xA9690A) }
@@ -99,6 +103,9 @@ pub fn red() -> Color { hex(0xB93227) }
 pub fn room_line() -> Color { hex(0x0B2A8C) }
 /// Existing work is washed toward this pale gray (call 149).
 pub fn existing_tone() -> Color { hex(0xD9DBDD) }
+/// On a plan with work marked: existing walls filled light gray, new work solid (call 178).
+pub fn plan_existing_fill() -> Color { hex(0xD0D3D6) }
+pub fn plan_new_fill() -> Color { hex(0x5C636C) }
 /// What comes down: a faint red, seen through (call 149).
 pub fn demolition_tone() -> Color { Color::srgba(0.86, 0.20, 0.18, 0.30) }
 pub fn red_wash() -> Color { hex(0xFDE7E4) }
@@ -443,7 +450,7 @@ pub fn typed(fonts: &Fonts, s: impl Into<String>, size: f32, weight: Weight, col
         Weight::Medium => fonts.medium.clone(),
         Weight::Semibold => fonts.semibold.clone(),
     };
-    (Text::new(s), TextFont { font: FontSource::Handle(font), font_size: FontSize::Px(size), ..default() }, TextColor(colour))
+    (Text::new(s), TextFont { font: FontSource::Handle(font), font_size: FontSize::Px(size.max(MIN_TYPE)), ..default() }, TextColor(colour))
 }
 
 pub fn text(fonts: &Fonts, s: impl Into<String>, size: f32, weight: Weight, colour: Color) -> impl Bundle {
@@ -453,7 +460,7 @@ pub fn text(fonts: &Fonts, s: impl Into<String>, size: f32, weight: Weight, colo
         Weight::Semibold => fonts.semibold.clone(),
     };
     let features: FontFeatures = FontFeatures::builder().enable(FontFeatureTag::TABULAR_FIGURES).build();
-    (Text::new(spoken(&s.into())), TextFont { font: FontSource::Handle(font), font_size: FontSize::Px(size), font_features: features, ..default() }, TextColor(colour))
+    (Text::new(spoken(&s.into())), TextFont { font: FontSource::Handle(font), font_size: FontSize::Px(size.max(MIN_TYPE)), font_features: features, ..default() }, TextColor(colour))
 }
 
 /// A card on the glass: a whiter sheet with round corners and a faint edge.
@@ -488,12 +495,12 @@ pub fn status_chip(p: &mut ChildSpawnerCommands, fonts: &Fonts, status: Status) 
 /// A keyboard key, drawn as a key.
 pub fn keycap(p: &mut ChildSpawnerCommands, fonts: &Fonts, key: &str) {
     p.spawn((rounded(Node { padding: UiRect::axes(px(4.0), px(0.0)), border: UiRect::all(px(1.0)), min_width: px(16.0), justify_content: JustifyContent::Center, flex_shrink: 0.0, ..default() }, 4.0), BackgroundColor(Color::srgba(0.07, 0.09, 0.12, 0.05)), BorderColor::all(control_edge()), Pickable::IGNORE))
-        .with_child((text(fonts, key, 10.0, Weight::Medium, ink_soft()), Pickable::IGNORE));
+        .with_child((text(fonts, key, 11.0, Weight::Medium, ink_soft()), Pickable::IGNORE));
 }
 
 /// A section heading inside a panel: small capitals over a hairline.
 pub fn heading(p: &mut ChildSpawnerCommands, fonts: &Fonts, label: &str) {
-    p.spawn((Node { margin: UiRect { top: px(12.0), bottom: px(4.0), ..default() }, padding: UiRect::bottom(px(3.0)), border: UiRect::bottom(px(1.0)), flex_shrink: 0.0, ..default() }, BorderColor::all(glass_rule()))).with_child(text(fonts, label.to_uppercase(), 10.0, Weight::Semibold, ink_soft()));
+    p.spawn((Node { margin: UiRect { top: px(12.0), bottom: px(4.0), ..default() }, padding: UiRect::bottom(px(3.0)), border: UiRect::bottom(px(1.0)), flex_shrink: 0.0, ..default() }, BorderColor::all(glass_rule()))).with_child(text(fonts, label.to_uppercase(), 11.0, Weight::Semibold, ink_soft()));
 }
 
 /// What a script that drives the window calls something that can be clicked: the word
@@ -538,7 +545,7 @@ pub fn field<'a>(p: &'a mut ChildSpawnerCommands, fonts: &Fonts, label: &str, va
     let state = if state == 3 { 1 } else { state };
     let mut e = p.spawn((Node { flex_direction: FlexDirection::Column, row_gap: px(2.0), flex_shrink: 0.0, ..default() }, named(label)));
     e.with_children(|f| {
-        f.spawn((text(fonts, label.to_uppercase(), 9.5, Weight::Semibold, ink_faint()), TextLayout::no_wrap(), Pickable::IGNORE));
+        f.spawn((text(fonts, label.to_uppercase(), 11.0, Weight::Semibold, ink_faint()), TextLayout::no_wrap(), Pickable::IGNORE));
         let edge = match state {
             1 => accent(),
             2 => red(),

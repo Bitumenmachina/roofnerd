@@ -9178,6 +9178,57 @@ offset more than its thickness from the one below reads as standing on nothing. 
 window does not show any of it yet (the bearing tint and the top bar's mark are owed).
 Not judged.
 
+## Call 178 built: the window made clean, and every window demonstration rerun (2026-11-23)
+
+A worker built call 178's items 1 to 11 in the window (item 12 is not built) and
+reran every window demonstration on one frozen build made from the source as
+committed; its report is `research/worker-report-call178.md`.
+
+- **Existing reads as existing** (item 2): on the plan, new walls solid and dark,
+  existing walls light gray, what comes down a red dashed outline with no fill; in 3D
+  existing brick is mixed half-way to pale gray with its pattern kept. "Existing,
+  shown pale" is a switch. Measured: the colour's strength over the wall falls 46.6 to
+  21.5 (54 percent), the pattern's spread stays 14.4. **The check call 178 asked for
+  (a fall of over a third) was not red on the old picture (it fell 40 percent there,
+  and nobody could see it); the worker made it 45 percent, red on the old picture.**
+- **No file word on screen** (item 1): the language gate has a fourth pass for the
+  window's strings, each pattern red on the source before.
+- **Colour says what a message is** (item 5): a question is blue, done is green, a
+  caution amber, refused red; measured on the pictures.
+- **A message put away is put away** (item 4): the status line holds nothing of it in
+  either window; a sentence is cut at a whole word.
+- A card is four lines with "More" (6); a scan brought in is seen (3); a thing's cost
+  lines are at the top of its panel with "Take off" on each row (11); a figure written
+  one way (9, in part); names that read as names (10); the same thing said once with a
+  count (7); nothing under 11 points (8).
+
+**Demonstrations, all on that one build:** 31 passed as rerun by the worker. Two
+failed and were settled by the lead, each an expectation left behind, with the reason
+written beside it in the script, and each then rerun in the window by the lead and
+passing: `pricew.sh` counted 34 starter assemblies (40 since calls 159 and 164: no
+window demonstration was rerun when the library grew); `layoutsw.sh` asked a grey
+title's darkest dot to be over 100 (item 8 darkened the faintest ink to exactly 100:
+the check now asks it to be 60 lighter than the same title when it can be opened).
+`cargo test --workspace` on this tree: 600 passed (the worker's run).
+
+**Expectations moved, each by call 178** (the worker's list): `renow.sh` (the
+switch's name; "Undone: marked existing"; the demolished wall checked as a red
+outline; the 3D check as above); `itemlibw.sh`, `turnw.sh` ("48 items", no file
+ending); `cabinetsw.sh` ("27.62 SF" in what is said; the saved 27.625 is unchanged);
+`layoutsw.sh` (no ".json"); one world test ("4.5 in wall").
+
+**Not built, or not right:**
+- Item 12, all four parts (the laser message and the small lettering unproved; a
+  typed measure on an existing line's quantity; bearing made Known from the window).
+- Item 1 in part ("Not used, row N" still says row); item 9 in part.
+- A card still sits over the top of the plan; a scan's outline is faint.
+- In 3D, existing brick reads as "dusty brick", not clearly as existing: paler, and
+  measured so, but the lead agrees with the worker that it is not yet unmistakable.
+- The "Existing, shown pale" row's own swatch is nearly invisible.
+- **This tree does not yet hold today's command-line fixes** (calls 179 to 183): they
+  were merged on a separate copy. The merge is the next commit.
+- Not judged.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **Since this was written (2026-11-18): a second builder, Opus 5.5, under call 129.**

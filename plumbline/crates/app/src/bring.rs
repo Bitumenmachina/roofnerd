@@ -34,9 +34,26 @@ fn count(n: usize, one: &str, many: &str) -> String {
     }
 }
 
-/// What a table brought in did, said in full.
-fn said(file: &str, lost: &[String], b: &Brought) -> (String, bool) {
-    let mut out = format!("Brought in {file}: {} read, {} set on the job.", count(b.rows, "row", "rows"), b.done.len());
+/// A file named as a person names it: its title, with no folder and no ending
+/// ("turned items", not "lists/turned items.csv"; call 178).
+pub fn titled(file: &str) -> String {
+    let name = Path::new(file).file_name().and_then(|n| n.to_str()).unwrap_or(file);
+    match name.rsplit_once('.') {
+        Some((stem, end)) if !stem.is_empty() && end.len() <= 5 && end.chars().all(|c| c.is_ascii_alphanumeric()) => stem.to_string(),
+        _ => name.to_string(),
+    }
+}
+
+/// What a table brought in did, said in full. Counted in what it holds (prices, items),
+/// not in rows (call 178).
+fn said(file: &str, what: Bring, lost: &[String], b: &Brought) -> (String, bool) {
+    let (one, many) = match what {
+        Bring::Prices => ("price", "prices"),
+        Bring::Assemblies => ("assembly", "assemblies"),
+        Bring::Items => ("item", "items"),
+        _ => ("line", "lines"),
+    };
+    let mut out = format!("Brought in the {} \u{201c}{}\u{201d}: {} read, {} set on the job.", what.said(), titled(file), count(b.rows, one, many), b.done.len());
     for d in b.done.iter().take(6) {
         out.push_str(&format!("\n{d}"));
     }
@@ -44,7 +61,7 @@ fn said(file: &str, lost: &[String], b: &Brought) -> (String, bool) {
         out.push_str(&format!("\nand {} more", b.done.len() - 6));
     }
     if b.same > 0 {
-        out.push_str(&format!("\n{} the same as the job already has", count(b.same, "row is", "rows are")));
+        out.push_str(&format!("\n{} the same as the job already has", count(b.same, &format!("{one} is"), &format!("{} are", many))));
     }
     for (row, why) in &b.not_used {
         out.push_str(&format!("\nNot used, row {row}: {why}"));
@@ -53,7 +70,7 @@ fn said(file: &str, lost: &[String], b: &Brought) -> (String, bool) {
         out.push_str(&format!("\nNote: {note}"));
     }
     if b.above > 0 {
-        out.push_str(&format!("\nNot read: {} above the headings", count(b.above, "row", "rows")));
+        out.push_str(&format!("\nNot read: {} above the headings", count(b.above, "line", "lines")));
     }
     for c in &b.columns_not_used {
         out.push_str(&format!("\nNot read: the column {c:?}"));
@@ -127,7 +144,7 @@ pub fn bring(doc: &mut Doc, what: Bring, typed: &str) {
             }
             Bring::Model => {
                 let b = plumbline_ifc::import(&mut doc.job, &bytes, &file, how)?;
-                let mut out = format!("Brought in {file} ({}): {}.", b.schema, b.made.iter().map(|(what, n)| format!("{n} {}", if *n == 1 { what.strip_suffix('s').unwrap_or(what) } else { what })).collect::<Vec<_>>().join(", "));
+                let mut out = format!("Brought in the designer's model \u{201c}{}\u{201d} ({}): {}.", titled(&file), b.schema, b.made.iter().map(|(what, n)| format!("{n} {}", if *n == 1 { what.strip_suffix('s').unwrap_or(what) } else { what })).collect::<Vec<_>>().join(", "));
                 let left: usize = b.left_out.iter().map(|l| l.1).sum();
                 if left > 0 {
                     out.push_str(&format!("\nNot brought in: {}", count(left, "thing", "things")));
@@ -157,7 +174,7 @@ pub fn bring(doc: &mut Doc, what: Bring, typed: &str) {
                     }
                 }
                 .map_err(|why| format!("{file}: {why}"))?;
-                Ok(said(&file, &sheet.lost, &b))
+                Ok(said(&file, what, &sheet.lost, &b))
             }
         }
     })();
@@ -169,7 +186,7 @@ pub fn bring(doc: &mut Doc, what: Bring, typed: &str) {
             if what == Bring::Model {
                 doc.framed = false;
             }
-            doc.edit("Bring in");
+            doc.edit("brought something in");
             // What was not used or not read has to be seen: it is said over the model.
             doc.say(if to_see { Tone::Warned } else { Tone::Done }, out);
         }
@@ -192,7 +209,7 @@ pub fn dropped(doc: &mut Doc, file: &str) {
         bring(doc, Bring::Scan, file);
     } else if lower.ends_with(".csv") || lower.ends_with(".xlsx") || lower.ends_with(".xlsm") || lower.ends_with(".xls") {
         doc.dropped = Some(file.to_string());
-        doc.say(Tone::Warned, format!("{} is a table. Say what it is: click Price list, Assemblies, Prior estimate or Tool chest file, under Bring in on the left.", Path::new(file).file_name().and_then(|f| f.to_str()).unwrap_or(file)));
+        doc.say(Tone::Ask, format!("{} is a table. Say what it is: click Price list, Assemblies, Prior estimate or Tool chest file, under Bring in on the left.", Path::new(file).file_name().and_then(|f| f.to_str()).unwrap_or(file)));
         doc.touch();
     } else {
         crate::plans::add(doc, file);
@@ -208,7 +225,7 @@ pub fn starter(doc: &mut Doc) {
         Ok(b) if b.done.is_empty() => doc.say(Tone::Done, "The starter assemblies are already in this job. Click a wall, a floor, a room or a roof plane, then Assembly."),
         Ok(b) => {
             doc.job.derive();
-            doc.edit("Starter assemblies");
+            doc.edit("brought in the starter assemblies");
             doc.say(Tone::Done, format!("Brought in {} starter assemblies: walls, floors, rooms, roofs, doors, windows and runs, with no prices. Click one of those on the model, then Assembly.", b.done.len()));
         }
         Err(why) => crate::tools::cant(doc, "bring in the starter assemblies", why),
@@ -230,7 +247,7 @@ pub fn starter_items(doc: &mut Doc) {
         Ok((b, _)) if b.done.is_empty() => doc.say(Tone::Done, "The starter tool chest is already in this job, and each item was left as it is here. They are under Tool chest, on the left: click one, then click where one stands."),
         Ok((b, kept)) => {
             doc.job.derive();
-            doc.edit("Starter tool chest");
+            doc.edit("brought in the starter tool chest");
             doc.say(Tone::Done, format!("Brought in {} starter items, trade by trade, at typical sizes: each size is Assumed until the product is chosen.{} They are in the tool chest, on the left: click one, then click where one stands; Change opens it to be changed.", b.done.len(), left(&kept)));
         }
         Err(why) => crate::tools::cant(doc, "bring in the starter tool chest", why),
@@ -246,6 +263,7 @@ pub fn write_out(doc: &mut Doc, what: crate::model::WriteOut) {
     use plumbline_world::export::{self, Lens};
     let stem = doc.path.file_stem().and_then(|s| s.to_str()).unwrap_or("job").to_string();
     let name = format!("{stem}{}", what.ending());
+    let shown = format!("\u{201c}{}\u{201d}", titled(&name));
     let to = doc.path.with_file_name(&name);
     // Written again, it takes the place of the one written before, and says so (J19-38).
     let again = to.exists();
@@ -254,15 +272,15 @@ pub fn write_out(doc: &mut Doc, what: crate::model::WriteOut) {
     let bare = !matches!(what, WriteOut::Model | WriteOut::Items | WriteOut::Field) && plumbline_world::view::estimate(&mut doc.job).lines.is_empty();
     let done: Result<String, String> = (|| {
         if std::fs::read_to_string(&to).ok().is_some_and(|text| plumbline_world::file::load(&text).is_ok()) {
-            return Err(format!("{name} is a job: what is written out is not written over a job"));
+            return Err(format!("{shown} is a job: what is written out is not written over a job"));
         }
-        let wrote = |bytes: &[u8]| std::fs::write(&to, bytes).map_err(|e| format!("{name} {}", crate::plans::why_not_opened(&e)));
+        let wrote = |bytes: &[u8]| std::fs::write(&to, bytes).map_err(|e| format!("{shown} {}", crate::plans::why_not_opened(&e)));
         match what {
             WriteOut::Model => {
                 let written = plumbline_ifc::write::export(&mut doc.job, &name, &plumbline_world::job::now())?;
                 wrote(written.text.as_bytes())?;
                 let one = |what: &str| what.strip_prefix("pieces ").map(|rest| format!("piece {rest}")).unwrap_or_else(|| what.strip_suffix('s').unwrap_or(what).to_string());
-                let mut out = format!("Wrote {name}, beside the job: the building as a BIM model (IFC4, lengths in feet). In it: {}.", written.made.iter().map(|(what, n)| format!("{n} {}", if *n == 1 { one(what) } else { what.clone() })).collect::<Vec<_>>().join(", "));
+                let mut out = format!("Wrote {shown}, beside the job: the building as a BIM model (IFC4, lengths in feet). In it: {}.", written.made.iter().map(|(what, n)| format!("{n} {}", if *n == 1 { one(what) } else { what.clone() })).collect::<Vec<_>>().join(", "));
                 if !written.not_written.is_empty() {
                     out.push_str(&format!("\nNot in it: {}.", written.not_written.iter().map(|(what, n, why)| format!("{n} x {what} ({why})")).collect::<Vec<_>>().join("; ")));
                 }
@@ -276,18 +294,18 @@ pub fn write_out(doc: &mut Doc, what: crate::model::WriteOut) {
                 let n = rows.len() - 1;
                 let tab = plumbline_sheets::Tab { name: "Field list".into(), rows: rows.iter().map(|r| r.iter().map(|c| if c.is_empty() { plumbline_sheets::Cell::Empty } else { plumbline_sheets::Cell::Text(c.clone()) }).collect()).collect(), head: 1, widths: vec![6.0, 14.0, 24.0, 44.0, 52.0, 30.0] };
                 wrote(&plumbline_sheets::xlsx(&[tab])?)?;
-                Ok(if n == 0 { format!("Wrote {name}, beside the job: nothing is to verify in the field, so it has its headings and no rows.") } else { format!("Wrote {name}, beside the job: {n} to verify in the field, the most dollars first, each with where it is, what to do, a box to tick and a blank for what was found. Print it, take it to the job, and type what was measured back in here.") })
+                Ok(if n == 0 { format!("Wrote {shown}, beside the job: nothing is to verify in the field, so it has its headings and no rows.") } else { format!("Wrote {shown}, beside the job: {n} to verify in the field, the most dollars first, each with where it is, what to do, a box to tick and a blank for what was found. Print it, take it to the job, and type what was measured back in here.") })
             }
             WriteOut::Items => {
                 let rows = tables::items_out(&mut doc.job);
                 wrote(plumbline_sheets::csv(&rows).as_bytes())?;
-                Ok(format!("Wrote {name}, beside the job: the job's tool chest, {} under their headings. Open it, change a size or add a row, and bring it back in with Tool chest file, under Bring in.", count(rows.len().saturating_sub(1), "row", "rows")))
+                Ok(format!("Wrote {shown}, beside the job: the job's tool chest, {} under their headings. Open it, change a size or add an item, and bring it back in with Tool chest file, under Bring in.", count(rows.len().saturating_sub(1), "item", "items")))
             }
             WriteOut::Rows => {
                 let sheets = export::estimate_out(&mut doc.job, false);
                 let rows: Vec<Vec<String>> = sheets[0].rows[sheets[0].head..].iter().map(|r| r.iter().map(export::Out::said).collect()).collect();
                 wrote(plumbline_sheets::csv(&rows).as_bytes())?;
-                Ok(format!("Wrote {name}, beside the job: the estimate's lines as rows of values, {} under their headings.", count(rows.len().saturating_sub(1), "row", "rows")))
+                Ok(format!("Wrote {shown}, beside the job: the estimate's lines as values, {} under their headings.", count(rows.len().saturating_sub(1), "line", "lines")))
             }
             _ => {
                 let (sheets, said) = match what {
@@ -298,7 +316,7 @@ pub fn write_out(doc: &mut Doc, what: crate::model::WriteOut) {
                 };
                 let (bytes, formulas) = plumbline_sheets::workbook(&sheets)?;
                 wrote(&bytes)?;
-                Ok(format!("Wrote {name}, beside the job: {said}. {}: {}{}.", count(sheets.len(), "sheet", "sheets"), sheets.iter().map(|s| s.name.as_str()).collect::<Vec<_>>().join(", "), if formulas > 0 { format!("; {formulas} of its figures are formulas") } else { String::new() }))
+                Ok(format!("Wrote {shown}, beside the job: {said}. {}: {}{}.", count(sheets.len(), "sheet", "sheets"), sheets.iter().map(|s| s.name.as_str()).collect::<Vec<_>>().join(", "), if formulas > 0 { format!("; {formulas} of its figures are formulas") } else { String::new() }))
             }
         }
     })();
@@ -308,7 +326,7 @@ pub fn write_out(doc: &mut Doc, what: crate::model::WriteOut) {
                 out.push_str(" The job has no lines yet: the file has its headings and nothing under them.");
             }
             if again {
-                out.push_str(&format!(" It takes the place of the {name} that was there."));
+                out.push_str(&format!(" It takes the place of the {shown} that was there."));
             }
             doc.say(Tone::Done, out)
         }
@@ -361,7 +379,7 @@ fn scan_file(doc: &mut Doc, name: &str, units: plumbline_plans::scan::Units, up:
     use plumbline_plans::scan::Said;
     doc.scan_side = None;
     if name.is_empty() {
-        crate::tools::cant(doc, "bring in the scan file", "no file was named. Pick the scan from the list, or drop the file on this window.");
+        crate::tools::cant(doc, "bring in the scan", "no file was named. Pick the scan from the list, or drop the file on this window.");
         doc.touch();
         return;
     }
@@ -370,7 +388,7 @@ fn scan_file(doc: &mut Doc, name: &str, units: plumbline_plans::scan::Units, up:
         doc.show.storey = plumbline_world::building::storey_totals(&mut doc.job).into_iter().min_by(|a, b| a.elevation.unwrap_or(f64::MAX).total_cmp(&b.elevation.unwrap_or(f64::MAX))).map(|s| s.path);
     }
     let Some(level) = doc.show.storey.clone() else {
-        crate::tools::cant(doc, "bring in the scan file", "this job has no level for it to be a scan of. Add a level first.");
+        crate::tools::cant(doc, "bring in the scan", "this job has no level for it to be a scan of. Add a level first.");
         doc.touch();
         return;
     };
@@ -397,15 +415,18 @@ fn scan_file(doc: &mut Doc, name: &str, units: plumbline_plans::scan::Units, up:
         let about = |x: f64| plumbline_world::units::feet_as_ft_in((x * 12.0).round() / 12.0, 16);
         // A builder's words: the way the scan was measured, and that which way is up was
         // read from it. Nobody is asked for an axis (call 161).
-        let mut out = format!("Brought in the scan {called:?}: {} points, measured in {}, Assumed.\n", figure(brought.points), if units == plumbline_plans::scan::Units::Feet { "feet" } else { "meters" });
-        let _ = std::fmt::Write::write_fmt(&mut out, format_args!("On plan, where it is cut, it is about {} by {}.", about(cut.extent[0]), about(cut.extent[1])));
+        // The card is four lines: what was brought in, its size, what to do if the size is
+        // wrong, and (when it is in doubt) which way is up; the rest is under More (call 178).
+        let mut head = format!("Brought in the scan {called:?}: {} points, measured in {}, Assumed.\n", figure(brought.points), if units == plumbline_plans::scan::Units::Feet { "feet" } else { "meters" });
+        let _ = std::fmt::Write::write_fmt(&mut head, format_args!("On plan, where it is cut, it is about {} by {}.", about(cut.extent[0]), about(cut.extent[1])));
+        let mut out = String::new();
         let mut to_see = false;
         let told = why_up == "as you said";
         if !told {
             if why_up == "the way the house is shortest" {
                 out.push_str("\nWhich way is up was read from the scan.");
             } else {
-                out.push_str("\nWhich way is up is not clear from the scan. If the house looks to be lying on its side, press the button below.");
+                head.push_str("\nWhich way is up is not clear from the scan. If the house looks to be lying on its side, press the button below.");
                 doubtful = true;
                 to_see = true;
             }
@@ -441,13 +462,10 @@ fn scan_file(doc: &mut Doc, name: &str, units: plumbline_plans::scan::Units, up:
         out.push_str("\nIt is a drawing under the level on show, to scale and in the scan's own place: trace over it as over any plan.");
         if !brought.lost.is_empty() {
             out.push_str("\nOnly where its points are is kept: not its colors, and not the surface drawn over them.");
-            to_see = true;
         }
-        out.push('\n');
-        out.push_str(OTHER_MEASURE);
-        if wrong {
-            out = format!("{OTHER_MEASURE}\n{out}");
-        }
+        // The sentence about the other measure is said once: first where the size is not
+        // likely the house's, and else after the size.
+        out = if wrong { format!("{OTHER_MEASURE}\n{head}{out}") } else { format!("{head}\n{OTHER_MEASURE}{out}") };
         if stood {
             out = format!("Stood up. {out}");
         }
@@ -461,7 +479,7 @@ fn scan_file(doc: &mut Doc, name: &str, units: plumbline_plans::scan::Units, up:
             }
             doc.framed = false;
             doc.frame_on = laid.and_then(|path| crate::plans::corners_of(&mut doc.job, &path));
-            doc.edit("Scan");
+            doc.edit("brought in a scan");
             // The button is there only when the way up was guessed and may be wrong, and
             // only while this is the last thing done.
             if doubtful && up.is_none() {
@@ -470,10 +488,10 @@ fn scan_file(doc: &mut Doc, name: &str, units: plumbline_plans::scan::Units, up:
             doc.say(if to_see { Tone::Warned } else { Tone::Done }, out);
         }
         Err(why) if why.contains("there is already something called") => {
-            doc.say(Tone::Refused, "Can't bring in the scan file: It is already in, under the plan. Undo takes it out.");
+            doc.say(Tone::Warned, "It is already in, under the plan. Undo takes it out.");
         }
-        Err(why) if why.contains("no point of it is at that height") => crate::tools::cant(doc, "bring in the scan file", format!("{why}. {OTHER_MEASURE}")),
-        Err(why) => crate::tools::cant(doc, "bring in the scan file", why),
+        Err(why) if why.contains("no point of it is at that height") => crate::tools::cant(doc, "bring in the scan", format!("{why}. {OTHER_MEASURE}")),
+        Err(why) => crate::tools::cant(doc, "bring in the scan", why),
     }
     doc.redraw();
 }

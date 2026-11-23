@@ -69,5 +69,21 @@ else
   echo "  no programmer's plural"
 fi
 
+# 4. BuildOS's window (plumbline/crates/app/src, call 178): no file word is said to a person.
+#    A job is named by its title; a table brought in is the tool chest file or the price
+#    list and is counted in what it holds (items, prices), never in rows; a file's name is
+#    said without its ending. Comment lines are not read. Each pattern was proved red on the
+#    source as it stood before call 178 (git show HEAD~:... | grep) and green after.
+APP=plumbline/crates/app/src
+if [ -d "$APP" ]; then
+  if hits=$(grep -rnE -e 'scan file' -e 'count\([^;]*"rows?"' -e '\(\{f\}\)' -e '(Wrote|Brought in) \{(name|file)\}' "$APP" | grep -vE ':[0-9]+:[[:space:]]*(//|/\*|\*)'); then
+    echo "  a file word on a screen of the window:"
+    echo "$hits" | sed 's/^/    /'
+    fail=1
+  else
+    echo "  no file word on a screen of the window"
+  fi
+fi
+
 [ $fail -eq 0 ] && echo "PASS" || echo "FAIL"
 exit $fail

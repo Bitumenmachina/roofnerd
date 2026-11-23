@@ -134,7 +134,7 @@ says "$T/said.txt" "type another start in Starts at."
 says "$T/said.txt" "Set 6 boxes along wall "
 says "$T/said.txt" " in Kitchen: a run of 13 ft, from 1 ft to 14 ft along the wall; 1.75 ft left to the corner."
 says "$T/said.txt" "Undone: Set 6 boxes along wall "
-says "$T/said.txt" "Countertop: 13 ft long by 25 1/2 in deep, 34 1/2 in up; 27.625 SF, front edge 13 LF."
+says "$T/said.txt" "Countertop: 13 ft long by 25 1/2 in deep, 34 1/2 in up; 27.62 SF, front edge 13 LF."
 says "$T/said.txt" "Can't set the run: B99 is not in the tool chest. The list above the field has the boxes and the appliances this job has."
 # A refusal is said on the card and in the message line, once: not again in the panel, and the
 # list of what there is is not said again in it either (call 161).

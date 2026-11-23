@@ -147,9 +147,36 @@ pub struct Pattern {
 #[derive(Resource, Default)]
 pub struct Patterns {
     made: HashMap<(Look, [u8; 3]), Pattern>,
+    /// The same patterns in halftone, for existing work: each colour half-way to pale
+    /// gray, the pattern and its relief kept (call 178).
+    halftone: HashMap<(Look, [u8; 3]), Pattern>,
 }
 
 impl Patterns {
+    /// A pattern as new work wears it, or in halftone as existing work does.
+    pub fn of(&mut self, images: &mut Assets<Image>, look: Look, tone: Option<[u8; 3]>, halftone: bool) -> Pattern {
+        if !halftone {
+            return self.get(images, look, tone);
+        }
+        let tone = tone.unwrap_or(look.tone());
+        if let Some(p) = self.halftone.get(&(look, tone)) {
+            return p.clone();
+        }
+        let full = self.get(images, look, Some(tone));
+        let (mut colour, _) = paint(look, tone);
+        let pale = crate::theme::existing_tone().to_srgba();
+        let pale = [pale.red * 255.0, pale.green * 255.0, pale.blue * 255.0];
+        if let Some(data) = colour.data.as_mut() {
+            for px in data.chunks_exact_mut(4) {
+                for i in 0..3 {
+                    px[i] = (f32::from(px[i]) * 0.5 + pale[i] * 0.5).round().clamp(0.0, 255.0) as u8;
+                }
+            }
+        }
+        let made = Pattern { colour: images.add(colour), ..full };
+        self.halftone.insert((look, tone), made.clone());
+        made
+    }
     pub fn get(&mut self, images: &mut Assets<Image>, look: Look, tone: Option<[u8; 3]>) -> Pattern {
         let tone = tone.unwrap_or(look.tone());
         self.made

@@ -29,7 +29,7 @@ pub struct SheetScroll;
 
 fn stat_card(p: &mut ChildSpawnerCommands, fonts: &Fonts, label: &str, value: String, unit: &str, status: Status, under: String) {
     p.spawn(theme::card(Node { flex_direction: FlexDirection::Column, flex_grow: 1.0, flex_basis: px(0.0), padding: UiRect::axes(px(16.0), px(13.0)), row_gap: px(4.0), ..default() })).with_children(|c| {
-        c.spawn(text(fonts, label.to_uppercase(), 10.0, Weight::Semibold, theme::ink_faint()));
+        c.spawn(text(fonts, label.to_uppercase(), 11.0, Weight::Semibold, theme::ink_faint()));
         c.spawn(Node { align_items: AlignItems::Baseline, column_gap: px(5.0), ..default() }).with_children(|v| {
             v.spawn(text(fonts, value, 23.0, Weight::Semibold, theme::status_ink(status)));
             if !unit.is_empty() {
@@ -127,7 +127,7 @@ fn mark(p: &mut ChildSpawnerCommands, colour: Color) {
 fn header_row(p: &mut ChildSpawnerCommands, fonts: &Fonts, columns: &[(&str, f32, bool)]) {
     p.spawn((Node { align_items: AlignItems::Center, column_gap: px(12.0), padding: UiRect::axes(px(16.0), px(8.0)), border: UiRect::bottom(px(1.0)), ..default() }, BackgroundColor(theme::panel_alt()), BorderColor::all(theme::hairline()))).with_children(|r| {
         for (label, width, right) in columns {
-            cell(r, *width, *right, |c| words(c, fonts, label.to_uppercase(), 10.0, Weight::Semibold, theme::ink_faint()));
+            cell(r, *width, *right, |c| words(c, fonts, label.to_uppercase(), 11.0, Weight::Semibold, theme::ink_faint()));
         }
     });
 }
@@ -262,8 +262,8 @@ pub fn rebuild(mut commands: Commands, doc: Res<Doc>, snap: Res<Snapshot>, fonts
         });
         // The last thing that happened. It cannot push the sheet wider than its window.
         // Written as the model window writes it, with its first letter a capital.
-        let first = pretty(&one_line(&doc.message, 110));
-        let (tone_dot, ink) = tone_ink(doc.tone);
+        let first = crate::panels::bar_message(&doc, crate::panels::BAR_HOLDS);
+        let (tone_dot, ink) = if first.is_empty() { (theme::ink_faint(), theme::ink_soft()) } else { tone_ink(doc.tone) };
         root.spawn((rounded(Node { height: px(28.0), flex_shrink: 0.0, margin: UiRect { left: px(theme::GAP), right: px(theme::GAP), top: px(4.0), bottom: px(theme::GAP) }, padding: UiRect::horizontal(px(14.0)), align_items: AlignItems::Center, column_gap: px(9.0), border: UiRect::all(px(1.0)), overflow: Overflow::clip(), ..default() }, theme::BUTTON_RADIUS + 6.0), BackgroundColor(theme::panel()), BorderColor::all(theme::hairline()), theme::card_shadow())).with_children(|bar| {
             bar.spawn((rounded(Node { width: px(7.0), height: px(7.0), flex_shrink: 0.0, ..default() }, 4.0), BackgroundColor(tone_dot)));
             bar.spawn(Node { flex_grow: 1.0, flex_basis: px(0.0), min_width: px(0.0), overflow: Overflow::clip(), ..default() }).with_children(|m| words(m, fonts, first, 12.0, Weight::Regular, ink));
@@ -739,7 +739,7 @@ fn layouts(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
         });
         // The title a kept layout is given, typed here: this job's title and "B" offered.
         if let Some((Entry::LayoutName, typed)) = &doc.entry {
-            c.spawn(text(fonts, "ITS TITLE (A COPY OF THIS JOB IS KEPT UNDER IT, BESIDE THIS ONE)", 9.5, Weight::Semibold, theme::ink_faint()));
+            c.spawn(text(fonts, "ITS TITLE (A COPY OF THIS JOB IS KEPT UNDER IT, BESIDE THIS ONE)", 11.0, Weight::Semibold, theme::ink_faint()));
             theme::field(c, fonts, "Layout title", typed, "", if doc.fresh { 3 } else { 1 }, 360.0);
             c.spawn(text(fonts, "Enter keeps it and sets it beside this job. Esc lets go.", 11.0, Weight::Regular, theme::ink_faint()));
         }
@@ -767,7 +767,7 @@ fn layouts(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
         let setting = doc.choosing_layout && doc.beside.len() < 2;
         if setting || doc.opening_layout {
             let files: Vec<&(String, String)> = doc.jobs_here.iter().filter(|(n, _)| setting && !doc.beside.iter().any(|b| b.file == *n) || doc.opening_layout).collect();
-            c.spawn(text(fonts, if setting { "PICK THE LAYOUT, FROM THIS JOB'S FOLDER" } else { "PICK THE JOB TO OPEN, FROM THIS JOB'S FOLDER" }, 9.5, Weight::Semibold, theme::ink_faint()));
+            c.spawn(text(fonts, if setting { "PICK THE LAYOUT, FROM THIS JOB'S FOLDER" } else { "PICK THE JOB TO OPEN, FROM THIS JOB'S FOLDER" }, 11.0, Weight::Semibold, theme::ink_faint()));
             if doc.opening_layout && doc.edited {
                 c.spawn(text(fonts, "This job has changes that are not saved: Save first (Ctrl+S), then pick.", 12.0, Weight::Regular, theme::amber()));
             }
@@ -791,7 +791,7 @@ fn layouts(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
                 e.with_children(|r| {
                     r.spawn((text(fonts, title, 12.5, Weight::Medium, if grey { theme::ink_faint() } else { theme::ink() }), Pickable::IGNORE));
                     if alike {
-                        r.spawn((text(fonts, from, 10.5, Weight::Regular, theme::ink_faint()), Pickable::IGNORE));
+                        r.spawn((text(fonts, from, 11.0, Weight::Regular, theme::ink_faint()), Pickable::IGNORE));
                     }
                 });
                 let open = !setting;
@@ -816,7 +816,7 @@ fn layouts(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
     // side under the same words.
     let files: Vec<String> = std::iter::once(doc.path.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default()).chain(doc.beside.iter().map(|b| b.file.clone())).collect();
     let one_title = options.titles.iter().enumerate().any(|(i, t)| options.titles[..i].contains(t));
-    let heads: Vec<String> = options.titles.iter().zip(&files).map(|(t, f)| if one_title { format!("{t} ({f})") } else { t.clone() }).collect();
+    let heads: Vec<String> = options.titles.iter().zip(&files).map(|(t, f)| if one_title { format!("{t} ({})", crate::panels::plain_stem(f)) } else { t.clone() }).collect();
     // Three layouts side by side are narrower each, to leave the row names their room.
     let (col_w, diff_w) = if options.titles.len() >= 3 { (130.0, 170.0) } else { (150.0, 190.0) };
     let diff_head = format!("{} less {}", heads.get(last).cloned().unwrap_or_default(), heads.first().cloned().unwrap_or_default());
@@ -828,7 +828,7 @@ fn layouts(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
         head.push_str(&format!(" | {diff_head}"));
         let mut e = t.spawn((Node { align_items: AlignItems::Center, column_gap: px(12.0), padding: UiRect::axes(px(16.0), px(8.0)), border: UiRect::bottom(px(1.0)), ..default() }, BackgroundColor(theme::panel_alt()), BorderColor::all(theme::hairline()), theme::Named { name: head, scrolls: true }));
         e.with_children(|r| {
-            cell(r, 0.0, false, |c| words(c, fonts, "", 10.0, Weight::Semibold, theme::ink_faint()));
+            cell(r, 0.0, false, |c| words(c, fonts, "", 11.0, Weight::Semibold, theme::ink_faint()));
             // A title and, where two layouts have one title, its file's name under it.
             for title in &heads {
                 cell(r, col_w, true, |c| {
@@ -839,7 +839,7 @@ fn layouts(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
                     c.spawn(Node { flex_direction: FlexDirection::Column, align_items: AlignItems::FlexEnd, ..default() }).with_children(|col| {
                         words(col, fonts, first, 12.0, Weight::Semibold, theme::ink());
                         if let Some(file) = file {
-                            words(col, fonts, file, 10.0, Weight::Regular, theme::ink_faint());
+                            words(col, fonts, file, 11.0, Weight::Regular, theme::ink_faint());
                         }
                     });
                 });
@@ -1248,7 +1248,7 @@ fn estimate(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
                                 match doc.job.set_off(&path, Some(&line), !off) {
                                     Ok(()) => {
                                         doc.job.derive();
-                                        doc.edit("Labor on or off");
+                                        doc.edit("switched labor");
                                         doc.say(Tone::Done, format!("{path}: {line:?} switched {}.", if off { "on" } else { "off" }));
                                     }
                                     Err(why) => crate::tools::cant(doc, "switch labor", why),
@@ -1344,7 +1344,7 @@ fn estimate(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
                 let total = est.columns.iter().find(|x| x.0 == col).map(|x| &x.1);
                 cell(r, 96.0, true, |c| {
                     c.spawn(Node { flex_direction: FlexDirection::Column, align_items: AlignItems::FlexEnd, padding: UiRect::axes(px(0.0), px(5.0)), ..default() }).with_children(|c| {
-                        words(c, fonts, match col { Column::Material => "MATERIAL", Column::Labor => "LABOR", Column::General => "SUB, GENERAL" }, 10.0, Weight::Semibold, theme::ink_faint());
+                        words(c, fonts, match col { Column::Material => "MATERIAL", Column::Labor => "LABOR", Column::General => "SUB, GENERAL" }, 11.0, Weight::Semibold, theme::ink_faint());
                         match total.and_then(|t| t.value.map(|x| (x, t.status))) {
                             Some((x, status)) => words(c, fonts, view::money(x), 12.5, Weight::Semibold, theme::status_ink(status)),
                             None => words(c, fonts, "none", 12.5, Weight::Semibold, theme::ink_faint()),

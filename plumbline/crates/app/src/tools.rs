@@ -306,13 +306,13 @@ pub fn mark_work(doc: &mut Doc, status: plumbline_world::WorkStatus, lines: ed::
                 // What a mark changes in a room is said with its area: the receptacles
                 // the walls need are worked from the same walls (call 169).
                 match (area_moved, outlets_moved, was, now, was_outlets, now_outlets) {
-                    (true, true, Some(was), Some(now), Some(wo), Some(no)) => said.push(format!("{name} is now {} SF (was {}), and needs {} receptacles (was {})", num(now), num(was), num(no), num(wo))),
-                    (true, false, Some(was), Some(now), ..) => said.push(format!("{name} is now {} SF (was {})", num(now), num(was))),
-                    (false, true, _, Some(now), Some(wo), Some(no)) => said.push(format!("{name} is still {} SF, and needs {} receptacles (was {})", num(now), num(no), num(wo))),
+                    (true, true, Some(was), Some(now), Some(wo), Some(no)) => said.push(format!("{name} is now {} SF (was {}), and needs {} receptacles (was {})", plumbline_world::view::figure(now, 2), plumbline_world::view::figure(was, 2), num(no), num(wo))),
+                    (true, false, Some(was), Some(now), ..) => said.push(format!("{name} is now {} SF (was {})", plumbline_world::view::figure(now, 2), plumbline_world::view::figure(was, 2))),
+                    (false, true, _, Some(now), Some(wo), Some(no)) => said.push(format!("{name} is still {} SF, and needs {} receptacles (was {})", plumbline_world::view::figure(now, 2), num(no), num(wo))),
                     _ => {}
                 }
             }
-            doc.edit("Mark work");
+            doc.edit(match status { plumbline_world::WorkStatus::Existing => "marked existing", plumbline_world::WorkStatus::Demolish => "marked to demolish", _ => "marked new work" });
             doc.say(Tone::Done, said.join("\n"));
             doc.redraw();
         }
@@ -322,7 +322,7 @@ pub fn mark_work(doc: &mut Doc, status: plumbline_world::WorkStatus, lines: ed::
             match why.split_once(". Say which:") {
                 Some((carries, _)) if matches!(lines, ed::ItsLines::Ask) => {
                     doc.marking = Some((sel, status));
-                    doc.say(Tone::Refused, format!("{carries}. Say which: Take its lines off, or Keep its lines priced, as work done to it (paint, a patch, taking it down)."));
+                    doc.say(Tone::Ask, format!("{carries}. Say which: Take its lines off, or Keep its lines priced, as work done to it (paint, a patch, taking it down)."));
                     doc.touch();
                 }
                 _ => cant(doc, "mark it", why),
@@ -465,7 +465,7 @@ pub fn new_item(doc: &mut Doc, values: &[String]) {
     match made {
         Ok((path, name)) => {
             doc.job.derive();
-            doc.edit("New item");
+            doc.edit("made an item");
             doc.selected = Some(path);
             doc.say(Tone::Done, format!("Added the item {name:?}: its sizes are Assumed, as typed, until they are checked against its maker's sheet. Its trade is not said yet: pick it under Trade, on the right. It is under Items, on the left: click it there, then click where one stands."));
         }
@@ -484,7 +484,7 @@ pub fn rename_item(doc: &mut Doc, typed: &str) {
     match ed::rename_item(&mut doc.job, &path, typed) {
         Ok(placed) => {
             doc.job.derive();
-            doc.edit("Rename item");
+            doc.edit("renamed an item");
             let also = match placed {
                 0 => String::new(),
                 1 => " The one set down is called that too.".to_string(),
@@ -511,7 +511,7 @@ pub fn new_storey(doc: &mut Doc, values: &[String]) {
     match made {
         Ok(path) => {
             doc.show.storey = Some(path.clone());
-            doc.edit("Add level");
+            doc.edit("added a level");
             doc.say(Tone::Done, format!("Added level {:?}. It is the level drawn on.", parts[0]));
         }
         Err(why) => {
@@ -572,7 +572,7 @@ pub fn new_line(doc: &mut Doc, values: &[String]) {
     match made {
         Ok((on, class)) => {
             doc.job.derive();
-            doc.edit("Cost line");
+            doc.edit("added a cost line");
             let typed = if plumbline_world::units::looks_like_measure(parts[1]) { format!(" Its quantity, {}, is Assumed: entered on screen, until it is measured.", parts[1]) } else { String::new() };
             doc.say(Tone::Done, format!("Added to {on}: {:?}, {}, with no price yet.{typed} Click its price on the sheet's Estimate tab and type it.", parts[0], class.title().to_lowercase()));
         }
@@ -902,10 +902,10 @@ pub fn cabinets_entered(doc: &mut Doc, values: &[String]) {
     match ed::cabinets(&mut doc.job, &storey, &wall, &room, &from, &codes, top, how(&traced)) {
         Ok(made) => {
             doc.job.derive();
-            doc.edit("Cabinets");
+            doc.edit("set a run of cabinets");
             let num = plumbline_world::view::num;
             let mut said = format!(
-                "Set {} along {wall} in {room}: a run of {} ft, from {} ft to {} ft along the wall; {} ft left to the corner.",
+                "Set {} along {wall}, in {room}: a run of {} ft, from {} ft to {} ft along the wall; {} ft left to the corner.",
                 if made.boxes.len() == 1 { "1 box".to_string() } else { format!("{} boxes", made.boxes.len()) },
                 num(made.run),
                 num(made.from),
@@ -918,7 +918,7 @@ pub fn cabinets_entered(doc: &mut Doc, values: &[String]) {
             if let Some((path, _)) = &made.countertop {
                 let figure = |doc: &mut Doc, name: &str| doc.job.find(path).and_then(|e| doc.job.world.get::<plumbline_world::components::Measure>(e)).and_then(|m| m.0.get(name).and_then(|d| d.worked()));
                 if let (Some(long), Some(area)) = (figure(doc, "width"), figure(doc, "plan_area")) {
-                    said.push_str(&format!("\nCountertop: {} ft long by 25 1/2 in deep, 34 1/2 in up; {} SF, front edge {} LF.", num(long), num(area), num(long)));
+                    said.push_str(&format!("\nCountertop: {} ft long by 25 1/2 in deep, 34 1/2 in up; {} SF, front edge {} LF.", num(long), plumbline_world::view::figure(area, 2), num(long)));
                 }
             }
             doc.draw.cabinets = None;
@@ -1057,7 +1057,7 @@ pub fn keep_layout(doc: &mut Doc, title: &str) {
 /// in this window in place of this one. With changes not saved it opens nothing (call 161).
 pub fn open_layout(doc: &mut Doc, name: &str) {
     if doc.edited {
-        doc.say(Tone::Refused, "Save first (Ctrl+S).");
+        doc.say(Tone::Ask, "Save first (Ctrl+S).");
         doc.touch();
         return;
     }
@@ -1159,7 +1159,7 @@ pub fn measured(doc: &mut Doc, text: &str) {
     let source = if who.is_empty() { by.to_string() } else { format!("{by}: {who}") };
     match ed::measure(&mut doc.job, &path, &what, if same { ed::Reading::Same } else { ed::Reading::Length(&reading) }, to, &source) {
         Ok(done) => {
-            doc.edit("measured");
+            doc.edit("measured it");
             // What else moved with it has to be seen: it is said in full over the model.
             let tone = if done.also.is_empty() { Tone::Done } else { Tone::Warned };
             let mut said = done.said;
@@ -1215,7 +1215,7 @@ pub fn room_named(doc: &mut Doc, text: &str) {
     match made {
         Ok(path) => {
             doc.job.derive();
-            doc.edit("Room");
+            doc.edit("drew a room");
             // What it came to is said with it: a room that took the whole floor
             // because its walls do not close is seen here, at once, and not three
             // rooms later (J22A-2). The figure is the model's.
@@ -1258,7 +1258,7 @@ pub fn scale_entered(doc: &mut Doc, text: &str) {
     };
     match made {
         Ok((said, warned)) => {
-            doc.edit("scale");
+            doc.edit("set the scale");
             doc.framed = false;
             // What was left at the old scale is said the way a refusal is: it has to be seen.
             doc.say(if warned { Tone::Refused } else { Tone::Done }, said);
@@ -1323,7 +1323,7 @@ pub fn take_line_off(doc: &mut Doc, path: &str, name: &str, description: &str) {
     match doc.job.remove_line(path, description) {
         Ok(_) => {
             doc.job.derive();
-            doc.edit("Take line off");
+            doc.edit("took a line off");
             let num = plumbline_world::view::num;
             let stood = match was {
                 Some((Some(q), unit, Some(amount))) => format!("{} {unit}, {}", num(q), plumbline_world::view::money(amount)),
@@ -1380,7 +1380,7 @@ pub fn delete(doc: &mut Doc) {
         doc.together.clear();
         doc.hover = None;
         doc.let_go_of_what_is_gone();
-        doc.edit("Delete");
+        doc.edit("deleted it");
         let said = format!("Deleted {}: {}.", plumbline_world::view::so_many(gone.len(), "thing"), gone.join(", "));
         match went {
             Some(went) => doc.say(Tone::Warned, format!("{said} {}{}", went[..1].to_uppercase(), &went[1..])),
@@ -1403,7 +1403,7 @@ pub fn delete(doc: &mut Doc) {
                 doc.hover = None;
                 // A level deleted while it was on show alone, a roof, a thing in hand.
                 doc.let_go_of_what_is_gone();
-                doc.edit("Delete");
+                doc.edit("deleted it");
                 let said = match &traced {
                     Some((name, n)) if *n > 0 => format!("Deleted {name}. {} traced over it {} where {} and still {} so.", if *n == 1 { "1 thing".to_string() } else { format!("{n} things") }, if *n == 1 { "stays" } else { "stay" }, if *n == 1 { "it was" } else { "they were" }, if *n == 1 { "says" } else { "say" }),
                     // A roof takes its planes and their eaves, hips and ridges: named
@@ -1509,7 +1509,7 @@ pub fn clicks(mut doc: ResMut<Doc>, mouse: Res<ButtonInput<MouseButton>>, window
                 // it yet (call 86: it named the others and left that one out).
                 let typed_so_far = doc.entry.as_ref().map(|(_, t)| t.trim().is_empty()).unwrap_or(true);
                 let empty = doc.form.iter().enumerate().filter(|(i, v)| if *i == doc.form_at { typed_so_far } else { v.is_empty() }).map(|(i, _)| tool.fields()[i].0).collect::<Vec<_>>();
-                doc.say(Tone::Refused, format!("Nothing was placed: the {}'s sizes are still open. {}Press Enter first, then click.", tool.name().to_lowercase(), if empty.is_empty() { String::new() } else { format!("Still to be typed: {}. ", empty.join(", ")) }));
+                doc.say(Tone::Ask, format!("Nothing was placed: the {}'s sizes are still open. {}Press Enter first, then click.", tool.name().to_lowercase(), if empty.is_empty() { String::new() } else { format!("Still to be typed: {}. ", empty.join(", ")) }));
                 doc.touch();
             }
         }
@@ -1517,12 +1517,12 @@ pub fn clicks(mut doc: ResMut<Doc>, mouse: Res<ButtonInput<MouseButton>>, window
     // A click on the plan with a length typed and not yet entered places nothing either:
     // that is said (call 86, R21-8).
     if mouse.just_pressed(MouseButton::Left) && doc.draw.tool.is_some() && matches!(doc.entry, Some((Entry::Length, _))) && windows.single().ok().and_then(|w| w.cursor_position().map(|c| over_model(w, c))).unwrap_or(false) {
-        doc.say(Tone::Refused, "Nothing was placed: the length typed is not set yet. Press Enter to go that far toward the pointer, or Esc to let the length go.");
+        doc.say(Tone::Ask, "Nothing was placed: the length typed is not set yet. Press Enter to go that far toward the pointer, or Esc to let the length go.");
         doc.touch();
     }
     // The same while a run's boxes are being typed (call 156).
     if mouse.just_pressed(MouseButton::Left) && doc.draw.tool == Some(Tool::Cabinets) && matches!(doc.entry, Some((Entry::Cabinets, _))) && windows.single().ok().and_then(|w| w.cursor_position().map(|c| over_model(w, c))).unwrap_or(false) {
-        doc.say(Tone::Refused, "Nothing was set: the run's boxes are not entered yet. Press Enter to set the run, or Esc to let it go, then click the next wall.");
+        doc.say(Tone::Ask, "Nothing was set: the run's boxes are not entered yet. Press Enter to set the run, or Esc to let it go, then click the next wall.");
         doc.touch();
     }
     if !mouse.just_pressed(MouseButton::Left) || doc.draw.tool.is_none() || doc.entry.is_some() || !doc.plan {

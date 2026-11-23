@@ -133,7 +133,7 @@ impl Bring {
             Bring::Model => "designer's model",
             Bring::Sheet => "maker's sheet",
             Bring::Items => "tool chest file",
-            Bring::Scan => "scan file",
+            Bring::Scan => "scan",
         }
     }
 }
@@ -200,6 +200,9 @@ pub enum Tone {
     Done,
     /// Done, with something the estimator has to know about.
     Warned,
+    /// A question the program needs answered, or the next thing to type (call 178):
+    /// said in the window's own blue, as a refusal is said in red and nothing else is.
+    Ask,
     Refused,
 }
 
@@ -256,6 +259,8 @@ pub struct Show {
     /// What the work takes down, drawn as a faint red ghost where it stood (call 149).
     /// Off, the house is shown as the work leaves it.
     pub demolition: bool,
+    /// Existing work drawn pale, in halftone (call 178). Off, it is drawn as new work is.
+    pub existing: bool,
     /// The levels switched off, by path: what stands on one is not drawn. (A level
     /// "on show" alone is `storey`; this is each level's own switch.)
     pub off_levels: std::collections::BTreeSet<String>,
@@ -308,6 +313,9 @@ pub struct Doc {
     /// The message card has been put away (its mark, or Esc): it comes back with the next
     /// thing said.
     pub card_away: bool,
+    /// The rest of a long card is open (its "More"): a card is four lines, and says the
+    /// rest only when asked (call 178).
+    pub card_more: bool,
     /// The element the pointer is over.
     pub hover: Option<String>,
     /// What the last action did, or why it was refused.
@@ -462,6 +470,7 @@ impl Doc {
     }
     pub fn say(&mut self, tone: Tone, message: impl Into<String>) {
         self.card_away = false;
+        self.card_more = false;
         // Something half typed that was let go is said first, once (J18-6).
         match self.lost.take() {
             Some(lost) => {
@@ -497,7 +506,7 @@ impl Doc {
             None => false,
             Some((Entry::Settings(_) | Entry::Length, _)) => true,
             Some(_) => {
-                self.say(Tone::Refused, "Nothing was picked: a value is still being typed. Press Enter to set it or Esc to let it go, then click.");
+                self.say(Tone::Ask, "Nothing was picked: a value is still being typed. Press Enter to set it or Esc to let it go, then click.");
                 self.touch();
                 true
             }
@@ -926,6 +935,7 @@ pub fn refresh(mut doc: ResMut<Doc>, mut snap: ResMut<Snapshot>) {
     // What is not yet Known. Solved planes and lines rest on their roof's footprint, which
     // is listed itself; a condition's recipe is a blank form, not this job's unknowns.
     let mut groups: Vec<(Status, String, Vec<String>)> = Vec::new();
+    let mut same: Vec<(String, Status, String, String, Vec<String>)> = Vec::new();
     // The items one of which is set in the job (call 161): an item nobody has set down has
     // no maker, model or weight to be sorted out yet, and its unknowns are not listed.
     let set_down: std::collections::HashSet<String> = {
@@ -961,7 +971,11 @@ pub fn refresh(mut doc: ResMut<Doc>, mut snap: ResMut<Snapshot>) {
                         Some(_) => format!("{} of {}: {}", crate::panels::pretty(&r.label), el.name, crate::panels::shown(r)),
                         None => format!("{} of {} has no figure", crate::panels::pretty(&r.label), el.name),
                     };
-                    s.notes.push((r.status, said, r.note.clone()));
+                    // Figures of one thing with one reason are one row, with a count (call 178).
+                    match same.iter_mut().find(|g| g.0 == el.path && g.1 == r.status && g.2 == r.note) {
+                        Some(g) => g.4.push(said),
+                        None => same.push((el.path.clone(), r.status, r.note.clone(), el.name.clone(), vec![said])),
+                    }
                 }
                 continue;
             }
@@ -974,12 +988,36 @@ pub fn refresh(mut doc: ResMut<Doc>, mut snap: ResMut<Snapshot>) {
             }
             // A place is written as the panel writes it, E and N in feet and inches,
             // never as a bracketed pair of decimal feet.
-            let said = format!("{thing}, {}: {}", r.label, crate::panels::places(&crate::theme::trade(&r.text)));
+            let said = if r.label == "file" {
+                // What a drawing was taken from, said as a person says it, with no file
+                // word and no ending (call 178): a scan by its name and where it is cut,
+                // any other by its title.
+                let (from, page) = r.text.rsplit_once(", page ").map(|(a, b)| (crate::bring::titled(a), Some(b.to_string()))).unwrap_or((crate::bring::titled(&r.text), None));
+                match from.split_once(" cut at ") {
+                    Some((scan, height)) => format!("Scan {scan}, cut {} above the floor: {}", height.trim_end_matches(" 0 in"), status_word(r.status)),
+                    None => format!("{thing}, taken from {}{}: {}", crate::panels::plain_stem(&from), page.filter(|p| p != "1").map(|p| format!(", page {p}")).unwrap_or_default(), status_word(r.status)),
+                }
+            } else {
+                format!("{thing}, {}: {}", r.label, crate::panels::places(&crate::theme::trade(&r.text)))
+            };
+            // Each drawing is its own row: three scans are three, not "and 2 more".
+            if r.label == "file" {
+                s.notes.push((r.status, said, r.basis.clone()));
+                continue;
+            }
             match groups.iter_mut().find(|g| g.0 == r.status && g.1 == r.basis) {
                 Some(g) => g.2.push(said),
                 None => groups.push((r.status, r.basis.clone(), vec![said])),
             }
         }
+    }
+    for (_, status, note, name, said) in same {
+        let mut name = name;
+        if let Some(first) = name.get_mut(0..1) {
+            first.make_ascii_uppercase();
+        }
+        let what = if said.len() == 1 { said[0].clone() } else { format!("{name}: {} figures are not worked out", said.len()) };
+        s.notes.push((status, what, note));
     }
     for (path, why) in &s.not_drawn {
         // Said by its name, with its path after it: a person reads the name.
@@ -1007,4 +1045,13 @@ pub fn refresh(mut doc: ResMut<Doc>, mut snap: ResMut<Snapshot>) {
 /// A plan point and a height, as a point in the view: x east, y up, z south.
 pub fn to_view(origin: [f64; 3], p: [f64; 3]) -> Vec3 {
     Vec3::new((p[0] - origin[0]) as f32, (p[2] - origin[2]) as f32, -((p[1] - origin[1]) as f32))
+}
+
+/// A value's certainty in a word.
+fn status_word(s: Status) -> &'static str {
+    match s {
+        Status::Known => "Known",
+        Status::Assumed => "Assumed",
+        Status::Unknown => "Unknown",
+    }
 }

@@ -72,7 +72,7 @@ LOG="$(cat "$T/map.txt.said")"
 says "the starter" "Brought in 48 starter items, trade by trade, at typical sizes: each size is Assumed until the product is chosen." "$LOG"
 says "one set down" "Set one down on Ground." "$LOG"
 says "what it is drawn as" "Vanity, 36 in is drawn as a box, wherever one stands." "$LOG"
-says "the library written out" "Wrote bench items.csv, beside the job: the job's tool chest, 48 rows under their headings." "$LOG"
+says "the library written out" "Wrote “bench items”, beside the job: the job's tool chest, 48 items under their headings." "$LOG"
 
 echo
 echo "== What the session left: the saved job, and the library beside it =="
