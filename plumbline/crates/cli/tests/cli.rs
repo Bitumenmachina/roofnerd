@@ -386,8 +386,10 @@ fn the_estimate_is_read_by_item_and_comes_to_the_same_job_cost() {
     assert!(rows.iter().any(|r| r == "Concrete footing, in place Subcontract 4 10.0742 CY $450.00/CY $4,533.40"), "{said}");
     let every = String::from_utf8_lossy(&Command::new(bin).arg("estimate").arg(&job).output().unwrap().stdout).to_string();
     let job_cost = every.lines().map(squeezed).find(|l| l.starts_with("Job cost ")).unwrap();
-    assert!(job_cost.starts_with("Job cost $390,174.76"), "{job_cost}");
-    assert!(rows.last().unwrap().ends_with("$390,174.76"), "{said}");
+    // Call 179, C2: $85.50 more than it was ($390,174.76): the siding below the 3 ft of the stone is taken off by what
+    // lies below it (9 SF of windows with their sills at 2 1/2 ft, at $9.50), and not by the stone's length.
+    assert!(job_cost.starts_with("Job cost $390,260.26"), "{job_cost}");
+    assert!(rows.last().unwrap().ends_with("$390,260.26"), "{said}");
     // A word that is not a way to read it is refused, and says the two that are.
     let no = Command::new(bin).arg("estimate").arg(&job).arg("by-thing").output().unwrap();
     assert_eq!(no.status.code(), Some(1));

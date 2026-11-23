@@ -218,7 +218,12 @@ pub fn parse(text: &str) -> Result<Expr, String> {
     }
 }
 
-/// Every name the formula uses, once each, in the order they first appear.
+/// The start of a wall's figure that takes a height from the line: `net_area_below_wainscot`
+/// is the wall's net area below the length the line enters as `wainscot` (call 179, C2).
+pub const BELOW: &str = "net_area_below_";
+
+/// Every name the formula uses, once each, in the order they first appear. A figure that
+/// takes a height from the line (`net_area_below_wainscot`) uses that entry (`wainscot`) too.
 pub fn names(expr: &Expr) -> Vec<String> {
     fn walk(e: &Expr, out: &mut Vec<String>) {
         match e {
@@ -226,6 +231,11 @@ pub fn names(expr: &Expr) -> Vec<String> {
             Expr::Name(n) => {
                 if !out.contains(n) {
                     out.push(n.clone());
+                }
+                if let Some(input) = n.strip_prefix(BELOW).filter(|i| !i.is_empty()) {
+                    if !out.iter().any(|o| o == input) {
+                        out.push(input.to_string());
+                    }
                 }
             }
             Expr::Neg(a) => walk(a, out),

@@ -254,7 +254,8 @@ pub fn vif(job: &mut Job) -> Vif {
             // it in dollars: neither thing has to move, a hole has to be cut.
             // (A hole is one question however many pieces of the run pass through it.)
             let mut holes_seen: BTreeSet<usize> = BTreeSet::new();
-            for c in found.found.iter().filter(|c| c.status != Status::Known) {
+            // (A run laid in a floor or a wall is no hole and no clash: it is not a question, call 179 C5.)
+            for c in found.found.iter().filter(|c| c.status != Status::Known && !c.laid_in) {
                 if let Some(h) = c.hole.filter(|_| c.through) {
                     if !holes_seen.insert(h) {
                         continue;

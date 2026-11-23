@@ -271,7 +271,7 @@ fn clashes(job: &mut plumbline_world::Job, clearance: Option<f64>) -> Result<Str
     // a floor stands for the hole.
     let through: Vec<&clash::Clash> = {
         let mut seen: Vec<usize> = Vec::new();
-        found.found.iter().filter(|c| c.how == ClashKind::Hard && c.through).filter(|c| match c.hole {
+        found.found.iter().filter(|c| c.how == ClashKind::Hard && c.through && !c.laid_in).filter(|c| match c.hole {
             Some(h) if seen.contains(&h) => false,
             Some(h) => {
                 seen.push(h);
@@ -311,6 +311,12 @@ fn clashes(job: &mut plumbline_world::Job, clearance: Option<f64>) -> Result<Str
                 let _ = writeln!(out, "  {}, at {}", pairs(c), place(c));
             }
         }
+    }
+    // A run that lies in a floor or a wall along its length is no hole: it never comes out (call 179, C5).
+    let laid = found.laid_in();
+    let _ = writeln!(out, "Laid in a floor or a wall (it runs inside it, along its length: no hole to cut): {}{}", laid.len(), assumed(&laid));
+    for c in &laid {
+        let _ = writeln!(out, "  {}, at {}", pairs(c), place(c));
     }
     // What is in the way of a wall that comes down is not a clash (it is gone when the work
     // is done); it is counted apart, and only where a wall is to demolish (call 160).
@@ -1640,6 +1646,10 @@ fn run(args: &[String]) -> Result<(), String> {
                 return Err(format!("{path} reads, but it is not what saving this job writes. They part at line {}: the file has {}; saving writes {}. Opened and saved, it is written the program's way", n + 1, at(&have), at(&writes)));
             }
             say!("{path}: reads, its figures agree with what is drawn, and saving it back writes the same file");
+            // What the job holds that cannot be drawn now, and is said of one saved before (call 179, B5 and B6).
+            for (_, said) in plumbline_world::building::drawn_faults(&mut job) {
+                say!("! {said}");
+            }
             // What a bearing wall that the work opens needs, and that it is not in the price (call 160).
             for said in plumbline_world::hidden::cautions(&mut job.world) {
                 say!("! {}", said.1);

@@ -62,6 +62,16 @@ fn operand(on: &On, line: &CostLine, name: &str) -> Result<Operand, String> {
             Operand { value: v.feet(), dim: 1, status: v.status, shown: units::to_feet_text(name, &v.unit) }
         });
     }
+    // A wall's net area below a height the line enters (call 179, C2): worked with the wall's
+    // figures, an area; the height is the line's own entry, which is what makes it as sure as it is.
+    if on.kind == Kind::Wall && name.starts_with(formula::BELOW) {
+        let input = &name[formula::BELOW.len()..];
+        if !line.inputs.contains_key(input) {
+            return Err(format!("uses {:?}, which takes a height the line enters as {:?}, and the line has none", crate::view::words(name), crate::view::words(input)));
+        }
+        let d = on.measure.and_then(|m| m.0.get(name));
+        return Ok(Operand { value: d.and_then(|d| d.worked()), dim: 2, status: d.map(|d| d.status).unwrap_or(Status::Unknown), shown: name.to_string() });
+    }
     if name == HEIGHT && on.kind == Kind::Parapet {
         return Ok(match on.height {
             Some(h) => Operand { value: h.0.feet(), dim: 1, status: h.0.status, shown: units::to_feet_text(HEIGHT, &h.0.unit) },
@@ -381,7 +391,7 @@ fn worked(me: &str, on: &On, line: &CostLine, order_by: Option<&Order>, price: &
     // What the figure rests on, for a reader following it back.
     let used = formula::names(&read.expr);
     let mut inputs = Vec::new();
-    if used.iter().any(|n| on.kind.measures().iter().any(|(m, _)| m == n)) {
+    if used.iter().any(|n| on.kind.measures().iter().any(|(m, _)| m == n) || (on.kind == Kind::Wall && n.starts_with(formula::BELOW))) {
         inputs.push(format!("{me}#{K_MEASURE}"));
     }
     if used.iter().any(|n| n == HEIGHT) && on.kind == Kind::Parapet && !line.inputs.contains_key(HEIGHT) {

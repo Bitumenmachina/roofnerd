@@ -690,7 +690,7 @@ pub fn house_priced() -> Job {
                 put(&mut job, path, "Cedar lap siding, installed", "net_area", Material, 7, "$9.50/SF");
                 if on_ground {
                     // No siding is bought behind the stone, and no stone across a doorway (call 175).
-                    job.set_formula(path, Some("Cedar lap siding, installed"), "net_area - wainscot * net_length", &[("wainscot".to_string(), "3 ft".to_string())], Status::Known, "the 3 ft in the name of the stone line (made-up)").expect(OK);
+                    job.set_formula(path, Some("Cedar lap siding, installed"), "net_area - net_area_below_wainscot", &[("wainscot".to_string(), "3 ft".to_string())], Status::Known, "the 3 ft in the name of the stone line (made-up)").expect(OK);
                 }
                 put(&mut job, path, "Gypsum board, hung and finished", "net_area", Material, 9, "$2.40/SF");
                 put(&mut job, path, "Paint, two coats", "net_area", Material, 9, "$1.10/SF");

@@ -116,6 +116,10 @@ pub struct Clash {
     pub how: ClashKind,
     /// A run meeting a wall or a floor: a hole to cut, listed apart.
     pub through: bool,
+    /// A run that lies in a floor or a wall along its length (a conduit cast in a slab, a pipe
+    /// in the thickness of a wall): it never comes out, so it is no hole to cut. It is a
+    /// `through` clash that has no hole, listed and counted apart (call 179, C5).
+    pub laid_in: bool,
     /// A thing standing against a wall, or a run at its joint, in each other by no more than
     /// `SET_AGAINST_FT` (call 175): counted and listed apart, and not in the same space.
     pub set_against: bool,
@@ -161,13 +165,17 @@ impl Clashes {
     pub fn set_against(&self) -> Vec<&Clash> {
         self.found.iter().filter(|c| c.how == ClashKind::Hard && !c.through && c.set_against).collect()
     }
+    /// What lies in a floor or a wall along its length: not holes (call 179, C5).
+    pub fn laid_in(&self) -> Vec<&Clash> {
+        self.found.iter().filter(|c| c.how == ClashKind::Hard && c.laid_in).collect()
+    }
     /// The holes to cut, each once: the first piece of a run that passes through a wall or a
     /// floor stands for its hole (call 175).
     pub fn hole_rows(&self) -> Vec<&Clash> {
         let mut seen: Vec<usize> = Vec::new();
         self.found
             .iter()
-            .filter(|c| c.how == ClashKind::Hard && c.through)
+            .filter(|c| c.how == ClashKind::Hard && c.through && !c.laid_in)
             .filter(|c| match c.hole {
                 Some(h) if seen.contains(&h) => false,
                 Some(h) => {
@@ -559,6 +567,48 @@ fn away_from_joints(p: &Placement, other: &Placement, places: &[P3], owner: usiz
 /// at one size, for the runs that have such a neighbour: by where it stands in `drawn`.
 /// A cut is bookkeeping. It moves nothing, and what crosses a run at a cut is in the
 /// whole run, not in the last inch of one piece.
+/// Whether a straight run, from `a` to `b`, lies in a wall or a floor along its length: both its
+/// ends within the thickness (across a wall, down a floor), so it never comes out (call 179, C5).
+fn lies_in(a: P3, b: P3, wall: &Placement) -> bool {
+    let tol = FIT_TOLERANCE_FT;
+    match &wall.shape {
+        Shape::Wall { a: wa, b: wb, thickness, .. } => {
+            let (e, long) = ([wb[0] - wa[0], wb[1] - wa[1]], (wb[0] - wa[0]).hypot(wb[1] - wa[1]));
+            if long < 1.0e-9 {
+                return false;
+            }
+            [a, b].iter().all(|p| ((p[0] - wa[0]) * e[1] - (p[1] - wa[1]) * e[0]).abs() / long <= thickness / 2.0 + tol)
+        }
+        Shape::Floor { top, thickness, .. } => [a, b].iter().all(|p| p[2] <= top + tol && p[2] >= top - thickness - tol),
+        _ => false,
+    }
+}
+
+/// Where a straight run, from `a` to `b`, passes through a wall (the middle of its thickness) or a
+/// floor (the middle of its depth): None where it does not cross it between its two ends, or lies
+/// along it.
+fn cross_at(a: P3, b: P3, wall: &Placement) -> Option<P3> {
+    let t = match &wall.shape {
+        Shape::Wall { a: wa, b: wb, .. } => {
+            let (d, e) = ([b[0] - a[0], b[1] - a[1]], [wb[0] - wa[0], wb[1] - wa[1]]);
+            let denom = d[0] * e[1] - d[1] * e[0];
+            if denom.abs() < 1.0e-9 {
+                return None;
+            }
+            ((wa[0] - a[0]) * e[1] - (wa[1] - a[1]) * e[0]) / denom
+        }
+        Shape::Floor { top, thickness, .. } => {
+            let dz = b[2] - a[2];
+            if dz.abs() < 1.0e-9 {
+                return None;
+            }
+            (top - thickness / 2.0 - a[2]) / dz
+        }
+        _ => return None,
+    };
+    (-1.0e-9..=1.0 + 1.0e-9).contains(&t).then(|| [a[0] + t * (b[0] - a[0]), a[1] + t * (b[1] - a[1]), a[2] + t * (b[2] - a[2])])
+}
+
 fn carried_on(drawn: &[Placement], net: &network::Network) -> BTreeMap<usize, (P3, P3)> {
     let index: BTreeMap<&str, usize> = drawn.iter().enumerate().filter(|(_, p)| matches!(p.shape, Shape::Run { .. })).map(|(i, p)| (p.path.as_str(), i)).collect();
     // Which run ends meet at each joint: (run, whether it is its far end).
@@ -977,7 +1027,32 @@ fn find(job: &mut Job, clearance: Option<f64>, with_walls_coming_down: bool) -> 
         let (x, y) = (&drawn[i], &drawn[j]);
         let through = through(x, y);
         let (how, by) = if met.hard { (ClashKind::Hard, met.depth.filter(|_| !through)) } else { (ClashKind::Clearance, Some(met.gap.max(0.0))) };
-        found.push(Clash { a: x.path.clone(), b: y.path.clone(), a_name: said(x, &what), b_name: said(y, &what), a_kind: x.kind, b_kind: y.kind, how, through, set_against: false, hole: None, by, at: met.at, status: x.status.max(y.status) });
+        // A hole is where the run passes through the wall or the floor: where its whole line, carried
+        // on through the pieces it is split into, crosses the wall's middle or the floor's middle (call
+        // 179, C4). The deepest point of one piece was off the wall once a run was split.
+        let at = if through && met.hard {
+            let (run, wall, run_at) = if matches!(x.kind, Kind::Wall | Kind::Floor) { (y, x, j) } else { (x, y, i) };
+            match &run.shape {
+                Shape::Run { a, b, .. } => {
+                    let (a, b) = carried.get(&run_at).copied().unwrap_or((*a, *b));
+                    cross_at(a, b, wall).unwrap_or(met.at)
+                }
+                _ => met.at,
+            }
+        } else {
+            met.at
+        };
+        let laid_in = through && met.hard && {
+            let (run, wall, run_at) = if matches!(x.kind, Kind::Wall | Kind::Floor) { (y, x, j) } else { (x, y, i) };
+            match &run.shape {
+                Shape::Run { a, b, .. } => {
+                    let (a, b) = carried.get(&run_at).copied().unwrap_or((*a, *b));
+                    lies_in(a, b, wall)
+                }
+                _ => false,
+            }
+        };
+        found.push(Clash { a: x.path.clone(), b: y.path.clone(), a_name: said(x, &what), b_name: said(y, &what), a_kind: x.kind, b_kind: y.kind, how, through, laid_in, set_against: false, hole: None, by, at, status: x.status.max(y.status) });
     }
     // Set against (call 175). A placed thing and a wall in each other by no more than two
     // inches: a thing that stands against a wall, or hangs on it, or is set in it (the
@@ -1015,7 +1090,7 @@ fn find(job: &mut Job, clearance: Option<f64>, with_walls_coming_down: bool) -> 
     let mut holes: Vec<Hole> = Vec::new();
     let mut hole_of: Vec<Option<usize>> = vec![None; found.len()];
     let sides = |c: &Clash| if matches!(c.b_kind, Kind::Wall | Kind::Floor) { (c.a.clone(), c.b.clone()) } else { (c.b.clone(), c.a.clone()) };
-    let cut: Vec<usize> = (0..found.len()).filter(|&i| found[i].how == ClashKind::Hard && found[i].through).collect();
+    let cut: Vec<usize> = (0..found.len()).filter(|&i| found[i].how == ClashKind::Hard && found[i].through && !found[i].laid_in).collect();
     // Which pieces are one run: the same piece, or two joined, through the same wall or floor.
     let mut root: Vec<usize> = (0..cut.len()).collect();
     fn top(root: &mut [usize], mut i: usize) -> usize {

@@ -235,6 +235,30 @@ impl<'a> Reader<'a> {
         }
         None
     }
+    /// The line a wall is drawn on, where the file gives one (the "Axis" of its shape): its two
+    /// ends on plan, as the file places them. A body may run past this line at a corner.
+    fn axis(&self, product: &'a Entity) -> Option<[[f64; 2]; 2]> {
+        let (_, shape) = self.get(self.arg(product, 6))?;
+        let frame = self.placed(self.arg(product, 5));
+        for rep in Reader::list(self.arg(shape, 2)) {
+            let Some((_, rep)) = self.get(rep) else { continue };
+            if Reader::text(self.arg(rep, 1)) != Some("Axis") {
+                continue;
+            }
+            for item in Reader::list(self.arg(rep, 3)) {
+                let Some((_, line)) = self.get(item) else { continue };
+                if line.name != "IFCPOLYLINE" {
+                    continue;
+                }
+                let points: Vec<P3> = Reader::list(self.arg(line, 0)).iter().filter_map(|p| self.triple(p)).collect();
+                if let [p, q] = points.as_slice() {
+                    let (p, q) = (frame.place([p[0], p[1], 0.0]), frame.place([q[0], q[1], 0.0]));
+                    return Some([[p[0], p[1]], [q[0], q[1]]]);
+                }
+            }
+        }
+        None
+    }
     fn name(&self, e: &'a Entity) -> String {
         Reader::text(self.arg(e, 2)).unwrap_or("").trim().to_string()
     }
@@ -445,7 +469,7 @@ pub fn import(job: &mut Job, bytes: &[u8], name: &str, how: Entered) -> Result<B
         }
         if property_sets + materials > 0 {
             out.notes.push(format!(
-                "not read: {property_sets} property set{} and {materials} material{} in the model. A thing brought in has its shape, its place and its name, and, where the model gives them, the Status it says (as its mark: new, existing, to demolish or temporary) and the LoadBearing it says, each Assumed; what the model says it is made of, and anything else it says about it, is not brought in",
+                "not read: {property_sets} list{} of what the model says of each thing, and {materials} material{}. A thing brought in has its shape, its place and its name, and, where the model gives them, its work mark (new, existing, to demolish or temporary) and its bearing mark, each Assumed; what the model says it is made of, and anything else it says about each thing, is not brought in",
                 if property_sets == 1 { "" } else { "s" },
                 if materials == 1 { "" } else { "s" }
             ));
@@ -672,6 +696,7 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
 
     // ---- Walls.
     let mut wall_of: HashMap<u64, (String, P3, P3, f64)> = HashMap::new();
+    let mut wall_marks: Vec<(String, u64, String)> = Vec::new();
     for (id, e) in of(&["IFCWALL", "IFCWALLSTANDARDCASE", "IFCWALLELEMENTEDCASE"]) {
         if r.pieces(e) > 1 {
             leave(&e.name, "its body is made of more than one piece: only a body of one piece is read");
@@ -696,7 +721,26 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
         let (length, thickness, way) = if x >= y { (x, y, [along[0], along[1], 0.0]) } else { (y, x, [-along[1], along[0], 0.0]) };
         let middle = frame.place([at[0], at[1], 0.0]);
         let way = frame.turn(way);
-        let (a, b) = ([middle[0] - way[0] * length / 2.0, middle[1] - way[1] * length / 2.0], [middle[0] + way[0] * length / 2.0, middle[1] + way[1] * length / 2.0]);
+        let (mut a, mut b) = ([middle[0] - way[0] * length / 2.0, middle[1] - way[1] * length / 2.0], [middle[0] + way[0] * length / 2.0, middle[1] + way[1] * length / 2.0]);
+        let mut length = length;
+        let mut way = way;
+        // A wall this program wrote carries the line it was drawn on: at a corner the body runs
+        // past that line, or stops short of it, so the line, not the body, is the wall (call 179,
+        // C1). Taken where it lies along the body (the same line, and its middle inside the body);
+        // any other axis is left alone.
+        if let Some([p, q]) = r.axis(e) {
+            let (dx, dy) = (q[0] - p[0], q[1] - p[1]);
+            let long = dx.hypot(dy);
+            let (mx, my) = ((p[0] + q[0]) / 2.0 - middle[0], (p[1] + q[1]) / 2.0 - middle[1]);
+            let (u, v) = (mx * way[0] + my * way[1], mx * way[1] - my * way[0]);
+            if long > 1.0e-9 && ((dx * way[0] + dy * way[1]) / long).abs() > 0.9999 && u.abs() <= length / 2.0 && v.abs() <= thickness / 2.0 + 1.0e-6 {
+                let sign = if dx * way[0] + dy * way[1] >= 0.0 { 1.0 } else { -1.0 };
+                a = p;
+                b = q;
+                length = long;
+                way = [sign * way[0], sign * way[1], 0.0];
+            }
+        }
         let base = if up[2] > 0.0 { middle[2] } else { middle[2] - body.depth };
         let (storey, floor) = storey_of(id, base * k);
         let source = from(e, id);
@@ -709,7 +753,9 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
             };
             let made = ed::walls(job, &storey, &wall_type, &[[tidy(a[0] * k), tidy(a[1] * k)], [tidy(b[0] * k), tidy(b[1] * k)]], false, ed::Top::Height(&feet(body.depth * k)), entered)?;
             let path = made.into_iter().next().ok_or("no wall was made")?;
-            marks(job, &path, id, &source, Kind::Wall)?;
+            // (A wall's mark is put on after its doors and windows are in: a door is not set in a wall that is
+            // coming down, and the model has the door in that wall: call 179, C6.)
+            wall_marks.push((path.clone(), id, source.clone()));
             // The model's own name for the wall, where it has one nothing else on the
             // storey goes by.
             let called = r.name(e);
@@ -773,6 +819,11 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
         match done {
             Ok(_) => made(if kind == Kind::Door { "doors" } else { "windows" }),
             Err(why) => leave(&e.name, &format!("this program would not take it: {why}")),
+        }
+    }
+    for (path, id, source) in &wall_marks {
+        if let Err(why) = marks(job, path, *id, source, Kind::Wall) {
+            out.notes.push(format!("a mark on {path} was not put on it: {why}"));
         }
     }
     for (id, e) in of(&["IFCOPENINGELEMENT", "IFCOPENINGSTANDARDCASE"]) {

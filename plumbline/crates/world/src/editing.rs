@@ -83,9 +83,27 @@ pub enum OnWall<'a> {
 /// that does not hold (a type that is not there, an opening off its wall's storey), the
 /// job is put back as it was (BIMCraft's `transaction`, `engine.rs:648`: "all or
 /// nothing"). The figures are worked out again before it returns.
+/// What may not be drawn (`building::drawn_faults`), refused if the edit brought it in: a job
+/// that already holds such a thing still opens, says it in `check`, and can still be edited
+/// about anything else; what it cannot do is have one more drawn (call 179, B5 and B6).
+fn new_faults(job: &mut Job, before: &str) -> Result<(), String> {
+    let now = building::drawn_faults(job);
+    if now.is_empty() {
+        return Ok(());
+    }
+    let had: Vec<String> = match file::load(before) {
+        Ok((mut was, _)) => building::drawn_faults(&mut was).into_iter().map(|f| f.0).collect(),
+        Err(_) => Vec::new(),
+    };
+    match now.into_iter().find(|f| !had.contains(&f.0)) {
+        Some((_, said)) => Err(said),
+        None => Ok(()),
+    }
+}
+
 pub fn all_or_nothing<T>(job: &mut Job, f: impl FnOnce(&mut Job) -> Result<T, String>) -> Result<T, String> {
     let before = file::save(job);
-    match f(job).and_then(|v| building::check_whole(job).map(|()| v)) {
+    match f(job).and_then(|v| building::check_whole(job).map(|()| v)).and_then(|v| new_faults(job, &before).map(|()| v)) {
         Ok(v) => {
             job.derive();
             Ok(v)
@@ -255,8 +273,9 @@ pub fn framing_type(job: &mut Job, name: &str, kind: Kind, width: &str, depth: O
             None => None,
             Some(typed) => {
                 let text = typed.trim();
-                let lower = text.to_ascii_lowercase();
-                let number = ["lb/ft", "lbs/ft", "plf", "#/ft"].iter().find_map(|u| lower.strip_suffix(u)).ok_or_else(|| format!("{text:?} is a weight per foot with no unit: write it like \"18 lb/ft\""))?;
+                // The program's own word for a foot of length is LF (a beam is "16 LF"): "18 lb/LF" is read as "18 lb/ft" (call 179, C8).
+                let lower = text.to_ascii_lowercase().replace(" / ", "/");
+                let number = ["lb/ft", "lbs/ft", "lb/lf", "lbs/lf", "plf", "#/ft", "#/lf"].iter().find_map(|u| lower.strip_suffix(u)).ok_or_else(|| format!("{text:?} is a weight per foot with no unit: write it like \"18 lb/ft\" or \"18 lb/LF\""))?;
                 Some(how.val(units::parse_number(number)?, "lb/ft"))
             }
         };

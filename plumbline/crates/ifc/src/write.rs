@@ -134,6 +134,7 @@ struct Out {
     next: u64,
     job: String,
     body: u64,
+    axis: u64,
 }
 
 impl Out {
@@ -170,6 +171,25 @@ impl Out {
         let on = self.add(format!("IFCAXIS2PLACEMENT2D(#{middle},$)"));
         let profile = self.add(format!("IFCRECTANGLEPROFILEDEF(.AREA.,$,#{on},{},{})", real(x), real(y)));
         self.pushed(profile, depth)
+    }
+    /// A wall's body, and with it the line it is drawn on (IFC's "Axis"), from `from` to `to` along
+    /// its own x. The body may run past the line at a corner; the line is where the wall was drawn
+    /// and how long, and a reader that takes it takes the wall on its line (call 179, C1).
+    fn pushed_rect_on_axis(&mut self, at: [f64; 2], x: f64, y: f64, depth: f64, from: f64, to: f64) -> u64 {
+        let middle = self.point2(at);
+        let on = self.add(format!("IFCAXIS2PLACEMENT2D(#{middle},$)"));
+        let profile = self.add(format!("IFCRECTANGLEPROFILEDEF(.AREA.,$,#{on},{},{})", real(x), real(y)));
+        let first = self.point2([from, 0.0]);
+        let last = self.point2([to, 0.0]);
+        let line = self.add(format!("IFCPOLYLINE((#{first},#{last}))"));
+        let axis = self.axis;
+        let line_rep = self.add(format!("IFCSHAPEREPRESENTATION(#{axis},'Axis','Curve2D',(#{line}))"));
+        let at3 = self.axes([0.0; 3], [0.0, 0.0, 1.0], [1.0, 0.0, 0.0]);
+        let up = self.dir([0.0, 0.0, 1.0]);
+        let solid = self.add(format!("IFCEXTRUDEDAREASOLID(#{profile},#{at3},#{up},{})", real(depth)));
+        let body = self.body;
+        let body_rep = self.add(format!("IFCSHAPEREPRESENTATION(#{body},'Body','SweptSolid',(#{solid}))"));
+        self.add(format!("IFCPRODUCTDEFINITIONSHAPE($,$,(#{line_rep},#{body_rep}))"))
     }
     fn pushed_circle(&mut self, radius: f64, depth: f64) -> u64 {
         let middle = self.point2([0.0, 0.0]);
@@ -236,7 +256,7 @@ pub fn export(job: &mut Job, file: &str, when: &str) -> Result<Written, String> 
     let outlines = building::room_outlines(job);
     let (planes, planes_out) = roof::solid_planes(job);
 
-    let mut o = Out { lines: Vec::new(), next: 0, job: title.clone(), body: 0 };
+    let mut o = Out { lines: Vec::new(), next: 0, job: title.clone(), body: 0, axis: 0 };
     let mut made: BTreeMap<String, usize> = BTreeMap::new();
     let mut count = |what: &str| *made.entry(what.to_string()).or_insert(0) += 1;
     let mut not_written: Vec<(String, usize, String)> = Vec::new();
@@ -261,6 +281,7 @@ pub fn export(job: &mut Job, file: &str, when: &str) -> Result<Written, String> 
     let world = o.axes([0.0; 3], [0.0, 0.0, 1.0], [1.0, 0.0, 0.0]);
     let context = o.add(format!("IFCGEOMETRICREPRESENTATIONCONTEXT($,'Model',3,1.E-5,#{world},$)"));
     o.body = o.add(format!("IFCGEOMETRICREPRESENTATIONSUBCONTEXT('Body','Model',*,*,*,*,#{context},$,.MODEL_VIEW.,$)"));
+    o.axis = o.add(format!("IFCGEOMETRICREPRESENTATIONSUBCONTEXT('Axis','Model',*,*,*,*,#{context},$,.GRAPH_VIEW.,$)"));
     let project = o.add(format!("IFCPROJECT({},$,{},$,$,$,$,(#{context}),#{units})", o.id("project"), name_or_none(&title)));
     let site_at = o.placed(None, [0.0; 3], [0.0, 0.0, 1.0], [1.0, 0.0, 0.0]);
     let site = o.add(format!("IFCSITE({},$,'Site',$,$,#{site_at},$,$,.ELEMENT.,$,$,$,$,$)", o.id("site")));
@@ -348,7 +369,7 @@ pub fn export(job: &mut Job, file: &str, when: &str) -> Result<Written, String> 
                 let at = o.placed(Some(within), [a[0], a[1], base - floor], up, way);
                 // From so far before its first end to so far past its last (a corner).
                 let [before, after] = carried.get(p.path.as_str()).copied().unwrap_or([0.0, 0.0]);
-                let body = o.pushed_rect([(length + after - before) / 2.0, 0.0], length + before + after, *thickness, *height);
+                let body = o.pushed_rect_on_axis([(length + after - before) / 2.0, 0.0], length + before + after, *thickness, *height, 0.0, length);
                 // A strip footing is IFC's footing of that sort; anything else here is a wall.
                 let wall = if p.kind == plumbline_world::Kind::Footing {
                     count("footings");
@@ -687,7 +708,16 @@ pub fn export(job: &mut Job, file: &str, when: &str) -> Result<Written, String> 
             };
             let how = format!("{:?}", d.status);
             // A volume kept in CY is written in cubic feet, and its formula says so.
-            let formula = if matches!(sort, Q::Volume) && d.unit == "CY" { format!("({}) × 27, in cubic feet", d.formula) } else { d.formula.clone() };
+            // (Its ÷ 27 to the yard is not written to be multiplied by 27 again: it is left off. And the figures are
+            // named in words, not as the program holds them: call 179, C8.)
+            let formula = if matches!(sort, Q::Volume) && d.unit == "CY" {
+                match d.formula.strip_suffix(" ÷ 27") {
+                    Some(inside) => format!("{}, in cubic feet", plumbline_world::view::words(inside.strip_prefix('(').and_then(|x| x.strip_suffix(')')).filter(|x| !x.contains(')')).unwrap_or(inside))),
+                    None => format!("({}) × 27, in cubic feet", plumbline_world::view::words(&d.formula)),
+                }
+            } else {
+                plumbline_world::view::words(&d.formula)
+            };
             items.push(format!("#{}", o.add(format!("{entity}({},{},$,{},{})", text(ifc_name), text(&how), real(value), text(&formula)))));
         }
         if items.is_empty() {

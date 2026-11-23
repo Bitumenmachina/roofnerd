@@ -5482,7 +5482,13 @@ fn j12_6_an_opening_that_does_not_fit_leaves_no_opening_area_and_each_one_is_nam
     let mut o = job.world.get::<plumbline_world::Opening>(e).cloned().unwrap();
     o.offset = Val::known(Len::One(9.5), "ft", "made-up plan");
     job.put(&window, o).unwrap();
-    let second = ed::opening(&mut job, &wall[0], Kind::Door, &dt, ed::OnWall::Offset("2.5 ft"), "0 ft", how).unwrap();
+    // (Call 179, B5: a door drawn over another is refused now. The second is put in by hand, as a job saved
+    // before holds it, and the wall's figures are still not given and still name both.)
+    let refused = ed::opening(&mut job, &wall[0], Kind::Door, &dt, ed::OnWall::Offset("2.5 ft"), "0 ft", how).unwrap_err();
+    assert!(refused.contains("lie over each other"), "{refused}");
+    let second = job.add(&wall[0], Kind::Door, "door 2").unwrap();
+    let held = plumbline_world::Opening { type_name: Val::known(dt.clone(), "", "made-up plan"), offset: Val::known(Len::One(2.5), "ft", "made-up plan"), sill: Val::known(Len::One(0.0), "ft", "made-up plan") };
+    job.put(&second, held).unwrap();
     job.derive();
     for figure in ["opening_area", "net_area"] {
         let d = measure_of(&mut job, &wall[0], figure);

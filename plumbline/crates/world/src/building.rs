@@ -512,6 +512,130 @@ pub fn check_whole(job: &mut Job) -> Result<(), String> {
     Ok(())
 }
 
+/// What may not be drawn, and is said of a job that already has it (call 179, B5 and B6): an
+/// opening past the end of its wall or over another opening in it; two floors of one level in
+/// each other; two beams, two posts or two pad footings in one place. Each is a thing counted
+/// twice, or hung where there is no wall, as two walls on one line are. Each comes as a key
+/// (the thing and which fault) and the sentence. A job saved before that holds one still opens
+/// and still says it (`check` prints these); what an edit may not do is bring one in
+/// (`editing::all_or_nothing` refuses a fault the job did not have).
+pub fn drawn_faults(job: &mut Job) -> Vec<(String, String)> {
+    let tol = crate::check::FIT_TOLERANCE_FT;
+    let gone = crate::components::demolished(&mut job.world);
+    let tree = Tree::of(&mut job.world);
+    let w = &job.world;
+    let mut out: Vec<(String, String)> = Vec::new();
+    let mut nodes: Vec<(&Node, Entity)> = job.order.iter().filter_map(|&e| w.get::<Node>(e).map(|n| (n, e))).collect();
+    nodes.sort_by(|x, y| x.0.path.cmp(&y.0.path));
+    // Openings: within the wall, clear of one another.
+    for (n, e) in &nodes {
+        if w.get::<Kind>(*e) != Some(&Kind::Wall) {
+            continue;
+        }
+        let Some(line) = w.get::<Wall>(*e).and_then(|c| c.line_ft()) else { continue };
+        let length = geom::dist(line[0], line[1]);
+        let mut spans: Vec<(&str, [f64; 4])> = Vec::new();
+        for (c, ce) in &nodes {
+            if c.parent.as_deref() != Some(n.path.as_str()) || !w.get::<Kind>(*ce).is_some_and(|k| k.is_opening()) {
+                continue;
+            }
+            // (An opening to demolish is no hole in the wall that is built: the wall's figures leave it out,
+            // and a new one may stand where it stood.)
+            if gone.contains(&c.path) {
+                continue;
+            }
+            let Some(o) = w.get::<Opening>(*ce) else { continue };
+            let Some(span) = hole_of(&tree, &c.path, o).0.span else { continue };
+            let [from, to, _, _] = span;
+            if from < -tol {
+                out.push((format!("{} off the start", c.path), format!("{} starts {} ft before the start of its wall: an opening lies within its wall", c.path, view::figure_shown(-from, 2))));
+            } else if to > length + tol {
+                out.push((format!("{} off the end", c.path), format!("{} ends {} ft along a wall {} ft long: an opening lies within its wall", c.path, view::figure_shown(to, 2), view::figure_shown(length, 2))));
+            }
+            for (other, s) in &spans {
+                if from < s[1] && s[0] < to && span[2] < s[3] && s[2] < span[3] {
+                    out.push((format!("{} over {other}", c.path), format!("{} and {other} lie over each other: an opening is clear of every other opening in its wall", c.path)));
+                }
+            }
+            spans.push((c.path.as_str(), span));
+        }
+    }
+    // Floors of one level: none in another.
+    let floors: Vec<(&str, Option<&str>, Vec<P2>)> = nodes.iter().filter(|(_, e)| w.get::<Kind>(*e) == Some(&Kind::Floor)).filter_map(|(n, e)| Some((n.path.as_str(), n.parent.as_deref(), w.get::<Floor>(*e)?.boundary_ft()?))).collect();
+    for (i, (a, level, ring)) in floors.iter().enumerate() {
+        for (b, other, its) in &floors[i + 1..] {
+            if level == other && gone.contains(*a) == gone.contains(*b) && rings_overlap(ring, its) {
+                out.push((format!("{b} over {a}"), format!("{b} lies in {a} on the same level: two floors in one place would be counted twice")));
+            }
+        }
+    }
+    // Beams, posts and pad footings: not two in one place.
+    let beams: Vec<(&str, Option<&str>, [P2; 2], (f64, f64))> = nodes.iter().filter(|(_, e)| w.get::<Kind>(*e) == Some(&Kind::Beam)).filter_map(|(n, e)| {
+        let s = w.get::<Segment>(*e)?;
+        Some((n.path.as_str(), n.parent.as_deref(), s.line_ft()?, s.offsets_ft()?))
+    }).collect();
+    for (i, (a, level, line, top)) in beams.iter().enumerate() {
+        for (b, other, its, their_top) in &beams[i + 1..] {
+            let same_ends = |p: P2, q: P2| geom::dist(p, q) <= tol;
+            let one_line = (same_ends(line[0], its[0]) && same_ends(line[1], its[1])) || (same_ends(line[0], its[1]) && same_ends(line[1], its[0]));
+            let along = if same_ends(line[0], its[0]) { (top.0 - their_top.0).abs().max((top.1 - their_top.1).abs()) } else { (top.0 - their_top.1).abs().max((top.1 - their_top.0).abs()) };
+            if level == other && one_line && along <= tol && gone.contains(*a) == gone.contains(*b) {
+                out.push((format!("{b} over {a}"), format!("{b} lies where {a} is: two beams in one place would be counted twice")));
+            }
+        }
+    }
+    for kind in [Kind::Post, Kind::PadFooting] {
+        let columns: Vec<(&str, Option<&str>, P2, (f64, f64))> = nodes.iter().filter(|(_, e)| w.get::<Kind>(*e) == Some(&kind)).filter_map(|(n, e)| {
+            let c = w.get::<Stood>(*e)?;
+            let (base, height) = (c.base_offset.feet()?, c.height.feet()?);
+            Some((n.path.as_str(), n.parent.as_deref(), c.at_ft()?, (base, base + height)))
+        }).collect();
+        for (i, (a, level, at, span)) in columns.iter().enumerate() {
+            for (b, other, its, theirs) in &columns[i + 1..] {
+                if level == other && geom::dist(*at, *its) <= tol && span.0 < theirs.1 - tol && theirs.0 < span.1 - tol && gone.contains(*a) == gone.contains(*b) {
+                    out.push((format!("{b} over {a}"), format!("{b} lies where {a} is: two {} in one place would be counted twice", if kind == Kind::Post { "posts" } else { "pad footings" })));
+                }
+            }
+        }
+    }
+    out
+}
+
+/// Whether two outlines have any area in common: their edges cross, one has a corner strictly
+/// inside the other, or a piece of one (the middle of a triangle of it) is strictly inside the
+/// other. Outlines that only touch along an edge, or at a corner, do not.
+fn rings_overlap(a: &[P2], b: &[P2]) -> bool {
+    let tol = crate::check::FIT_TOLERANCE_FT;
+    let strictly_in = |p: P2, ring: &[P2]| {
+        if geom::point_to_outline(p, ring) <= tol {
+            return false;
+        }
+        let mut inside = false;
+        for i in 0..ring.len() {
+            let (u, v) = (ring[i], ring[(i + 1) % ring.len()]);
+            if (u[1] > p[1]) != (v[1] > p[1]) && p[0] < u[0] + (p[1] - u[1]) / (v[1] - u[1]) * (v[0] - u[0]) {
+                inside = !inside;
+            }
+        }
+        inside
+    };
+    let side = |p: P2, q: P2, r: P2| (q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0]);
+    for i in 0..a.len() {
+        let (p, q) = (a[i], a[(i + 1) % a.len()]);
+        for j in 0..b.len() {
+            let (r, t) = (b[j], b[(j + 1) % b.len()]);
+            // Crossing, each edge clear of the other's ends by more than the tolerance.
+            let (d1, d2, d3, d4) = (side(p, q, r), side(p, q, t), side(r, t, p), side(r, t, q));
+            let (lp, lr) = (geom::dist(p, q).max(1.0e-9), geom::dist(r, t).max(1.0e-9));
+            if d1 * d2 < 0.0 && d3 * d4 < 0.0 && d1.abs() / lp > tol && d2.abs() / lp > tol && d3.abs() / lr > tol && d4.abs() / lr > tol {
+                return true;
+            }
+        }
+    }
+    let middles = |ring: &[P2]| -> Vec<P2> { geom::triangles(ring).0.iter().map(|t| [(ring[t[0]][0] + ring[t[1]][0] + ring[t[2]][0]) / 3.0, (ring[t[0]][1] + ring[t[1]][1] + ring[t[2]][1]) / 3.0]).collect() };
+    a.iter().any(|p| strictly_in(*p, b)) || b.iter().any(|p| strictly_in(*p, a)) || middles(a).into_iter().any(|p| strictly_in(p, b)) || middles(b).into_iter().any(|p| strictly_in(p, a))
+}
+
 // ---------------------------------------------------------------- what is worked out
 
 const NOT_CONVERTED: &str = "is in a unit this program does not convert";
@@ -838,6 +962,49 @@ pub fn measures(world: &mut World) -> HashMap<String, BTreeMap<String, Derived>>
                         },
                     })
                 };
+                // The net area of the wall below a height a line of it names (call 179, C2): its face up
+                // to that height, less the parts of its openings that lie below it. A stone wainscot's
+                // 3 ft is such a height, and the siding is the wall's net area less this. The height is
+                // a length entered on the line (`net_area_below_wainscot` takes the line's `wainscot`);
+                // it is as sure as that entry. Given only where a line names it.
+                let mut below: Vec<(String, Derived)> = Vec::new();
+                for l in cost.iter().flat_map(|c| c.lines.iter()).filter(|l| !l.off) {
+                    let Ok(e) = crate::formula::parse(&l.quantity) else { continue };
+                    for name in crate::formula::names(&e).into_iter().filter(|n| n.starts_with(crate::formula::BELOW)) {
+                        if below.iter().any(|(n, _)| *n == name) {
+                            // A second line with the same name: the two have to give one height.
+                            let first = below.iter().position(|(n, _)| *n == name).unwrap_or(0);
+                            let height_of = |x: &crate::components::CostLine| x.inputs.get(&name[crate::formula::BELOW.len()..]).map(|v| v.feet());
+                            let one = cost.iter().flat_map(|c| c.lines.iter()).filter(|x| !x.off && crate::formula::parse(&x.quantity).is_ok_and(|e| crate::formula::names(&e).contains(&name))).map(height_of).collect::<Vec<_>>();
+                            if one.windows(2).any(|w| w[0] != w[1]) {
+                                let f_below = "the face up to that height less the parts of its openings below it";
+                                below[first].1 = Derived::refused("SF", f_below, &inputs, &format!("two lines of this wall give {:?} two heights", &name[crate::formula::BELOW.len()..]));
+                            }
+                            continue;
+                        }
+                        let input_name = &name[crate::formula::BELOW.len()..];
+                        let f_below = "the face up to that height less the parts of its openings below it";
+                        let figure = match l.inputs.get(input_name) {
+                            None => Derived::refused("SF", f_below, &inputs, &format!("{:?} is not a height entered on the line", crate::view::words(input_name))),
+                            Some(hv) => match (&fault, length, hv.feet()) {
+                                _ if unit_fault => Derived::refused("SF", f_below, &inputs, &format!("the wall line {NOT_CONVERTED}")),
+                                (Some(why), _, _) => Derived::refused("SF", f_below, &inputs, why),
+                                (None, None, _) => Derived::refused("SF", f_below, &inputs, "the wall has no length"),
+                                (None, _, None) => Derived::refused("SF", f_below, &inputs, &format!("the height {:?} is not known", crate::view::words(input_name))),
+                                (None, Some(l_ft), Some(h_ft)) => match mine.iter().find(|h| h.span.is_none()) {
+                                    Some(h) => Derived::refused("SF", f_below, &inputs, &format!("{} has no size, so how much of the wall it takes is not known", h.path)),
+                                    None => {
+                                        let cut: f64 = mine.iter().filter_map(|h| h.span).map(|[from, to, sill, head]| (to - from) * (head.clamp(0.0, h_ft) - sill.clamp(0.0, h_ft))).sum();
+                                        let mut st: Vec<Status> = mine.iter().map(|h| h.status).collect();
+                                        st.extend([w.line.status, hv.status]);
+                                        Derived::new(Some(l_ft * h_ft - cut), "SF", &st, f_below, &inputs)
+                                    }
+                                },
+                            },
+                        };
+                        below.push((name, figure));
+                    }
+                }
                 let f_net = "face_area − opening_area";
                 let net = match (fault, face.value, open.value) {
                     (Some(why), _, _) => Derived::refused("SF", f_net, &inputs, &why),
@@ -857,6 +1024,9 @@ pub fn measures(world: &mut World) -> HashMap<String, BTreeMap<String, Derived>>
                 m.insert("net_area".into(), net);
                 if let Some(nl) = net_length {
                     m.insert("net_length".into(), nl);
+                }
+                for (name, figure) in below {
+                    m.insert(name, figure);
                 }
                 // How thick it is: its type's thickness, as sure as the type and the
                 // wall's choice of it. A foundation wall's concrete is net_area ×

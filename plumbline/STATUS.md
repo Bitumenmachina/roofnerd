@@ -9178,6 +9178,34 @@ offset more than its thickness from the one below reads as standing on nothing. 
 window does not show any of it yet (the bearing tint and the top bar's mark are owed).
 Not judged.
 
+## Call 179 part C fixed: the wrong figures a judge found (2026-11-23)
+
+A worker fixed each, writing the failing check first; the lead ran the tests on its
+working copy (**601 passed, 0 failed** in the six command-line crates; the window's
+code compiles against it) and tried the worst one on a house of its own.
+`research/worker-report-call179C.md` has each cause.
+
+| Found | Cause | Now |
+|---|---|---|
+| The BIM file read back moved every wall | at a square corner one wall's body runs to the outside and the other stops at its face; the reader took the body's length as the wall's | the drawn line is written too and read back; the lead's own L-shaped ring of six walls: 108.00 LF out, 108.00 LF back, 972.00 SF both |
+| A joist counted twice at a notch's edge | a mark's piece was dropped only when the same length as the edge member | the mirrored L 19 joists, 250 LF; the U 25, 408 LF, by hand and as said |
+| A low-silled window taken off the siding twice | net area already lacks the window's part under the stone | siding is net area less the net area below the top of the stone (`net_area_below_wainscot`): sill at 1 ft, 254.00 SF; at 3 ft, 244.00; the judge's 265 was right |
+| A hole's place off the wall after a split | the deepest point of the whole run was taken | where the run's line crosses the wall's or floor's middle |
+| A pipe laid in a slab was "1 hole" | any run meeting a floor was a hole | "laid in", listed and counted apart |
+| An opening past its wall's end or over another; a floor in a floor; a beam or post drawn twice | nothing guarded them | refused when drawn or moved; a job saved before with one still opens, and `check` says it |
+| A door in a wall to demolish lost on read-back | the wall was marked before its door was in | marks go on after the openings |
+| "18 lb/LF" refused; "property sets" said | | read; "what the model says of each thing", "bearing mark" |
+
+**What moved, each by call 179:** the sample house's job cost, $390,174.76 to
+**$390,260.26** (+$85.50: 9 SF of siding at $9.50 under windows whose sills are at 2 ft
+6 in); `sweep-money.sh` step 2 (south wall siding 218.99 to 223.99); one test's second
+overlapping door is now refused when drawn and is put in by hand; `joists.sh`'s L
+floor is drawn clear of the other floor of its level (its figures are the same).
+
+**Not right:** a run whose skin only grazes a wall's face is still a hole; a beam along
+part of another's line, or two posts a hair apart, are not refused; the questions a
+beam asks of its ends (C7) are not built. Not judged again.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **Since this was written (2026-11-18): a second builder, Opus 5.5, under call 129.**
