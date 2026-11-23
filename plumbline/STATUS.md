@@ -9692,6 +9692,41 @@ alone): that edge's overhang is Unknown and says why; its soffit has no figure. 
 job with none of these lines prints what it printed: the sample house's estimate is
 the same before and after, byte for byte.
 
+## Call 183 fixed: the scan's walls after their second judgment (2026-11-23)
+
+`research/worker-report-call183.md` has each cause, every measure and the whole table
+of 65 houses (the last builder's 46, the second judge's 11, 8 new). The lead ran the
+tests and every command-line demonstration on the integration copy and a house turned
+57 degrees (five walls, closing). No house the last builder had right got worse.
+
+| The judge's house | Right | Before | Now |
+|---|---|---|---|
+| a mirror on one wall of a 20 by 12 room | 4 walls, 64 LF | 5 walls, 118 LF laid, "the walls close" | 64 LF laid; 3 walls beyond the mirror in doubt, said |
+| a neighbour's wall through a window | said as beyond | counted as furniture | said as beyond the wall |
+| a garage wall with a 16 ft door | a wall with an opening | "something hung from the ceiling" | a wall, the opening 16 ft 0 in |
+| a curved wall, 8 ft radius | said, not laid | three chords laid, called furniture | "curved", its radius and length said, not laid |
+| a closet with a flat ceiling | no word | "the ceiling is not one height" | no word; walls laid 96 in |
+| a house a tenth as thick at one end | 5 walls, the thin part said | 2 walls | 5 walls, said by where |
+| two storeys in one scan | said; one level at a time | "not likely the house" | "the scan holds 2 levels"; each found alone |
+| a 4 ft stub wall with a door | found | dropped | found, the door 2 ft 7 in |
+| the seven-room house | 10 walls, 8 doors | 8 walls, 6 doors | 9 walls, 7 doors; what is left out said with where |
+
+Every stretch left out is now said one by one with where it is and how long, and
+where leaving it out leaves two rooms open to one another, that is said.
+
+**Run on the integration copy:** 726 tests pass in the six command-line crates, 0
+fail; all 45 command-line demonstrations pass; the three gates and `portmap.sh` pass.
+
+**Still wrong, by the builder's own table:** a curve of 5 ft radius is not detected and
+its chords are laid; the closet's own 4 ft door wall in the seven-room house is still
+dropped (said, with a wrong reason: "reaches the ceiling and not the floor"); a
+stair's top treads read as walls; where the scan thins and the house is turned, walls
+break into pieces (105 of 122 ft found); a hall of four doors has one wall end 1 ft 8
+in short; a room behind a two-faced partition whose door was missed is not said to be
+beyond (call 183, as built); one speed test takes 12 s alone and can pass its 20 s
+limit only on a quiet machine. **It has still seen only made-up scans.** Not judged a
+third time.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **As of 2026-11-23 (the lead, after the merge of that day). Read this block first; what
@@ -9721,9 +9756,7 @@ send them as each piece lands.
 - At the command line, each judged and its findings fixed: structure and joists (164,
   165), the plan set (168; judged twice: 179 D, 182), a wall moved (170; 179 B, 180),
   the money fixes (175; 179 C, 180), what a wall carries and stands on (176; 180).
-- Walls found in a scan (173; judged twice: 179 A fixed; **183's fixes were with a
-  builder when this was written: look for `call183.patch` in the scratch area, or do
-  it again from call 183**). Walls found on a drawn plan (181; **not judged**). **Both
+- Walls found in a scan (173; judged twice, both rounds fixed: 179 A, 183). Walls found on a drawn plan (181; **not judged**). **Both
   finders have seen only made-up scans and sheets.**
 
 **What is owed, in order.**

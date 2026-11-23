@@ -16,8 +16,11 @@ pub mod drawn;
 #[cfg(test)]
 mod drawn_tests;
 pub mod found;
+pub(crate) mod found_183;
 #[cfg(test)]
 mod found_179;
+#[cfg(test)]
+mod found_183_tests;
 #[cfg(test)]
 mod found_scenes;
 pub mod scan;

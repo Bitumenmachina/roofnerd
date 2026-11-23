@@ -47,6 +47,8 @@ pub struct Scene {
     /// Footprints that take the floor away: boxes, and (a, b, thickness) walls.
     boxes: Vec<[f64; 4]>,
     feet: Vec<(P2, P2, f64)>,
+    /// A mirror on the wall at this east: the whole scan is again beyond it (call 183).
+    pub mirror: Option<f64>,
 }
 
 /// A stretch left out of a face: from, to along it, low, high.
@@ -55,7 +57,7 @@ pub type Gap = [f64; 4];
 impl Scene {
     /// `dens` points to the square foot of every surface; `noise` the scatter in feet (1.5 cm is 0.049).
     pub fn new(dens: f64, seed: u64) -> Scene {
-        Scene { pts: Vec::new(), rng: Rng::new(seed), dens, noise: 0.015 / 0.3048, floors: Vec::new(), ceilings: Vec::new(), boxes: Vec::new(), feet: Vec::new() }
+        Scene { pts: Vec::new(), rng: Rng::new(seed), dens, noise: 0.015 / 0.3048, floors: Vec::new(), ceilings: Vec::new(), boxes: Vec::new(), feet: Vec::new(), mirror: None }
     }
 
     pub fn ceiling_at(&self, x: f64, y: f64) -> f64 {
@@ -110,6 +112,31 @@ impl Scene {
                 continue;
             }
             self.pts.push([x, y, z]);
+        }
+    }
+
+    /// A horizontal surface over a rectangle at height `z` (a second storey's floor): points at the density, to the square foot.
+    pub fn plate(&mut self, r: [f64; 4], z: f64) {
+        let n = ((r[2] - r[0]) * (r[3] - r[1]) * self.dens).round() as usize;
+        for _ in 0..n {
+            let p = [self.rng.between(r[0], r[2]), self.rng.between(r[1], r[3]), z];
+            self.pts.push(p);
+        }
+    }
+
+    /// The same at its own density to the square foot (a part of the house scanned thinner than the rest).
+    pub fn plate_dens(&mut self, r: [f64; 4], z: f64, dens: f64) {
+        let was = std::mem::replace(&mut self.dens, dens);
+        self.plate(r, z);
+        self.dens = was;
+    }
+
+    /// A curved face: an arc of radius `r` about `c` from angle `a0` to `a1` (degrees), to `top`.
+    pub fn arc(&mut self, c: P2, r: f64, a0: f64, a1: f64, top: f64) {
+        let n = (r * (a1 - a0).to_radians() * top * self.dens).round() as usize;
+        for _ in 0..n {
+            let (a, z) = (self.rng.between(a0, a1).to_radians(), self.rng.between(0.0, top));
+            self.pts.push([c[0] + r * a.cos(), c[1] + r * a.sin(), z]);
         }
     }
 
@@ -173,6 +200,10 @@ impl Scene {
         }
         let noise = self.noise;
         let mut pts: Vec<[f64; 3]> = std::mem::take(&mut self.pts);
+        if let Some(m) = self.mirror {
+            let again: Vec<[f64; 3]> = pts.iter().map(|p| [2.0 * m - p[0], p[1], p[2]]).collect();
+            pts.extend(again);
+        }
         for p in pts.iter_mut() {
             for c in p.iter_mut() {
                 *c += noise * self.rng.gauss();

@@ -6875,3 +6875,21 @@ grows and its counts move by this call):
 
 The sample house's own lines do not change (its "Casing and trim" by the each stays a
 person's choice); nothing existing moves but the library's counts.
+
+### Call 183, as built (2026-11-23)
+
+The builder fixed items 1 to 8 (4 and 7 in part) and left one reading to the lead.
+
+- **Item 2, the reading kept.** Read to the letter, "what is found beyond a wall with no
+  opening leading to it is in doubt" would put the room behind every partition with no
+  doorway found in doubt, and every house the finder was built on has one. **A wall
+  found with both its faces is not a wall in the way: both its sides were scanned, so
+  someone stood on each.** What bars the way is a wall of one face (a mirror, glass,
+  an outside wall) and a window. What this leaves, and is said in STATUS: a room behind
+  a two-faced partition whose door was missed is not said to be beyond.
+- **Item 9 is not done**, rightly: the level and the type by their marks ("laid on
+  level-0002") are in what existing steps of the demonstrations assert as written. They
+  move to names with the window's half of the finders, in one change with those steps.
+- **Item 1** is fixed at the rule (after the find, two walls whose bodies share a
+  length: one is put in doubt); the judge's own scan that laid a wall twice could not
+  be rebuilt in 72 runs.

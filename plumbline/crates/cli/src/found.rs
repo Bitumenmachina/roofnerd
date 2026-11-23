@@ -66,6 +66,19 @@ fn level_height(job: &mut plumbline_world::job::Job, level: &str) -> Option<(f64
     Some((feet, format!("{:?}", l.height.status), l.height.source.clone()))
 }
 
+/// How high above the datum a level's floor is, in feet.
+fn level_elevation(job: &mut plumbline_world::job::Job, level: &str) -> Option<f64> {
+    let e = job.find(level)?;
+    let l = job.world.get::<plumbline_world::Level>(e)?;
+    l.elevation.value.as_ref()?.feet(&l.elevation.unit).ok()
+}
+
+/// The lowest elevation of any level of the job.
+fn lowest_elevation(job: &mut plumbline_world::job::Job) -> Option<f64> {
+    let mut q = job.world.query::<&plumbline_world::Level>();
+    q.iter(&job.world).filter_map(|l| l.elevation.value.as_ref()?.feet(&l.elevation.unit).ok()).reduce(f64::min)
+}
+
 /// Whether the job already holds a sheet laid from this scan under the level (its place is where the scan's feet put it).
 fn has_sheet(job: &mut plumbline_world::job::Job, level: &str, called: &str) -> bool {
     let mut q = job.world.query::<(&plumbline_world::Node, &plumbline_world::plans::Drawing)>();
@@ -88,11 +101,17 @@ pub fn said(found: &Found, called: &str, points: usize, taken: &str, level_note:
     if let (Some(f), Some(c)) = (found.floor, found.ceiling) {
         let _ = writeln!(out, "  floor to ceiling reads about {}", inch(c - f));
     }
+    if let Some(note) = &found.level_note {
+        let _ = writeln!(out, "  {note}");
+    }
     if let Some(note) = level_note {
         let _ = writeln!(out, "  {note}");
     }
     if let Some(d) = found.density {
         let _ = writeln!(out, "  the scan holds about {} to the square foot of floor", plumbline_world::view::figure(d, 0).to_string() + " points");
+    }
+    if let Some(note) = &found.zone_note {
+        let _ = writeln!(out, "  {note}");
     }
     if let Some(note) = &found.thin_note {
         let _ = writeln!(out, "  {note}");
@@ -113,7 +132,7 @@ pub fn said(found: &Found, called: &str, points: usize, taken: &str, level_note:
     }
     let one_side = found.walls.iter().filter(|w| w.thickness.is_none()).count();
     let doubted = found.walls.iter().filter(|w| w.doubt.is_some()).count();
-    let in_doubt = if doubted > 0 { format!(", {doubted} of them in doubt (a wall or something tall standing at a wall)") } else { String::new() };
+    let in_doubt = if doubted > 0 { format!(", {doubted} of them in doubt (each is said below, and none is laid unless you say it is a wall)") } else { String::new() };
     if found.walls.is_empty() {
         let _ = writeln!(out, "  no wall found: no upright face of 2 ft or more runs from the floor to the ceiling");
     }
@@ -124,6 +143,7 @@ pub fn said(found: &Found, called: &str, points: usize, taken: &str, level_note:
             None => "seen from one side (its thickness is not in the scan)".to_string(),
         };
         let high = match (found.ceiling_note.is_some(), w.height) {
+            (true, Some(h)) if w.ceiling_not_read => format!(", {} high (the ceiling over it was not read, for too few points: the middle of the house's ceiling)", inch(h)),
             (true, Some(h)) => format!(", {} high", inch(h)),
             _ => String::new(),
         };
@@ -143,6 +163,12 @@ pub fn said(found: &Found, called: &str, points: usize, taken: &str, level_note:
             let _ = writeln!(out, "      not seen for {} ({} to {} from its {end} end) behind what stands at it: taken as wall, to be checked", inch(h.to - h.from), inch(h.from), inch(h.to));
         }
     }
+    if let Some(note) = &found.beyond_note {
+        let _ = writeln!(out, "  {note}");
+    }
+    for t in &found.beyond_things {
+        let _ = writeln!(out, "  {t}");
+    }
     if found.walls.iter().any(|w| w.doubt.is_none()) {
         if found.open_ends.is_empty() {
             let _ = writeln!(out, "  the walls found close: every end meets another wall");
@@ -159,6 +185,9 @@ pub fn said(found: &Found, called: &str, points: usize, taken: &str, level_note:
                     _ => "north",
                 };
                 let _ = writeln!(out, "    wall {}, its {word} end, at {}", i + 1, place(*p));
+                for l in found.left_near(*p, found::LEFT_NEAR) {
+                    let _ = writeln!(out, "      the stretch from {} to {} lies there ({}): leaving it out leaves the rooms either side open to one another; if it is a wall, it is for you to say so", place(l.from), place(l.to), l.why);
+                }
             }
         }
     }
@@ -249,7 +278,9 @@ pub fn run(args: &[String]) -> Result<(), String> {
     let mut scan = plumbline_plans::scan::read_ply(&bytes, units_of, up).map_err(|why| format!("{scan_path}: {why}"))?;
     scan.level_by_floor();
     let taken = format!("read as {}{}", if units_of == Units::Metres { "meters" } else { "feet" }, if up == Up::Z { "" } else { ", with the file's other direction taken as up (--up y)" });
-    let found = found::find(&scan);
+    // Where the scan holds more than one level, the one asked for is found by its floor: the level's elevation above the job's lowest level (call 183, 8).
+    let wanted = if found::levels(&scan).len() >= 2 { level_elevation(&mut job, &level).zip(lowest_elevation(&mut job)).map(|(e, low)| e - low) } else { None };
+    let found = found::find_level(&scan, wanted);
     // Where the level says it is another height than the scan reads, that is said (call 179, A8).
     let level_name = name_of(&mut job, &level);
     let level_note = level_height(&mut job, &level).and_then(|(h, status, source)| {

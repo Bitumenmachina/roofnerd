@@ -683,5 +683,355 @@ check("laid where its sheet lies: the least east", min(xs), 1234.5, 1, "ft")
 done()
 PY12C
 
+# ---- call 183: what the second judge found, each step with its figures worked by hand ----
+
+echo
+echo "== Step 13 (call 183, 1). A face belongs to one wall: a face recorded twice beside a partition is one wall and a doubt, never two laid =="
+scene "$T/drift.ply" drift --set drift=0.6 --density 100 --seed 1
+# By hand: a room 20 ft by 12 ft, 8 ft high, a partition 4 1/2 in thick at 10 ft east (faces at 9' 9 3/4" and 10' 2 1/4"), and its east face
+# recorded again 7 1/5 in east of itself (10' 9 1/2") from 3 to 8 ft north (a scan that does not register its passes). Five walls
+# are the house (the four outside, the partition 4 1/2 in, 12 ft); the face again is a sixth, 5 ft long, which lies where the
+# partition already has its two faces: in doubt, said with the wall it lies by, and not laid unless the person says it is a wall.
+J13="$T/d13.json"; L13="$(new_job "$J13")"
+W13="$(made "$("$P" type "$J13" wall "Existing outside wall" --thickness "6 in" --status Assumed --source "to be checked on site")")"
+F13="$("$P" find-walls "$J13" "$T/drift.ply" --level "$L13")"
+echo "$F13" | sed -n '/walls found/,/squared/p' | sed 's/^/    | /'
+says "the face again is said to be in doubt" "where it already has its faces: the same face seen again, or something against it" "$F13"
+python3 - "$T" <<PY13
+import re, sys
+sys.path.insert(0, sys.argv[1])
+from said import *
+said = """$F13"""
+w = walls_said(said)
+check("walls found (five, and the face again)", len(w), 6, 0, "walls")
+check("in doubt", int(re.search(r"(\d+) of them in doubt", said)[1]), 1, 0, "walls")
+again = [x for x in w if x["long"] < 6 * 12 and 10 * 12 < x["from"][0] < 11 * 12]
+assert len(again) == 1, w
+check("the face again, east", again[0]["from"][0], 10 * 12 + 9.6, 3); check("its length", again[0]["long"], 5 * 12, 6)
+part = [x for x in w if x["thick"] is not None]
+assert len(part) == 1, w
+check("the partition's thickness", part[0]["thick"], 4.5, 0.5); check("the partition's length", part[0]["long"], 12 * 12, 4)
+done()
+PY13
+F13L="$("$P" find-walls "$J13" "$T/drift.ply" --level "$L13" --lay --outside "$W13")"
+echo "$F13L" | sed -n '/laid on/,$p' | sed 's/^/    | /'
+says "five laid, not the face again" "laid on $L13: 5 walls" "$F13L"
+says "the one not laid is named, and what to say" "say --take" "$F13L"
+python3 - "$T" "$J13" <<PY13B
+import sys
+sys.path.insert(0, sys.argv[1])
+from said import *
+walls = wall_lines(sys.argv[2])
+check("walls in the saved job", len(walls), 5, 0, "walls")
+xs = sorted(round((w["line"]["value"][0][0]) * 12) for w in walls.values() if abs(w["line"]["value"][0][0] - w["line"]["value"][1][0]) < 0.01)
+print("    north-south walls laid, east of the west corner, in inches:", xs)
+assert not any(10 * 12 + 4 < x < 11 * 12 for x in xs), "a wall is laid beside the partition"
+done()
+PY13B
+
+echo
+echo "== Step 14 (call 183, 2). What is found beyond a wall with no way to it is in doubt and said: a mirror's room, a neighbour's wall through glass =="
+scene "$T/mirror.ply" mirror --density 100 --seed 1
+# By hand: a room 20 ft by 12 ft, 8 ft high, with a mirror on its east wall: the whole scan is again beyond that wall (east 20 to 40 ft). The room walked
+# has four walls, 20 + 12 + 20 + 12 = 64 LF. The mirror's south and north walls run on to 40 ft (they are cut at the east wall: 20 ft each beyond
+# it) and its west wall stands at 40 ft, 12 ft long. Four walls are the house; three are beyond the east wall with no way to it: in doubt, said,
+# not laid. Which side of the wall is the house is not in the scan (as much floor each side): the side the scan begins on, and that is said.
+J14="$T/m14.json"; L14="$(new_job "$J14")"
+W14="$(made "$("$P" type "$J14" wall "Existing outside wall" --thickness "6 in" --status Assumed --source "to be checked on site")")"
+F14="$("$P" find-walls "$J14" "$T/mirror.ply" --level "$L14")"
+echo "$F14" | sed -n '/walls found/,/squared/p' | sed 's/^/    | /'
+says "beyond a wall with no way to it" "in doubt: beyond wall" "$F14"
+says "no way to it" "with no way to it" "$F14"
+says "which side the house is on, said" "it is taken as the side the scan begins on" "$F14"
+python3 - "$T" <<PY14
+import re, sys
+sys.path.insert(0, sys.argv[1])
+from said import *
+said = """$F14"""
+w = walls_said(said)
+check("walls found (four, and three beyond)", len(w), 7, 0, "walls")
+check("in doubt", int(re.search(r"(\d+) of them in doubt", said)[1]), 3, 0, "walls")
+beyond = [x for x in w if min(x["from"][0], x["to"][0]) >= 20 * 12 - 3 and (x["long"] > 19 * 12 or abs(x["from"][0] - 40 * 12) < 3)]
+check("walls east of the east wall (their ends at 20 ft or more)", len(beyond), 3, 0, "walls")
+check("the longest of them, 20 ft", max(x["long"] for x in beyond), 20 * 12, 6)
+done()
+PY14
+F14L="$("$P" find-walls "$J14" "$T/mirror.ply" --level "$L14" --lay --outside "$W14")"
+echo "$F14L" | sed -n '/laid on/,$p' | sed 's/^/    | /'
+says "four laid, not the room beyond" "laid on $L14: 4 walls" "$F14L"
+python3 - "$T" "$J14" <<PY14B
+import math, sys
+sys.path.insert(0, sys.argv[1])
+from said import *
+walls = wall_lines(sys.argv[2])
+lf = sum(math.hypot(w["line"]["value"][1][0] - w["line"]["value"][0][0], w["line"]["value"][1][1] - w["line"]["value"][0][1]) for w in walls.values())
+check("laid, the centre lines of the room's four walls (hand: faces 64 LF, each wall's centre 3 in outside its face: 2 x 20.5 + 2 x 12.5 = 66)", lf, 66.0, 2.0, "ft")
+done()
+PY14B
+
+scene "$T/neighbour.ply" neighbor --density 100 --seed 1
+# By hand: a room 20 ft by 12 ft, 8 ft high, a window 5 ft wide (sill 3 ft, head 7 ft) in the east wall and, 10 ft outside the glass, a neighbour's wall seen
+# through it: 5 ft of it, 3 to 7 ft up. Four walls and the window are the house. The neighbour's wall is beyond the east wall, which has a window and no
+# doorway: said ("beyond wall ... with no way to it"), and not among what stood short in the room.
+J14N="$T/n14.json"; L14N="$(new_job "$J14N")"
+F14N="$("$P" find-walls "$J14N" "$T/neighbour.ply" --level "$L14N")"
+echo "$F14N" | sed -n '/walls found/,$p' | sed 's/^/    | /'
+says "the neighbour's wall is said to be beyond" "is beyond wall" "$F14N"
+says "and not counted among what stood short" "nothing stood short of the ceiling" "$F14N"
+python3 - "$T" <<PY14C
+import re, sys
+sys.path.insert(0, sys.argv[1])
+from said import *
+said = """$F14N"""
+w = walls_said(said)
+check("walls found", len(w), 4, 0, "walls")
+win = [x for ww in w for x in ww["windows"]]
+check("windows", len(win), 1, 0, "windows"); check("the window's width", win[0]["wide"], 60, 3); check("its sill", win[0]["sill"], 36, 2); check("its head", win[0]["head"], 84, 2)
+m = re.search(r"something (\d+)' (\d+)\" high, at " + LEN + " east", said)
+assert m, said
+check("the neighbour's wall, how high", int(m[1]) * 12 + int(m[2]), 7 * 12, 4); check("how far east", inches(m[3]), 30 * 12, 6)
+done()
+PY14C
+
+echo
+echo "== Step 15 (call 183, 4). A short wall with a door in it is found; every stretch left out is said with where it is, and where it leaves the room open =="
+scene "$T/stub.ply" stub --density 100
+# By hand: a room 20 ft by 12 ft, 8 ft high; across its east end a partition 4 1/2 in thick, 4 ft long (east 16 to 20 ft, 6 ft north), with a doorway
+# 2 ft 6 in wide 1 ft from its west end, head 6 ft 8 in. Its pieces are a jamb of 1 ft, a head across, and a jamb of 6 in: a wall with a door in it. Five
+# walls: the four outside and the partition (4 ft long, 4 1/2 in thick, one doorway 2 ft 6 in wide from 1 ft along it, head 6 ft 8 in). Its west end is free:
+# the walls found do not close there.
+J15="$T/s15.json"; L15="$(new_job "$J15")"
+F15="$("$P" find-walls "$J15" "$T/stub.ply" --level "$L15")"
+echo "$F15" | sed -n '/walls found/,/squared/p' | sed 's/^/    | /'
+python3 - "$T" <<PY15
+import re, sys
+sys.path.insert(0, sys.argv[1])
+from said import *
+said = """$F15"""
+w = walls_said(said)
+check("walls found (the four outside and the short wall)", len(w), 5, 0, "walls")
+stub = [x for x in w if x["thick"] is not None]
+assert len(stub) == 1, w
+check("the short wall's length", stub[0]["long"], 4 * 12, 4); check("its thickness", stub[0]["thick"], 4.5, 0.5)
+assert len(stub[0]["doors"]) == 1, stub[0]
+d = stub[0]["doors"][0]
+check("its doorway's width", d["wide"], 30, 3); check("where the doorway begins", d["from"], 12, 3); check("its head", d["head"], 80, 2)
+done()
+PY15
+
+scene "$T/stubx.ply" stubx --density 100
+# By hand: a room 20 ft by 12 ft, 8 ft high; a partition 4 1/2 in thick, 4 ft long, going north from the south wall at 10 ft east; at its free end a face 1 ft 6 in
+# long across it (east 10 to 11 ft 6 in, 4 ft north), floor to ceiling. Five walls found. The face is under 2 ft: left out, and said with where it is (from about
+# 10 ft east, 4 ft north to 11 ft 6 in east) and how long (1 ft 6 in, to 3 in). The partition's north end meets nothing: said, and said that the stretch left out lies there.
+J15B="$T/s15b.json"; L15B="$(new_job "$J15B")"
+F15B="$("$P" find-walls "$J15B" "$T/stubx.ply" --level "$L15B")"
+echo "$F15B" | sed -n '1,/walls found/p;/do not close/,/squared/p' | sed 's/^/    | /'
+says "a stretch left out is said with where it is" "a stretch of upright points" "$F15B"
+says "and why" "not taken as walls: under 2 ft long (a wall is at least 2 ft long)" "$F15B"
+says "where it leaves the room open, said" "leaving it out leaves the rooms either side open to one another" "$F15B"
+python3 - "$T" <<PY15B
+import re, sys
+sys.path.insert(0, sys.argv[1])
+from said import *
+said = """$F15B"""
+check("walls found (the four outside and the partition)", len(walls_said(said)), 5, 0, "walls")
+m = re.search(r"a stretch of upright points " + LEN + " long, from " + LEN + " east, " + LEN + " north to " + LEN + " east, " + LEN + " north, not taken as walls: under 2 ft", said)
+assert m, said
+check("how long", inches(m[1]), 18, 4); check("where it begins, east", min(inches(m[2]), inches(m[4])), 10 * 12, 4); check("where it ends, east", max(inches(m[2]), inches(m[4])), 11.5 * 12, 4); check("north", inches(m[3]), 4 * 12, 3)
+done()
+PY15B
+
+echo
+echo "== Step 16 (call 183, 3). A soffit over cabinets, and a face that meets no wall at either end: in doubt, said, never laid on the scan's word =="
+scene "$T/soffit.ply" soffit2 --density 100
+# By hand: a room 20 ft by 12 ft, 8 ft high; along the whole north wall base cabinets 3 ft high and 2 ft deep with a soffit over them from 7 to 8 ft in the plane of
+# their front (10 ft north), wall to wall. The wall behind (12 ft north) is seen only between 3 and 7 ft up. The face at 10 ft north is 20 ft long, reaches the
+# floor (the cabinets) and the ceiling (the soffit), with nothing between 3 and 7 ft and a wall behind that: the top of what stands, not a wall: in doubt, laid
+# only on the person's word. The south, west and east walls are laid (the west and east stop at the face, 11 ft 10 in): 3 walls; the north ends meet nothing: said.
+J16="$T/f16.json"; L16="$(new_job "$J16")"
+W16="$(made "$("$P" type "$J16" wall "Existing outside wall" --thickness "6 in" --status Assumed --source "to be checked on site")")"
+F16="$("$P" find-walls "$J16" "$T/soffit.ply" --level "$L16")"
+echo "$F16" | sed -n '/walls found/,/squared/p' | sed 's/^/    | /'
+says "the face is in doubt, as base cabinets and a soffit" "such as base cabinets and a soffit, and not a wall" "$F16"
+says "the hole said, 3 ft 3 in to 7 ft up" "(3' 3\" to 7' 0\" up)" "$F16"
+python3 - "$T" <<PY16
+import re, sys
+sys.path.insert(0, sys.argv[1])
+from said import *
+said = """$F16"""
+w = walls_said(said)
+check("walls found", len(w), 4, 0, "walls"); check("in doubt", int(re.search(r"(\d+) of them in doubt", said)[1]), 1, 0, "walls")
+face = [x for x in w if abs(x["from"][1] - 120) < 3 and abs(x["to"][1] - 120) < 3]
+assert len(face) == 1, w
+check("the face, 10 ft north", face[0]["from"][1], 120, 2); check("its length", face[0]["long"], 240, 6)
+check("the open ends said", int(re.search(r"do not close: (\d+) ends", said)[1]), 2, 0, "ends")
+done()
+PY16
+F16L="$("$P" find-walls "$J16" "$T/soffit.ply" --level "$L16" --lay --outside "$W16")"
+says "three laid, not the face" "laid on $L16: 3 walls" "$F16L"
+says "the word the person must give" "say --take" "$F16L"
+
+scene "$T/free.ply" freestand --density 100
+# By hand: a room 20 ft by 12 ft, 8 ft high with, in the middle of it, a face of one side 6 ft long (east 7 to 13, 6 ft north), floor to ceiling, nearest wall 6 ft away. Four walls
+# are the house. The face meets no wall at either end, with nothing standing behind it: in doubt, said, and not laid.
+J16B="$T/g16.json"; L16B="$(new_job "$J16B")"
+W16B="$(made "$("$P" type "$J16B" wall "Existing outside wall" --thickness "6 in" --status Assumed --source "to be checked on site")")"
+F16B="$("$P" find-walls "$J16B" "$T/free.ply" --level "$L16B")"
+echo "$F16B" | sed -n '/walls found/,/squared/p' | sed 's/^/    | /'
+says "a face that meets no wall is in doubt" "meets no wall at either end: a wall seen from one side that stops in the room, or the front of something tall standing in it" "$F16B"
+python3 - "$T" <<PY16B
+import re, sys
+sys.path.insert(0, sys.argv[1])
+from said import *
+said = """$F16B"""
+w = walls_said(said)
+check("walls found", len(w), 5, 0, "walls"); check("in doubt", int(re.search(r"(\d+) of them in doubt", said)[1]), 1, 0, "walls")
+face = [x for x in w if abs(x["from"][1] - 72) < 3 and abs(x["to"][1] - 72) < 3 and x["long"] < 8 * 12]
+assert len(face) == 1, w
+check("the face's length", face[0]["long"], 72, 6)
+done()
+PY16B
+F16BL="$("$P" find-walls "$J16B" "$T/free.ply" --level "$L16B" --lay --outside "$W16B")"
+says "four laid, not the face" "laid on $L16B: 4 walls" "$F16BL"
+
+echo
+echo "== Step 17 (call 183, 5). A wall that is mostly opening is a wall with an opening; a curved face is said to be curved, with its length, and is not laid =="
+scene "$T/garage.ply" garage --density 100
+# By hand: a garage 24 ft by 22 ft, 9 ft high; in its south wall a door 16 ft wide (east 4 to 20 ft, head 7 ft), in its east wall one 8 ft wide (north 6 to 14 ft, head 7 ft).
+# The south wall stands 8 ft of its 24 (a jamb of 4 ft each side) with a head across: a wall with an opening, not "something hung from the ceiling". Four walls, two openings
+# 16 ft and 8 ft wide, head 7 ft, and the walls close.
+J17="$T/g17.json"; L17="$(new_job "$J17")"
+F17="$("$P" find-walls "$J17" "$T/garage.ply" --level "$L17")"
+echo "$F17" | sed -n '/walls found/,/squared/p' | sed 's/^/    | /'
+python3 - "$T" <<PY17
+import re, sys
+sys.path.insert(0, sys.argv[1])
+from said import *
+said = """$F17"""
+w = walls_said(said)
+check("walls found", len(w), 4, 0, "walls")
+doors = sorted((d for x in w for d in x["doors"]), key=lambda d: d["wide"])
+check("openings", len(doors), 2, 0, "openings")
+check("the narrower, 8 ft", doors[0]["wide"], 96, 4); check("the wider, 16 ft", doors[1]["wide"], 192, 5)
+check("their head", doors[1]["head"], 84, 2); check("their head", doors[0]["head"], 84, 2)
+assert "the walls found close: every end meets another wall" in said, said
+assert "reaches the ceiling and not the floor" not in said, said
+done()
+PY17
+
+scene "$T/curved.ply" curved --density 100 --seed 1
+# By hand: a room 20 ft by 12 ft, 8 ft high with a curved wall across its northwest corner: a quarter circle of 8 ft radius about (0, 12 ft north), from the west wall (at 4 ft north) to
+# the north wall (at 8 ft east), 4 1/2 in thick. Its centre line is 8 x pi / 2 = 12.57 ft long (12 ft 7 in). The four outside walls are walls; the curve is not found as walls: it is said to
+# be curved (radius about 8 ft, length about 12 ft 7 in) and is not laid; no chord of it is laid.
+J17B="$T/c17.json"; L17B="$(new_job "$J17B")"
+W17B="$(made "$("$P" type "$J17B" wall "Existing outside wall" --thickness "6 in" --status Assumed --source "to be checked on site")")"
+F17B="$("$P" find-walls "$J17B" "$T/curved.ply" --level "$L17B")"
+echo "$F17B" | sed -n '1,/walls found/p' | sed 's/^/    | /'
+says "a curved face is said to be curved" "a curved face of radius" "$F17B"
+says "and not found as walls" "curved walls are not found, so it is not laid" "$F17B"
+python3 - "$T" <<PY17B
+import re, sys
+sys.path.insert(0, sys.argv[1])
+from said import *
+said = """$F17B"""
+m = re.search(r"a curved face of radius " + LEN + ", about " + LEN + " long", said)
+assert m, said
+check("the curve's radius", inches(m[1]), 8 * 12, 14); check("its length", inches(m[2]), 12.57 * 12, 20)
+done()
+PY17B
+F17BL="$("$P" find-walls "$J17B" "$T/curved.ply" --level "$L17B" --lay --outside "$W17B")"
+says "only the four outside walls are laid" "laid on $L17B: 4 walls" "$F17BL"
+
+echo
+echo "== Step 18 (call 183, 8). Two levels in one scan are said, and found one at a time: the level asked for, by its floor =="
+scene "$T/storey.ply" storey --density 100 --seed 1
+# By hand: a room 24 ft by 12 ft; the lower floor at 0 and its ceiling at 8 ft, the upper floor at 9 ft 3 in and its ceiling at 17 ft 3 in. In the south wall a door below
+# (east 10 to 13 ft, head 6 ft 8 in) and a door above (east 4 to 7 ft, head 6 ft 8 in over the upper floor). The scan holds two levels: floors at 0' 0" and 9' 3", said. Each level
+# is found alone: four walls each; the lower has its door 3 ft wide; the upper, asked for by its level (elevation 9 ft 3 in), has its own door, 3 ft wide from 4 ft, head 6 ft 8 in,
+# and no window with its sill at 9 ft 3 in. Nothing is said to be not likely the house (it reads 8 ft from floor to ceiling).
+J18="$T/s18.json"; "$P" new "$J18" "A scanned house (not a real job)" >/dev/null
+L18G="$(made "$("$P" level "$J18" ground --elevation "0 ft" --height "8 ft" --status Assumed --source "to be checked on site")")"
+L18U="$(made "$("$P" level "$J18" upper --elevation "9 ft 3 in" --height "8 ft" --status Assumed --source "to be checked on site")")"
+F18G="$("$P" find-walls "$J18" "$T/storey.ply" --level "$L18G")"
+F18U="$("$P" find-walls "$J18" "$T/storey.ply" --level "$L18U")"
+echo "$F18U" | sed -n '1,/walls found/p' | sed 's/^/    | /'
+says "the two levels are said" "the scan holds 2 levels: floors at 0' 0\" and 9' 3\"" "$F18G"
+! grep -q "not likely the house" <<<"$F18G$F18U" || { echo "FAIL: two levels read as a house that is not likely"; exit 1; }
+python3 - "$T" <<PY18
+import re, sys
+sys.path.insert(0, sys.argv[1])
+from said import *
+for name, said, door_from in (("lower", """$F18G""", 10 * 12), ("upper", """$F18U""", 4 * 12)):
+    w = walls_said(said)
+    check(name + ": walls found", len(w), 4, 0, "walls")
+    doors = [d for x in w for d in x["doors"]]; wins = [d for x in w for d in x["windows"]]
+    check(name + ": doorways", len(doors), 1, 0, "doorways"); check(name + ": windows", len(wins), 0, 0, "windows")
+    check(name + ": the doorway's width", doors[0]["wide"], 36, 3); check(name + ": where it begins", doors[0]["from"], door_from, 4); check(name + ": its head", doors[0]["head"], 80, 3)
+    assert re.search(r"the level found is the one whose floor is at " + ("0' 0\"" if name == "lower" else "9' 3\""), said), said
+done()
+PY18
+
+echo
+echo "== Step 19 (call 183, 6). A flat ceiling is not said to slope or to be two heights; a small closet's walls are as high as its ceiling =="
+for SEED in 1 3 4; do
+  scene "$T/closet$SEED.ply" closet6 --density 100 --seed "$SEED"
+  # By hand: a closet 6 ft by 3 ft, 8 ft high, a flat ceiling. Four walls, each 8 ft (96 in) high. No word of a slope, of two heights, or of the ceiling not being one height.
+  JC="$T/cl$SEED.json"; LC="$(new_job "$JC")"
+  WC="$(made "$("$P" type "$JC" wall "Existing outside wall" --thickness "6 in" --status Assumed --source "to be checked on site")")"
+  FC="$("$P" find-walls "$JC" "$T/closet$SEED.ply" --level "$LC" --lay --outside "$WC")"
+  ! grep -qE "slopes|not one height" <<<"$FC" || { echo "FAIL: seed $SEED: said of a flat ceiling:"; echo "$FC" | grep -E "slopes|not one height"; exit 1; }
+  says "seed $SEED: four walls laid" "laid on $LC: 4 walls" "$FC"
+  python3 - "$T" "$JC" "$SEED" <<PY19
+import sys
+sys.path.insert(0, sys.argv[1])
+from said import *
+walls = wall_lines(sys.argv[2])
+assert len(walls) == 4, walls
+for p, w in walls.items():
+    check("seed " + sys.argv[3] + ": a wall's height", w["height"]["value"], 96, 1)
+done()
+PY19
+done
+
+echo
+echo "== Step 20 (call 183, 7). How thick the scan is, place by place: a part ten times thinner is said by where, and read by its own thickness =="
+scene "$T/dens.ply" dens --density 100 --seed 1
+# By hand: a house 40 ft by 14 ft, 8 ft high; a partition 4 1/2 in thick at 20 ft east; the west 20 ft scanned at 100 points to the square foot and the east 20 ft at 10.
+# Five walls: the south and the north each one wall 40 ft long, the east and west walls 14 ft, the partition 4 1/2 in. The walls close. The scan is said to be about 100 to the
+# square foot in one part and about 10 in the other, with where: the floor is read in blocks of 8 ft, so the thin part, which begins at 20 ft east, is said to begin at 16 or at
+# 24 ft east, and to run to 40 ft east.
+JD="$T/d20.json"; LD="$(new_job "$JD")"
+FD="$("$P" find-walls "$JD" "$T/dens.ply" --level "$LD")"
+echo "$FD" | sed -n '/not as thick everywhere/p;/walls found/,/squared/p' | sed 's/^/    | /'
+says "the scan is said to be uneven, with where" "the scan is not as thick everywhere: about " "$FD"
+python3 - "$T" <<PY20A
+import re, sys
+sys.path.insert(0, sys.argv[1])
+from said import *
+said = """$FD"""
+m = re.search(r"and about \d+ points to the square foot from (\d+)' 0\" east, 0' 0\" north to 40' 0\" east, 16' 0\" north", said)
+assert m, said
+check("where the thinner part begins, east (hand 20 ft, in blocks of 8 ft)", int(m[1]) * 12, 20 * 12, 4 * 12)
+done()
+PY20A
+says "read by parts, and joined" "each part is read by its own thickness and what each finds is joined" "$FD"
+python3 - "$T" <<PY20
+import re, sys
+sys.path.insert(0, sys.argv[1])
+from said import *
+said = """$FD"""
+w = walls_said(said)
+check("walls found", len(w), 5, 0, "walls")
+check("walls of 40 ft (the south and the north, each whole)", len([x for x in w if abs(x["long"] - 480) < 12]), 2, 0, "walls")
+part = [x for x in w if x["thick"] is not None]
+assert len(part) == 1, w
+check("the partition's thickness", part[0]["thick"], 4.5, 0.5)
+assert "the walls found close: every end meets another wall" in said, said
+m = re.findall(r"about (\d+) points to the square foot from", said)
+assert len(m) == 2, said
+check("how thick the thicker part is", int(m[0]), 100, 20); check("how thick the thinner part is", int(m[1]), 10, 4)
+done()
+PY20
+
 echo
 echo "PASS: walls, doors, windows and what stands short found in a scan, said in full and laid on the word, to the figures worked by hand"

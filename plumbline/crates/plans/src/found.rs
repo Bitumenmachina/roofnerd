@@ -31,7 +31,7 @@
 use crate::scan::Scan;
 use std::collections::{HashMap, HashSet};
 
-type P2 = [f64; 2];
+pub(crate) type P2 = [f64; 2];
 
 // ---- the measures: each a choice where the call (173) gave none, named and said why ----
 
@@ -87,7 +87,7 @@ const SHORT_FACE: f64 = 1.0;
 /// A face is at least this long (call 173), and a gap this long or more in the points
 /// along a line ends the face (the least opening, so that a doorway is inside a wall and
 /// not between two).
-const MIN_FACE: f64 = 2.0;
+pub(crate) const MIN_FACE: f64 = 2.0;
 const GAP: f64 = 1.5;
 /// The floor's and the ceiling's own scatter, set aside: no wall's point is taken from
 /// the lowest or the highest 3 in.
@@ -106,12 +106,12 @@ const SOME_REACHES_CEILING: f64 = 0.3;
 const SQUARE_DEGREES: f64 = 1.0;
 /// Parallel, for two faces of one wall: within 1 degree; apart 2 in to 16 in; side by
 /// side for at least this much of their length.
-const PAIR_DEGREES: f64 = 1.0;
-const PAIR_LEAST: f64 = 2.0 / 12.0;
-const PAIR_MOST: f64 = 16.0 / 12.0;
+pub(crate) const PAIR_DEGREES: f64 = 1.0;
+pub(crate) const PAIR_LEAST: f64 = 2.0 / 12.0;
+pub(crate) const PAIR_MOST: f64 = 16.0 / 12.0;
 /// ... and up to this far apart where no floor is seen between them (call 179, A6): of the floor a gap would
 /// show, less than this share is seen, not counting 3 in each side of it.
-const PAIR_MOST_BARE: f64 = 24.0 / 12.0;
+pub(crate) const PAIR_MOST_BARE: f64 = 24.0 / 12.0;
 const FLOOR_BETWEEN: f64 = 0.1;
 const FLOOR_MARGIN: f64 = 0.25;
 const PAIR_ALONGSIDE: f64 = MIN_FACE;
@@ -131,13 +131,17 @@ const SNAP: f64 = 0.5;
 /// Openings within this of one another in width and in head are one type (call 179, A9): an inch.
 const ONE_TYPE: f64 = 1.0 / 12.0;
 /// A found wall's end is carried to another's line where it comes within this of it (call 173).
-const CORNER: f64 = 1.0;
+pub(crate) const CORNER: f64 = 1.0;
 /// Two walls this nearly parallel (sine of the angle between) do not meet at a corner.
 const NOT_PARALLEL: f64 = 0.5;
 /// How far from its end the solid of an edge is looked at to count its density, and how
 /// far the edge is expected to lie from the first empty square: see `edge`.
 const EDGE_BACK: f64 = 0.4;
 const EDGE_LOOK: f64 = 0.5;
+/// The count puts an edge no further than the farthest point counted, unless the solid there is no thicker than where the density was counted: where
+/// what is counted is more than this many times as thick (and this much over, in feet), the count says only that the solid changed (see `edge`).
+const EDGE_THICKER: f64 = 1.5;
+const EDGE_OVERSHOOT: f64 = 0.1;
 /// The foot of a wall nearest its end is not counted for the density of an edge: the
 /// points of a wall that crosses it were taken off there.
 const NEAR_END: f64 = 0.3;
@@ -152,9 +156,41 @@ const SEEN_FLOOR_CELLS: usize = 5;
 /// floor nearest a wall is not counted, for the wall's own base scatters into it).
 const SEEN_SHARE: usize = 3;
 const SEEN_REACH: f64 = 6.0;
+/// A cell of the scan's floor is floor, and not the foot of a wall, where it holds this share of the points the middling cell holds
+/// (a wall's foot, 3 in high, holds a quarter of what a foot of floor does or less).
+const FLOOR_LIKE: f64 = 0.3;
 /// A wall face stands behind a face, for the face to be "a wall or something tall standing at the
 /// wall", when it lies this far behind it or nearer, on the side the scan did not see it from (call 179, A3).
 const BEHIND: f64 = 3.0;
+/// How far from a crossing wall's line a column of a face is inside that wall's body: half the thickest wall (a foot) is generous; a quarter of a
+/// foot would miss the band the finder takes off at a corner (BAND + 0.05, 0.2 ft); this is a little over that (call 183, 4).
+/// A stretch left out lies at a wall's open end when it comes within this of it (two corners).
+pub const LEFT_NEAR: f64 = 2.0 * CORNER;
+const CORNER_BODY: f64 = 0.35;
+/// A curved face (call 183, 5): the pieces of upright points are looked at in cells of 0.3 ft; a piece of at least 5 ft that lies 0.2 ft or more off its
+/// straight line, whose circle fit is at least three times as close (and CURVE_FIT is that share), of a radius from 2 ft 6 in to 80 ft over an arc of 30 to 270 degrees.
+const CURVE_CELL: f64 = 0.3;
+/// Points left over before a piece is looked at, and how long a wall may be to be taken of a curve (a chord of 4 ft; a bay's walls are as long, but leave nothing over).
+const CURVE_LEFTOVER: usize = 60;
+const CURVE_CHORD: f64 = 8.0;
+const CURVE_LEAST: f64 = 5.0;
+const CURVE_OFF: f64 = 0.2;
+const CURVE_FIT: f64 = 0.34;
+/// A face lies on a curve where its ends and its middle are this near its circle (the circle is fitted through both faces of a wall 4 1/2 in thick and through
+/// the chords, which lie a quarter foot in at their middles; a foot's width in all is generous) and within the arc it runs over, and 10 degrees more.
+const CURVE_ON: f64 = 0.8;
+const CURVE_ARC_SLACK: f64 = 0.17;
+const CURVE_RADIUS: (f64, f64) = (2.5, 80.0);
+const CURVE_ARC: (f64, f64) = (30.0, 270.0);
+/// A hole in a face (call 183, 3): a stretch of its height this high or more (2 ft) with points above it and below it, over this share of its length, with
+/// this share of the points a surface would show standing behind the hole (a surface behind shows all of them; the stray and the scatter, none).
+const HOLE_HIGH: f64 = 2.0;
+const HOLE_SHARE: f64 = 0.6;
+const HOLE_BACKED: f64 = 0.3;
+/// The tiers of height a column is looked at in.
+const HOLE_TIER: f64 = 0.25;
+/// A wall with an opening in it has a piece that reaches the floor at each end at least this long (a jamb: the 6 in a door's casing leaves).
+const END_PIECE: f64 = 0.5;
 /// Something stands before a gap in a wall, for it to be hidden and not open, along at least this
 /// share of the gap (call 179, A2).
 const STANDS_ALONG: f64 = 0.9;
@@ -176,6 +212,10 @@ const CEIL_FLAT: f64 = 0.25;
 const CEIL_STEP: f64 = 0.4;
 /// A group of heights is a ceiling of its own where it is this share of the whole.
 const CEIL_GROUP: f64 = 0.05;
+/// A plane through the cells' heights is a slope where it leaves less than this share of the scatter a flat leaves (and rises by more than the flat's own scatter, 3 in).
+const SLOPE_BETTER: f64 = 0.5;
+/// A cell of ceiling is a surface where its points fill at least this share of the nine parts of the cell (call 183, 6).
+const CEIL_FILL: f64 = 0.8;
 /// How far out from a wall, each side, the ceiling over it is looked at.
 const CEIL_OUT: f64 = 1.5;
 
@@ -217,6 +257,14 @@ impl Ceil {
         }
         self.middle
     }
+    /// Whether the ceiling was read near a place (a cell of it within a cell either way), or is one height everywhere.
+    fn reads(&self, p: P2) -> bool {
+        if self.flat.is_some() {
+            return true;
+        }
+        let (cx, cy) = ((p[0] / self.side).floor() as i64, (p[1] / self.side).floor() as i64);
+        (-1..=1).any(|dx| (-1..=1).any(|dy| self.cells.contains_key(&(cx + dx, cy + dy))))
+    }
     /// The ceiling over a wall at `p` whose normal is `n`: the lower of what is over either side of it.
     fn over(&self, p: P2, n: P2) -> f64 {
         if let Some(h) = self.flat {
@@ -232,12 +280,14 @@ fn ceiling_of(scan: &Scan, floor: f64, scan_ceiling: Option<f64>, rho: Option<f6
     let key = |p: &[f64; 3]| ((p[0] / side).floor() as i64, (p[1] / side).floor() as i64);
     // (sorted by cell, then taken cell by cell: a map with a list for each cell costs more than this on a
     // scan of a few hundred thousand points)
-    let mut high: Vec<((i64, i64), f32)> = Vec::new();
+    let mut high: Vec<((i64, i64), f32, u8)> = Vec::new();
     let mut low: Vec<(i64, i64)> = Vec::new();
     for p in &scan.points {
         let z = p[2] - floor;
         if z >= LEAST_CEILING && z <= 30.0 {
-            high.push((key(p), z as f32));
+            // Which ninth of its cell the point is in (3 by 3): a ceiling fills the cell, the foot of two walls at a corner does not.
+            let (fx, fy) = (p[0] / side - (p[0] / side).floor(), p[1] / side - (p[1] / side).floor());
+            high.push((key(p), z as f32, (((fx * 3.0) as u8).min(2)) * 3 + ((fy * 3.0) as u8).min(2)));
         } else if z.abs() <= SET_ASIDE {
             low.push(key(p));
         }
@@ -250,15 +300,21 @@ fn ceiling_of(scan: &Scan, floor: f64, scan_ceiling: Option<f64>, rho: Option<f6
     let mut cells: HashMap<(i64, i64), f64> = HashMap::new();
     for run in high.chunk_by(|a, b| a.0 == b.0) {
         let mut bins = vec![0u32; 300];
-        for (_, z) in run {
+        for (_, z, _) in run {
             bins[(((f64::from(*z) - LEAST_CEILING) / 0.1) as usize).min(299)] += 1;
         }
         // The highest half foot with as many points in it as a surface would hold.
         let window = (0..295).rev().find(|b| f64::from(bins[*b..*b + 5].iter().sum::<u32>()) >= least);
         if let Some(b) = window {
             let lo = LEAST_CEILING + b as f64 * 0.1;
-            let inside: Vec<f64> = run.iter().map(|(_, z)| f64::from(*z)).filter(|z| *z >= lo && *z < lo + 0.5).collect();
-            cells.insert(run[0].0, inside.iter().sum::<f64>() / inside.len() as f64);
+            let mut filled = 0u16;
+            let inside: Vec<f64> = run.iter().filter(|(_, z, _)| f64::from(*z) >= lo && f64::from(*z) < lo + 0.5).map(|(_, z, sub)| { filled |= 1 << *sub; f64::from(*z) }).collect();
+            // A surface fills its cell (call 183, 6): the points of a wall's top, or two walls' at a corner, in the same half foot of height are not a ceiling.
+            if f64::from(filled.count_ones()) < CEIL_FILL * 9.0 {
+                continue;
+            }
+            // Its height is the middle of what is in the window, not the mean: what is above the ceiling or a wall's points below it, in the same window, do not move it.
+            cells.insert(run[0].0, median(inside));
         }
     }
     let covered = cells.keys().filter(|k| under.contains(*k)).count();
@@ -289,6 +345,28 @@ fn ceiling_of(scan: &Scan, floor: f64, scan_ceiling: Option<f64>, rho: Option<f6
         let names: Vec<String> = groups.iter().map(|g| tape(g[g.len() / 2])).collect();
         format!("the ceiling is not one height: {}; each wall is judged against the ceiling over it (a wall between two rooms, against the lower), and a wall that runs under both is laid at the height of the ceiling over its middle (the step in its top is not drawn)", names.join(" and "))
     } else {
+        // A slope is said only where the cells' heights fit a plane better than a flat by more than their scatter (call 183, 6).
+        let pts: Vec<(f64, f64, f64)> = cells.iter().map(|(k, h)| ((k.0 as f64 + 0.5) * side, (k.1 as f64 + 0.5) * side, *h)).collect();
+        let n = pts.len() as f64;
+        let (mx, my, mz) = (pts.iter().map(|p| p.0).sum::<f64>() / n, pts.iter().map(|p| p.1).sum::<f64>() / n, pts.iter().map(|p| p.2).sum::<f64>() / n);
+        let (mut sxx, mut sxy, mut syy, mut sxz, mut syz) = (0.0, 0.0, 0.0, 0.0, 0.0);
+        for p in &pts {
+            let (x, y, z) = (p.0 - mx, p.1 - my, p.2 - mz);
+            sxx += x * x;
+            sxy += x * y;
+            syy += y * y;
+            sxz += x * z;
+            syz += y * z;
+        }
+        let det = sxx * syy - sxy * sxy;
+        let (a, b) = if det.abs() > 1e-9 { ((sxz * syy - syz * sxy) / det, (syz * sxx - sxz * sxy) / det) } else { (0.0, 0.0) };
+        let flat_rms = (pts.iter().map(|p| (p.2 - middle).powi(2)).sum::<f64>() / n).sqrt();
+        let plane_rms = (pts.iter().map(|p| (p.2 - mz - a * (p.0 - mx) - b * (p.1 - my)).powi(2)).sum::<f64>() / n).sqrt();
+        let rise = pts.iter().map(|p| a * (p.0 - mx) + b * (p.1 - my)).fold(f64::MIN, f64::max) - pts.iter().map(|p| a * (p.0 - mx) + b * (p.1 - my)).fold(f64::MAX, f64::min);
+        if plane_rms > SLOPE_BETTER * flat_rms || rise < CEIL_FLAT {
+            // Neither one height, nor two, nor a slope the points fit: the ceiling is not told here; the scan's own is used, and that is said.
+            return (scan_ceiling.map(|c| Ceil { flat: Some(c - floor), cells: HashMap::new(), side, middle: c - floor, lowest: c - floor, highest: c - floor }), Some("the ceiling's heights vary more than one height, two, or a slope can say: the scan's own floor to ceiling is used for every wall".to_string()));
+        }
         format!("the ceiling slopes, from {} to {}; a wall under it is judged against the ceiling over it and laid at the height of the ceiling over its middle (its sloped top is not drawn)", tape(hs[0]), tape(hs[hs.len() - 1]))
     };
     (Some(Ceil { flat: None, cells, side, middle, lowest: hs[0], highest: hs[hs.len() - 1] }), Some(note))
@@ -351,6 +429,8 @@ pub struct Wall {
     pub doubt: Option<String>,
     /// How high the ceiling over it is, above the floor; None where it was not told.
     pub height: Option<f64>,
+    /// The ceiling was not read over it (no cell of ceiling points near, where the ceiling is not one height): its height is the house's middle one (call 183, 6).
+    pub ceiling_not_read: bool,
 }
 
 impl Wall {
@@ -386,6 +466,29 @@ pub struct Thing {
     pub at: P2,
 }
 
+/// A stretch of upright points that was not taken as a wall, with where it is (call 183, 4).
+#[derive(Clone, Debug)]
+pub struct Left {
+    pub from: P2,
+    pub to: P2,
+    /// Why, in a builder's words.
+    pub why: String,
+}
+
+/// A curved face found (call 183, 5): said, never laid.
+#[derive(Clone, Debug)]
+pub struct Curve {
+    pub from: P2,
+    pub to: P2,
+    pub centre: P2,
+    pub radius: f64,
+    /// Along the arc, in feet.
+    pub length: f64,
+    /// The middle of the arc as an angle about its centre, and how far either way it runs (radians).
+    pub mid: f64,
+    pub span: (f64, f64),
+}
+
 /// What was found.
 #[derive(Clone, Debug, Default)]
 pub struct Found {
@@ -416,9 +519,31 @@ pub struct Found {
     pub thin_note: Option<String>,
     /// Where the ceiling is not one height (two, or a slope): said, with what is done about it.
     pub ceiling_note: Option<String>,
+    /// The floors of the levels the scan holds, above the lowest (call 183, 8); empty where it holds one. Which of them was found, and what is said of it.
+    pub levels: Vec<f64>,
+    pub level_found: Option<usize>,
+    pub level_note: Option<String>,
+    /// The scan is thicker in one part than another: what is said of it, with where (call 183, 7).
+    pub zone_note: Option<String>,
+    /// Each stretch of upright points left out, with where it is, how long and why (call 183, 4); `left_out` says them in words.
+    pub left: Vec<Left>,
+    /// Curved faces: said, and not laid (curved walls are not found).
+    pub curves: Vec<Curve>,
+    /// The faces counted as standing short (furniture, cabinets), with where each is: said only where one lies at a wall's open end, for it
+    /// may be a wall that was not told (call 183, 4).
+    pub stood: Vec<Left>,
+    /// What stood beyond a wall with no way to it (call 183, 2), taken out of what stood short: each said.
+    pub beyond_things: Vec<String>,
+    /// Which floor is the house, where that is a choice (call 183, 2).
+    pub beyond_note: Option<String>,
 }
 
 impl Found {
+    /// The stretches left out that lie within `reach` of a place on the plan (call 183, 4: where leaving one out leaves a wall's end open).
+    pub fn left_near(&self, p: P2, reach: f64) -> Vec<&Left> {
+        self.left.iter().chain(self.stood.iter()).filter(|l| distance_to(p, l.from, l.to) <= reach).collect()
+    }
+
     pub fn tallest(&self) -> Option<f64> {
         self.things.iter().map(|t| t.height).fold(None, |a, h| Some(a.map_or(h, |a: f64| a.max(h))))
     }
@@ -432,7 +557,7 @@ fn dir(theta: f64) -> P2 {
 fn normal(theta: f64) -> P2 {
     [-theta.sin(), theta.cos()]
 }
-fn dot(a: P2, b: P2) -> f64 {
+pub(crate) fn dot(a: P2, b: P2) -> f64 {
     a[0] * b[0] + a[1] * b[1]
 }
 
@@ -484,6 +609,14 @@ impl Face {
     }
 }
 
+/// Where the two ends of `f` lie along the direction `d` (a line's own way, which may be the other way round from `f`'s: both are one line
+/// to a degree), the lesser first (call 183: two faces of one wall found running opposite ways were laid over one another mirrored, and an opening
+/// in the wall was filled by the other face's points).
+fn along_span(f: &Face, d: P2) -> (f64, f64) {
+    let (a, b) = (dot(f.at(f.s0), d), dot(f.at(f.s1), d));
+    (a.min(b), a.max(b))
+}
+
 fn median(mut v: Vec<f64>) -> f64 {
     if v.is_empty() {
         return 0.0;
@@ -506,18 +639,23 @@ fn edge(v: &[f64], x0: f64, up: bool, room: f64, hollow_end: f64) -> Option<f64>
     if look < 0.2 {
         return None;
     }
-    let (dense, between) = if up {
+    let (dense, between, reach) = if up {
         let back = (x0 - 1.0).max(hollow_end);
-        (v.iter().filter(|x| **x >= x0 && **x < x0 + look).count(), v.iter().filter(|x| **x >= back && **x < x0).count())
+        let between: Vec<f64> = v.iter().copied().filter(|x| *x >= back && *x < x0).collect();
+        (v.iter().filter(|x| **x >= x0 && **x < x0 + look).count(), between.len(), between.iter().copied().fold(f64::MAX, f64::min))
     } else {
         let back = (x0 + 1.0).min(hollow_end);
-        (v.iter().filter(|x| **x <= x0 && **x > x0 - look).count(), v.iter().filter(|x| **x <= back && **x > x0).count())
+        let between: Vec<f64> = v.iter().copied().filter(|x| *x <= back && *x > x0).collect();
+        (v.iter().filter(|x| **x <= x0 && **x > x0 - look).count(), between.len(), between.iter().copied().fold(f64::MIN, f64::max))
     };
     if dense < 5 {
         return None;
     }
     let density = dense as f64 / look;
-    let covered = between as f64 / density;
+    // The edge is not beyond the farthest point of what is counted: where the solid a little further in is thicker than where the density was
+    // counted (the jamb of a door beside its head, at a wall's end), the count would carry the edge feet past the last point (call 183, 4).
+    let (counted, extent) = (between as f64 / density, (reach - x0).abs());
+    let covered = if between > 0 && counted > EDGE_THICKER * extent + EDGE_OVERSHOOT { extent } else { counted };
     Some(if up { x0 - covered } else { x0 + covered })
 }
 
@@ -650,8 +788,8 @@ fn tall_at_a_wall(faces: &[Face], wall_ids: &[usize]) -> HashMap<usize, String> 
                 if dt.to_degrees() > PAIR_DEGREES || across <= 0.0 || across > BEHIND {
                     return None;
                 }
-                let shift = dot(g.at(g.mid()), dir(f.theta)) - g.mid();
-                Some((g.s0 + shift, g.s1 + shift, across))
+                let (b0, b1) = along_span(g, dir(f.theta));
+                Some((b0, b1, across))
             })
             .collect();
         let near = |e: f64| behind.iter().any(|b| e >= b.0 - BEHIND && e <= b.1 + BEHIND);
@@ -671,6 +809,217 @@ fn tall_at_a_wall(faces: &[Face], wall_ids: &[usize]) -> HashMap<usize, String> 
         };
         if !meets(f.s0) && !meets(f.s1) {
             out.insert(i, format!("a wall or something tall standing at the wall: it reaches the ceiling, but neither end meets a wall and a wall face stands {} behind it", plumbline_units(across)));
+        }
+    }
+    // Any face whose two ends meet no wall is in doubt, whatever is behind it (call 183, 3): a wall of one face that stops in the room, or the front of
+    // something tall. A face with another beside it that it could be paired with (a wall of two faces that stops in the room) is not asked about.
+    for &i in wall_ids {
+        let f = &faces[i];
+        if out.contains_key(&i) || candidates.contains_key(&i) || !f.tall {
+            continue;
+        }
+        let has_partner = wall_ids.iter().filter(|&&j| j != i).any(|&j| {
+            let g = &faces[j];
+            let mut dt = (f.theta - g.theta).abs();
+            dt = dt.min(std::f64::consts::PI - dt);
+            let across = (dot(g.at(g.mid()), normal(f.theta)) - f.rho).abs();
+            let (b0, b1) = along_span(g, dir(f.theta));
+            dt.to_degrees() <= PAIR_DEGREES && across >= PAIR_LEAST && across <= PAIR_MOST_BARE && f.s1.min(b1) - f.s0.max(b0) >= MIN_FACE
+        });
+        if has_partner {
+            continue;
+        }
+        let meets = |e: f64| {
+            wall_ids.iter().filter(|j| **j != i && !candidates.contains_key(j) && !out.contains_key(j)).any(|&j| {
+                let h = &faces[j];
+                cross_at(f, h).is_some_and(|(s, along)| (s - e).abs() <= CORNER && along >= h.s0 - CORNER && along <= h.s1 + CORNER)
+            })
+        };
+        if !meets(f.s0) && !meets(f.s1) {
+            out.insert(i, "a face that reaches the ceiling and meets no wall at either end: a wall seen from one side that stops in the room, or the front of something tall standing in it".to_string());
+        }
+    }
+    out
+}
+
+/// Curved faces (call 183, 5). The upright points that no wall found accounts for (those near a wall face not in doubt are its own) are gathered into
+/// pieces that run on from one to the next; a piece at least 5 ft long whose points lie off a straight line by 0.2 ft or more (a chord of an arc of 8 ft
+/// radius, 4 ft long, is 0.25 ft off) and are fitted by a circle at least three times as closely, of a radius a room can have (2 ft 6 in to 80 ft)
+/// and an arc of 30 degrees or more, is a curved face. Polygons (a bay of 45 degree walls) are not: their walls are found as walls, and their points
+/// are accounted for.
+fn curved(pool: &[P2], faces: &[Face], wall_ids: &[usize], doubts: &HashMap<usize, String>) -> Vec<Curve> {
+    let near_a_wall = |p: P2| {
+        wall_ids.iter().filter(|i| !doubts.contains_key(i)).any(|&i| {
+            let f = &faces[i];
+            (dot(p, normal(f.theta)) - f.rho).abs() <= BAND + 0.1 && dot(p, dir(f.theta)) >= f.s0 - 0.2 && dot(p, dir(f.theta)) <= f.s1 + 0.2
+        })
+    };
+    let mut cells: HashMap<(i64, i64), Vec<P2>> = HashMap::new();
+    for p in pool.iter().filter(|p| !near_a_wall(**p)) {
+        cells.entry(((p[0] / CURVE_CELL).floor() as i64, (p[1] / CURVE_CELL).floor() as i64)).or_default().push(*p);
+    }
+    cells.retain(|_, v| v.len() >= 3);
+    let mut seen: HashSet<(i64, i64)> = HashSet::new();
+    let mut keys: Vec<(i64, i64)> = cells.keys().copied().collect();
+    keys.sort();
+    let mut out = Vec::new();
+    for k in keys {
+        if !seen.insert(k) {
+            continue;
+        }
+        let (mut stack, mut pts) = (vec![k], Vec::new());
+        while let Some((ci, cj)) = stack.pop() {
+            pts.extend(cells[&(ci, cj)].iter().copied());
+            for di in -1..=1 {
+                for dj in -1..=1 {
+                    let n = (ci + di, cj + dj);
+                    if cells.contains_key(&n) && seen.insert(n) {
+                        stack.push(n);
+                    }
+                }
+            }
+        }
+        if pts.len() < CURVE_LEFTOVER {
+            continue;
+        }
+        // The short walls the finder took of the curve are part of it: those with an end or their middle against the pieces left over (a chord of an arc is
+        // found straight where it is short, and the bulge between its end and the next is what is left over). A bay has nothing left over to begin with.
+        let reached: HashSet<(i64, i64)> = pts.iter().map(|p| ((p[0] / CURVE_CELL).floor() as i64, (p[1] / CURVE_CELL).floor() as i64)).collect();
+        for &i in wall_ids {
+            let f = &faces[i];
+            if f.s1 - f.s0 >= CURVE_CHORD {
+                continue;
+            }
+            let touches = |p: P2| {
+                let (ci, cj) = ((p[0] / CURVE_CELL).floor() as i64, (p[1] / CURVE_CELL).floor() as i64);
+                (-2..=2).any(|di| (-2..=2).any(|dj| reached.contains(&(ci + di, cj + dj))))
+            };
+            if touches(f.at(f.s0)) || touches(f.at(f.s1)) || touches(f.at(f.mid())) {
+                let (d, n) = (dir(f.theta), normal(f.theta));
+                pts.extend(f.pts.iter().map(|p| [p[0] * d[0] + p[1] * n[0], p[0] * d[1] + p[1] * n[1]]));
+            }
+        }
+        let Some((theta, mean)) = long_way(&pts) else { continue };
+        let (d, n) = (dir(theta), normal(theta));
+        let along: Vec<f64> = pts.iter().map(|p| dot(sub2(*p, mean), d)).collect();
+        let across: Vec<f64> = pts.iter().map(|p| dot(sub2(*p, mean), n)).collect();
+        let extent = along.iter().copied().fold(f64::MIN, f64::max) - along.iter().copied().fold(f64::MAX, f64::min);
+        let line_rms = (across.iter().map(|a| a * a).sum::<f64>() / across.len() as f64).sqrt();
+        if extent < CURVE_LEAST || line_rms < CURVE_OFF {
+            continue;
+        }
+        // The circle (Kasa's fit): x^2 + y^2 + a x + b y + c = 0 in the least squares sense, about the mean.
+        let m = pts.len() as f64;
+        let (mut sx, mut sy, mut sxx, mut syy, mut sxy, mut sz, mut sxz, mut syz) = (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+        for p in &pts {
+            let (x, y) = (p[0] - mean[0], p[1] - mean[1]);
+            let z = x * x + y * y;
+            sx += x;
+            sy += y;
+            sxx += x * x;
+            syy += y * y;
+            sxy += x * y;
+            sz += z;
+            sxz += x * z;
+            syz += y * z;
+        }
+        // Normal equations for (a, b, c): [sxx sxy sx; sxy syy sy; sx sy m] [a b c]^T = -[sxz syz sz]^T.
+        let det = |a: [[f64; 3]; 3]| a[0][0] * (a[1][1] * a[2][2] - a[1][2] * a[2][1]) - a[0][1] * (a[1][0] * a[2][2] - a[1][2] * a[2][0]) + a[0][2] * (a[1][0] * a[2][1] - a[1][1] * a[2][0]);
+        let a = [[sxx, sxy, sx], [sxy, syy, sy], [sx, sy, m]];
+        let d0 = det(a);
+        if d0.abs() < 1e-9 {
+            continue;
+        }
+        let rhs = [-sxz, -syz, -sz];
+        let solve = |col: usize| {
+            let mut t = a;
+            for r in 0..3 {
+                t[r][col] = rhs[r];
+            }
+            det(t) / d0
+        };
+        let (ca, cb, cc) = (solve(0), solve(1), solve(2));
+        let centre = [-ca / 2.0, -cb / 2.0];
+        let radius2 = centre[0] * centre[0] + centre[1] * centre[1] - cc;
+        if radius2 <= 0.0 {
+            continue;
+        }
+        let radius = radius2.sqrt();
+        let rms = (pts.iter().map(|p| { let r = (p[0] - mean[0] - centre[0]).hypot(p[1] - mean[1] - centre[1]) - radius; r * r }).sum::<f64>() / m).sqrt();
+        let angles: Vec<f64> = pts.iter().map(|p| (p[1] - mean[1] - centre[1]).atan2(p[0] - mean[0] - centre[0])).collect();
+        // The arc's span: the angles about the middle one (the middle of the points' own way round), so that a seam at 180 degrees does not split it.
+        let mid = angles.iter().map(|a| a.sin()).sum::<f64>().atan2(angles.iter().map(|a| a.cos()).sum::<f64>());
+        let rel: Vec<f64> = angles.iter().map(|a| { let mut r = a - mid; while r > std::f64::consts::PI { r -= std::f64::consts::TAU; } while r < -std::f64::consts::PI { r += std::f64::consts::TAU; } r }).collect();
+        let (lo, hi) = (rel.iter().copied().fold(f64::MAX, f64::min), rel.iter().copied().fold(f64::MIN, f64::max));
+        let span = hi - lo;
+        if rms > CURVE_FIT * line_rms || radius < CURVE_RADIUS.0 || radius > CURVE_RADIUS.1 || span.to_degrees() < CURVE_ARC.0 || span.to_degrees() > CURVE_ARC.1 {
+            continue;
+        }
+        let c = [mean[0] + centre[0], mean[1] + centre[1]];
+        let at = |a: f64| [c[0] + radius * (mid + a).cos(), c[1] + radius * (mid + a).sin()];
+        out.push(Curve { from: at(lo), to: at(hi), centre: c, radius, length: radius * span, mid, span: (lo, hi) });
+    }
+    out
+}
+
+fn sub2(a: P2, b: P2) -> P2 {
+    [a[0] - b[0], a[1] - b[1]]
+}
+fn unit2(a: P2) -> P2 {
+    let l = a[0].hypot(a[1]).max(1e-12);
+    [a[0] / l, a[1] / l]
+}
+
+/// A tall face with nothing between its lower part and its upper part over most of its length, with a wall face standing behind that hole within 3 ft
+/// (call 183, 3): the front of something standing at the wall with something over it in the same plane (base cabinets and a soffit; a bar and a bulkhead),
+/// and not a wall: the lower part and the upper part are things in one plane, and what shows between is the wall behind them. Where nothing stands
+/// behind the hole it is a window along most of the wall, and is measured as one. Said as the other faces in doubt are, and laid only on the person's word.
+fn holed(faces: &[Face], wall_ids: &[usize], band: &[[f64; 3]], density: f64) -> HashMap<usize, String> {
+    let mut out = HashMap::new();
+    for &i in wall_ids {
+        let f = &faces[i];
+        if !f.tall || f.floor_cols.is_empty() {
+            continue;
+        }
+        let cols = f.floor_cols.len();
+        let tiers = ((f.ceil / HOLE_TIER).ceil() as usize).max(1);
+        let mut seen = vec![vec![0u32; tiers]; cols];
+        for p in &f.pts {
+            let c = ((p[0] - f.cols_from) / f.sq).floor();
+            if c >= 0.0 && (c as usize) < cols {
+                seen[c as usize][((p[2] / HOLE_TIER) as usize).min(tiers - 1)] += 1;
+            }
+        }
+        // For each column the widest stretch of empty tiers between points above and points below it.
+        let mut holes: Vec<(f64, f64)> = Vec::new();
+        for col in &seen {
+            let occupied: Vec<usize> = (0..tiers).filter(|t| col[*t] > 0).collect();
+            let gap = occupied.windows(2).max_by_key(|w| w[1] - w[0]);
+            if let Some(w) = gap {
+                let high = (w[1] - w[0] - 1) as f64 * HOLE_TIER;
+                if high >= HOLE_HIGH {
+                    holes.push(((w[0] + 1) as f64 * HOLE_TIER, w[1] as f64 * HOLE_TIER));
+                }
+            }
+        }
+        if (holes.len() as f64) < HOLE_SHARE * cols as f64 {
+            continue;
+        }
+        let (lo, hi) = (median(holes.iter().map(|h| h.0).collect()), median(holes.iter().map(|h| h.1).collect()));
+        // What stands behind the hole, on the side the scan did not see the face from (either side where it is not known).
+        let (d, n) = (dir(f.theta), normal(f.theta));
+        let sides: Vec<f64> = if f.seen[0] != f.seen[1] { vec![if f.seen[0] { -1.0 } else { 1.0 }] } else { vec![1.0, -1.0] };
+        let behind = band
+            .iter()
+            .filter(|p| p[2] > lo + 0.3 && p[2] < hi - 0.3 && dot([p[0], p[1]], d) >= f.s0 && dot([p[0], p[1]], d) <= f.s1)
+            .filter(|p| {
+                let a = dot([p[0], p[1]], n) - f.rho;
+                sides.iter().any(|sg| a * sg > IN_FRONT_LEAST && a * sg <= BEHIND)
+            })
+            .count() as f64;
+        let would = density * (f.s1 - f.s0) * (hi - lo - 0.6).max(0.0);
+        if behind >= HOLE_BACKED * would {
+            out.insert(i, format!("a face with nothing between its part from the floor and its part under the ceiling ({} to {} up) along most of its length, and a wall standing behind that: the front of something at the wall with something over it, such as base cabinets and a soffit, and not a wall", plumbline_units(lo), plumbline_units(hi)));
         }
     }
     out
@@ -857,13 +1206,140 @@ fn plumbline_units_count(n: usize, one: &str, many: &str) -> String {
 }
 
 /// A length as a tape reads it, feet and inches to the inch.
-fn plumbline_units(feet: f64) -> String {
+pub(crate) fn plumbline_units(feet: f64) -> String {
     let inches = (feet * 12.0).round() as i64;
     format!("{}' {}\"", inches.div_euclid(12), inches.rem_euclid(12))
 }
 
-/// Find the walls of a scan that has been levelled by its floor.
+/// One level of a scan: its floor and the ceiling over it, as heights in the scan (call 183, 8).
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct ScanLevel {
+    pub floor: f64,
+    pub ceiling: f64,
+}
+
+/// The floors a level has between it and the next: a plate (the floor's depth and the ceiling's below it) is no thicker than this, 3 ft 6 in.
+const MOST_PLATE: f64 = 3.5;
+/// An inch of height is a surface where it holds more than a third of what the fullest inch holds (the scan's own measure of a floor or a ceiling).
+const SURFACE_SHARE: f64 = 3.0;
+
+/// The levels a scan holds, from the lowest: a floor and the ceiling over it (a surface 5 ft or more above it, and not over 15 ft), the next floor
+/// within 3 ft 6 in above that ceiling, and its ceiling. Fewer than two complete levels is one level, and the scan's own floor and ceiling are its (call 183, 8).
+pub fn levels(scan: &Scan) -> Vec<ScanLevel> {
+    let Some(lo) = scan.points.iter().map(|p| p[2]).reduce(f64::min) else { return Vec::new() };
+    let hi = scan.points.iter().map(|p| p[2]).fold(lo, f64::max);
+    let inch = 1.0 / 12.0;
+    let bins = (((hi - lo) / inch).ceil() as usize + 1).min(100_000);
+    let mut count = vec![0usize; bins];
+    for p in &scan.points {
+        count[(((p[2] - lo) / inch).round() as usize).min(bins - 1)] += 1;
+    }
+    let most = count.iter().copied().max().unwrap_or(0);
+    // Surfaces: runs of full inches, 3 in apart or less, each as the height of its fullest inch.
+    let mut surfaces: Vec<f64> = Vec::new();
+    let mut run: Option<(usize, usize, usize)> = None; // (last full inch, fullest inch, its count)
+    for (i, n) in count.iter().enumerate() {
+        if *n * SURFACE_SHARE as usize > most && *n > 0 {
+            run = Some(match run {
+                Some((last, best, c)) if i - last <= 3 => (i, if *n > c { i } else { best }, c.max(*n)),
+                Some((_, best, _)) => {
+                    surfaces.push(lo + best as f64 * inch);
+                    (i, i, *n)
+                }
+                None => (i, i, *n),
+            });
+        }
+    }
+    if let Some((_, best, _)) = run {
+        surfaces.push(lo + best as f64 * inch);
+    }
+    let mut out: Vec<ScanLevel> = Vec::new();
+    let mut k = 0;
+    while k < surfaces.len() {
+        let floor = surfaces[k];
+        let Some(c) = (k + 1..surfaces.len()).find(|j| surfaces[*j] - floor >= LEAST_CEILING) else { break };
+        let ceiling = surfaces[c];
+        if ceiling - floor > MOST_HIGH {
+            break;
+        }
+        out.push(ScanLevel { floor, ceiling });
+        // The next level's floor: a surface within a plate above this ceiling.
+        match (c + 1..surfaces.len()).find(|j| surfaces[*j] - ceiling <= MOST_PLATE) {
+            Some(n) => k = n,
+            None => break,
+        }
+    }
+    if out.len() < 2 {
+        Vec::new()
+    } else {
+        out
+    }
+}
+
+/// Find the walls of a scan that has been levelled by its floor. Where the scan holds more than one level, the lowest is found and the others are said;
+/// `find_level` finds another.
 pub fn find(scan: &Scan) -> Found {
+    find_level(scan, None)
+}
+
+/// Find the walls of one level of a scan (call 183, 8): the one whose floor is nearest `wanted` feet above the scan's lowest floor, or the lowest where none
+/// is asked for. A scan of one level is found as it is. More than one is said, "the scan holds two levels: floors at 0' 0" and 9' 3"", and the points of the
+/// others are not looked at: each level is found alone, so that the walls of one are not found twice and a door of the upper floor is not a window of the lower.
+pub fn find_level(scan: &Scan, wanted: Option<f64>) -> Found {
+    let lv = levels(scan);
+    if lv.len() < 2 {
+        return find_one(scan);
+    }
+    let base = lv[0].floor;
+    let at: Vec<f64> = lv.iter().map(|l| l.floor - base).collect();
+    let k = wanted.map_or(0, |h| (0..lv.len()).min_by(|a, b| (at[*a] - h).abs().total_cmp(&(at[*b] - h).abs())).unwrap_or(0));
+    let lo_cut = if k == 0 { f64::MIN } else { (lv[k - 1].ceiling + lv[k].floor) / 2.0 };
+    let hi_cut = if k + 1 == lv.len() { f64::MAX } else { (lv[k].ceiling + lv[k + 1].floor) / 2.0 };
+    let shift = lv[k].floor - base;
+    let sub = Scan { points: scan.points.iter().filter(|p| p[2] > lo_cut && p[2] < hi_cut).map(|p| [p[0], p[1], p[2] - shift]).collect(), lost: Vec::new() };
+    let mut out = find_one(&sub);
+    let list = at.iter().map(|h| plumbline_units(*h)).collect::<Vec<_>>();
+    let list = match list.as_slice() {
+        [a, b] => format!("{a} and {b}"),
+        many => format!("{} and {}", many[..many.len() - 1].join(", "), many[many.len() - 1]),
+    };
+    let asked = match wanted {
+        Some(h) if (at[k] - h).abs() > LEVEL_NEAR => format!(", and the level asked for is {} above the lowest floor: the nearest is found", plumbline_units(h)),
+        _ => String::new(),
+    };
+    out.levels = at;
+    out.level_found = Some(k);
+    out.level_note = Some(format!("the scan holds {} levels: floors at {list}; the level found is the one whose floor is at {}, alone (find another by naming its level){asked}", lv.len(), plumbline_units(out.levels[k])));
+    out
+}
+
+/// A level asked for is this near (2 ft) a floor of the scan's for that to be the one found without saying so.
+const LEVEL_NEAR: f64 = 2.0;
+
+/// Find the walls of a scan of one level (levelled by its floor), by how thick the scan is where: where one part is thinner than another by 2 1/2 times or
+/// more, each part is read by its own thickness and what each finds is one find, and the parts are said, with where (call 183, 7).
+fn find_one(scan: &Scan) -> Found {
+    let Some((floor, _)) = scan.floor_and_ceiling().0.map(|f| (f, ())) else { return find_core(scan) };
+    let Some(z) = crate::found_183::zones(scan, floor) else { return find_core(scan) };
+    let (thick_scan, thin_scan) = (crate::found_183::part_of(scan, &z.thick, &z.thin), crate::found_183::part_of(scan, &z.thin, &z.thick));
+    let thick = find_core(&thick_scan);
+    let thin = find_core(&thin_scan);
+    let describe = |blocks: &HashSet<(i64, i64)>| {
+        let (x0, x1) = (blocks.iter().map(|b| b.0).min().unwrap_or(0), blocks.iter().map(|b| b.0).max().unwrap_or(0) + 1);
+        let (y0, y1) = (blocks.iter().map(|b| b.1).min().unwrap_or(0), blocks.iter().map(|b| b.1).max().unwrap_or(0) + 1);
+        format!("from {} east, {} north to {} east, {} north", plumbline_units(x0 as f64 * 8.0), plumbline_units(y0 as f64 * 8.0), plumbline_units(x1 as f64 * 8.0), plumbline_units(y1 as f64 * 8.0))
+    };
+    let mut note = format!("the scan is not as thick everywhere: about {} to the square foot {}, and about {} to the square foot {}; each part is read by its own thickness and what each finds is joined", figure(z.thick_rho), describe(&z.thick), figure(z.thin_rho), describe(&z.thin));
+    if let Some(why) = &thin.too_thin {
+        note.push_str(&format!("; the thinner part {} is too thin to tell a wall: nothing is found there ({why})", describe(&z.thin)));
+    }
+    let mut out = crate::found_183::merge(thick, thin, note);
+    out.walls.sort_by(|a, b| a.from[0].total_cmp(&b.from[0]).then(a.from[1].total_cmp(&b.from[1])));
+    out.open_ends = open_ends(&out.walls);
+    out
+}
+
+fn find_core(scan: &Scan) -> Found {
     let mut out = Found::default();
     let (floor, scan_ceiling) = scan.floor_and_ceiling();
     out.floor = floor;
@@ -952,6 +1428,12 @@ pub fn find(scan: &Scan) -> Found {
             *floor_cells.entry(((p[0] / FLOOR_CELL).floor() as i64, (p[1] / FLOOR_CELL).floor() as i64)).or_default() += 1;
         }
     }
+    // The cells that are floor and not the foot of a wall (which holds points near the floor too, but a fraction of what a floor does):
+    // those holding at least FLOOR_LIKE of what the middling floor cell holds (call 183, 2).
+    let floor_dense: Vec<P2> = {
+        let m = median(floor_cells.values().map(|n| f64::from(*n)).collect());
+        floor_cells.iter().filter(|(_, n)| f64::from(**n) >= (FLOOR_LIKE * m).max(3.0)).map(|((a, b), _)| [(*a as f64 + 0.5) * FLOOR_CELL, (*b as f64 + 0.5) * FLOOR_CELL]).collect()
+    };
     let floor_cells: Vec<P2> = floor_cells.into_iter().filter(|(_, n)| *n >= 3).map(|((a, b), _)| [(a as f64 + 0.5) * FLOOR_CELL, (b as f64 + 0.5) * FLOOR_CELL]).collect();
 
     // ---- lines, strongest first; each one's stretches are faces ----
@@ -960,8 +1442,8 @@ pub fn find(scan: &Scan) -> Found {
     let mut faces: Vec<Face> = Vec::new();
     // How closely the points of a face keep to its line, as the best faces found so far keep (call 179, A5).
     let mut ref_rms: Option<f64> = None;
-    let mut not_straight = 0usize;
-    let mut short = 0usize;
+    let mut left: Vec<Left> = Vec::new();
+    let mut bits = 0usize;
     for _ in 0..MOST_LINES {
         let Some((k, rho0, _)) = strongest(&votes, &cos, &sin, min_votes) else { break };
         // The vote's line, as coarse as the vote: the points within SEED_BAND of it, all
@@ -982,7 +1464,9 @@ pub fn find(scan: &Scan) -> Found {
             taken_out.push((sa, sb));
             if sb - sa < MIN_FACE {
                 if sb - sa >= SHORT_FACE {
-                    short += 1;
+                    left.push(Left { from: [sa * d0[0] + rho0 * n0[0], sa * d0[1] + rho0 * n0[1]], to: [sb * d0[0] + rho0 * n0[0], sb * d0[1] + rho0 * n0[1]], why: format!("under {MIN_FACE} ft long (a wall is at least {MIN_FACE} ft long)") });
+                } else {
+                    bits += 1;
                 }
                 continue;
             }
@@ -1027,7 +1511,7 @@ pub fn find(scan: &Scan) -> Found {
                             pts = p2;
                         }
                         None => {
-                            not_straight += 1;
+                            left.push(Left { from: [sa * d0[0] + rho0 * n0[0], sa * d0[1] + rho0 * n0[1]], to: [sb * d0[0] + rho0 * n0[0], sb * d0[1] + rho0 * n0[1]], why: "not straight along the whole length (furniture, or two walls close together)".into() });
                             continue;
                         }
                     }
@@ -1054,9 +1538,9 @@ pub fn find(scan: &Scan) -> Found {
             let (first_s, last_s) = (s[0], s[s.len() - 1]);
             let s0 = edge(&s, first_s + EDGE_BACK, true, last_s - first_s - EDGE_BACK, f64::MIN).unwrap_or(first_s);
             let s1 = edge(&s, last_s - EDGE_BACK, false, last_s - first_s - EDGE_BACK, f64::MAX).unwrap_or(last_s);
-                    if s1 - s0 < MIN_FACE {
+            if s1 - s0 < MIN_FACE {
                 if s1 - s0 >= SHORT_FACE {
-                    short += 1;
+                    left.push(Left { from: [s0 * d[0] + rho * n[0], s0 * d[1] + rho * n[1]], to: [s1 * d[0] + rho * n[0], s1 * d[1] + rho * n[1]], why: format!("under {MIN_FACE} ft long (a wall is at least {MIN_FACE} ft long)") });
                 }
                 continue;
             }
@@ -1104,16 +1588,16 @@ pub fn find(scan: &Scan) -> Found {
         }
     }
 
-    if short + not_straight > 0 {
-        let mut why: Vec<String> = Vec::new();
-        if short > 0 {
-            why.push(format!("{short} under 2 ft long (a wall is at least 2 ft long)"));
-        }
-        if not_straight > 0 {
-            why.push(format!("{not_straight} not straight along the whole length (furniture, or two walls close together)"));
-        }
-        out.left_out.push(format!("{} of upright points not taken as walls: {}", plumbline_units_count(short + not_straight, "stretch", "stretches"), why.join(", ")));
+    // Every stretch left out is said, with where it is and how long (call 183, 4).
+    left.sort_by(|a, b| a.from[0].total_cmp(&b.from[0]).then(a.from[1].total_cmp(&b.from[1])));
+    left.dedup_by(|a, b| (a.from[0] - b.from[0]).abs() < 0.5 && (a.from[1] - b.from[1]).abs() < 0.5 && (a.to[0] - b.to[0]).abs() < 0.5 && (a.to[1] - b.to[1]).abs() < 0.5);
+    for l in &left {
+        out.left_out.push(format!("a stretch of upright points {} long, from {} east, {} north to {} east, {} north, not taken as walls: {}", plumbline_units((l.to[0] - l.from[0]).hypot(l.to[1] - l.from[1])), plumbline_units(l.from[0]), plumbline_units(l.from[1]), plumbline_units(l.to[0]), plumbline_units(l.to[1]), l.why));
     }
+    if bits > 0 {
+        out.left_out.push(format!("{} of upright points, each under {SHORT_FACE} ft long, not taken as walls (too short to place)", plumbline_units_count(bits, "stretch", "stretches")));
+    }
+    out.left = left;
     // A line drawn through the points of other things (a sofa's front and back, a table's
     // corner) has a few points of its own: a face with under a quarter of the usual
     // number of points to the square foot of face is not one.
@@ -1246,8 +1730,29 @@ pub fn find(scan: &Scan) -> Found {
     }
 
     // ---- a face that reaches the ceiling and is not shown to be a wall (call 179, A3) ----
-    let doubts = tall_at_a_wall(&faces, &wall_ids);
+    let mut doubts = tall_at_a_wall(&faces, &wall_ids);
+    for (k, v) in holed(&faces, &wall_ids, &band, rho.unwrap_or(REFERENCE_DENSITY)) {
+        doubts.entry(k).or_insert(v);
+    }
 
+    // ---- curved faces (call 183, 5): said and not laid; the chords the finder took of one are in doubt ----
+    out.curves = curved(&pool, &faces, &wall_ids, &doubts);
+    for c in &out.curves {
+        out.left_out.push(format!("a curved face of radius {}, about {} long, from {} east, {} north to {} east, {} north: curved walls are not found, so it is not laid", plumbline_units(c.radius), plumbline_units(c.length), plumbline_units(c.from[0]), plumbline_units(c.from[1]), plumbline_units(c.to[0]), plumbline_units(c.to[1])));
+        for &i in &wall_ids {
+            let f = &faces[i];
+            // On the curve: near its circle (within a wall's thickness and the fit's own error) and within the arc it runs over (and a little more).
+            let on = |p: P2| {
+                let mut a = (p[1] - c.centre[1]).atan2(p[0] - c.centre[0]) - c.mid;
+                while a > std::f64::consts::PI { a -= std::f64::consts::TAU; }
+                while a < -std::f64::consts::PI { a += std::f64::consts::TAU; }
+                ((p[0] - c.centre[0]).hypot(p[1] - c.centre[1]) - c.radius).abs() <= CURVE_ON && a >= c.span.0 - CURVE_ARC_SLACK && a <= c.span.1 + CURVE_ARC_SLACK
+            };
+            if on(f.at(f.s0)) && on(f.at(f.s1)) && on(f.at(f.mid())) {
+                doubts.insert(i, format!("part of a curved face of radius {}: curved walls are not found, so a chord of one is not laid", plumbline_units(c.radius)));
+            }
+        }
+    }
     // ---- what a wall is hidden by: the ceiling or the floor not reached where something stands before it ----
     // (call 179, A2) Where something stands: the cells of the plan the points of what stops short, and of
     // what is in doubt, are in. A wall that something tall stands before is not "stood short", nor is one that
@@ -1287,16 +1792,65 @@ pub fn find(scan: &Scan) -> Found {
                 s >= a && s <= b && sides.iter().any(|side| across * side > IN_FRONT_LEAST && across * side <= IN_FRONT)
             })
         };
-        let cols = f.floor_cols.len().max(1) as f64;
         let hidden: Vec<bool> = (0..f.floor_cols.len()).map(hidden_column).collect();
-        let up = f.ceil_cols.iter().zip(&hidden).filter(|(there, h)| **there || **h).count() as f64;
-        let down = f.floor_cols.iter().zip(&hidden).filter(|(there, h)| **there || **h).count() as f64;
+        // A column inside the body of a wall that crosses this one is that wall's, not this one's: it is judged neither way (call
+        // 183, 4: a short wall's ends are all corner, and the points taken off there are not a lack of wall).
+        let corner: Vec<bool> = (0..f.floor_cols.len())
+            .map(|c| {
+                let q = f.at(f.cols_from + (c as f64 + 0.5) * f.sq);
+                wall_ids.iter().filter(|j| **j != i).any(|&j| {
+                    let g = &faces[j];
+                    (f.theta - g.theta).sin().abs() >= CROSSES && (dot(q, normal(g.theta)) - g.rho).abs() <= CORNER_BODY && dot(q, dir(g.theta)) >= g.s0 - SNAP && dot(q, dir(g.theta)) <= g.s1 + SNAP
+                })
+            })
+            .collect();
+        let cols = (f.floor_cols.len() - corner.iter().filter(|x| **x).count()).max(1) as f64;
+        let up = (0..f.ceil_cols.len()).filter(|c| !corner[*c] && (f.ceil_cols[*c] || hidden[*c])).count() as f64;
+        let mut reach: Vec<bool> = (0..f.floor_cols.len()).map(|c| corner[c] || f.floor_cols[c] || hidden[c]).collect();
+        // Openings: stretches at least 1 ft 6 in long that do not reach the floor but are closed over their whole length by a head that
+        // reaches the ceiling, with a piece that reaches the floor at each end of the wall (its jambs): a wall with a door in it, or
+        // a wall that is mostly opening (a garage's). A face that reaches the floor nowhere, or at one end only, is not one (call 183, 4 and 5).
+        let wide = (MIN_OPENING / f.sq).round() as usize;
+        let jamb = (END_PIECE / f.sq).ceil() as usize;
+        {
+            let n_cols = reach.len();
+            let (mut c, mut runs) = (0usize, Vec::new());
+            while c < n_cols {
+                if !reach[c] {
+                    let b = c;
+                    while c < n_cols && !reach[c] {
+                        c += 1;
+                    }
+                    runs.push((b, c));
+                } else {
+                    c += 1;
+                }
+            }
+            // A piece reaches the floor at each end: of the columns at an end (twice a jamb's), at least a jamb's worth do.
+            let at_end = |range: std::ops::Range<usize>| range.clone().filter(|c| reach[*c]).count() >= jamb;
+            let jambs_at_ends = n_cols >= 4 * jamb && at_end(0..2 * jamb) && at_end(n_cols - 2 * jamb..n_cols);
+            // A stretch is an opening where it is wide enough and closed over by a head that reaches the ceiling over most of its length.
+            let headed = |(b, e): (usize, usize)| (b..e).filter(|c| f.ceil_cols[*c] || corner[*c]).count() as f64 >= WALL_REACHES_CEILING * (e - b) as f64;
+            if jambs_at_ends {
+                for (b, e) in runs.into_iter().filter(|r| r.1 - r.0 >= wide && headed(*r)) {
+                    for c in b..e {
+                        reach[c] = true;
+                    }
+                }
+            }
+        }
+        let down = reach.iter().filter(|x| **x).count() as f64;
+        let cols_all = f.floor_cols.len().max(1) as f64;
         if up / cols < WALL_REACHES_CEILING {
             demoted.push((i, false));
-        } else if down / cols < WALL_REACHES_FLOOR {
+        } else if down / cols_all < WALL_REACHES_FLOOR {
             out.left_out.push(format!("a face {} long at {} east, {} north reaches the ceiling and not the floor, and nothing stands before it: it is not taken as a wall (something hung from the ceiling, or a wall seen only above)", plumbline_units(f.s1 - f.s0), plumbline_units(f.at(f.mid())[0]), plumbline_units(f.at(f.mid())[1])));
             demoted.push((i, true));
         }
+    }
+    for (i, _) in &demoted {
+        let f = &faces[*i];
+        out.stood.push(Left { from: f.at(f.s0), to: f.at(f.s1), why: "stands short of the ceiling over some of its length (a cabinet, furniture, or a wall whose top was not seen)".into() });
     }
     for (i, hung) in demoted {
         faces[i].wall = false;
@@ -1408,8 +1962,8 @@ pub fn find(scan: &Scan) -> Found {
                 continue;
             }
             // Side by side along the first's own measure of the way along.
-            let shift = dot(fb.at(fb.mid()), dir(fa.theta)) - fb.mid();
-            let overlap = fa.s1.min(fb.s1 + shift) - fa.s0.max(fb.s0 + shift);
+            let (b0, b1) = along_span(fb, dir(fa.theta));
+            let overlap = fa.s1.min(b1) - fa.s0.max(b0);
             if overlap < PAIR_ALONGSIDE {
                 continue;
             }
@@ -1417,7 +1971,7 @@ pub fn find(scan: &Scan) -> Found {
             // between them, and where they end together: a cabinet bank 2 ft deep before a wall, or two walls
             // with a closet between, are not (call 179, A6).
             if across.abs() > PAIR_MOST {
-                let (lo, hi) = (fa.s0.max(fb.s0 + shift), fa.s1.min(fb.s1 + shift));
+                let (lo, hi) = (fa.s0.max(b0), fa.s1.min(b1));
                 let (na, da) = (normal(fa.theta), dir(fa.theta));
                 let (ra, rb) = (fa.rho.min(fa.rho + across), fa.rho.max(fa.rho + across));
                 let width = (rb - ra - 2.0 * FLOOR_MARGIN).max(0.0);
@@ -1426,7 +1980,7 @@ pub fn find(scan: &Scan) -> Found {
                     (p[2] - floor).abs() <= SET_ASIDE && dot(q, na) > ra + FLOOR_MARGIN && dot(q, na) < rb - FLOOR_MARGIN && dot(q, da) > lo + FLOOR_MARGIN && dot(q, da) < hi - FLOOR_MARGIN
                 }).count() as f64;
                 let would = rho.unwrap_or(REFERENCE_DENSITY) * width * (hi - lo - 2.0 * FLOOR_MARGIN).max(0.0);
-                let ends_agree = (fa.s0 - (fb.s0 + shift)).abs() <= CORNER && (fa.s1 - (fb.s1 + shift)).abs() <= CORNER;
+                let ends_agree = (fa.s0 - b0).abs() <= CORNER && (fa.s1 - b1).abs() <= CORNER;
                 if seen > FLOOR_BETWEEN * would || !ends_agree {
                     continue;
                 }
@@ -1447,15 +2001,17 @@ pub fn find(scan: &Scan) -> Found {
         let (d, n) = (dir(theta), normal(theta));
         // Both in the first's frame.
         let rb = dot(fb.at(fb.mid()), n);
-        let shift = dot(fb.at(fb.mid()), d) - dot(fb.at(fb.mid()), dir(fb.theta));
+        let (b0, b1) = along_span(fb, d);
         let centre = (fa.rho + rb) / 2.0;
         // Where the two faces end differently by no more than a wall is thick, they meet a wall across them: the
         // wall ends at its near face, the shorter of the two, and not at its far one (call 179, A9). Where they
         // end far apart one of them is hidden, and the wall is as long as both show.
-        let s0 = { let (a0, b0) = (fa.s0, fb.s0 + shift); if (a0 - b0).abs() <= PAIR_MOST { a0.max(b0) } else { a0.min(b0) } };
-        let s1 = { let (a1, b1) = (fa.s1, fb.s1 + shift); if (a1 - b1).abs() <= PAIR_MOST { a1.min(b1) } else { a1.max(b1) } };
+        let s0 = { let a0 = fa.s0; if (a0 - b0).abs() <= PAIR_MOST { a0.max(b0) } else { a0.min(b0) } };
+        let s1 = { let a1 = fa.s1; if (a1 - b1).abs() <= PAIR_MOST { a1.min(b1) } else { a1.max(b1) } };
         let mut pts: Vec<[f64; 2]> = fa.pts.iter().map(|p| [p[0], p[2]]).collect();
-        pts.extend(fb.pts.iter().map(|p| [p[0] + shift, p[2]]));
+        // fb's points in fa's frame: where they lie along fa's own line (fb's line may run the other way: both are the same line to a degree).
+        let (db, nb) = (dir(fb.theta), normal(fb.theta));
+        pts.extend(fb.pts.iter().map(|p| [(p[0] * db[0] + p[1] * nb[0]) * d[0] + (p[0] * db[1] + p[1] * nb[1]) * d[1], p[2]]));
         // Seen from the side each face faces away from the other: both, so none of the one-sided.
         let (mut w, flip) = wall_of(theta, centre, s0, s1, Some((rb - fa.rho).abs()), None);
         w.height = Some(fa.ceil.min(fb.ceil));
@@ -1600,9 +2156,28 @@ pub fn find(scan: &Scan) -> Found {
         }
     }
 
+    // ---- what lies beyond a wall with no way to it (call 183, 2): in doubt, said ----
+    let walls_only: Vec<Wall> = walls.into_iter().map(|(w, _)| w).collect();
+    let (pieces, gone, note) = crate::found_183::beyond(walls_only, &mut out.things, &floor_dense);
+    out.beyond_note = note;
     // ---- first end first: west to east, or south to north ----
-    out.walls = walls.into_iter().map(|(w, _)| w).collect();
-    out.walls.sort_by(|a, b| a.from[0].total_cmp(&b.from[0]).then(a.from[1].total_cmp(&b.from[1])));
+    let mut pieces = pieces;
+    // Where the ceiling was not read over a wall (call 183, 6): said.
+    for (w, _) in pieces.iter_mut() {
+        let (d, n) = (unit2(sub2(w.to, w.from)), [0.0, 0.0]);
+        let _ = n;
+        let mid = [(w.from[0] + w.to[0]) / 2.0, (w.from[1] + w.to[1]) / 2.0];
+        let nn = [-d[1], d[0]];
+        w.ceiling_not_read = !(ceil.reads([mid[0] + nn[0] * CEIL_OUT, mid[1] + nn[1] * CEIL_OUT]) || ceil.reads([mid[0] - nn[0] * CEIL_OUT, mid[1] - nn[1] * CEIL_OUT]));
+    }
+    pieces.sort_by(|a, b| a.0.from[0].total_cmp(&b.0.from[0]).then(a.0.from[1].total_cmp(&b.0.from[1])));
+    // The number each wall had before they were put in order, to the number it has now (of its piece that is not in doubt, where it was cut).
+    let place_of = |orig: usize| pieces.iter().position(|(w, o)| *o == orig && !w.doubt.as_deref().is_some_and(|d| d.starts_with("in doubt: beyond"))).or_else(|| pieces.iter().position(|(_, o)| *o == orig)).unwrap_or(0);
+    out.beyond_things = gone.into_iter().map(|(_, s)| crate::found_183::resolve(&s, &place_of)).collect();
+    let numbered: Vec<(Wall, usize)> = pieces.iter().map(|(w, o)| (Wall { doubt: w.doubt.as_ref().map(|d| crate::found_183::resolve(d, &place_of)), ..w.clone() }, *o)).collect();
+    out.walls = numbered.into_iter().map(|(w, _)| w).collect();
+    // A face belongs to one wall (call 183, 1).
+    crate::found_183::one_face_one_wall(&mut out.walls);
     out.open_ends = open_ends(&out.walls);
     out
 }
@@ -1614,7 +2189,7 @@ fn end_word(w: &Wall) -> &'static str {
 }
 
 /// The distance from a place to a wall's line, as a stretch from end to end.
-fn distance_to(p: P2, a: P2, b: P2) -> f64 {
+pub(crate) fn distance_to(p: P2, a: P2, b: P2) -> f64 {
     let (e, l) = (sub(b, a), (b[0] - a[0]).hypot(b[1] - a[1]));
     let t = if l < 1e-9 { 0.0 } else { (dot(sub(p, a), e) / (l * l)).clamp(0.0, 1.0) };
     (p[0] - (a[0] + e[0] * t)).hypot(p[1] - (a[1] + e[1] * t))
