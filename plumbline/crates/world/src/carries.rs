@@ -217,6 +217,7 @@ struct EaveRec {
 }
 
 struct FloorRec {
+    path: String,
     name: String,
     storey: String,
     ring: Vec<P2>,
@@ -318,7 +319,7 @@ fn gather(job: &mut Job) -> Drawn {
         for (path, f, span) in all {
             let (Some(ring), Some(storey)) = (f.boundary_ft(), tree.storey_of(&path)) else { continue };
             let run = building::joists_run(&ring, span.as_ref()).and_then(|(run, said)| said.map(|(_, status)| (run, status)));
-            floors.push(FloorRec { name: tree.called(&path), storey: storey.to_string(), ring, run, status: f.boundary.status.max(span.as_ref().map(|s| s.0.status).unwrap_or(Status::Known)) });
+            floors.push(FloorRec { name: tree.called(&path), path: path.clone(), storey: storey.to_string(), ring, run, status: f.boundary.status.max(span.as_ref().map(|s| s.0.status).unwrap_or(Status::Known)) });
         }
     }
     Drawn { storeys, walls, footings, beams, eaves, floors }
@@ -348,7 +349,7 @@ type Span = (f64, f64);
 /// How far along `wall` (a line) the line `other` lies over it: where it runs within 1
 /// degree of the wall's direction and each of its ends is within `thick` of the wall's
 /// line. The stretch is in feet from the wall's first end.
-fn over(wall: [P2; 2], thick: f64, other: [P2; 2]) -> Option<Span> {
+pub(crate) fn over(wall: [P2; 2], thick: f64, other: [P2; 2]) -> Option<Span> {
     let (dx, dy) = (wall[1][0] - wall[0][0], wall[1][1] - wall[0][1]);
     let long = dx.hypot(dy);
     let (ox, oy) = (other[1][0] - other[0][0], other[1][1] - other[0][1]);
@@ -735,4 +736,65 @@ pub fn headers_asked(job: &mut Job) -> BTreeMap<String, Vec<String>> {
         out.entry(wall).or_insert_with(Vec::new).push(format!("What size is the header over {name}? It is drawn {drawn} deep ({}).", building::framing::HEADER_DEPTH_IS));
     }
     out
+}
+
+// ---------------------------------------------------------------- what goes with a wall that is moved (call 179, B1)
+
+/// A wall as a body on the plan: where it is, how thick, how high.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Body {
+    pub path: String,
+    pub storey: String,
+    /// Its line in feet, first end and second.
+    pub line: [P2; 2],
+    pub thick: f64,
+    pub base: f64,
+    pub top: f64,
+}
+
+/// Every wall that can be placed, with its level, line, thickness and height.
+pub fn bodies(job: &mut Job) -> Vec<Body> {
+    gather(job).walls.into_iter().map(|w| Body { path: w.path, storey: w.storey, line: w.line, thick: w.thick, base: w.base, top: w.top }).collect()
+}
+
+/// What lies on a wall's line, found as what stands on it and what it stands on are found
+/// here (`over`), so that a wall moved can take it along: the walls of the level above whose
+/// lines lie on it, the footings of its level under it, the floors of its level with an edge
+/// on it, and the roofs with an edge over it whose eave is about as high as its top.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct GoesWith {
+    pub walls: Vec<String>,
+    pub footings: Vec<String>,
+    pub floors: Vec<String>,
+    /// A roof, and which of its edges (counted from 1).
+    pub roofs: Vec<(String, usize)>,
+}
+
+/// What lies on `wall`'s line, as the job is now drawn.
+pub fn goes_with(job: &mut Job, wall: &str) -> Result<GoesWith, String> {
+    let roofs: Vec<(String, Vec<P2>, Option<f64>)> = {
+        let mut q = job.world.query::<(&Node, &Footprint)>();
+        let mut all: Vec<(String, Vec<P2>, Option<f64>)> = q.iter(&job.world).filter_map(|(n, f)| Some((n.path.clone(), f.points_ft()?, f.eave_height.feet()))).collect();
+        all.sort_by_key(|(p, _, _)| number(p));
+        all
+    };
+    let d = gather(job);
+    let w = d.walls.iter().find(|w| w.path == wall).ok_or_else(|| format!("{wall} cannot be placed (its line, its type or its level is not known)"))?;
+    let mut out = GoesWith::default();
+    if let Some(above) = d.above(&w.storey) {
+        out.walls = d.walls.iter().filter(|u| u.storey == above && over(w.line, w.thick, u.line).is_some()).map(|u| u.path.clone()).collect();
+    }
+    out.footings = d.footings.iter().filter(|f| f.storey == w.storey && over(w.line, w.thick, f.line).is_some()).map(|f| f.path.clone()).collect();
+    out.floors = d.floors.iter().filter(|f| f.storey == w.storey && (0..f.ring.len()).any(|i| over(w.line, w.thick, [f.ring[i], f.ring[(i + 1) % f.ring.len()]]).is_some())).map(|f| f.path.clone()).collect();
+    for (path, ring, eave) in roofs {
+        if !eave.map(|h| (h - w.top).abs() <= EAVE_REACH_FT + 1.0e-9).unwrap_or(false) {
+            continue;
+        }
+        for i in 0..ring.len() {
+            if over(w.line, w.thick, [ring[i], ring[(i + 1) % ring.len()]]).is_some() {
+                out.roofs.push((path.clone(), i + 1));
+            }
+        }
+    }
+    Ok(out)
 }

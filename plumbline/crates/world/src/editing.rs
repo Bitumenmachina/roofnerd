@@ -32,7 +32,7 @@ pub mod snap;
 pub mod stretch;
 
 pub use history::{History, UNDO_LIMIT};
-pub use stretch::{move_wall, Followed, Moved};
+pub use stretch::{move_wall, read_move, way_said, Followed, Moved, Resized, RoofMoved};
 pub use join::{connect, connect_at, fit_all, fitting, split, Fitted, PassedOver};
 pub(crate) use measure::takes_among;
 pub use measure::{measure, measure_on_line, takes, Measured, Reading};

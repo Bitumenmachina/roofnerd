@@ -9242,6 +9242,43 @@ machine (it asks 20 s). Words the worker left because existing demonstrations qu
 them: a level and a type by their marks in "laid on ...", "it is not a PLY file".
 It has still seen only made-up scans. Not judged again.
 
+## Call 179 part B built: a moved wall takes what is on it (2026-11-23)
+
+`plumbline move` now: refuses a move that would carry a wall across a wall it does not
+meet, naming that wall and how far it can go; reads a length any way the program reads
+one and takes a direction in words ("4 ft west"); says a move as a direction; and a
+moved wall takes with it what lies on its line: the floor's edge, the footing under it
+with the footings that meet its ends, the wall above it up the levels, the roof's edge,
+and a room line that ends on it. Each is said; what lies along the wall but runs past
+its end is said as left behind. `--alone` moves the wall only and says what it left.
+`research/worker-report-call179B.md`.
+
+`demos/stretch.sh` steps 11 to 18, by the hand figures of the contract: the 24 by 16
+box's east wall 4 ft east: floor 384 to **448 SF**, footings 80 to **88 LF**, the room
+364.25 to **426.25 SF**, the roof's plan 384 to 448 SF; the price **rises** ($7,600.00
+to $8,616.00: $800.00 of floor and footing and $216.00 of wall, at made-up prices);
+moved back, every figure as before; 30 ft west refused, the file byte for byte the
+same; across a partition refused at 11 ft 6 in.
+
+**Run on the integration copy with parts A, B and C together:** 625 tests pass in the
+six command-line crates, 0 fail; all 44 command-line demonstrations pass; the three
+gates and `portmap.sh` pass.
+
+**Not right.**
+- The worker wrote demonstration steps and **no unit test**, and did not prove the new
+  steps red on the old program.
+- After `--alone`, `check` says the wall stands off its footing, but cannot say the
+  room reaches past its floor: the room no longer closes, so it has no outline to
+  compare. The caution works only where the room still closes.
+- Only the moved wall is tested for crossing another; a neighbour that follows and
+  turns could cross a third wall unseen.
+- The footing caution is a guess (a wall within 10 ft of a footing with no wall on
+  it) and could fire on a footing drawn before its wall.
+- **The window moves walls with the same function**, so a wall moved in the window now
+  takes its floor, footing and roof along too, and no window demonstration has been
+  run on that (`draww.sh` moves a partition).
+- Not judged.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **Since this was written (2026-11-18): a second builder, Opus 5.5, under call 129.**

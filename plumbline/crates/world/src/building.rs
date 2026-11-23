@@ -601,6 +601,104 @@ pub fn drawn_faults(job: &mut Job) -> Vec<(String, String)> {
     out
 }
 
+/// Feet as a builder says them aloud: "4 ft", "11 ft 6 in".
+fn ft_in_said(feet: f64) -> String {
+    if (feet - feet.round()).abs() < 1.0e-6 {
+        format!("{} ft", feet.round())
+    } else {
+        units::feet_as_ft_in(feet, 16).replacen("' ", " ft ", 1).replacen('"', " in", 1).trim_start_matches("0 ft ").to_string()
+    }
+}
+
+/// What is drawn out of reach of what should carry it (call 179, B1): a room that reaches
+/// past the floor of its level, and a wall that stands off a footing that has no wall on it.
+/// Cautions, never refusals: the drawing may be what is meant, and `move --alone` leaves
+/// exactly this. Each comes as a key and the sentence. A level with no floor drawn says
+/// nothing of its rooms, and a footing with no wall near it says nothing.
+pub fn reach_cautions(job: &mut Job) -> Vec<(String, String)> {
+    let tol = crate::check::FIT_TOLERANCE_FT;
+    let gone = crate::components::demolished(&mut job.world);
+    let tree = Tree::of(&mut job.world);
+    let outlines = room_outlines(job);
+    let bodies = crate::carries::bodies(job);
+    let w = &job.world;
+    let mut out: Vec<(String, String)> = Vec::new();
+    let mut nodes: Vec<(&Node, Entity)> = job.order.iter().filter_map(|&e| w.get::<Node>(e).map(|n| (n, e))).collect();
+    nodes.sort_by(|x, y| x.0.path.cmp(&y.0.path));
+    // Rooms and floors of one level.
+    let floors: Vec<(&Node, Vec<P2>)> = nodes.iter().filter(|(_, e)| w.get::<Kind>(*e) == Some(&Kind::Floor)).filter_map(|(n, e)| Some((*n, w.get::<Floor>(*e)?.boundary_ft()?))).filter(|(n, _)| !gone.contains(&n.path)).collect();
+    let inside = |p: P2, ring: &[P2]| crate::vif::inside(ring, p) || geom::point_to_outline(p, ring) <= tol;
+    for (n, _) in nodes.iter().filter(|(_, e)| w.get::<Kind>(*e) == Some(&Kind::Room)) {
+        let Some(poly) = outlines.get(&n.path) else { continue };
+        let there: Vec<&(&Node, Vec<P2>)> = floors.iter().filter(|(f, _)| f.parent == n.parent).collect();
+        if there.is_empty() || gone.contains(&n.path) {
+            continue;
+        }
+        // How far each corner of the room is outside every floor of its level.
+        let reach = |ring: Option<&Vec<P2>>| -> f64 {
+            poly.iter()
+                .map(|p| {
+                    let rings: Vec<&Vec<P2>> = match ring {
+                        Some(r) => vec![r],
+                        None => there.iter().map(|(_, r)| r).collect(),
+                    };
+                    if rings.iter().any(|r| inside(*p, r)) { 0.0 } else { rings.iter().map(|r| geom::point_to_outline(*p, r)).fold(f64::MAX, f64::min) }
+                })
+                .fold(0.0, f64::max)
+        };
+        let past = reach(None);
+        if past > tol {
+            let nearest = there.iter().min_by(|a, b| reach(Some(&a.1)).total_cmp(&reach(Some(&b.1)))).map(|(f, _)| f.name.clone()).unwrap_or_default();
+            out.push((format!("{} past its floor", n.path), format!("{} reaches {} past {nearest}: the floor is drawn smaller than the room (a wall was moved, or the floor was drawn short)", if n.name.is_empty() { n.path.clone() } else { n.name.clone() }, ft_in_said(past))));
+        }
+    }
+    // Footings with no wall on them, and a wall that stands off one.
+    let several = bodies.iter().map(|b| b.storey.as_str()).collect::<std::collections::BTreeSet<_>>().len() > 1;
+    let called = |path: &str, storey: &str| match (tree.names.get(path), tree.names.get(storey)) {
+        (Some(n), Some(l)) if several && !l.is_empty() => format!("{n} on {l}"),
+        (Some(n), _) => n.clone(),
+        _ => path.to_string(),
+    };
+    for (n, e) in nodes.iter().filter(|(_, e)| w.get::<Kind>(*e) == Some(&Kind::Footing)) {
+        let Some(line) = w.get::<Wall>(*e).and_then(|c| c.line_ft()) else { continue };
+        let Some(level) = n.parent.as_deref() else { continue };
+        if gone.contains(&n.path) {
+            continue;
+        }
+        let flen = geom::dist(line[0], line[1]);
+        if flen <= tol {
+            continue;
+        }
+        let on_it = bodies.iter().any(|b| b.storey == level && !gone.contains(&b.path) && crate::carries::over(b.line, b.thick, line).is_some());
+        if on_it {
+            continue;
+        }
+        let (ux, uy) = ((line[1][0] - line[0][0]) / flen, (line[1][1] - line[0][1]) / flen);
+        // The nearest wall of its level that runs along it, within 10 ft, and overlaps it.
+        let mut near: Option<(f64, &crate::carries::Body)> = None;
+        for b in bodies.iter().filter(|b| b.storey == level && !gone.contains(&b.path)) {
+            let (bx, by) = (b.line[1][0] - b.line[0][0], b.line[1][1] - b.line[0][1]);
+            let blen = bx.hypot(by);
+            if blen <= tol || (ux * by - uy * bx).abs() / blen > 0.017_452_406_437_283_512 {
+                continue;
+            }
+            let along = |p: P2| ux * (p[0] - line[0][0]) + uy * (p[1] - line[0][1]);
+            let (lo, hi) = (along(b.line[0]).min(along(b.line[1])).max(0.0), along(b.line[0]).max(along(b.line[1])).min(flen));
+            if hi - lo <= tol {
+                continue;
+            }
+            let lateral = (ux * (b.line[0][1] - line[0][1]) - uy * (b.line[0][0] - line[0][0])).abs();
+            if lateral <= 10.0 && near.map(|(l, _)| lateral < l).unwrap_or(true) {
+                near = Some((lateral, b));
+            }
+        }
+        if let Some((lateral, b)) = near {
+            out.push((format!("{} off {}", b.path, n.path), format!("{} stands {} off {}, which has no wall on it: the footing was left where it was", called(&b.path, &b.storey), ft_in_said(lateral), n.name)));
+        }
+    }
+    out
+}
+
 /// Whether two outlines have any area in common: their edges cross, one has a corner strictly
 /// inside the other, or a piece of one (the middle of a triangle of it) is strictly inside the
 /// other. Outlines that only touch along an edge, or at a corner, do not.

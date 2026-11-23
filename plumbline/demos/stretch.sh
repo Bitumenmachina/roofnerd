@@ -156,5 +156,163 @@ cp "$J" "$T/saved.json"
 cmp -s "$T/a.txt" "$T/b.txt" || { echo "FAIL: read back differently"; exit 1; }
 echo "    (the job is read back as it was)"
 
+
+# ---- Call 179, B: a wall moved takes what lies on its line --------------------------------
+# The box: 24 ft (east) by 16 ft (north), 6 in walls, one level 9 ft, a floor on the walls'
+# outline, strip footings under all four walls, a gable roof (6:12, eave 9 ft, ridge east-west,
+# the east and west edges gables) on the outline, a room inside.  By hand:
+#   floor 24 x 16 = 384 SF; footings 2 x 24 + 2 x 16 = 80 LF; room 23.5 x 15.5 = 364.25 SF;
+#   roof plan 384 SF, surface 384 x sqrt(1 + (6/12)^2) = 384 x 1.118034 = 429.33 SF.
+# East wall 4 ft east: floor 28 x 16 = 448; footings 2 x 28 + 2 x 16 = 88; room 27.5 x 15.5 = 426.25;
+#   roof plan 448, surface 448 x 1.118034 = 500.88 SF (plan +64 SF).
+# Priced at a made-up $10.00/SF floor, $20.00/LF footing, $3.00/SF wall face:
+#   floor +64 x 10 = $640.00; footings +8 x 20 = $160.00; walls (north and south +4 LF x 9 ft = +72 SF) 72 x 3 = $216.00;
+#   the price rises by 640 + 160 + 216 = $1,016.00 ($800.00 for floor and footings, as the call has it, and $216.00 of walls).
+B="$T/boxjob.json"
+box() {
+    "$P" new "$B" "Box (not a real job)" >/dev/null
+    BS="$(made "$("$P" level "$B" ground --elevation "0 ft" --height "9 ft" "${K[@]}")")"
+    BWT="$(made "$("$P" type "$B" wall "wall 6 in" --thickness "6 in" "${K[@]}")")"
+    BFT="$(made "$("$P" type "$B" footing "footing 24 in" --width "24 in" "${K[@]}")")"
+    BFL="$(made "$("$P" type "$B" floor "floor 10 in" --thickness "10 in" "${K[@]}")")"
+    read -r BSOUTH BEAST BNORTH BWEST <<<"$("$P" wall "$B" "$BS" "$BWT" --points "0,0 24,0 24,16 0,16" --closed --height "9 ft" "${K[@]}" | grep -oE 'wall-[0-9]+' | tr '\n' ' ')"
+    "$P" footing "$B" "$BS" "$BFT" --points "0,0 24,0 24,16 0,16" --closed --depth "12 in" "${K[@]}" >/dev/null
+    BFLOOR="$(made "$("$P" floor "$B" "$BS" "$BFL" --walls "${K[@]}")")"
+    "$P" roof "$B" "Main roof" --points "0,0 24,0 24,16 0,16" --pitch 6:12 --eave-height "9 ft" "${K[@]}" >/dev/null
+    BROOF="$(grep -oE 'roof-[0-9]+' "$B" | head -1)"
+    "$P" set "$B" "$BROOF" edge:2 gable "${K[@]}" >/dev/null
+    "$P" set "$B" "$BROOF" edge:4 gable "${K[@]}" >/dev/null
+    BROOM="$(made "$("$P" room "$B" "$BS" Inside --at "12,8" "${K[@]}")")"
+}
+footings_lf() { "$P" show "$1" | awk '/^ *footing-/ { inf = 1; next } /^ *[a-z]+-[0-9]+ / { inf = 0 } inf && /plan length/ { s += $(NF-1) } END { print s + 0 }'; }
+no_caution() { "$P" check "$1" > "$T/check.txt"; if grep -q '^!' "$T/check.txt"; then echo "FAIL: check cautions"; cat "$T/check.txt"; exit 1; fi; echo "    (check: no caution)"; }
+total() { "$P" estimate "$1" | grep -E 'column totals' | grep -oE '\$[0-9,]+\.[0-9]+' | tr -d '$,' | awk '{ s += $1 } END { printf "%.2f", s }'; }
+
 echo
-echo "PASS: a wall moved takes the ends that meet it, holds its ends on the walls it butts, keeps doors and windows in place, refuses what it cannot, and --alone moves it alone"
+echo "== 11. The box: floor 384 SF, footings 80 LF, room 364.25 SF, roof 384 SF plan =="
+box
+block "$B" "$BFLOOR"; says "$T/block.txt" "plan area        384 SF"
+[ "$(footings_lf "$B")" = 80 ] || { echo "FAIL: the footings are not 80 LF"; exit 1; }
+echo "    (footings 80 LF)"
+block "$B" "$BROOM"; says "$T/block.txt" "floor area       364.25 SF"
+"$P" line "$B" "$BFLOOR" "Floor" plan_area --cost-type material >/dev/null
+"$P" set "$B" "$BFLOOR" unit_cost '$10/SF' --line "Floor" "${K[@]}" >/dev/null
+for f in $(grep -oE 'footing-[0-9]+' "$B" | sort -u); do
+    "$P" line "$B" "$f" "Footing" plan_length --cost-type subcontract >/dev/null
+    "$P" set "$B" "$f" unit_cost '$20/LF' --line "Footing" "${K[@]}" >/dev/null
+done
+for w in $BSOUTH $BEAST $BNORTH $BWEST; do
+    "$P" line "$B" "$w" "Wall" face_area --cost-type subcontract >/dev/null
+    "$P" set "$B" "$w" unit_cost '$3/SF' --line "Wall" "${K[@]}" >/dev/null
+done
+PRICE0="$(total "$B")"
+# walls 60 + ... : 80 LF x 9 ft = 720 SF x 3 = 2160; floor 3840; footings 80 x 20 = 1600
+[ "$PRICE0" = "7600.00" ] || { echo "FAIL: the price is $PRICE0, not 7600.00 (2,160 + 3,840 + 1,600)"; exit 1; }
+echo "    (price \$7,600.00 = walls 2,160 + floor 3,840 + footings 1,600)"
+no_caution "$B"
+cp "$B" "$T/box-start.json"
+
+echo
+echo "== 12. The east wall 4 ft east takes the floor's edge, the footings, the roof's edge; the price rises =="
+"$P" move "$B" "$BEAST" --by "4 ft east" "${K[@]}" > "$T/out.txt"
+says "$T/out.txt" "moved 4 ft east"
+lacks "$T/out.txt" "-4"
+says "$T/out.txt" "wall 1 followed: 4 ft longer"
+says "$T/out.txt" "wall 3 followed: 4 ft longer"
+says "$T/out.txt" "floor 1 followed: its edge on wall 2 went with it, 384.00 SF now 448.00 SF"
+says "$T/out.txt" "footing 1 followed: 4 ft longer"
+says "$T/out.txt" "footing 2 followed: moved with it, the same length"
+says "$T/out.txt" "footing 3 followed: 4 ft longer"
+says "$T/out.txt" "Main roof followed: its edge over wall 2 went with it, plan area 384.00 SF now 448.00 SF, surface 429.33 SF now 500.88 SF"
+block "$B" "$BFLOOR"; says "$T/block.txt" "plan area        448 SF"
+[ "$(footings_lf "$B")" = 88 ] || { echo "FAIL: the footings are not 88 LF"; exit 1; }
+echo "    (footings 88 LF)"
+block "$B" "$BROOM"; says "$T/block.txt" "floor area       426.25 SF"
+no_caution "$B"
+PRICE1="$(total "$B")"
+# floor 448 x 10 = 4480; footings 88 x 20 = 1760; walls 88 LF x 9 = 792 SF x 3 = 2376; total 8616 = 7600 + 640 + 160 + 216
+[ "$PRICE1" = "8616.00" ] || { echo "FAIL: the price is $PRICE1, not 8616.00"; exit 1; }
+echo "    (price \$7,600.00 to \$8,616.00: floor +\$640.00, footings +\$160.00, walls +\$216.00 = +\$1,016.00; it did not fall)"
+
+echo
+echo "== 13. Moved back 4 ft west: every figure is what it was =="
+"$P" move "$B" "$BEAST" --by "4 ft west" "${K[@]}" > "$T/out.txt"
+says "$T/out.txt" "moved 4 ft west"
+says "$T/out.txt" "floor 1 followed: its edge on wall 2 went with it, 448.00 SF now 384.00 SF"
+block "$B" "$BFLOOR"; says "$T/block.txt" "plan area        384 SF"
+[ "$(footings_lf "$B")" = 80 ] || { echo "FAIL: the footings are not 80 LF"; exit 1; }
+block "$B" "$BROOM"; says "$T/block.txt" "floor area       364.25 SF"
+[ "$(total "$B")" = "7600.00" ] || { echo "FAIL: the price is not back to 7600.00"; exit 1; }
+echo "    (floor 384, footings 80, room 364.25, price \$7,600.00)"
+
+echo
+echo "== 14. The same move with --alone: only the wall moves, and what it left is said; check cautions =="
+cp "$T/box-start.json" "$B"
+"$P" move "$B" "$BEAST" --by "4 ft east" --alone "${K[@]}" > "$T/out.txt"
+says "$T/out.txt" "moved alone: nothing followed it"
+says "$T/out.txt" "it left where they were: wall 1, wall 3, footing 1, footing 2, footing 3, floor 1 and Main roof"
+block "$B" "$BFLOOR"; says "$T/block.txt" "plan area        384 SF"
+"$P" check "$B" > "$T/check.txt"
+says "$T/check.txt" "wall 2 stands 4 ft off footing 2, which has no wall on it"
+echo "    (the room's walls no longer close, so it has no outline to reach past the floor with: see the report)"
+
+echo
+echo "== 15. A second level over the first: the first level's east wall takes the second level's with it =="
+B2="$T/box2.json"
+cp "$T/start.json" "$T/ignore.json"
+"$P" new "$B2" "Box two levels (not a real job)" >/dev/null
+L1="$(made "$("$P" level "$B2" ground --elevation "0 ft" --height "9 ft" "${K[@]}")")"
+L2="$(made "$("$P" level "$B2" second --elevation "9 ft" --height "9 ft" "${K[@]}")")"
+W2="$(made "$("$P" type "$B2" wall "wall 6 in" --thickness "6 in" "${K[@]}")")"
+read -r G1S G1E G1N G1W <<<"$("$P" wall "$B2" "$L1" "$W2" --points "0,0 24,0 24,16 0,16" --closed --height "9 ft" "${K[@]}" | grep -oE 'wall-[0-9]+' | tr '\n' ' ')"
+read -r G2S G2E G2N G2W <<<"$("$P" wall "$B2" "$L2" "$W2" --points "0,0 24,0 24,16 0,16" --closed --height "9 ft" "${K[@]}" | grep -oE 'wall-[0-9]+' | tr '\n' ' ')"
+"$P" move "$B2" "$G1E" --by "4 ft east" "${K[@]}" > "$T/out.txt"
+says "$T/out.txt" "wall 2 on second went with it: it stands over wall 2 on ground"
+says "$T/out.txt" "wall 1 on second followed: 4 ft longer"
+says "$T/out.txt" "wall 3 on second followed: 4 ft longer"
+block "$B2" "$G2E"; says "$T/block.txt" "wall line        (28, 0) to (28, 16) ft"
+block "$B2" "$G1E"; says "$T/block.txt" "wall line        (28, 0) to (28, 16) ft"
+
+echo
+echo "== 16. Refused: 30 ft west (past the west wall); a partition at east 12 and 14 ft west =="
+cp "$T/box-start.json" "$B"
+cp "$B" "$T/before.json"
+refused "$P" move "$B" "$BEAST" --by "30 ft west" "${K[@]}"
+# By hand: the east wall's west face is at 24 - 0.25 = 23.75, the west wall's east face at 0 + 0.25: 23.5 ft = 23 ft 6 in.
+says "$T/out.txt" "wall 2 would run into wall 4, a wall it does not meet"
+says "$T/out.txt" "it can go 23 ft 6 in west"
+unchanged "$B"
+PART2="$("$P" wall "$B" "$BS" "$BWT" --points "12,0 12,16" --height "9 ft" "${K[@]}" | grep -oE 'wall-[0-9]+' | head -1)"
+cp "$B" "$T/before.json"
+refused "$P" move "$B" "$BEAST" --by "14 ft west" "${K[@]}"
+# By hand: the partition's east face is at 12.25, the east wall's west face at 23.75: 11.5 ft = 11 ft 6 in.
+says "$T/out.txt" "wall 2 would run into wall 5, a wall it does not meet"
+says "$T/out.txt" "it can go 11 ft 6 in west"
+unchanged "$B"
+"$P" move "$B" "$BEAST" --by "11 ft 6 in west" "${K[@]}" >/dev/null
+echo "    (and 11 ft 6 in is taken)"
+
+echo
+echo "== 17. Lengths typed as lengths, directions as directions =="
+cp "$T/box-start.json" "$B"
+"$P" move "$B" "$BEAST" --by "3' 6\" east and 2 ft north" "${K[@]}" > "$T/out.txt"
+says "$T/out.txt" "moved 3 ft 6 in east and 2 ft north"
+cp "$T/box-start.json" "$B"
+"$P" move "$B" "$BNORTH" --by "6 in south" "${K[@]}" > "$T/out.txt"
+says "$T/out.txt" "moved 6 in south"
+cp "$T/box-start.json" "$B"
+"$P" move "$B" "$BNORTH" --by "0,-0.5" "${K[@]}" > "$T/out.txt"
+says "$T/out.txt" "moved 6 in south"
+refused "$P" move "$B" "$BNORTH" --by "4 ft east and 3 ft west" "${K[@]}"
+refused "$P" move "$B" "$BNORTH" --by "4" "${K[@]}"
+echo "    (a bare 4 is refused; \"0,-0.5\" is still feet)"
+
+echo
+echo "== 18. A room line that ends on the moved wall goes with it =="
+cp "$T/box-start.json" "$B"
+"$P" room-line "$B" "$BS" --points "8,8 24,8" "${K[@]}" >/dev/null
+"$P" move "$B" "$BEAST" --by "4 ft east" "${K[@]}" > "$T/out.txt"
+says "$T/out.txt" "room line 1 followed: its end on wall 2 went with it"
+"$P" show "$B" | grep -q "(8, 8) to (28, 8) ft" || { echo "FAIL: the room line's end did not follow"; exit 1; }
+echo
+echo "PASS: a wall moved takes the ends that meet it, what lies on its line (floor, footing, roof, wall above, room line), holds its ends on the walls it butts, keeps doors and windows in place, refuses what it cannot, and --alone moves it alone"

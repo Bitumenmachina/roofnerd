@@ -1650,6 +1650,10 @@ fn run(args: &[String]) -> Result<(), String> {
             for (_, said) in plumbline_world::building::drawn_faults(&mut job) {
                 say!("! {said}");
             }
+            // A room past its floor, a wall off its footing (call 179, B1).
+            for (_, said) in plumbline_world::building::reach_cautions(&mut job) {
+                say!("! {said}");
+            }
             // What a bearing wall that the work opens needs, and that it is not in the price (call 160).
             for said in plumbline_world::hidden::cautions(&mut job.world) {
                 say!("! {}", said.1);
@@ -2762,11 +2766,10 @@ fn draw(args: &[String]) -> Result<(), String> {
         }
         ("move", [element]) => {
             let (status, source) = how(&status, &source)?;
-            let by = points(&need(flag("--by"), "--by", "\"3,2\" (feet east, feet north)")?)?;
-            let [by] = by.as_slice() else { return Err("--by is one distance, east,north in feet".into()) };
+            let (east, north) = ed::read_move(&need(flag("--by"), "--by", "\"4 ft west\", \"3 ft 6 in north and 2 ft east\", or \"3,2\" (feet east, feet north)")?)?;
             // A wall takes the ends that meet it with it unless moved alone (call 170).
-            let moved = ed::move_wall(&mut job, element, by[0], by[1], ed::Entered { status, source: &source }, flag("--alone").is_some())?;
-            let mut out = format!("{element} moved {} ft east and {} ft north", view::num(by[0]), view::num(by[1]));
+            let moved = ed::move_wall(&mut job, element, east, north, ed::Entered { status, source: &source }, flag("--alone").is_some())?;
+            let mut out = format!("{element} moved {}", ed::way_said(east, north));
             for line in moved.said() {
                 out.push_str(&format!("\n  {line}"));
             }
