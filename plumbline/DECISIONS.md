@@ -6977,3 +6977,47 @@ on two rules of the lead's that existing tests show were wrong as written.
   stands. They are said ("something overhead or hidden, or on a renovation a wall to be
   demolished"), counted, and never laid: a person draws or marks a demolished wall
   themselves.
+
+### Call 187. The window first: what the lead changes after Patrick asked whether there is progress (2026-11-23)
+
+Patrick: "i am still concerened that we are not making progess what can you do to
+reassure me and confirm there has not been drift or issues with bad looping".
+
+**The audit, from the branch itself** (48f3bdf to 0677db0, 2026-11-22 20:15 to 11-23
+14:37 UTC): 33 commits; 23,020 lines added under `crates/` in 78 files, **1,357 of them
+in the window's crate (6 percent)**; 6,311 lines added to the decisions, the status
+record and the research notes; about half the commits are decisions and records.
+Tests 510 to 760 in the command-line crates.
+
+**What is so.**
+- No drift from the purpose (call 172): each piece built that day is one of scan in,
+  drawn plan in, the 3D building seen by each trade, the renovation, drawings out.
+- **But the work is lopsided, the same way it was two days before**: the window, which
+  is what a person uses, got 6 percent of the new code. Found walls in a scan and on a
+  plan, what a wall carries, beams and posts, the plan set and the priced trim exist
+  only at the command line. One builder at a time can work on the window, a window
+  pass takes hours on this machine, and command-line work beside it is cheap: so it
+  piled up.
+- **One loop with shrinking returns**: build, judge, fix, judge on the two wall-finders,
+  two rounds each, all on made-up files. Each round found real defects; a third round
+  on made-up files would be looping.
+- Lost time that was not work: about nine hours in two stalls (a worker restart that
+  lost done signals; a usage limit that stopped the window's builder), and a steady
+  overhead of check-ins and records.
+
+**Changed from here.**
+1. **The window first.** No new command-line feature is started until the window has
+   what the command line has, in this order: the window's work in hand (contract-184)
+   merged; the priced trim drawn; walls found in a scan and on a plan offered when one
+   is brought in; the bearing tint and what a wall carries; the beam, post and pad
+   tools; the plan set under Write out. Command-line agents fix only what real files
+   show wrong.
+2. **No third judgment on made-up files.** The finders are next judged by real files
+   (the run in hand) and by a person; a judge is sent only to something no judge has
+   seen (the window; the trim).
+3. **An update to Patrick is a picture of something he can now do in the window, or a
+   figure from a real file.** Not a count of calls.
+4. **At most two agents at a time, the window's builder first**, so that the shared
+   usage limit does not stop it again; a check-in resumes a stopped agent.
+5. **Records are kept short**: a call is written where a meaning or an expectation
+   moves, a section of STATUS where something was run; neither for its own sake.
