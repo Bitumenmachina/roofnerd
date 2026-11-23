@@ -65,6 +65,16 @@ const FINE_BIN: f64 = 0.025;
 const MIN_VOTES: u32 = 20;
 /// The most lines looked for (a house has a few dozen).
 const MOST_LINES: usize = 120;
+/// The strongest lines the roughness of a scan's walls is measured on, and how far from each (feet) its points are taken (call 188, 1).
+/// What is left out and is this long or longer is offered as "likely a wall" (call 188, 1), and how much of the ceiling's height a face that stops short stands for it to be.
+const LIKELY_LEAST: f64 = 6.0;
+/// Faces within this far (16 in, the thickest wall found as one, and not the 2 ft a bank of cabinets is deep) across, alongside one another for this share of the shorter's length, and seen from the same side, are one face scanned in passes (call 188, 2).
+const PASS_APART: f64 = PAIR_MOST;
+const PASS_ALONGSIDE: f64 = 0.5;
+const PILOT_LINES: usize = 6;
+const PILOT_WINDOW: f64 = 0.3;
+/// How far from the floor its points are taken to tell how rough it is (feet).
+const FLOOR_REACH: f64 = 0.25;
 /// How far from its line a point is still on a face, each side: 3 sigma of 1.5 cm of
 /// scatter. Two faces nearer than this to each other cannot be told apart (the call's
 /// least wall is 2 in = 0.167 ft; a face of 1.5 cm scatter keeps within 0.15).
@@ -431,6 +441,10 @@ pub struct Wall {
     pub height: Option<f64>,
     /// The ceiling was not read over it (no cell of ceiling points near, where the ceiling is not one height): its height is the house's middle one (call 183, 6).
     pub ceiling_not_read: bool,
+    /// How deep it bows over what length, in feet, where the bow is an inch or more (call 188, 1); None where it is straight.
+    pub bow: Option<(f64, f64)>,
+    /// How many faces were joined into it: a wall scanned in passes (call 188, 2).
+    pub joined: usize,
 }
 
 impl Wall {
@@ -536,6 +550,10 @@ pub struct Found {
     pub beyond_things: Vec<String>,
     /// Which floor is the house, where that is a choice (call 183, 2).
     pub beyond_note: Option<String>,
+    /// How rough the scan's walls are, in feet (call 188, 1), where they are rougher than the made-up scans the finder was built on (and the band a face's points lie in is wider by as much): the robust spread of a wall's points about its own plane; None where it was not wider.
+    pub scatter: Option<f64>,
+    /// The scan was thinned before it was read, from this many points to this many (call 188, 4).
+    pub thinned: Option<(usize, usize)>,
 }
 
 impl Found {
@@ -597,6 +615,14 @@ struct Face {
     sq: f64,
     /// How much of it the scan shows: the squares of 3 in along and up that hold points, in square feet.
     seen_area: f64,
+    /// The band its points were taken in, across it (wider in a scan that scatters more), and how deep it bows over what length (call 188, 1).
+    tol: f64,
+    bow: (f64, f64),
+    /// How many faces were joined into this one (a wall scanned in passes), and whether this one was itself joined into another (call 188, 2).
+    joined: usize,
+    gone: bool,
+    /// Which side the scan saw it from was told by floor in front of it (not guessed where neither side showed enough floor).
+    seen_sure: bool,
 }
 
 impl Face {
@@ -1027,13 +1053,10 @@ fn holed(faces: &[Face], wall_ids: &[usize], band: &[[f64; 3]], density: f64) ->
 
 /// The same, against every face but `skip`.
 /// How far the points of a face lie from its line, root mean square.
-fn rms_across(pts: &[[f64; 3]], rho: f64) -> f64 {
-    (pts.iter().map(|p| (p[1] - rho) * (p[1] - rho)).sum::<f64>() / pts.len().max(1) as f64).sqrt()
-}
 
 fn crosses_other(p: P2, theta: f64, faces: &[Face], skip: usize) -> bool {
     faces.iter().enumerate().any(|(j, g)| {
-        j != skip && (theta - g.theta).sin().abs() >= CROSSES && (dot(p, normal(g.theta)) - g.rho).abs() <= BAND + 0.05 && dot(p, dir(g.theta)) >= g.s0 - SNAP && dot(p, dir(g.theta)) <= g.s1 + SNAP
+        j != skip && (theta - g.theta).sin().abs() >= CROSSES && (dot(p, normal(g.theta)) - g.rho).abs() <= g.tol + 0.05 && dot(p, dir(g.theta)) >= g.s0 - SNAP && dot(p, dir(g.theta)) <= g.s1 + SNAP
     })
 }
 
@@ -1043,7 +1066,7 @@ fn crosses_other(p: P2, theta: f64, faces: &[Face], skip: usize) -> bool {
 /// things (through a sofa's front and back) has nothing of its own.
 fn crosses_face(p: P2, theta: f64, faces: &[Face]) -> bool {
     faces.iter().any(|g| {
-        (theta - g.theta).sin().abs() >= CROSSES && (dot(p, normal(g.theta)) - g.rho).abs() <= BAND + 0.05 && dot(p, dir(g.theta)) >= g.s0 - 0.2 && dot(p, dir(g.theta)) <= g.s1 + 0.2
+        (theta - g.theta).sin().abs() >= CROSSES && (dot(p, normal(g.theta)) - g.rho).abs() <= g.tol + 0.05 && dot(p, dir(g.theta)) >= g.s0 - 0.2 && dot(p, dir(g.theta)) <= g.s1 + 0.2
     })
 }
 
@@ -1104,9 +1127,9 @@ fn runs_of(s: &[f64], sq: f64) -> Vec<(f64, f64)> {
 
 /// A vote's line told again from the points near it (see where it is used): its direction from all of them, and
 /// its place from the fullest 3 in across it of them.
-fn seed_line(pool: &[P2], theta: f64, rho: f64) -> (f64, f64) {
+fn seed_line(pool: &[P2], theta: f64, rho: f64, seed_band: f64) -> (f64, f64) {
     let n = normal(theta);
-    let near: Vec<P2> = pool.iter().copied().filter(|p| (dot(*p, n) - rho).abs() <= SEED_BAND + 0.05).collect();
+    let near: Vec<P2> = pool.iter().copied().filter(|p| (dot(*p, n) - rho).abs() <= seed_band + 0.05).collect();
     if near.len() < 20 {
         return (theta, rho);
     }
@@ -1121,17 +1144,17 @@ fn seed_line(pool: &[P2], theta: f64, rho: f64) -> (f64, f64) {
     };
     let n = normal(theta);
     let offs: Vec<f64> = near.iter().map(|p| dot(*p, n)).collect();
-    let bins = (2.0 * (SEED_BAND + 0.05) / FINE_BIN).ceil() as usize + 1;
+    let bins = (2.0 * (seed_band + 0.05) / FINE_BIN).ceil() as usize + 1;
     let mut count = vec![0u32; bins];
     for o in &offs {
-        let b = ((o - (rho - SEED_BAND - 0.05)) / FINE_BIN).floor();
+        let b = ((o - (rho - seed_band - 0.05)) / FINE_BIN).floor();
         if b >= 0.0 && (b as usize) < bins {
             count[b as usize] += 1;
         }
     }
     // The fullest three bins together (a face's scatter is a few bins wide).
     let best = (0..bins).max_by_key(|b| (b.saturating_sub(1)..=(*b + 1).min(bins - 1)).map(|i| count[i]).sum::<u32>()).unwrap_or(0);
-    let centre = rho - SEED_BAND - 0.05 + (best as f64 + 0.5) * FINE_BIN;
+    let centre = rho - seed_band - 0.05 + (best as f64 + 0.5) * FINE_BIN;
     let mine: Vec<f64> = offs.into_iter().filter(|o| (o - centre).abs() <= 0.1).collect();
     if mine.is_empty() {
         return (theta, rho);
@@ -1199,6 +1222,19 @@ fn unlikely(scan: &Scan, heights: Option<(f64, f64)>) -> Option<String> {
         return Some(format!("{check} (the scan is {} across, and a house is not over {})", ft_in(east.max(north)), ft_in(MOST_LONG)));
     }
     None
+}
+
+/// A count with its thousands set off, as the program writes them.
+pub(crate) fn plumbline_world_figure(n: usize) -> String {
+    let s = n.to_string();
+    let mut out = String::new();
+    for (i, c) in s.chars().enumerate() {
+        if i > 0 && (s.len() - i) % 3 == 0 {
+            out.push(',');
+        }
+        out.push(c);
+    }
+    out
 }
 
 fn plumbline_units_count(n: usize, one: &str, many: &str) -> String {
@@ -1286,6 +1322,32 @@ pub fn find(scan: &Scan) -> Found {
 /// is asked for. A scan of one level is found as it is. More than one is said, "the scan holds two levels: floors at 0' 0" and 9' 3"", and the points of the
 /// others are not looked at: each level is found alone, so that the walls of one are not found twice and a door of the upper floor is not a window of the lower.
 pub fn find_level(scan: &Scan, wanted: Option<f64>) -> Found {
+    // A scan too large to be read in good time is thinned first, and that is said (call 188, 4).
+    if scan.points.len() > crate::found_188::MOST_POINTS {
+        let (thin, kept) = crate::found_188::thin(scan);
+        let mut out = find_level(&thin, wanted);
+        out.thinned = Some((scan.points.len(), kept));
+        return out;
+    }
+    // Which way is up, told by shape, before anything is found (call 188, 3): said first, and nothing is laid without the person's word.
+    let mut out = find_level_inner(scan, wanted);
+    if let Some(up) = crate::found_188::which_way_up(&scan.points) {
+        // The shape says it first; what the reading of the floor to the ceiling says is kept, as what it read.
+        out.not_likely = Some(match out.not_likely.take() {
+            Some(read) => match (read.find('('), read.rfind(')')) {
+                (Some(a), Some(b)) if b > a => format!("{up}; {}", &read[a + 1..b]),
+                _ => format!("{up}; {read}"),
+            },
+            None => up,
+        });
+    }
+    out
+}
+
+fn find_level_inner(scan: &Scan, wanted: Option<f64>) -> Found {
+    if scan.points.len() >= crate::found_188::PROGRESS_FROM {
+        crate::found_188::progress(&format!("reading {} points for walls", plumbline_world_figure(scan.points.len())));
+    }
     let lv = levels(scan);
     if lv.len() < 2 {
         return find_one(scan);
@@ -1315,6 +1377,11 @@ pub fn find_level(scan: &Scan, wanted: Option<f64>) -> Found {
 
 /// A level asked for is this near (2 ft) a floor of the scan's for that to be the one found without saying so.
 const LEVEL_NEAR: f64 = 2.0;
+
+/// Set where progress is said (a line at a time), for a scan large enough to take a while; None says nothing (call 188, 4).
+pub fn set_progress(f: Option<fn(&str)>) {
+    crate::found_188::set_progress(f);
+}
 
 /// Find the walls of a scan of one level (levelled by its floor), by how thick the scan is where: where one part is thinner than another by 2 1/2 times or
 /// more, each part is read by its own thickness and what each finds is one find, and the parts are said, with where (call 183, 7).
@@ -1439,12 +1506,40 @@ fn find_core(scan: &Scan) -> Found {
     // ---- lines, strongest first; each one's stretches are faces ----
     let steps = (180.0 / VOTE_DEGREES) as usize;
     let (cos, sin): (Vec<f64>, Vec<f64>) = (0..steps).map(|k| { let n = normal((k as f64 * VOTE_DEGREES).to_radians()); (n[0], n[1]) }).unzip();
+    // How rough this scan's walls are, from its strongest lines (call 188, 1): the band a face's points lie in, and the reach of what is
+    // taken off the vote, are as much wider than the made-up scans' as its walls scatter more.
+    let (scatter, kr) = {
+        let mut pv = votes.clone();
+        let mut lines: Vec<(f64, f64)> = Vec::new();
+        for _ in 0..PILOT_LINES {
+            let Some((k, r0, _)) = strongest(&pv, &cos, &sin, min_votes) else { break };
+            let (t0, r0) = seed_line(&pool, (k as f64 * VOTE_DEGREES).to_radians(), r0, SEED_BAND);
+            let n0 = normal(t0);
+            pv.retain(|p| (dot(*p, n0) - r0).abs() > SEED_BAND);
+            lines.push((t0, r0));
+        }
+        let walls_say = crate::found_188::wall_scatter(&band, &lines, PILOT_WINDOW);
+        let floor_says = crate::found_188::floor_scatter(&scan.points, floor, FLOOR_REACH);
+        let sc = match (walls_say, floor_says) {
+            (Some(a), Some(b)) => Some(a.max(b)),
+            (a, b) => a.or(b),
+        };
+        (sc, crate::found_188::band_scale(sc))
+    };
+    let mut wide_used = false;
+    // A face is first fitted in the band the made-up scans were (so that two faces a thin wall apart are two); only where it is not straight
+    // so, is it fitted again in the band this scan's own roughness asks (call 188, 1).
+    let (tol, tol_wide, seed_band) = (BAND, BAND * kr, SEED_BAND);
     let mut faces: Vec<Face> = Vec::new();
     // How closely the points of a face keep to its line, as the best faces found so far keep (call 179, A5).
     let mut ref_rms: Option<f64> = None;
     let mut left: Vec<Left> = Vec::new();
     let mut bits = 0usize;
-    for _ in 0..MOST_LINES {
+    let big = scan.points.len() >= crate::found_188::PROGRESS_FROM;
+    for line_no in 0..MOST_LINES {
+        if big && line_no % 10 == 0 {
+            crate::found_188::progress(&format!("looking for walls: line {} of at most {MOST_LINES}, {} faces so far", line_no + 1, faces.len()));
+        }
         let Some((k, rho0, _)) = strongest(&votes, &cos, &sin, min_votes) else { break };
         // The vote's line, as coarse as the vote: the points within SEED_BAND of it, all
         // heights, along it. Its stretches are looked at one at a time: two things on one
@@ -1455,9 +1550,9 @@ fn find_core(scan: &Scan) -> Found {
         // peak, and a line fitted to the points of both leans across them and then across the next (call 179,
         // A5). The line is told again from the points themselves, its direction from all that lie near it and its
         // place from the fullest quarter-inch of them: one face, the fuller; the other is the next line's.
-        let (theta0, rho0) = seed_line(&pool, (k as f64 * VOTE_DEGREES).to_radians(), rho0);
+        let (theta0, rho0) = seed_line(&pool, (k as f64 * VOTE_DEGREES).to_radians(), rho0, seed_band);
         let (d0, n0) = (dir(theta0), normal(theta0));
-        let mut on: Vec<f64> = band.iter().filter(|p| (dot([p[0], p[1]], n0) - rho0).abs() <= SEED_BAND && !crosses_face([p[0], p[1]], theta0, &faces)).map(|p| dot([p[0], p[1]], d0)).collect();
+        let mut on: Vec<f64> = band.iter().filter(|p| (dot([p[0], p[1]], n0) - rho0).abs() <= seed_band && !crosses_face([p[0], p[1]], theta0, &faces)).map(|p| dot([p[0], p[1]], d0)).collect();
         on.sort_by(f64::total_cmp);
         let mut taken_out: Vec<(f64, f64)> = Vec::new();
         for (sa, sb) in runs_of(&on, sq) {
@@ -1474,25 +1569,26 @@ fn find_core(scan: &Scan) -> Found {
             let (mut theta, mut rho) = (theta0, rho0);
             for _ in 0..3 {
                 let (d, n) = (dir(theta), normal(theta));
-                let near: Vec<P2> = pool.iter().copied().filter(|p| (dot(*p, n) - rho).abs() <= if theta == theta0 { SEED_BAND } else { BAND } && dot(*p, d) >= sa - 0.2 && dot(*p, d) <= sb + 0.2 && !crosses_face(*p, theta, &faces)).collect();
+                let near: Vec<P2> = pool.iter().copied().filter(|p| (dot(*p, n) - rho).abs() <= if theta == theta0 { seed_band } else { tol } && dot(*p, d) >= sa - 0.2 && dot(*p, d) <= sb + 0.2 && !crosses_face(*p, theta, &faces)).collect();
                 let Some((t, m)) = long_way(&near) else { break };
                 // `long_way` gives an angle within 0 to pi; keep the one nearest the vote's.
                 theta = if (t - theta0).abs() > std::f64::consts::FRAC_PI_2 { if t > theta0 { t - std::f64::consts::PI } else { t + std::f64::consts::PI } } else { t };
                 rho = dot(m, normal(theta));
             }
-            let points_of = |theta: f64, rho: f64, faces: &[Face]| -> Vec<[f64; 3]> {
-                let (d, n) = (dir(theta), normal(theta));
-                band.iter().filter(|p| (dot([p[0], p[1]], n) - rho).abs() <= BAND && !crosses_face([p[0], p[1]], theta, faces)).map(|p| [dot([p[0], p[1]], d), dot([p[0], p[1]], n), p[2]]).filter(|p| p[0] >= sa - 0.2 && p[0] <= sb + 0.2).collect()
-            };
-            let mut pts: Vec<[f64; 3]> = points_of(theta, rho, &faces);
+            // The face is fitted as the wall stands in a real scan (call 188, 1): the points within the band of a plane that leans a
+            // little and may bow, the band as wide as the scan's own scatter says.
+            let skip = |q: P2, t: f64| crosses_face(q, t, &faces);
+            let Some(fit) = crate::found_188::fit_face(&band, theta, rho, sa, sb, tol, sb - sa >= crate::found_188::FREE_FROM, &skip) else { continue };
+            let (mut theta, mut rho, mut pts, mut rms) = (fit.theta, fit.rho, fit.pts.clone(), fit.rms);
+            let mut used = tol;
+            let mut bow = (fit.bow, fit.bow_len);
             // A face is fitted along its whole length or it is not found (call 179, A5): its points keep to
             // its line as closely as the other faces' keep to theirs. A line that leans across two walls near
             // one another (a closet's, 3 1/2 in thick and a few feet long) has points all across its band. It is
             // tried again square to a face already found, the way the walls of a house lie; if its points do not
             // keep to that either, it is not a face, and that is said.
-            let (mut theta, mut rho) = (theta, rho);
             if let Some(r) = ref_rms.filter(|_| pts.len() >= 20) {
-                if rms_across(&pts, rho) > STRAIGHT * r {
+                if rms > STRAIGHT * r {
                     let square: Option<f64> = faces.iter().flat_map(|f| [f.theta, f.theta + std::f64::consts::FRAC_PI_2, f.theta - std::f64::consts::FRAC_PI_2]).filter(|t| (t - theta).abs().to_degrees() <= LEAN_MOST).min_by(|a, b| (a - theta).abs().total_cmp(&(b - theta).abs()));
                     let again = square.and_then(|t| {
                         let n = normal(t);
@@ -1501,14 +1597,26 @@ fn find_core(scan: &Scan) -> Found {
                         let best = offs.iter().copied().max_by_key(|o| offs.iter().filter(|q| (**q - *o).abs() <= 0.075).count())?;
                         let near: Vec<f64> = offs.into_iter().filter(|o| (o - best).abs() <= 0.075).collect();
                         let r2 = near.iter().sum::<f64>() / near.len() as f64;
-                        let p2 = points_of(t, r2, &faces);
-                        (p2.len() >= 20 && rms_across(&p2, r2) <= STRAIGHT * r).then_some((t, r2, p2))
+                        let f2 = crate::found_188::fit_face(&band, t, r2, sa, sb, tol, false, &skip)?;
+                        (f2.pts.len() >= 20 && f2.rms <= STRAIGHT * r).then_some(f2)
+                    });
+                    // Rougher than the made-up scans: the same line in the wider band, held to as many times the bar (call 188, 1).
+                    let again = again.map(|f| (f, tol)).or_else(|| {
+                        if kr <= 1.0 {
+                            return None;
+                        }
+                        let f3 = crate::found_188::fit_face(&band, theta, rho, sa, sb, tol_wide, true, &skip)?;
+                        (f3.pts.len() >= 20 && f3.rms <= STRAIGHT * r * kr).then_some((f3, tol_wide))
                     });
                     match again {
-                        Some((t, r2, p2)) => {
-                            theta = t;
-                            rho = r2;
-                            pts = p2;
+                        Some((f2, band_used)) => {
+                            theta = f2.theta;
+                            rho = f2.rho;
+                            rms = f2.rms;
+                            bow = (f2.bow, f2.bow_len);
+                            pts = f2.pts;
+                            used = band_used;
+                            wide_used |= band_used > tol;
                         }
                         None => {
                             left.push(Left { from: [sa * d0[0] + rho0 * n0[0], sa * d0[1] + rho0 * n0[1]], to: [sb * d0[0] + rho0 * n0[0], sb * d0[1] + rho0 * n0[1]], why: "not straight along the whole length (furniture, or two walls close together)".into() });
@@ -1531,7 +1639,7 @@ fn find_core(scan: &Scan) -> Found {
                 szd += (p[2] - mean_z) * (p[1] - mean_d);
             }
             let slope = if szz > 1e-9 { szd / szz } else { 0.0 };
-            let at_floor = if slope.abs() <= 0.035 { mean_d - slope * mean_z } else { mean_d };
+            let at_floor = if slope.abs() <= crate::found_188::TILT_MOST { mean_d - slope * mean_z } else { mean_d };
             pts.sort_by(|p, q| p[0].total_cmp(&q[0]));
             // Its ends, to the point, as an edge (what is beyond is empty or another wall).
             let s: Vec<f64> = pts.iter().map(|p| p[0]).collect();
@@ -1563,31 +1671,34 @@ fn find_core(scan: &Scan) -> Found {
                 let apart = (f.theta - theta).abs();
                 let across = (dot(f.at(f.mid()), n) - rho).abs();
                 let along = f.s1.min(s1) - f.s0.max(s0);
-                apart.to_degrees() < 2.0 && across < BAND && along > 0.5 * (s1 - s0).min(f.s1 - f.s0)
+                apart.to_degrees() < 2.0 && across < used && along > 0.5 * (s1 - s0).min(f.s1 - f.s0)
             });
             if twice {
                 continue;
             }
             if pts.len() >= 500 {
-                let r = rms_across(&pts, rho);
-                ref_rms = Some(ref_rms.map_or(r, |q: f64| q.min(r)));
+                ref_rms = Some(ref_rms.map_or(rms, |q: f64| q.min(rms)));
             }
-            let mut face = Face { theta, rho: at_floor, s0, s1, pts, wall: false, squared: false, seen: [false, false], height: 0.0, tall: false, floor_cols: Vec::new(), ceil_cols: Vec::new(), partial: false, hung: false, cols_from: 0.0, ceil: 0.0, sq, seen_area: 0.0 };
+            let mut face = Face { theta, rho: at_floor, s0, s1, pts, wall: false, squared: false, seen: [false, false], height: 0.0, tall: false, floor_cols: Vec::new(), ceil_cols: Vec::new(), partial: false, hung: false, cols_from: 0.0, ceil: 0.0, sq, seen_area: 0.0, tol: used, bow, joined: 0, gone: false, seen_sure: false };
             classify(&mut face, &ceil, sq);
             faces.push(face);
             // Its cells are out of the next vote.
             // (as far as the seed band: cells at a corner are drawn a little off their line by the wall that crosses it)
-            votes.retain(|p| !((dot(*p, n) - rho).abs() <= SEED_BAND && dot(*p, d) >= sa - 0.3 && dot(*p, d) <= sb + 0.3));
+            votes.retain(|p| !((dot(*p, n) - rho).abs() <= seed_band && dot(*p, d) >= sa - 0.3 && dot(*p, d) <= sb + 0.3));
         }
         // Whatever the vote's own cells were, they are out of the next vote: the ones near
         // its line, where its stretches ran.
         let before = votes.len();
-        votes.retain(|p| !((dot(*p, n0) - rho0).abs() <= SEED_BAND && taken_out.iter().any(|(a, b)| dot(*p, d0) >= a - 0.3 && dot(*p, d0) <= b + 0.3)));
+        votes.retain(|p| !((dot(*p, n0) - rho0).abs() <= seed_band && taken_out.iter().any(|(a, b)| dot(*p, d0) >= a - 0.3 && dot(*p, d0) <= b + 0.3)));
         if votes.len() == before {
-            votes.retain(|p| (dot(*p, n0) - rho0).abs() > SEED_BAND);
+            votes.retain(|p| (dot(*p, n0) - rho0).abs() > seed_band);
         }
     }
 
+    if big {
+        crate::found_188::progress(&format!("{} faces found; telling which are walls", faces.len()));
+    }
+    out.scatter = if wide_used { scatter } else { None };
     // Every stretch left out is said, with where it is and how long (call 183, 4).
     left.sort_by(|a, b| a.from[0].total_cmp(&b.from[0]).then(a.from[1].total_cmp(&b.from[1])));
     left.dedup_by(|a, b| (a.from[0] - b.from[0]).abs() < 0.5 && (a.from[1] - b.from[1]).abs() < 0.5 && (a.to[0] - b.to[0]).abs() < 0.5 && (a.to[1] - b.to[1]).abs() < 0.5);
@@ -1605,7 +1716,11 @@ fn find_core(scan: &Scan) -> Found {
     // one that does not over its length and its height)
     let floor_reach = |f: &Face| f.floor_cols.iter().filter(|x| **x).count() as f64 / f.floor_cols.len().max(1) as f64;
     let per_foot: Vec<f64> = faces.iter().map(|f| f.pts.len() as f64 / ((f.s1 - f.s0) * if f.tall && floor_reach(f) >= WALL_REACHES_FLOOR { f.ceil } else { f.height.max(0.5) })).collect();
+    // The usual is what a face of the scan shows, but not more than the floor shows to the square foot (call 188, 1): the walls of a phone's
+    // scan are seen at 10 times the density of one another (near and square on, or far and at a slant), and the median of three walls
+    // is then four times what the fourth shows.
     let usual = median(per_foot.clone());
+    let usual = rho.map_or(usual, |r| usual.min(r));
     // A face that reaches the ceiling is also kept if what the scan shows of it is dense: a wall seen only
     // above what stands before it has few points to its whole face and as many to what it shows as any (call
     // 179, A2). A face that stops short is held to the whole of what it spans: a line through other things'
@@ -1724,8 +1839,64 @@ fn find_core(scan: &Scan) -> Found {
             }
         }
         f.seen = [sides[0] >= SEEN_FLOOR_CELLS && sides[0] * SEEN_SHARE >= sides[1], sides[1] >= SEEN_FLOOR_CELLS && sides[1] * SEEN_SHARE >= sides[0]];
+        f.seen_sure = f.seen[0] != f.seen[1];
         if !f.seen[0] && !f.seen[1] {
             f.seen = [sides[0] >= sides[1], sides[0] < sides[1]];
+        }
+    }
+
+    // ---- a wall scanned in passes is one face (call 188, 2) ----
+    // Faces that run alongside one another within a wall's thickness and were seen from the same side are the layers of one wall, not
+    // two walls (the faces of one wall seen from both sides face away from each other, and are paired below, as they were).
+    let mut wall_ids = wall_ids;
+    {
+        let mut again = true;
+        while again {
+            again = false;
+            'passes: for x in 0..wall_ids.len() {
+                for y in x + 1..wall_ids.len() {
+                    let (a, b) = (wall_ids[x], wall_ids[y]);
+                    let (fa, fb) = (&faces[a], &faces[b]);
+                    let (na, nb) = (normal(fa.theta), normal(fb.theta));
+                    let way = |f: &Face, n: P2| if f.seen[0] == f.seen[1] { None } else if f.seen[0] { Some(n) } else { Some([-n[0], -n[1]]) };
+                    if !fa.seen_sure || !fb.seen_sure {
+                        continue;
+                    }
+                    let (Some(wa), Some(wb)) = (way(fa, na), way(fb, nb)) else { continue };
+                    let mut dt = (fa.theta - fb.theta).abs();
+                    dt = dt.min(std::f64::consts::PI - dt);
+                    if dt.to_degrees() > PAIR_DEGREES || dot(wa, wb) <= 0.0 {
+                        continue;
+                    }
+                    let across = (dot(fb.at(fb.mid()), na) - fa.rho).abs();
+                    let (b0, b1) = along_span(fb, dir(fa.theta));
+                    let overlap = fa.s1.min(b1) - fa.s0.max(b0);
+                    if across > PASS_APART || overlap < PASS_ALONGSIDE * (fa.s1 - fa.s0).min(fb.s1 - fb.s0) {
+                        continue;
+                    }
+                    // The one with more points keeps; the other is joined into it.
+                    let (k, o) = if fa.pts.len() >= fb.pts.len() { (a, b) } else { (b, a) };
+                    let (d, n) = (dir(faces[k].theta), normal(faces[k].theta));
+                    let (o0, o1) = along_span(&faces[o], d);
+                    let (do_, no_) = (dir(faces[o].theta), normal(faces[o].theta));
+                    let moved: Vec<[f64; 3]> = faces[o].pts.iter().map(|p| { let q = [p[0] * do_[0] + p[1] * no_[0], p[0] * do_[1] + p[1] * no_[1]]; [dot(q, d), dot(q, n), p[2]] }).collect();
+                    let more = faces[o].joined + 1;
+                    faces[o].gone = true;
+                    faces[o].wall = false;
+                    let fk = &mut faces[k];
+                    fk.pts.extend(moved);
+                    fk.s0 = fk.s0.min(o0);
+                    fk.s1 = fk.s1.max(o1);
+                    fk.joined += more;
+                    classify(fk, &ceil, sq);
+                    wall_ids.retain(|j| *j != o);
+                    if !faces[k].wall {
+                        wall_ids.retain(|j| *j != k);
+                    }
+                    again = true;
+                    break 'passes;
+                }
+            }
         }
     }
 
@@ -1773,7 +1944,7 @@ fn find_core(scan: &Scan) -> Found {
         }
         stand_at
     };
-    let stoppers: Vec<usize> = (0..faces.len()).filter(|i| !faces[*i].wall || doubts.contains_key(i)).collect();
+    let stoppers: Vec<usize> = (0..faces.len()).filter(|i| !faces[*i].gone && (!faces[*i].wall || doubts.contains_key(i))).collect();
     let stand_at = stand_of(&stoppers, &faces);
     let mut wall_ids = wall_ids;
     let mut demoted: Vec<(usize, bool)> = Vec::new();
@@ -1841,11 +2012,24 @@ fn find_core(scan: &Scan) -> Found {
         }
         let down = reach.iter().filter(|x| **x).count() as f64;
         let cols_all = f.floor_cols.len().max(1) as f64;
+        // What is left out and is 6 ft or longer is offered by its number as "likely a wall", and is laid only on the person's word (call
+        // 188, 1): a face that reaches the ceiling over some of its length, though not over most of it (a wall whose top was not seen over the
+        // rest, or lowered), and one that reaches the ceiling and whose foot was not seen (a low thing stands before it that no face was
+        // found for, or it hangs from the ceiling). A face that stands short of the ceiling over all its length is a cabinet, and is not offered.
+        let long_enough = f.s1 - f.s0 >= LIKELY_LEAST;
         if up / cols < WALL_REACHES_CEILING {
-            demoted.push((i, false));
+            if long_enough {
+                doubts.insert(i, format!("likely a wall: a face {} long whose top reaches the ceiling over {} in 100 of its length and not over the rest (a wall whose top was not seen there, or was lowered, or something tall)", plumbline_units(f.s1 - f.s0), (100.0 * up / cols).round()));
+            } else {
+                demoted.push((i, false));
+            }
         } else if down / cols_all < WALL_REACHES_FLOOR {
-            out.left_out.push(format!("a face {} long at {} east, {} north reaches the ceiling and not the floor, and nothing stands before it: it is not taken as a wall (something hung from the ceiling, or a wall seen only above)", plumbline_units(f.s1 - f.s0), plumbline_units(f.at(f.mid())[0]), plumbline_units(f.at(f.mid())[1])));
-            demoted.push((i, true));
+            if long_enough {
+                doubts.insert(i, format!("likely a wall: a face {} long that reaches the ceiling, its foot not seen over {} of its length (something low stood before it, or it hangs from the ceiling)", plumbline_units(f.s1 - f.s0), plumbline_units((1.0 - down / cols_all) * (f.s1 - f.s0))));
+            } else {
+                out.left_out.push(format!("a face {} long at {} east, {} north reaches the ceiling and not the floor, and nothing stands before it: it is not taken as a wall (something hung from the ceiling, or a wall seen only above)", plumbline_units(f.s1 - f.s0), plumbline_units(f.at(f.mid())[0]), plumbline_units(f.at(f.mid())[1])));
+                demoted.push((i, true));
+            }
         }
     }
     for (i, _) in &demoted {
@@ -1857,8 +2041,7 @@ fn find_core(scan: &Scan) -> Found {
         faces[i].hung = hung;
         wall_ids.retain(|j| *j != i);
     }
-    let standing: Vec<usize> = (0..faces.len()).filter(|i| !faces[*i].wall && !faces[*i].hung).collect();
-
+    let standing: Vec<usize> = (0..faces.len()).filter(|i| !faces[*i].wall && !faces[*i].hung && !faces[*i].gone).collect();
     // ---- one wall seen in two parts, with something standing along the gap between them ----
     // (call 179, A2) A wall's face that stops where a cabinet bank begins and starts again where it
     // ends is one wall, not two with the room open between: not seen is not open. The gap is said
@@ -2015,6 +2198,9 @@ fn find_core(scan: &Scan) -> Found {
         // Seen from the side each face faces away from the other: both, so none of the one-sided.
         let (mut w, flip) = wall_of(theta, centre, s0, s1, Some((rb - fa.rho).abs()), None);
         w.height = Some(fa.ceil.min(fb.ceil));
+        let deeper = if fa.bow.0 >= fb.bow.0 { fa.bow } else { fb.bow };
+        w.bow = (deeper.0 >= crate::found_188::BOW_SAY).then_some(deeper);
+        w.joined = fa.joined + fb.joined;
         walls.push((w, WallBuild { pts, theta, rho: centre, s0, flip }));
     }
     for i in &wall_ids {
@@ -2030,9 +2216,14 @@ fn find_core(scan: &Scan) -> Found {
         let (mut w, flip) = wall_of(f.theta, f.rho, f.s0, f.s1, None, seen_from);
         w.doubt = doubts.get(i).cloned();
         w.height = Some(f.ceil);
+        w.bow = (f.bow.0 >= crate::found_188::BOW_SAY).then_some(f.bow);
+        w.joined = f.joined;
         walls.push((w, WallBuild { pts, theta: f.theta, rho: f.rho, s0: f.s0, flip }));
     }
 
+    if big {
+        crate::found_188::progress("looking for openings in the walls");
+    }
     // ---- the openings, and what is not seen ----
     for (w, b) in &mut walls {
         let (d, n) = (dir(b.theta), normal(b.theta));

@@ -9836,6 +9836,28 @@ committed at 0677db0. **Nothing below is fixed yet**; DECISIONS.md call 188 has 
 So: what was built on made-up scans does not yet work on a real phone scan, and what
 was built on made-up sheets mostly works on a real clean sheet.
 
+## Call 188 items 1 to 5 built: the scan's finder on real phone scans (2026-11-23)
+
+`research/worker-report-call188.md`. The builder measured three real phone scans before
+changing anything, then made the finder tolerate what real walls are. Merged; **770
+tests in the six command-line crates and 46 command-line demonstrations pass** on the
+integration copy. The lead ran the three real scans through the merged program itself
+and reads the same as the builder.
+
+| Real scan | By its top-down picture | Before | Now |
+|---|---|---|---|
+| a small furnished room | about 8 wall pieces, the longest about 7 ft | 0 walls found | nothing laid; 3 offered as "likely a wall": the south wall (bowed 2 1/4 in), the east wall twice; the west and north walls not found (said, with where) |
+| a long room | about 8 to 9 walls | 11 found, one three times; 75 s | 12 found, every side there, one wall twice, 6 ends meet nothing (said); 7 s |
+| a large notched room | about 10 to 12 pieces | 5 short pieces; 40 s | 8 found: three right; one wrongly joined across the notch and offered twice; one missed; 5 s |
+
+The wrong way up is now caught. **It is still not right on any real scan**, and by the
+builder's account the unit tests were written after the code. DECISIONS.md call 189
+says why (the finder is the lead's own design where a published method exists) and
+what changes: the finder is rebuilt on the published method, judged on real scans
+first. Made-up houses: 60 of 65 the same; three better; one adds two offers in doubt;
+one says "1 end meets nothing" where it said the walls close (a closet wall's end
+moved 3 in).
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **As of 2026-11-23 (the lead, after the merge of that day). Read this block first; what

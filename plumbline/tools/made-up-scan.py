@@ -215,11 +215,19 @@ class Scene:
         self.np, self.rng, self.dens = np, rng, dens
         self.faces, self.boxes, self.floors, self.ceilings, self.foot = [], [], [], [], []
         self.ceil_dens, self.arcs, self.mirror_at, self.mirror_y, self.extra = {}, [], None, None, []
+        self.warps = {}                      # call 188: face index -> (bow, lean, extra scatter, shift), see warp()
 
     def face(self, a, b, top, gaps=(), hide=(), z0=0.0, dens=None):
         """A vertical face from a to b, up to `top` (a height, or a function of (x, y)). `gaps`: (from, to, low, high)
         left empty (an opening); `hide`: (from, to, height) not seen below that height (something stands in front)."""
         self.faces.append((a, b, top, list(gaps), list(hide), z0, dens or self.dens))
+        return len(self.faces) - 1
+
+    def warp(self, i, bow=0.0, lean=0.0, extra=0.0, shift=0.0):
+        """Make face i as a phone's scan has it (call 188): `bow` feet deep in the middle against its ends, `lean` (a rise over a foot of
+        height) off plumb, `extra` feet more scatter across it than the scan's own, the whole face `shift` feet out. Drawn from a generator
+        of its own, so that the faces of the scenes above are unchanged byte for byte."""
+        self.warps[i] = (bow, lean, extra, shift)
 
     def thick(self, a, b, t, top, gaps=(), hide=(), sides="both", dens=None):
         """A wall t feet thick on the centre line a to b: its two faces (or only the left or the right of the way a to b)."""
@@ -280,7 +288,7 @@ class Scene:
             xy = uni(x0, y0, x1, y1, self.ceil_dens.get(ci, self.dens))
             z = np.array([self.ceiling_at(x, y) for x, y in xy]) if z0 != z1 else np.full(len(xy), z0)
             out.append(np.column_stack([xy, z]))
-        for (a, b, top, gaps, hide, z0, d) in self.faces:
+        for fi, (a, b, top, gaps, hide, z0, d) in enumerate(self.faces):
             dx, dy = b[0] - a[0], b[1] - a[1]
             L = (dx * dx + dy * dy) ** 0.5
             tops = top if callable(top) else None
@@ -297,6 +305,12 @@ class Scene:
             for (h0, h1, hz) in hide:
                 keep &= ~((s >= h0) & (s <= h1) & (z <= hz))
             keep &= z >= z0
+            if fi in self.warps:
+                bow, lean, extra, shift = self.warps[fi]
+                nx, ny = -dy / L, dx / L
+                u = 2 * s / L - 1
+                off = shift + lean * z + bow * (1 - u * u) + extra * np.random.default_rng(7000 + fi).normal(0, 1, n)
+                x, y = x + nx * off, y + ny * off
             out.append(np.column_stack([x[keep], y[keep], z[keep]]))
         for (x0, y0, x1, y1, top, un, d) in self.boxes:
             n = int(round((x1 - x0) * (y1 - y0) * d))
@@ -710,6 +724,41 @@ def s_storey2(S, p):
             S.face(a, b, top, [gap] if i == 0 else [], [], z0=z0)
     for k in range(10):
         S.box(18, 1 + k, 22, 2 + k, 0.9 * (k + 1))
+
+
+def s_phone(S, p):
+    """A 12 by 14 ft room, 8 ft high, scanned as a phone scans (call 188): rough, bowed, leaning, uneven and in passes. Right: 4 walls, none in doubt; the south wall (12 ft) bowed 1 1/2 in and said; the west wall found once though scanned in two passes 10 in apart (joined: said); the south and west walls seen at an eighth of the density of the north and east, found all the same."""
+    # The measures are those of three real phone scans (a small, a long and a large room), taken for call 188 (nothing here is a real point):
+    #   a wall's points scatter 2.4 to 4.8 cm (rms) about its plane in 0.5 m windows, 1.7 to 3.1 cm by the median deviation: here 1.5 cm of the scan's
+    #     own and 2 cm more across each face (--set extra=feet to change it);
+    #   a wall leans 0.5 to 2.2 degrees over its height: here 1 degree (--set lean=rise per foot);
+    #   a wall bows 1 to 15 cm over its length (2 to 4 in on 10 to 14 ft is usual): here 1 1/2 in on the south wall (--set bow=feet);
+    #   a wall is seen at 0.9 to 1.6 times the floor's density as a rule, but a wall scanned close and square on shows up to 11 times the floor's (370 against
+    #     4750 to the square foot of face in the small room): here the north and east walls at 8 times the others (--set dense=times);
+    #   a wall is passed over more than once: 1.4 to 2.3 layers in a half meter window, 1.4 to 4.4 cm apart: here the west wall in two passes 10 in apart
+    #     (--set pass=feet), each at half the density.
+    W, D, H = p.get("w", 12), p.get("d", 14), 8
+    bow, lean, extra = p.get("bow", 0.125), p.get("lean", 0.0175), p.get("extra", 0.0656)
+    S.floor(0, 0, W, D)
+    S.ceiling(0, 0, W, D, H)
+    d = S.dens
+    south = S.face((0, 0), (W, 0), None, dens=d)
+    S.warp(south, bow=bow, lean=lean, extra=extra)
+    east = S.face((W, 0), (W, D), None, dens=d * p.get("dense", 8))
+    S.warp(east, lean=lean, extra=extra)
+    north = S.face((W, D), (0, D), None, dens=d * p.get("dense", 8))
+    S.warp(north, lean=lean, extra=extra)
+    west = S.face((0, D), (0, 0), None, dens=d / 2)
+    S.warp(west, lean=lean, extra=extra)
+    west2 = S.face((0, D), (0, 0), None, dens=d / 2)
+    S.warp(west2, lean=lean, extra=extra, shift=p.get("pass", 10 / 12))
+
+
+def s_hung(S, p):
+    """A 14 by 12 ft room, 8 ft high, with a beam face 8 ft long hanging from the ceiling, from the east wall 5 ft in from the south wall, from 3 ft up to the ceiling (call 188: what is left out and is 6 ft or longer is offered by its number as likely a wall). Right: the 4 outside walls found; the hanging face is 8 ft long, reaches the ceiling and not the floor and nothing stands before it: offered as likely a wall, not laid unless the person says so."""
+    W, D, H = p.get("w", 14), p.get("d", 12), 8
+    box_room(S, W, D, H)
+    S.face((6, 5), (14, 5), None, z0=p.get("low", 3.0))
 
 
 SCENES = {k[2:]: v for k, v in list(globals().items()) if k.startswith("s_") and callable(v)}

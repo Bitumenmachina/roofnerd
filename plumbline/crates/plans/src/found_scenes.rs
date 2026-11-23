@@ -115,6 +115,32 @@ impl Scene {
         }
     }
 
+    /// A face as a phone's scan has it (call 188): `bow` deep in the middle against its ends, `lean` (a rise over a foot of height) off plumb,
+    /// `extra` more scatter across it than the scan's own (feet), the whole face `shift` out, at `dens` to the square foot of it. The measures a
+    /// phone's scan has are in `tools/made-up-scan.py` (scene phone), from three real scans.
+    #[allow(clippy::too_many_arguments)]
+    pub fn face_rough(&mut self, a: P2, b: P2, top: Option<f64>, bow: f64, lean: f64, extra: f64, shift: f64, dens: f64) {
+        let len = (b[0] - a[0]).hypot(b[1] - a[1]);
+        let tall = top.unwrap_or_else(|| self.ceiling_at(a[0], a[1]).max(self.ceiling_at(b[0], b[1])));
+        let (nx, ny) = (-(b[1] - a[1]) / len, (b[0] - a[0]) / len);
+        for _ in 0..(len * tall * dens).round() as usize {
+            let (s, z) = (self.rng.between(0.0, len), self.rng.between(0.0, tall));
+            let u = 2.0 * s / len - 1.0;
+            let off = shift + lean * z + bow * (1.0 - u * u) + extra * self.rng.gauss();
+            self.pts.push([a[0] + (b[0] - a[0]) * s / len + nx * off, a[1] + (b[1] - a[1]) * s / len + ny * off, z]);
+        }
+    }
+
+    /// A face that hangs from the ceiling: from `low` up to the ceiling over it (a beam, a soffit).
+    pub fn hung(&mut self, a: P2, b: P2, low: f64) {
+        let len = (b[0] - a[0]).hypot(b[1] - a[1]);
+        let tall = self.ceiling_at(a[0], a[1]).max(self.ceiling_at(b[0], b[1]));
+        for _ in 0..(len * (tall - low) * self.dens).round() as usize {
+            let (s, z) = (self.rng.between(0.0, len), self.rng.between(low, tall));
+            self.pts.push([a[0] + (b[0] - a[0]) * s / len, a[1] + (b[1] - a[1]) * s / len, z]);
+        }
+    }
+
     /// A horizontal surface over a rectangle at height `z` (a second storey's floor): points at the density, to the square foot.
     pub fn plate(&mut self, r: [f64; 4], z: f64) {
         let n = ((r[2] - r[0]) * (r[3] - r[1]) * self.dens).round() as usize;

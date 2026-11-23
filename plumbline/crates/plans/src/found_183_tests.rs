@@ -223,8 +223,14 @@ fn a_beam_on_posts_or_a_soffit_is_not_a_wall_with_an_opening() {
     s.room(20.0, 12.0, 8.0);
     s.face([0.0, 6.0], [20.0, 6.0], Some(8.0), &[[0.0, 20.0, 0.0, 7.0]], &[]);
     let f = find(&s.scan(0.0));
-    assert_eq!(f.walls.len(), 4, "{:?}", f.walls);
-    assert!(f.left_out.iter().any(|l| l.contains("reaches the ceiling and not the floor")), "{:?}", f.left_out);
+    // (call 188, 1: what is left out and is 6 ft or longer is offered by its number as likely a wall: the beam is 20 ft long. It is in doubt, never laid
+    // by the scan's word, and the walls not in doubt are the room's four, as they were.)
+    assert_eq!(f.walls.iter().filter(|w| w.doubt.is_none()).count(), 4, "{:?}", f.walls);
+    let beam: Vec<&Wall> = f.walls.iter().filter(|w| w.doubt.is_some()).collect();
+    assert_eq!(beam.len(), 1, "{:?}", f.walls);
+    let said = beam[0].doubt.as_deref().unwrap_or("");
+    assert!(said.starts_with("likely a wall") && said.contains("reaches the ceiling") && said.contains("hangs from the ceiling"), "{said}");
+    assert!((beam[0].length() - 20.0).abs() < 1.0, "{}", beam[0].length());
 }
 
 #[test]

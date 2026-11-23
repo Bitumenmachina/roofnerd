@@ -1033,5 +1033,143 @@ check("how thick the thicker part is", int(m[0]), 100, 20); check("how thick the
 done()
 PY20
 
+# ---- call 188: what three real phone scans showed, each step with its figures worked by hand ----
+# The measures of the scene `phone` (rough, bowed, leaning, uneven, in passes) are those of three real phone scans, written beside it in tools/made-up-scan.py;
+# no real scan is in the repository and none is read here.
+
+echo
+echo "== Step 21 (call 188, 1, 2 and 5). A phone's scan: rough, bowed, off plumb, uneven, scanned in passes: four walls, the bow said, a wall scanned twice found once =="
+scene "$T/phone.ply" phone --density 120
+# By hand: a room 12 ft by 14 ft, 8 ft high. The south wall (12 ft) bows 1 1/2 in, its middle that far off its ends; the west wall is scanned twice, the passes 10 in apart,
+# each at half the density; the north and east walls are scanned 8 times as thickly as the south and west; every wall is 2.5 cm rough and leans a degree.
+# Four walls, none in doubt: the south and the north 12 ft (144 in), the east and the west 14 ft (168 in), each seen from one side, none given a thickness (the two passes
+# of the west wall are not the two faces of a 10 in wall). The south wall is said to bow 1 1/2 in over 12 ft (to an inch and a foot). The west wall is one wall, and it
+# is said that 2 faces were joined into it. The walls close.
+J21="$T/d21.json"; L21="$(new_job "$J21")"
+F21="$("$P" find-walls "$J21" "$T/phone.ply" --level "$L21")"
+echo "$F21" | sed -n '/walls found/,/squared/p' | sed 's/^/    | /'
+says "the south wall's bow is said" "bowed 1 1/2 in over 12 ft" "$F21"
+says "a wall scanned twice is one wall, and how many were joined is said" "2 faces of this wall were joined into one" "$F21"
+says "the walls close" "the walls found close: every end meets another wall" "$F21"
+python3 - "$T" <<PY21
+import re, sys
+sys.path.insert(0, sys.argv[1])
+from said import *
+said = """$F21"""
+w = walls_said(said)
+check("walls found", len(w), 4, 0, "walls")
+assert all(x["thick"] is None for x in w), ("a thickness was told that the scan does not give", w)
+assert "in doubt" not in said.split("walls found")[1].split("\n")[0], said
+check("walls 12 ft long", len([x for x in w if abs(x["long"] - 144) <= 12]), 2, 0, "walls")
+check("walls 14 ft long", len([x for x in w if abs(x["long"] - 168) <= 12]), 2, 0, "walls")
+m = re.search(r"bowed (\d+)(?: (\d+)/(\d+))? in over (\d+) ft(?: (\d+) in)?", said)
+assert m, said
+check("how deep the bow is", int(m[1]) + (int(m[2]) / int(m[3]) if m[2] else 0), 1.5, 1.0)
+check("how long it runs", int(m[4]) * 12 + (int(m[5]) if m[5] else 0), 144, 12)
+assert len(re.findall(r"bowed", said)) == 1, "only the south wall bows"
+done()
+PY21
+FS21="$("$P" find-walls "$J21" "$T/phone.ply" --level "$L21" --lay --outside "$(made "$("$P" type "$J21" wall "Existing outside wall" --thickness "6 in" --status Assumed --source "to be checked on site")")")"
+says "all four laid, Assumed" "laid on $L21: 4 walls" "$FS21"
+
+echo
+echo "== Step 22 (call 188, 3). Which way is up, told by shape: a house on its side is said, before anything else, and nothing is laid on its word =="
+scene "$T/g22.ply" house --density 60 --set d=14
+# By hand: a house 30 ft by 14 ft and 8 ft high, written z up. Read with y up (--up y) what stands from "floor" to "ceiling" is the room's 14 ft depth, a height a room
+# can have, so the reading of the height alone says nothing is wrong. The two largest flat level things in a room are its floor and its ceiling (each 30 by 14 ft, 420 sq ft);
+# across the direction taken as up the two largest are its south and north walls (30 by 8 ft, 240 sq ft each), 8 ft apart: the other way up fits the shape better, and
+# the scan says so, with the 8 ft between the two and what each pair covers, before any wall.
+J22="$T/d22.json"; L22="$(new_job "$J22")"
+F22="$("$P" find-walls "$J22" "$T/g22.ply" --level "$L22" --up y)"
+echo "$F22" | sed -n '1,4p' | sed 's/^/    | /'
+says "the other way up is said first" "this is not likely the house: check the measure and which way is up (the two largest flat level things in a room, its floor and its ceiling, lie " "$F22"
+says "and across what" "across, facing north and south, and cover " "$F22"
+says "and what to try" "say --up z or --up y, whichever was not taken" "$F22"
+python3 - "$T" <<PY22
+import sys
+sys.path.insert(0, sys.argv[1])
+from said import *
+said = """$F22"""
+check("said before the first wall", said.index("not likely the house") < said.index("walls found"), 1, 0, "")
+import re
+m = re.search(r"lie " + LEN + r" across, facing north and south, and cover (\d+) sq ft; across the direction taken as up the two largest cover (\d+) sq ft", said)
+assert m, said
+check("how far apart the two flat level things are (hand 8 ft, the bins 1 in)", inches(m[1]), 96, 4)
+check("what they cover (hand 2 x 30 x 14 = 840 sq ft, in squares of a foot)", int(m[2]), 840, 160, "sq ft")
+check("what the two largest across the direction taken as up cover (hand 2 x 30 x 8 = 480)", int(m[3]), 480, 130, "sq ft")
+done()
+PY22
+W22="$(made "$("$P" type "$J22" wall "Existing outside wall" --thickness "6 in" --status Assumed --source "to be checked on site")")"
+refused "not laid on its word" "nothing is laid: this is not likely the house" "$P" find-walls "$J22" "$T/g22.ply" --level "$L22" --up y --lay --outside "$W22"
+[ "$("$P" show "$J22" | grep -c '\[wall\]' || true)" = 0 ] || { echo "FAIL: a wall was laid from a house on its side"; exit 1; }
+G22="$("$P" find-walls "$J22" "$T/g22.ply" --level "$L22")"
+! grep -q "which way is up" <<<"$G22" || { echo "FAIL: the house the right way up was said to be on its side"; exit 1; }
+echo "    the same house the right way up is not said to be on its side"
+
+echo
+echo "== Step 23 (call 188, 4). A large scan says how it is going and is thinned first, and that is said =="
+scene "$T/big23.ply" house --density 250
+# By hand: the house of step 1 (30 ft by 16 ft, a partition 4 1/2 in thick at 18 ft) at 250 points to the square foot: a floor and a ceiling of 480 sq ft, walls of 736 sq ft,
+# the partition's two faces 256 sq ft, a little over 1,900 sq sf of surface in all: about 480,000 points, over the 300,000 that are read whole. It is thinned to under 300,000,
+# one point in 2, the same points each time; the line saying so gives both counts. Progress is said as it goes, a line at a time. The five walls are found all the same, the
+# partition 4 1/2 in thick (to 1/2 in), and the walls close.
+J23="$T/d23.json"; L23="$(new_job "$J23")"
+F23="$("$P" find-walls "$J23" "$T/big23.ply" --level "$L23" 2>&1)"
+echo "$F23" | grep -E '^  \.\.\.|thinned' | sed 's/^/    | /'
+says "the thinning is said" "it was thinned first, one point in 2 kept" "$F23"
+says "progress is said as it goes" "... reading " "$F23"
+says "progress, line by line" "... looking for walls: line 1 of at most" "$F23"
+says "progress, after the lines" "faces found; telling which are walls" "$F23"
+python3 - "$T" <<PY23
+import re, sys
+sys.path.insert(0, sys.argv[1])
+from said import *
+said = """$F23"""
+m = re.search(r"the scan holds ([\d,]+) points, more than can be read in good time: it was thinned first, one point in 2 kept \(([\d,]+) points\)", said)
+assert m, said
+before, kept = int(m[1].replace(",", "")), int(m[2].replace(",", ""))
+assert before > 300000 and kept <= 300000 and abs(kept * 2 - before) < before * 0.02, (before, kept)
+w = walls_said(said)
+check("walls found", len(w), 5, 0, "walls")
+part = [x for x in w if x["thick"] is not None]
+assert len(part) == 1, w
+check("the partition's thickness", part[0]["thick"], 4.5, 0.5)
+assert "the walls found close: every end meets another wall" in said, said
+done()
+PY23
+F23B="$("$P" find-walls "$J23" "$T/big23.ply" --level "$L23" 2>&1)"
+[ "$(grep -v '^real\|^user\|^sys' <<<"$F23")" = "$(grep -v '^real\|^user\|^sys' <<<"$F23B")" ] || { echo "FAIL: the thinned scan did not read the same twice"; exit 1; }
+echo "    read twice, it said the same"
+
+echo
+echo "== Step 24 (call 188, 1). What is left out and is 6 ft or longer is offered by its number as likely a wall, and laid only on the person's word =="
+scene "$T/hung.ply" hung --density 100
+# By hand: a room 14 ft by 12 ft, 8 ft high, with a face 8 ft long hanging from the ceiling, from 3 ft up (a beam, a soffit), 5 ft in from the south wall. It reaches the ceiling and
+# not the floor, with nothing standing before it, so it is no wall the finder can tell; it is 8 ft long, so it is offered by its number as likely a wall, and not laid by --lay. The
+# four outside walls are laid; with --take for the offer it is laid too.
+J24="$T/d24.json"; L24="$(new_job "$J24")"
+W24="$(made "$("$P" type "$J24" wall "Existing outside wall" --thickness "6 in" --status Assumed --source "to be checked on site")")"
+F24="$("$P" find-walls "$J24" "$T/hung.ply" --level "$L24")"
+echo "$F24" | grep -E 'wall [0-9]+:|likely' | sed 's/^/    | /'
+says "a long face left out is offered" "likely a wall: a face " "$F24"
+says "by its number" "it is not laid unless you say it is a wall (--take " "$F24"
+python3 - "$T" <<PY24
+import re, sys
+sys.path.insert(0, sys.argv[1])
+from said import *
+said = """$F24"""
+offers = re.findall(r"likely a wall: a face (" + LEN + r") long that reaches the ceiling, its foot not seen over (" + LEN + ")", said)
+assert len(offers) == 1, said
+check("the offered face's length", inches(offers[0][0]), 96, 12)
+check("how much of its foot was not seen", inches(offers[0][2]), 96, 12)
+done()
+PY24
+FL24="$("$P" find-walls "$J24" "$T/hung.ply" --level "$L24" --lay --outside "$W24")"
+says "the four outside walls are laid, the offer is not" "laid on $L24: 4 walls" "$FL24"
+J24B="$T/d24b.json"; L24B="$(new_job "$J24B")"; W24B="$(made "$("$P" type "$J24B" wall "Existing outside wall" --thickness "6 in" --status Assumed --source "to be checked on site")")"
+N24="$(grep -E 'likely a wall' -B1 <<<"$F24" | grep -oE 'wall [0-9]+:' | head -1 | grep -oE '[0-9]+')"
+FT24="$("$P" find-walls "$J24B" "$T/hung.ply" --level "$L24B" --lay --take "$N24" --outside "$W24B")"
+says "one taken on the person's word is laid" "laid on $L24B: 5 walls" "$FT24"
+
 echo
 echo "PASS: walls, doors, windows and what stands short found in a scan, said in full and laid on the word, to the figures worked by hand"

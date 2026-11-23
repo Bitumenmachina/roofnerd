@@ -26,6 +26,25 @@ fn thick(feet: f64) -> String {
     units::feet_as_ft_in((feet * 12.0 * 4.0).round() / 48.0, 16)
 }
 
+/// A small length the way a trade says it: "1 1/2 in" (to the quarter inch).
+fn inches_word(feet: f64) -> String {
+    let q = (feet * 12.0 * 4.0).round() as i64;
+    let (whole, frac) = (q / 4, q % 4);
+    let f = match frac {
+        1 => " 1/4",
+        2 => " 1/2",
+        3 => " 3/4",
+        _ => "",
+    };
+    format!("{whole}{f} in")
+}
+
+/// A long length as "12 ft" or "12 ft 3 in".
+fn feet_word(feet: f64) -> String {
+    let inches = (feet * 12.0).round() as i64;
+    if inches % 12 == 0 { format!("{} ft", inches / 12) } else { format!("{} ft {} in", inches / 12, inches % 12) }
+}
+
 fn plural(n: usize, one: &str, many: &str) -> String {
     format!("{n} {}", if n == 1 { one } else { many })
 }
@@ -110,6 +129,12 @@ pub fn said(found: &Found, called: &str, points: usize, taken: &str, level_note:
     if let Some(d) = found.density {
         let _ = writeln!(out, "  the scan holds about {} to the square foot of floor", plumbline_world::view::figure(d, 0).to_string() + " points");
     }
+    if let Some((before, kept)) = found.thinned {
+        let _ = writeln!(out, "  the scan holds {} points, more than can be read in good time: it was thinned first, one point in {} kept ({} points), the same points each time; a wall is told as well from them, and an opening to a few inches", plumbline_world::view::figure(before as f64, 0), before.div_ceil(kept.max(1)), plumbline_world::view::figure(kept as f64, 0));
+    }
+    if let Some(s) = found.scatter {
+        let _ = writeln!(out, "  the walls of this scan are rough to about {} (the spread of their points about a flat face)", inches_word(s));
+    }
     if let Some(note) = &found.zone_note {
         let _ = writeln!(out, "  {note}");
     }
@@ -149,6 +174,12 @@ pub fn said(found: &Found, called: &str, points: usize, taken: &str, level_note:
         };
         let _ = writeln!(out, "    wall {}: from {} to {}, {} long, {how}{high}", i + 1, place(w.from), place(w.to), inch(w.length()));
         let end = end_of(w);
+        if let Some((depth, length)) = w.bow {
+            let _ = writeln!(out, "      bowed {} over {}: the scan's face is not flat; the wall is laid straight (Assumed, like the rest)", inches_word(depth), feet_word(length));
+        }
+        if w.joined > 0 {
+            let _ = writeln!(out, "      {} of this wall were joined into one: faces within a wall's thickness of one another, alongside and facing the same way (a wall scanned in passes)", plural(w.joined + 1, "face", "faces"));
+        }
         if let Some(why) = &w.doubt {
             let _ = writeln!(out, "      {why}: it is not laid unless you say it is a wall (--take {})", i + 1);
         }
@@ -288,7 +319,10 @@ pub fn run(args: &[String]) -> Result<(), String> {
     let taken = format!("read as {}{}", if units_of == Units::Metres { "meters" } else { "feet" }, if up == Up::Z { "" } else { ", with the file's other direction taken as up (--up y)" });
     // Where the scan holds more than one level, the one asked for is found by its floor: the level's elevation above the job's lowest level (call 183, 8).
     let wanted = if found::levels(&scan).len() >= 2 { level_elevation(&mut job, &level).zip(lowest_elevation(&mut job)).map(|(e, low)| e - low) } else { None };
+    // A large scan says how it is going, a line at a time, as it goes (to the error channel, so that what is said at the end is whole).
+    found::set_progress(Some(|line| eprintln!("  ... {line}")));
     let found = found::find_level(&scan, wanted);
+    found::set_progress(None);
     // Where the level says it is another height than the scan reads, that is said (call 179, A8).
     let level_name = name_of(&mut job, &level);
     let level_note = level_height(&mut job, &level).and_then(|(h, status, source)| {

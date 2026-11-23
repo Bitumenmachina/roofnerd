@@ -7063,3 +7063,53 @@ worst: no wall found in a room with four clear walls.
    opening.
 9. **The sheet's own dimensions**: where the page holds its words as words, the
    dimension strings are read and offered to scale the sheet by, each with where it is.
+
+### Call 188, as built, and call 189: the scan's finder goes to the published method (2026-11-23)
+
+**Call 188 items 1 to 5, as built.** Built and merged: a face fitted as a plane that
+may lean and bow, its bow said; passes of one wall joined; which way is up checked by
+the area of the two largest level things; progress said and a large scan thinned (40 s
+and 75 s became 7 s); a made-up scene made as a phone's mesh is, from measures taken on
+three real scans. The builder measured the real scans first
+(`research/worker-report-call188.md`): walls rough by 1.7 to 3.1 cm where the made-up
+ones had 1.5; leaning up to 2.2 degrees; bowed 1 to 15 cm; scanned in 1.5 to 5 passes
+1.4 to 4.4 cm apart. **The lead's measure in item 1 (the floor's spread) was wrong for
+the very scan it was aimed at** (floor 1.0 cm, walls 1.7 to 3.4): the builder used the
+larger of the floor's spread and the cleanest strong wall's. Two expectations it moved
+are kept: a 20 ft hanging beam is now offered as "likely a wall", in doubt (it is never
+laid by itself); a test's scene was given a floor and a ceiling (its assertions are as
+they were). The first run's "a room with four clear walls" was the first agent's
+misreading: it is a cramped furnished room of about eight wall pieces.
+
+**And it is still not right on a real scan.** The small room: nothing laid; 3 offered,
+one wall twice, two walls not found. The long room: every side there, one wall twice,
+6 ends meeting nothing. The large room: 8 found, one wall wrongly joined across a
+notch, one missed.
+
+**Call 189. Why, and what changes.** The finder was the lead's own design (lines voted
+from points the whole height of the room), built before anyone had looked at a real
+scan. CLAUDE.md: "Do not invent what already has a name." The published method for
+exactly this (read for the sweep, `research/sweep/edge.md`, second pass, section 1:
+its paper and its permissively licensed code) does it another way, and for the reason
+the real scans showed: **furniture does not reach the ceiling.** It keeps only the
+points in the top tenth of the room's height, lays them on the plan as a picture of
+where points are dense, takes the outlines of the dense parts, makes them straight
+lines, and pairs opposite faces into walls; openings are then read in each wall's own
+face by where points are missing, with "not seen" told from "open" by what the
+scanner could see.
+
+1. **The scan's finder is rebuilt on that method**, ported from the published
+   description and the code read open in front of the builder (its licence recorded in
+   `plumbline/NOTICE` and `LICENSES.md`; nothing linked that is not permissive; its
+   stated measures used and named, and each one the program changes said with why).
+2. **What the first finder got right is kept and laid over it**: everything Assumed and
+   sourced to the scan; a wall seen from one side has no thickness made up; in doubt,
+   and laid only on the person's word; "not seen is not open"; what is left out said
+   with where; whether the walls close; the wrong measure and the wrong way up said
+   first; nothing Known.
+3. **It is judged on real scans first.** The three on hand, by what a person sees in
+   each one's top-down picture, and as many more real scans as can be had under terms
+   that allow it. The made-up houses are run after, as a check that nothing a person
+   would rely on is lost, not as the test.
+4. **Until it is right on real scans, the window offers tracing over the cut scan
+   first** (which works today) and the finder second, as an offer to be looked at.
