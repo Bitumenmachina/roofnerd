@@ -9653,6 +9653,87 @@ window builder's first job.
 
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
+**As of 2026-11-23 (the lead, after the merge of that day). Read this block first; what
+is below it is older and is kept for what it says of the window's history.**
+
+**Where the work is.** Branch `claude/hopeful-cannon-kng8eo` (pushed; the same commits
+are pushed to `claude/nifty-tesla-qmn44n`). Head: the merge 90aed89 and what follows
+it. On that merge, run by the lead: the whole workspace builds; `cargo test
+--workspace` 714 passed, 0 failed; all 45 command-line demonstrations pass; the three
+gates, `portmap.sh` and `licenses.sh` pass. **No window demonstration has been run on
+the merged tree**; 33 passed on the window builder's build just before it. It is not a
+release candidate and is not tagged.
+
+**What Patrick ruled that week** (DECISIONS.md, his words in each): call 172, the
+purpose (the first 3D-first, renovation-first platform, taking in a PDF, a model or a
+LiDAR scan, free, for every person, so that what a tradesman knows is not lost); call
+174 (the builder runs on its own and asks him nothing; this machine's pictures are the
+proof for now; a sweep by every person who looks at the building; one name, BuildOS);
+call 184's question ("What is your plan for hyper realistic ?"). He reads pictures:
+send them as each piece lands.
+
+**What was built that week, and where each stands** (each has a section above):
+- In the window: call 169 (thirteen items), call 177 (a trade's view: eight trade
+  buttons, sizes on the work, the frame drawn, a run never a hairline, a clash names
+  its room), call 178 (the window made clean; item 12 not built). Not judged by a
+  judge who drives the window.
+- At the command line, each judged and its findings fixed: structure and joists (164,
+  165), the plan set (168; judged twice: 179 D, 182), a wall moved (170; 179 B, 180),
+  the money fixes (175; 179 C, 180), what a wall carries and stands on (176; 180).
+- Walls found in a scan (173; judged twice: 179 A fixed; **183's fixes were with a
+  builder when this was written: look for `call183.patch` in the scratch area, or do
+  it again from call 183**). Walls found on a drawn plan (181; **not judged**). **Both
+  finders have seen only made-up scans and sheets.**
+
+**What is owed, in order.**
+1. Every window demonstration rerun on the merged tree, its pictures read; a wall
+   moved in the window demonstrated (it now takes its floor, footing and roof).
+2. Call 184, the look, steps 1 and 2 (outside detail that casts shadow, each piece
+   with the line that prices it; the light finished). The model's half of step 1
+   (figures and starter lines for fascia, soffit, gutters, corner boards, casing)
+   needs its own call and hand figures before a builder gets it.
+3. The window's half of what exists only at the command line: beam, post and pad
+   footing tools, the plan set under Write out, Move saying what followed (call 171);
+   the bearing tint and the top bar's mark (call 176); the offer to find walls when a
+   scan or a drawn plan is brought in (calls 173, 181); the model's new clash counts.
+4. Call 183 merged and judged; call 181 judged; a real phone scan and an architect's
+   real sheet through the finders (Patrick has both; nothing is asked of him: a public
+   sheet with drawn lines is to be found, the one on hand is a scan of paper).
+5. Call 178 item 12; the sweep's list (the section "The sweep: one list") from item 4
+   on: the renovation seen in 3D with before and after, the owner's view, sections and
+   elevations, each trade's depth as tables; openings' sizes, swings and tags on the
+   plan set.
+6. One name through the code (call 174 item 4); a download for each kind of machine;
+   `TRY-IT.md` reissued; the thirteen items of CLAUDE.md's release candidate.
+
+**How the week was run, so it is not learned again.**
+- Builders and judges are Sonnet agents under written contracts (the contracts are in
+  the session's scratch area and do not survive it: their shape is in CLAUDE.md, "Who
+  holds what", and each worker's report in `research/worker-report-call*.md` shows
+  what one asked for). Judges' notes are `research/judgment-*.md`.
+- **One builder at a time may work on the window** (it holds the main checkout and
+  runs timed window runs). Command-line work goes on beside it in second working
+  copies (`git worktree add --detach`), their build folders hard-linked from the main
+  one (`cp -al target/debug/{deps,build,.fingerprint}`) and their root given links to
+  the main checkout's `node_modules` so the commit hook can run; the lead applies each
+  patch on an integration copy, tests, commits there and pushes that commit to the
+  branch; when the window builder is done its work is committed and the pushed head
+  merged into it.
+- **The disk is the limit** (about 39 GB in all): two builders beside the window's
+  filled it twice. Clear a working copy's `target` the moment its patch is verified;
+  keep at most one frozen copy of the program.
+- **Two pieces that each pass can fail together.** Three times that week a merge found
+  what no single run did (two builders writing one rule twice; a sheet's new layout
+  breaking the finder that reads it, and a real defect under it; a name's new order).
+  Run everything again after every merge.
+- A worker's done signal can be lost when the session's worker restarts: a timed
+  check-in (`send_later`) every 40 minutes caught it.
+- The lead was wrong, in writing, four times that week (a hand figure of siding; a
+  sheet taken for a drawing that is a scan of paper; a room line taken as drawn; a
+  check that passed on a wall nobody could tell was marked) and each time a worker or
+  a judge said so and did not bend the program to it. Keep telling them to.
+
+
 **Since this was written (2026-11-18): a second builder, Opus 5.5, under call 129.**
 Patrick ruled that BuildOS stays in this repository, that its scope is every trade and
 the design professions, that roofnerd's learned specifics are ported in, and that a
