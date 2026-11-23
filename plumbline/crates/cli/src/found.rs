@@ -214,6 +214,14 @@ pub fn run(args: &[String]) -> Result<(), String> {
             if let Some(drawing) = drawing {
                 return sheet_run(path, job, &drawing, &args[3..]);
             }
+            // Neither a drawing of the job nor a file on hand (a scan): say so, and what the job's drawings are (call 186).
+            if !std::path::Path::new(second).exists() {
+                let mut q = job.world.query::<(&plumbline_world::Node, &Kind)>();
+                let mut names: Vec<(String, String)> = q.iter(&job.world).filter(|(_, k)| **k == Kind::Drawing).map(|(n, _)| (n.path.clone(), n.name.clone())).collect();
+                names.sort();
+                let listed = if names.is_empty() { "the job has no drawing yet: bring a sheet in with plumbline drawing".to_string() } else { format!("the job's drawings are: {}", names.iter().map(|(p, n)| format!("{n:?} ({p})")).collect::<Vec<_>>().join(", ")) };
+                return Err(format!("{second:?} is no drawing of this job and no scan is on hand by that name; {listed}"));
+            }
         }
     }
     let usage = "find-walls takes the job's file, a scan (a PLY point cloud) and --level <level>: plumbline find-walls <file> <scan.ply> --level <level> [--units m|ft] [--up z|y] [--lay [--outside \"<wall type>\"] [--take <n>] [--anyway]]";
@@ -428,22 +436,33 @@ fn count_said(n: usize, one: &str, many: &str) -> String {
 }
 
 /// What a sheet's finding says, in a builder's words; its places are places on the plan.
-pub fn sheet_said(d: &Drawn, sheet: &str, scale: &str, lost: &[String]) -> String {
+pub fn sheet_said(d: &Drawn, sheet: &str, scale: &str, lost: &[String], pictures: usize) -> String {
     let mut out = String::new();
     let at = |p: [f64; 2]| place(p);
     let _ = writeln!(out, "sheet {sheet:?}: {} straight lines read, at {scale}", plumbline_world::view::figure(d.counts.lines as f64, 0));
     for why in lost {
         let _ = writeln!(out, "  not read: {why}");
     }
+    // Part of a sheet that is a picture is not read for walls, and it is said so (call 186).
+    if pictures > 0 {
+        let _ = writeln!(out, "  not read: {} on the page: nothing was read from {} for walls, so a wall drawn in {} is not found, and what is found here is of the drawn lines alone", count_said(pictures, "picture", "pictures"), if pictures == 1 { "it" } else { "them" }, if pictures == 1 { "it" } else { "them" });
+    }
     let doubted = d.walls.iter().filter(|w| w.doubt.is_some()).count();
     let in_doubt = if doubted > 0 { format!(", {doubted} of them in doubt") } else { String::new() };
     if d.walls.is_empty() {
-        let _ = writeln!(out, "  no wall found: no two lines 3 in to 14 in apart run side by side for 2 ft or more");
+        if !d.single_outlines.is_empty() {
+            let _ = writeln!(out, "  no wall found: walls here are drawn as single lines: a thickness cannot be read from one line, so no two lines make a wall (see below)");
+        } else if !d.sets.is_empty() {
+            let _ = writeln!(out, "  no wall found: the lines that run side by side are evenly spaced in sets of three or more (see below), and those are not taken as walls: treads, boards, siding, or a wall with a line down its middle");
+        } else {
+            let _ = writeln!(out, "  no wall found: no two lines 3 in to 14 in apart run side by side for 2 ft or more");
+        }
     } else {
         let _ = writeln!(out, "  walls found: {}{in_doubt} (everything found is Assumed: a drawn thickness is the drafter's, not the wall's, and a plan's lines are checked on site)", d.walls.len());
     }
     for (i, w) in d.walls.iter().enumerate() {
-        let _ = writeln!(out, "    wall {}: from {} to {}, {} long, {} thick", i + 1, at(w.from), at(w.to), inch(w.length()), thick(w.thickness));
+        let layers = if w.lines > 2 { format!(", drawn with {} lines", w.lines) } else { String::new() };
+        let _ = writeln!(out, "    wall {}: from {} to {}, {} long, {} thick{layers}", i + 1, at(w.from), at(w.to), inch(w.length()), thick(w.thickness));
         let end = end_name(w);
         if let Some(why) = &w.doubt {
             let _ = writeln!(out, "      in doubt, at {}: {why}: it is not laid unless you say it is a wall (--take {})", at([(w.from[0] + w.to[0]) / 2.0, (w.from[1] + w.to[1]) / 2.0]), i + 1);
@@ -454,14 +473,26 @@ pub fn sheet_said(d: &Drawn, sheet: &str, scale: &str, lost: &[String]) -> Strin
         }
     }
     if d.walls.iter().any(|w| w.doubt.is_none()) {
-        if d.open_ends.is_empty() {
-            let _ = writeln!(out, "  the walls found close: every end meets another wall");
-        } else {
+        if d.open_ends.is_empty() && d.cut_ends.is_empty() {
+            let _ = writeln!(out, "  the walls found close: every end meets another wall{}", if pictures > 0 { " (of the lines read: nothing was read from the picture)" } else { "" });
+        }
+        if !d.open_ends.is_empty() {
             let _ = writeln!(out, "  the walls found do not close: {} meet{} nothing, so the room is open there as far as the sheet shows (a wall may be left off the sheet, or drawn with lines that were not told as a wall):", count_said(d.open_ends.len(), "end", "ends"), if d.open_ends.len() == 1 { "s" } else { "" });
             for (i, p) in &d.open_ends {
                 let w = &d.walls[*i];
                 let first = (p[0] - w.from[0]).hypot(p[1] - w.from[1]) <= (p[0] - w.to[0]).hypot(p[1] - w.to[1]);
                 let _ = writeln!(out, "    wall {}, its {} end, at {}", i + 1, if first { end_name(w) } else { far_name(w) }, at(*p));
+            }
+        }
+    }
+    {
+        // A wall that runs to the edge of what the page shows is cut off there, and nothing is said of what is beyond it.
+        if !d.cut_ends.is_empty() {
+            let _ = writeln!(out, "  the walls found cannot be said to close: {} run{} to the edge of what the page shows, where the lines are cut off (a cover over part of the sheet, or the page's own edge), and a wall may go on beyond {}:", count_said(d.cut_ends.len(), "end", "ends"), if d.cut_ends.len() == 1 { "s" } else { "" }, if d.cut_ends.len() == 1 { "it" } else { "them" });
+            for (i, p) in &d.cut_ends {
+                let w = &d.walls[*i];
+                let first = (p[0] - w.from[0]).hypot(p[1] - w.from[1]) <= (p[0] - w.to[0]).hypot(p[1] - w.to[1]);
+                let _ = writeln!(out, "    wall {}, its {} end, cut off at {}", i + 1, if first { end_name(w) } else { far_name(w) }, at(*p));
             }
         }
     }
@@ -480,7 +511,13 @@ pub fn sheet_said(d: &Drawn, sheet: &str, scale: &str, lost: &[String]) -> Strin
     }
     if c.boxed > 0 {
         let sizes: Vec<String> = d.boxes.iter().map(|b| format!("{} by {} at {}", inch(b.wide), inch(b.high), at(b.at))).collect();
-        left.push(format!("{} inside {} (a title block, a key, a schedule: {})", count_said(c.boxed, "line", "lines"), count_said(d.boxes.len(), "box", "boxes"), sizes.join("; ")));
+        left.push(format!("{} inside {} (a title block, a key, a schedule or a detail, or a house or room drawn with one line for each wall, from which a thickness cannot be read: {})", count_said(c.boxed, "line", "lines"), count_said(d.boxes.len(), "box", "boxes"), sizes.join("; ")));
+    }
+    if c.dashed > 0 {
+        left.push(format!("{} (hidden or overhead, a property line, a wall to be demolished: a wall's lines are solid)", count_said(c.dashed, "dashed line", "dashed lines")));
+    }
+    for (pieces, at_p) in d.single_outlines.iter().map(|(n, p)| (*n, *p)) {
+        left.push(format!("an outline of {pieces} single lines end to end, near {}: walls here are drawn as single lines, and a thickness cannot be read from one line (trace them by eye)", at(at_p)));
     }
     for s in &d.sets {
         left.push(format!("1 set of {} evenly spaced lines, {} apart, near {} (treads, siding, boards: a wall drawn with a line down its middle reads so too)", s.lines, thick(s.spacing), at(s.at)));
@@ -498,12 +535,24 @@ pub fn sheet_said(d: &Drawn, sheet: &str, scale: &str, lost: &[String]) -> Strin
         left.push(format!("{} across a wall too near another to end it (hatching across a wall, or a wall's end under 2 ft from another)", count_said(c.crosses_ignored, "line", "lines")));
     }
     if left.is_empty() {
-        let _ = writeln!(out, "  nothing else on the sheet was left out");
+        if pictures > 0 {
+            let _ = writeln!(out, "  nothing else of the lines read was left out (nothing was read from the picture)");
+        } else {
+            let _ = writeln!(out, "  nothing else on the sheet was left out");
+        }
     } else {
         let _ = writeln!(out, "  not taken as walls:");
         for l in left {
             let _ = writeln!(out, "    {l}");
         }
+    }
+    // Dashed lines a wall's thickness apart: what they may be, with where. A wall's lines are solid, so they are not walls.
+    for o in &d.overhead {
+        let _ = writeln!(out, "  {} dashed lines {} apart and {} long, at {}: something overhead or hidden (a beam, a soffit, cabinets above), or, on a plan of a renovation, a wall to be demolished; a wall's lines are solid, so it is not taken as a wall and not laid (trace it by eye if it is one)", o.lines, thick(o.apart), inch(o.length), at(o.at));
+    }
+    let layered = d.walls.iter().filter(|w| w.lines > 2).count();
+    if layered > 0 {
+        let _ = writeln!(out, "  {} drawn with several lines, the lines of {} layers: {} taken as one wall, its two outermost lines its faces and its thickness the drawn thickness over all of them", count_said(layered, "wall is", "walls are"), if layered == 1 { "its" } else { "their" }, if layered == 1 { "it is" } else { "each is" });
     }
     for (pieces, len, p) in &d.curved {
         let _ = writeln!(out, "  a line {} long, drawn in {pieces} short straight pieces end to end, near {} (a curved wall, a bay, a door's swing): the curve is not followed and no wall is found in it", inch(*len), at(*p));
@@ -578,6 +627,20 @@ fn sheet_run(path: &str, mut job: plumbline_world::job::Job, drawing: &str, rest
     if (take_given || doors.is_some() || windows.is_some()) && !lay {
         return Err("--take, --doors and --windows say what is laid: they go with --lay".into());
     }
+    // A head is above the floor, and above its sill (call 186): a head of nothing, or of less, is a door an inch high.
+    if let Some(head) = doors {
+        if head <= 0.0 {
+            return Err(format!("--doors: a door's head is above the floor, and {} is not", inch(head)));
+        }
+    }
+    if let Some((sill, head)) = windows {
+        if sill < 0.0 {
+            return Err(format!("--windows: a window's sill is at the floor or above it, and {} is below it", inch(sill)));
+        }
+        if head <= 0.0 {
+            return Err(format!("--windows: a window's head is above the floor, and {} is not", inch(head)));
+        }
+    }
     let (d, name, level) = {
         let e = job.find(drawing).ok_or_else(|| format!("no element {drawing}"))?;
         let d = job.world.get::<plans::Drawing>(e).cloned().ok_or_else(|| format!("{drawing} is not a drawing"))?;
@@ -600,6 +663,9 @@ fn sheet_run(path: &str, mut job: plumbline_world::job::Job, drawing: &str, rest
     }
     let scale = super::scale_words(&d, k);
     let corner = d.to_plan([0.0, 0.0]).unwrap_or([0.0, 0.0]);
+    // Walls are laid where the sheet says they are. A sheet that has not been lined up with the job has only its own corner
+    // to say it by: said, and why (call 186).
+    let lined_up = d.lined_up.is_some();
     let level_name = name_of(&mut job, &level);
     if page.sort != plumbline_plans::Sort::Pdf || page.lines.is_empty() {
         let mut out = format!("sheet {name:?}: it has no drawn lines of its own, so there are none to find walls in");
@@ -610,8 +676,15 @@ fn sheet_run(path: &str, mut job: plumbline_world::job::Job, drawing: &str, rest
         let _ = std::io::stdout().write_all(out.as_bytes());
         return Ok(());
     }
-    let found = drawn::find(&page.lines, Some(k), page.size, corner);
-    let mut out = sheet_said(&found, &name, &scale, &page.lost);
+    let found = drawn::find_on(&page.lines, Some(k), page.size, corner, &drawn::Extra { dashed: &page.dashed, cuts: &page.cuts });
+    let mut out = sheet_said(&found, &name, &scale, &page.lost, page.pictures);
+    if let Some(caution) = d.scale_caution() {
+        out = out.replacen('\n', &format!("\n  caution: {caution}\n"), 1);
+    }
+    let not_lined_up = if lined_up { None } else { Some(format!("the sheet has not been lined up with the job: its lower left corner is taken as {}, {}, so these places are measured from that corner of the page and not from the job's own origin (line it up first with plumbline lineup, or they are not where the job's walls are)", inch(corner[0]).replace("0' 0\"", "0"), inch(corner[1]).replace("0' 0\"", "0"))) };
+    if let Some(why) = &not_lined_up {
+        out = out.replacen('\n', &format!("\n  {why}\n"), 1);
+    }
     if !lay {
         if !found.walls.is_empty() {
             let _ = writeln!(out, "  nothing is laid: say --lay to lay these walls on {level_name}");
@@ -668,6 +741,9 @@ fn sheet_run(path: &str, mut job: plumbline_world::job::Job, drawing: &str, rest
             }
         };
         std::fs::write(path, file::save(&mut job)).map_err(|e| format!("cannot write {path}: {e}"))?;
+        if let Some(why) = &not_lined_up {
+            let _ = writeln!(out, "  laid at the places said above, because {why}");
+        }
         let _ = writeln!(out, "  laid on {level_name}: {}, {}, {}, each Assumed, source \"{source}\"{}; none is Known", count_said(made.walls.len(), "wall", "walls"), count_said(made.doors.len(), "door", "doors"), count_said(made.windows.len(), "window", "windows"), if said_source.is_some() { " (the doors' and windows' heights: \"said when the walls were found\")" } else { "" });
         for (path, i) in made.walls.iter().zip(&made.of) {
             let _ = writeln!(out, "    {path}: found wall {}, {} thick", laid_index[*i] + 1, thick(walls[*i].thickness));

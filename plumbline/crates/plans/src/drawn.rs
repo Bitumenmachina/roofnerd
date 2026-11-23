@@ -71,6 +71,12 @@ const TOUCH_PT: f64 = 1.0;
 const CURVE_PIECES: usize = 5;
 const CURVE_LONG: f64 = 4.0;
 const CURVE_TURN: f64 = 35.0;
+/// Two walls are of one thickness if they are drawn within 1/4 in of it: what a sheet's walls are, said by how many of them
+/// are that thick (call 186).
+const THICK_SAME: f64 = INCH / 4.0;
+/// A group of walls that meet one another is apart from the plan if it is under this share of the plan's length: two plans of
+/// like size on one sheet are both plans, a detail or a section beside one is far smaller (experiment, call 186 item 3).
+const APART_SHARE: f64 = 0.5;
 /// More lines than this are not all looked at: those under 4 in at scale are left out, and it says so.
 const MOST_SEGS: usize = 150_000;
 const SHORT_KEPT: f64 = 4.0 * INCH;
@@ -93,6 +99,9 @@ pub struct Wall {
     pub openings: Vec<Opening>,
     /// Why it is in doubt, where it is.
     pub doubt: Option<String>,
+    /// How many lines the wall is drawn with where that is more than its two faces (a wall drawn in its layers: the
+    /// outermost two are its faces and the others lie between them); 0 for a wall of two lines.
+    pub lines: usize,
 }
 
 impl Wall {
@@ -135,6 +144,29 @@ pub struct Counts {
     /// Lines across a wall too near another such line to end a wall.
     pub crosses_ignored: usize,
     pub left_out_short_lines: usize,
+    /// Lines drawn dashed: a wall's lines are solid, so none is taken (call 186).
+    pub dashed: usize,
+}
+
+/// Two or more dashed lines side by side: something overhead or hidden (a beam, a soffit, cabinets above), or, on
+/// a renovation plan, a wall to be demolished. A wall's lines are solid (call 186), so it is never taken as a wall.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Overhead {
+    pub lines: usize,
+    /// How far apart the outer two lines are, and how long the longest is.
+    pub apart: f64,
+    pub length: f64,
+    pub at: P2,
+}
+
+/// What the page's reader knows of its lines beyond where they are (call 186): which are dashed, and the places
+/// where a line was cut off at the edge of what the page shows (the page's own edge or a clip).
+#[derive(Clone, Copy, Debug, Default)]
+pub struct Extra<'a> {
+    /// The places in `lines` of the dashed lines.
+    pub dashed: &'a [usize],
+    /// Places on the page, in its own units, where a line was cut off.
+    pub cuts: &'a [P2],
 }
 
 #[derive(Clone, Debug, Default)]
@@ -145,12 +177,20 @@ pub struct Drawn {
     pub boxes: Vec<Boxed>,
     /// The ends of the walls (not in doubt) that meet no other wall, with the wall's place in `walls`.
     pub open_ends: Vec<(usize, P2)>,
+    /// The ends of the walls (not in doubt) that run to the edge of what the page shows, where a clip or the page's
+    /// own edge cut the lines off: the wall may go on beyond it. Not open ends.
+    pub cut_ends: Vec<(usize, P2)>,
     pub counts: Counts,
     /// Anything else it could not tell, each with where.
     pub notes: Vec<String>,
     /// Lines drawn in short straight pieces, end to end, turning a little at each (a curved wall, a bay,
     /// a door's swing): how many pieces, how long it is, where. They are not followed and no wall is found in them.
     pub curved: Vec<(usize, f64, P2)>,
+    /// Dashed lines side by side, a wall's thickness apart: what they may be, where. Never walls.
+    pub overhead: Vec<Overhead>,
+    /// Outlines of single lines meeting end to end (a room or a house drawn as one line a wall): how many lines, where.
+    /// A thickness cannot be read from a single line.
+    pub single_outlines: Vec<(usize, P2)>,
 }
 
 // ---- small geometry ----
@@ -338,7 +378,18 @@ fn faces_of(segs: &[Seg], ids: &[usize], letter: f64) -> (Vec<Face>, HashMap<usi
             }
         }
         let iv = merged(spans.clone(), MERGE_GAP);
-        let ivb: Iv = merged(iv.clone(), JOINT_MOST).into_iter().filter(|&(a, b)| iv.iter().any(|&(x, y)| x >= a - 1e-9 && y <= b + 1e-9 && y - x >= letter)).collect();
+        let mut ivb: Iv = merged(iv.clone(), JOINT_MOST).into_iter().filter(|&(a, b)| iv.iter().any(|&(x, y)| x >= a - 1e-9 && y <= b + 1e-9 && y - x >= letter)).collect();
+        // A pier (call 186): a piece of the line too short to count alone, on the same line as a stretch that does and no
+        // further from it than the widest opening, is part of the wall that stretch is the face of, however short: it is
+        // what lies between two openings, or between an opening and the wall's end.
+        loop {
+            let more: Vec<(f64, f64)> = iv.iter().copied().filter(|&(a, b)| !ivb.iter().any(|&(x, y)| x <= a + 1e-9 && y >= b - 1e-9) && ivb.iter().any(|&(x, y)| (a >= y && a - y <= OPENING_MOST) || (x >= b && x - b <= OPENING_MOST))).collect();
+            if more.is_empty() {
+                break;
+            }
+            ivb.extend(more);
+            ivb.sort_by(|x, y| x.0.total_cmp(&y.0));
+        }
         let longest = ivb.iter().map(|(a, b)| b - a).fold(0.0, f64::max);
         faces.push(Face { u, n, c, iv, ivb, longest, raw: spans });
     }
@@ -584,14 +635,29 @@ fn alongside(faces: &[Face], a: usize, b: usize, min_len: f64) -> Option<(Iv, f6
     let ivb_b = fb.along(fa, &fb.ivb);
     let mut keep: Iv = Vec::new();
     for (lo, hi) in intersect(&fa.ivb, &ivb_b) {
-        if hi - lo < min_len {
-            continue;
-        }
         let piece = |iv: &Iv| iv.iter().find(|(x, y)| *x <= lo + 1e-9 && *y >= hi - 1e-9).map(|(x, y)| y - x).unwrap_or(0.0);
         if hi - lo >= OVERLAP_SHARE * piece(&fa.ivb).max(piece(&ivb_b)) {
             keep.push((lo, hi));
         }
     }
+    // The least length is of the wall's whole line, not of a piece between two openings (call 186): pieces no
+    // further apart than the widest opening are one wall, and it is as long as its first piece's start to its last
+    // piece's end. A piece alone is a wall only if it is long enough alone.
+    let mut kept: Iv = Vec::new();
+    let mut run: Iv = Vec::new();
+    for &(lo, hi) in &keep {
+        if run.last().is_some_and(|l| lo - l.1 > OPENING_MOST) {
+            if run[run.len() - 1].1 - run[0].0 >= min_len {
+                kept.append(&mut run);
+            }
+            run.clear();
+        }
+        run.push((lo, hi));
+    }
+    if !run.is_empty() && run[run.len() - 1].1 - run[0].0 >= min_len {
+        kept.append(&mut run);
+    }
+    let keep = kept;
     if keep.is_empty() {
         return None;
     }
@@ -633,6 +699,69 @@ fn neighbours(faces: &[Face], long: &[bool], min_len: f64) -> Vec<Vec<(usize, f6
     near
 }
 
+// ---- dashed lines: what is overhead or hidden ----
+
+/// Dashed lines side by side, a wall's thickness apart and long enough to be a wall's: each such group is one thing
+/// overhead or hidden (a beam, a soffit, cabinets above) or, on a renovation plan, a wall to be demolished. Judged by
+/// the rules for a wall's two lines, so that what would have been laid as a wall is said as what it may be.
+fn overhead_of(dsegs: &[Seg], k: f64, origin: P2) -> Vec<Overhead> {
+    if dsegs.is_empty() {
+        return Vec::new();
+    }
+    let min_len = MIN_FACE.max(LETTER_PT * k);
+    let ids: Vec<usize> = (0..dsegs.len()).collect();
+    let (faces, _) = faces_of(dsegs, &ids, LETTER_PT * k);
+    let long: Vec<bool> = faces.iter().map(|f| f.longest >= min_len).collect();
+    let near = neighbours(&faces, &long, min_len);
+    // Faces that lie side by side are one group.
+    let mut group: Vec<usize> = (0..faces.len()).collect();
+    fn root(g: &mut [usize], i: usize) -> usize {
+        let mut r = i;
+        while g[r] != r {
+            r = g[r];
+        }
+        let mut c = i;
+        while g[c] != r {
+            let n = g[c];
+            g[c] = r;
+            c = n;
+        }
+        r
+    }
+    for (a, list) in near.iter().enumerate() {
+        for (b, _, _) in list {
+            let (ra, rb) = (root(&mut group, a), root(&mut group, *b));
+            group[ra] = rb;
+        }
+    }
+    let mut by: BTreeMap<usize, Vec<usize>> = BTreeMap::new();
+    for (f, l) in near.iter().enumerate() {
+        if !l.is_empty() {
+            let r = root(&mut group, f);
+            by.entry(r).or_default().push(f);
+        }
+    }
+    let mut out: Vec<Overhead> = Vec::new();
+    for members in by.values() {
+        let mut apart: f64 = 0.0;
+        let mut centre = [0.0, 0.0];
+        let mut n = 0.0;
+        for &a in members {
+            for (_, d, iv) in &near[a] {
+                apart = apart.max(d.abs());
+                let (t0, t1) = (iv[0].0, iv[iv.len() - 1].1);
+                let c = at(faces[a].u, faces[a].n, (t0 + t1) / 2.0, faces[a].c + d / 2.0);
+                centre = [centre[0] + c[0], centre[1] + c[1]];
+                n += 1.0;
+            }
+        }
+        let length = members.iter().map(|&f| faces[f].longest).fold(0.0, f64::max);
+        out.push(Overhead { lines: members.len(), apart, length, at: shift([centre[0] / n, centre[1] / n], origin) });
+    }
+    out.sort_by(|a, b| a.at[1].total_cmp(&b.at[1]).then(a.at[0].total_cmp(&b.at[0])));
+    out
+}
+
 // ---- the finding ----
 
 #[derive(Clone, Debug)]
@@ -644,6 +773,9 @@ struct Cand {
     t1: f64,
     openings: Vec<(f64, f64, bool)>,
     doubt: Option<String>,
+    /// Its doubt is that a line of it is already the face of another wall: it is no wall in the way of the others.
+    loser: bool,
+    lines: usize,
 }
 
 /// A length as a tape says it, to the quarter inch.
@@ -680,22 +812,36 @@ enum Why {
 /// it has none, and nothing is found), `page` its size in its own units, `origin` where the page's
 /// lower-left corner lies on the plan, in feet: every place that comes back is a place on the plan.
 pub fn find(lines: &[[[f64; 2]; 2]], feet_per_unit: Option<f64>, page: [f64; 2], origin: P2) -> Drawn {
+    find_on(lines, feet_per_unit, page, origin, &Extra::default())
+}
+
+/// `find`, told which of the lines are dashed and where the page cut lines off.
+pub fn find_on(lines: &[[[f64; 2]; 2]], feet_per_unit: Option<f64>, page: [f64; 2], origin: P2, extra: &Extra) -> Drawn {
     let mut out = Drawn::default();
     let Some(k) = feet_per_unit.filter(|k| k.is_finite() && *k > 0.0) else {
         out.no_scale = true;
         return out;
     };
     let min_len = MIN_FACE.max(LETTER_PT * k);
+    let dashed_at: std::collections::HashSet<usize> = extra.dashed.iter().copied().collect();
     let mut segs: Vec<Seg> = Vec::new();
-    for l in lines {
+    let mut dsegs: Vec<Seg> = Vec::new();
+    for (li, l) in lines.iter().enumerate() {
         let a = [l[0][0] * k, l[0][1] * k];
         let b = [l[1][0] * k, l[1][1] * k];
         let len = norm(sub(b, a));
         if a.iter().chain(b.iter()).all(|v| v.is_finite()) && len > 1e-9 {
-            segs.push(Seg { a, b, len });
+            // A wall's lines are solid (call 186): a dashed line is looked at for what it may be and for nothing else.
+            if dashed_at.contains(&li) {
+                dsegs.push(Seg { a, b, len });
+            } else {
+                segs.push(Seg { a, b, len });
+            }
         }
     }
-    out.counts.lines = segs.len();
+    out.counts.lines = segs.len() + dsegs.len();
+    out.counts.dashed = dsegs.len();
+    out.overhead = overhead_of(&dsegs, k, origin);
     if segs.len() > MOST_SEGS {
         let before = segs.len();
         segs.retain(|s| s.len >= SHORT_KEPT);
@@ -847,9 +993,11 @@ pub fn find(lines: &[[[f64; 2]; 2]], feet_per_unit: Option<f64>, page: [f64; 2],
         }
     }
     // A face in two pairs over the same stretch is not a clean pair.
-    let mut conflict: Vec<Option<String>> = vec![None; pairs.len()];
-    for i in 0..pairs.len() {
-        for j in (i + 1)..pairs.len() {
+    let np = pairs.len();
+    let mut conflict: Vec<Option<String>> = vec![None; np];
+    let mut adj: Vec<Vec<usize>> = vec![Vec::new(); np];
+    for i in 0..np {
+        for j in (i + 1)..np {
             let Some(f) = [pairs[i].0, pairs[i].1].into_iter().find(|f| *f == pairs[j].0 || *f == pairs[j].1) else { continue };
             let on_f = |p: &(usize, usize, f64, Iv)| if p.0 == f { p.3.clone() } else { faces[p.0].along(&faces[f], &p.3) };
             let shared: f64 = intersect(&on_f(&pairs[i]), &on_f(&pairs[j])).iter().map(|(a, b)| b - a).sum();
@@ -857,12 +1005,124 @@ pub fn find(lines: &[[[f64; 2]; 2]], feet_per_unit: Option<f64>, page: [f64; 2],
                 let said = format!("another line lies beside it ({} and {} from the same line, not evenly spaced): it may be a wall and a line drawn near it", inch_said(pairs[i].2.abs()).replace("0' ", ""), inch_said(pairs[j].2.abs()).replace("0' ", ""));
                 conflict[i].get_or_insert(said.clone());
                 conflict[j].get_or_insert(said);
+                adj[i].push(j);
+                adj[j].push(i);
+            }
+        }
+    }
+    // Pairs that share lines are a stack. A line is the face of one wall only, and a wall drawn in its layers is one wall
+    // (call 186). A stack's outermost two lines, if they are a wall's thickness apart and the sheet has other walls of
+    // that thickness (or other stacks that outer), are one wall with the lines between them its layers. Else the pair of
+    // the thickness most of the sheet's clean walls have claims the lines it uses, and a pair that would use one again
+    // is no wall in the way: in doubt, said so. Else it cannot be told, and all of them are in doubt, as they were.
+    let mut loser = vec![false; np];
+    let mut dropped = vec![false; np];
+    let mut layered = vec![0usize; np];
+    {
+        let mut comp = vec![usize::MAX; np];
+        let mut comps: Vec<Vec<usize>> = Vec::new();
+        for i in 0..np {
+            if comp[i] != usize::MAX {
+                continue;
+            }
+            let c = comps.len();
+            let mut stack = vec![i];
+            comp[i] = c;
+            let mut members = Vec::new();
+            while let Some(x) = stack.pop() {
+                members.push(x);
+                for &y in &adj[x] {
+                    if comp[y] == usize::MAX {
+                        comp[y] = c;
+                        stack.push(y);
+                    }
+                }
+            }
+            members.sort_unstable();
+            comps.push(members);
+        }
+        // Each component's outermost pair, where it has one, and what it holds.
+        struct Stack {
+            outer: Option<usize>,
+            faces: usize,
+        }
+        let mut stacks: Vec<Stack> = Vec::new();
+        for m in &comps {
+            if m.len() == 1 {
+                stacks.push(Stack { outer: Some(m[0]), faces: 2 });
+                continue;
+            }
+            let mut fs: Vec<usize> = m.iter().flat_map(|&i| [pairs[i].0, pairs[i].1]).collect();
+            fs.sort_unstable();
+            fs.dedup();
+            let r = pairs[m[0]].0;
+            let t_mid = pairs[m[0]].3.first().map(|x| (x.0 + x.1) / 2.0).unwrap_or(0.0);
+            let off = |f: usize| if f == r { 0.0 } else { faces[f].offset_from(&faces[r], t_mid) };
+            let lo = *fs.iter().min_by(|&&x, &&y| off(x).total_cmp(&off(y))).unwrap();
+            let hi = *fs.iter().max_by(|&&x, &&y| off(x).total_cmp(&off(y))).unwrap();
+            let outer = m.iter().copied().find(|&i| (pairs[i].0 == lo && pairs[i].1 == hi) || (pairs[i].0 == hi && pairs[i].1 == lo));
+            stacks.push(Stack { outer, faces: fs.len() });
+        }
+        let span = |c: usize| stacks[c].outer.map(|i| pairs[i].2.abs());
+        for (c, m) in comps.iter().enumerate() {
+            if m.len() == 1 {
+                continue;
+            }
+            // 1. Layers: the outer pair's thickness is one other walls or stacks have.
+            if let (Some(o), Some(sp)) = (stacks[c].outer, span(c)) {
+                let others = (0..comps.len()).filter(|&c2| c2 != c && span(c2).is_some_and(|s2| (s2 - sp).abs() <= THICK_SAME)).count();
+                if others >= 1 && stacks[c].faces >= 3 {
+                    for &i in m {
+                        dropped[i] = i != o;
+                        conflict[i] = None;
+                    }
+                    layered[o] = stacks[c].faces;
+                    continue;
+                }
+            }
+            // 2. The pair of the thickness most clean walls have claims its lines.
+            let strength = |i: usize| (0..comps.len()).filter(|&c2| comps[c2].len() == 1 && (pairs[comps[c2][0]].2.abs() - pairs[i].2.abs()).abs() <= THICK_SAME).count();
+            let mut ranked: Vec<(usize, usize)> = m.iter().map(|&i| (strength(i), i)).filter(|(n, _)| *n >= 1).collect();
+            ranked.sort_by(|a, b| b.0.cmp(&a.0));
+            if let Some(&(top, w)) = ranked.first() {
+                // A tie between two pairs that do not share a line is no tie: the claim is on the lines of one pair.
+                let tie = ranked.iter().skip(1).any(|&(n, i)| n == top && adj[w].contains(&i));
+                if !tie {
+                    let said = format!("another line lies beside it: one of its lines is already the face of a wall {} thick, so it is not a second wall (a counter's edge, a ledge, a line drawn near a wall)", inch_said(pairs[w].2.abs()).replace("0' ", ""));
+                    conflict[w] = None;
+                    // The line beside it is said once, as the nearest pair it would make; the others over the same line are
+                    // the same thing.
+                    let mut by_line: BTreeMap<usize, usize> = BTreeMap::new();
+                    for &i in m {
+                        if i != w && adj[w].contains(&i) {
+                            let line = [pairs[i].0, pairs[i].1].into_iter().find(|f| *f != pairs[w].0 && *f != pairs[w].1).unwrap_or(pairs[i].1);
+                            match by_line.get(&line) {
+                                Some(&keep) if pairs[keep].2.abs() <= pairs[i].2.abs() => dropped[i] = true,
+                                Some(&keep) => {
+                                    dropped[keep] = true;
+                                    loser[keep] = false;
+                                    by_line.insert(line, i);
+                                }
+                                None => {
+                                    by_line.insert(line, i);
+                                }
+                            }
+                        }
+                    }
+                    for &i in by_line.values() {
+                        conflict[i] = Some(said.clone());
+                        loser[i] = true;
+                    }
+                }
             }
         }
     }
 
     let mut cands: Vec<Cand> = Vec::new();
     for (pi, (a, b, d, ov)) in pairs.iter().enumerate() {
+        if dropped[pi] {
+            continue;
+        }
         let (fa, fb) = (&faces[*a], &faces[*b]);
         let cc = fa.c + d / 2.0;
         let thick = d.abs();
@@ -882,7 +1142,9 @@ pub fn find(lines: &[[[f64; 2]; 2]], feet_per_unit: Option<f64>, page: [f64; 2],
             // The pieces of this line that lie between the pair's two lines, none reaching past either, joined:
             // a cap drawn in halves is one cap, and a room line or a grid line that runs on through the wall
             // (and a dashed one) is none, by itself or in company with the cap it crosses.
-            let (lo, hi) = (0.0_f64.min(*d) - CAP_TOL, 0.0_f64.max(*d) + CAP_TOL);
+            // A line across may run past the faces by less than the wall's thickness and be a line across all the same
+            // (call 186): a cap drawn a little long. Past that it runs on through the wall (a room line, a grid line).
+            let (lo, hi) = (0.0_f64.min(*d) - thick - CAP_TOL, 0.0_f64.max(*d) + thick + CAP_TOL);
             let mut inside: Vec<(f64, f64)> = Vec::new();
             let mut at_t = 0.0;
             for &(x, y) in &g.raw {
@@ -956,7 +1218,21 @@ pub fn find(lines: &[[[f64; 2]; 2]], feet_per_unit: Option<f64>, page: [f64; 2],
         for (pieces, mut opens) in groups {
             let (g_lo, g_hi) = (pieces[0].0, pieces.last().unwrap().1);
             let cont = |t: f64| pieces.iter().any(|&(x, y)| t >= x + CAP_TOL && t <= y - CAP_TOL);
-            let mine: Vec<f64> = crosses.iter().copied().filter(|&t| t > g_lo && t < g_hi && cont(t)).collect();
+            // A line across within a thickness of the end of a piece, where the next piece or the opening begins, is the
+            // jamb of that opening with the faces run on past it, as drafters draw them (call 186): it ends no wall.
+            let jamb = |t: f64| pieces.iter().any(|&(x, y)| (x > g_lo + 1e-9 && (t - x).abs() < thick) || (y < g_hi - 1e-9 && (t - y).abs() < thick));
+            let mine: Vec<f64> = crosses.iter().copied().filter(|&t| t > g_lo && t < g_hi && cont(t) && !jamb(t)).collect();
+            // An opening's sides are its jambs where the faces run on past them: the nearest line across within a thickness
+            // of where the faces stop.
+            for o in opens.iter_mut() {
+                let near_to = |at: f64| crosses.iter().copied().filter(|&t| (t - at).abs() > CAP_TOL && (t - at).abs() < thick).min_by(|p, q| (p - at).abs().total_cmp(&(q - at).abs()));
+                if let Some(t) = near_to(o.0).filter(|&t| t < o.0) {
+                    o.0 = t;
+                }
+                if let Some(t) = near_to(o.1).filter(|&t| t > o.1) {
+                    o.1 = t;
+                }
+            }
             // Lines across where both lines go on: a window's jambs, or the end of a wall.
             let mut ends: Vec<f64> = Vec::new();
             let mut i = 0;
@@ -987,8 +1263,10 @@ pub fn find(lines: &[[[f64; 2]; 2]], feet_per_unit: Option<f64>, page: [f64; 2],
             bounds.push(g_hi);
             for w in bounds.windows(2) {
                 let (s0, s1) = (w[0], w[1]);
-                let longest = pieces.iter().filter(|&&(x, y)| y > s0 + 1e-9 && x < s1 - 1e-9).map(|&(x, y)| y.min(s1) - x.max(s0)).fold(0.0, f64::max);
-                if longest < min_len {
+                // Its whole line, not a piece of it between openings (call 186).
+                let inside_it: Vec<&(f64, f64)> = pieces.iter().filter(|&&(x, y)| y > s0 + 1e-9 && x < s1 - 1e-9).collect();
+                let whole = inside_it.iter().map(|p| p.1.min(s1)).fold(0.0, f64::max) - inside_it.iter().map(|p| p.0.max(s0)).fold(f64::MAX, f64::min);
+                if whole < min_len {
                     out.counts.short_stretches += 1;
                     continue;
                 }
@@ -998,7 +1276,7 @@ pub fn find(lines: &[[[f64; 2]; 2]], feet_per_unit: Option<f64>, page: [f64; 2],
                     .map(|&(x, y)| (x, y, across(x, y) >= 2))
                     .collect();
                 ops.sort_by(|p, q| p.0.total_cmp(&q.0));
-                cands.push(Cand { a: *a, cc, thick, t0: s0, t1: s1, openings: ops, doubt: conflict[pi].clone() });
+                cands.push(Cand { a: *a, cc, thick, t0: s0, t1: s1, openings: ops, doubt: conflict[pi].clone(), loser: loser[pi], lines: layered[pi] });
             }
         }
     }
@@ -1012,15 +1290,16 @@ pub fn find(lines: &[[[f64; 2]; 2]], feet_per_unit: Option<f64>, page: [f64; 2],
     let mut ends: Vec<[P2; 2]> = Vec::with_capacity(nw);
     let mut t_ends: Vec<[f64; 2]> = Vec::with_capacity(nw);
     let mut meets: Vec<[bool; 2]> = vec![[false; 2]; nw];
+    let mut edges: Vec<(usize, usize)> = Vec::new();
     for i in 0..nw {
         let (p, q, ui) = line_of(&cands[i]);
         let (mut e, mut te) = ([p, q], [cands[i].t0, cands[i].t1]);
         for end in 0..2 {
             let me = if end == 0 { p } else { q };
-            let mut best: Option<(f64, P2)> = None;
-            let mut touch = false;
+            let mut best: Option<(f64, P2, usize)> = None;
+            let mut touch: Option<usize> = None;
             for j in 0..nw {
-                if j == i {
+                if j == i || cands[j].loser {
                     continue;
                 }
                 let (pj, qj, uj) = line_of(&cands[j]);
@@ -1029,7 +1308,7 @@ pub fn find(lines: &[[[f64; 2]; 2]], feet_per_unit: Option<f64>, page: [f64; 2],
                 if sinv.abs() < 0.087 {
                     // Going on in line: its end is at this one.
                     if dot(perp(uj), sub(me, pj)).abs() <= reach / 2.0 + CAP_TOL && norm(sub(me, pj)).min(norm(sub(me, qj))) <= reach {
-                        touch = true;
+                        touch = Some(j);
                     }
                     continue;
                 }
@@ -1037,16 +1316,18 @@ pub fn find(lines: &[[[f64; 2]; 2]], feet_per_unit: Option<f64>, page: [f64; 2],
                 let s = cross(sub(pj, me), uj) / sinv;
                 let x = [me[0] + ui[0] * s, me[1] + ui[1] * s];
                 let along_j = dot(uj, sub(x, pj));
-                if s.abs() <= reach && along_j >= -cands[i].thick && along_j <= norm(sub(qj, pj)) + cands[i].thick && best.map_or(true, |(bd, _)| s.abs() < bd) {
-                    best = Some((s.abs(), x));
+                if s.abs() <= reach && along_j >= -cands[i].thick && along_j <= norm(sub(qj, pj)) + cands[i].thick && best.map_or(true, |(bd, _, _)| s.abs() < bd) {
+                    best = Some((s.abs(), x, j));
                 }
             }
-            if let Some((_, x)) = best {
+            if let Some((_, x, j)) = best {
                 e[end] = x;
                 te[end] = dot(ui, x);
                 meets[i][end] = true;
-            } else if touch {
+                edges.push((i, j));
+            } else if let Some(j) = touch {
                 meets[i][end] = true;
+                edges.push((i, j));
             }
         }
         ends.push(e);
@@ -1056,6 +1337,36 @@ pub fn find(lines: &[[[f64; 2]; 2]], feet_per_unit: Option<f64>, page: [f64; 2],
         if cands[i].doubt.is_none() && !meets[i][0] && !meets[i][1] {
             let len = norm(sub(ends[i][1], ends[i][0]));
             cands[i].doubt = Some(format!("two lines {} apart and {} long that meet no other wall at either end (a counter's edge, a beam shown, a stair's side)", inch_said(cands[i].thick).replace("0' ", ""), inch_said(len)));
+        }
+    }
+    // The plan is the largest group of walls that meet one another; a group far smaller than it, apart from it, is another
+    // plan, a detail or a section (call 186, item 3).
+    {
+        let mut group: Vec<usize> = (0..nw).collect();
+        fn root_g(g: &mut [usize], i: usize) -> usize {
+            let mut r = i;
+            while g[r] != r {
+                r = g[r];
+            }
+            r
+        }
+        for &(a, b) in &edges {
+            let (ra, rb) = (root_g(&mut group, a), root_g(&mut group, b));
+            group[ra] = rb;
+        }
+        let mut total: BTreeMap<usize, f64> = BTreeMap::new();
+        for i in 0..nw {
+            if !cands[i].loser {
+                *total.entry(root_g(&mut group, i)).or_default() += norm(sub(ends[i][1], ends[i][0]));
+            }
+        }
+        if let Some((&plan, &plan_len)) = total.iter().max_by(|a, b| a.1.total_cmp(b.1)) {
+            for i in 0..nw {
+                let r = root_g(&mut group, i);
+                if r != plan && cands[i].doubt.is_none() && total[&r] < APART_SHARE * plan_len {
+                    cands[i].doubt = Some(format!("apart from the plan: it meets no wall of the largest group of walls on the sheet ({} of wall), and the group it is in is {} long: another plan, a detail or a section", inch_said(plan_len), inch_said(total[&r])));
+                }
+            }
         }
     }
 
@@ -1080,18 +1391,27 @@ pub fn find(lines: &[[[f64; 2]; 2]], feet_per_unit: Option<f64>, page: [f64; 2],
             std::mem::swap(&mut p, &mut q);
         }
         ops.sort_by(|x, y| x.from.total_cmp(&y.from));
-        out.walls.push(Wall { from: p, to: q, thickness: c.thick, openings: ops, doubt: c.doubt.clone() });
+        out.walls.push(Wall { from: p, to: q, thickness: c.thick, openings: ops, doubt: c.doubt.clone(), lines: c.lines });
     }
+    // An end that meets nothing is open, unless the page cut the lines off there: where a clip or the page's own edge ends
+    // what shows, the wall may go on beyond it (call 186).
+    let cuts: Vec<P2> = extra.cuts.iter().map(|p| [p[0] * k, p[1] * k]).collect();
+    // (A wall in doubt that runs to the edge of what shows is said to be cut off as well: what is said of the walls closing
+    // rests on what they meet.)
     for i in 0..nw {
-        if cands[i].doubt.is_none() {
-            for end in 0..2 {
-                if !meets[i][end] {
+        for end in 0..2 {
+            if !meets[i][end] {
+                let at_cut = cuts.iter().any(|c| norm(sub(*c, ends[i][end])) <= cands[i].thick + CAP_TOL);
+                if at_cut {
+                    out.cut_ends.push((new_index[i], ends[i][end]));
+                } else if cands[i].doubt.is_none() {
                     out.open_ends.push((new_index[i], ends[i][end]));
                 }
             }
         }
     }
     out.open_ends.sort_by(|x, y| x.0.cmp(&y.0));
+    out.cut_ends.sort_by(|x, y| x.0.cmp(&y.0));
 
     // 7. What each line was, counted by kind.
     for i in 0..n_segs {
@@ -1117,6 +1437,67 @@ pub fn find(lines: &[[[f64; 2]; 2]], feet_per_unit: Option<f64>, page: [f64; 2],
                 }
             }
         }
+    }
+    // Long lines left over that meet end to end in an outline (a house or a room drawn with one line a wall): a thickness
+    // cannot be read from one line, and it is said (call 186).
+    {
+        let single: Vec<usize> = (0..n_segs)
+            .filter(|&i| why[i].is_none() && segs[i].len >= min_len && {
+                let m = [(segs[i].a[0] + segs[i].b[0]) / 2.0, (segs[i].a[1] + segs[i].b[1]) / 2.0];
+                !out.walls.iter().any(|w| {
+                    let u = unit(sub(w.to, w.from));
+                    let (t, o) = (dot(u, sub(m, w.from)), dot(perp(u), sub(m, w.from)));
+                    t >= -w.thickness && t <= w.length() + w.thickness && o.abs() <= w.thickness / 2.0 + CAP_TOL
+                })
+            })
+            .collect();
+        let cell = CAP_TOL * 2.0;
+        let key = |p: P2| ((p[0] / cell).round() as i64, (p[1] / cell).round() as i64);
+        let mut at_key: HashMap<(i64, i64), Vec<usize>> = HashMap::new();
+        for (n, &i) in single.iter().enumerate() {
+            for e in [segs[i].a, segs[i].b] {
+                let (kx, ky) = key(e);
+                for dx in -1..=1 {
+                    for dy in -1..=1 {
+                        at_key.entry((kx + dx, ky + dy)).or_default().push(n);
+                    }
+                }
+            }
+        }
+        let mut group: Vec<usize> = (0..single.len()).collect();
+        fn root_of(g: &mut [usize], i: usize) -> usize {
+            let mut r = i;
+            while g[r] != r {
+                r = g[r];
+            }
+            r
+        }
+        for (n, &i) in single.iter().enumerate() {
+            for e in [segs[i].a, segs[i].b] {
+                for &m in at_key.get(&key(e)).map(|v| v.as_slice()).unwrap_or(&[]) {
+                    let j = single[m];
+                    if m != n && [segs[j].a, segs[j].b].iter().any(|f| norm(sub(*f, e)) <= CAP_TOL) {
+                        let (ra, rb) = (root_of(&mut group, n), root_of(&mut group, m));
+                        group[ra] = rb;
+                    }
+                }
+            }
+        }
+        let mut comps: BTreeMap<usize, Vec<usize>> = BTreeMap::new();
+        for n in 0..single.len() {
+            let r = root_of(&mut group, n);
+            comps.entry(r).or_default().push(single[n]);
+        }
+        for members in comps.values().filter(|m| m.len() >= 3) {
+            let c = members.iter().fold([0.0, 0.0], |m, &j| [m[0] + (segs[j].a[0] + segs[j].b[0]) / 2.0, m[1] + (segs[j].a[1] + segs[j].b[1]) / 2.0]);
+            out.single_outlines.push((members.len(), shift([c[0] / members.len() as f64, c[1] / members.len() as f64], origin)));
+        }
+        // Said only of a sheet that found no wall: where walls were found, a north arrow or a symbol is an outline of lines
+        // end to end too, and the walls are not drawn as single lines.
+        if out.walls.iter().any(|w| w.doubt.is_none()) {
+            out.single_outlines.clear();
+        }
+        out.single_outlines.sort_by(|a, b| a.1[1].total_cmp(&b.1[1]).then(a.1[0].total_cmp(&b.1[0])));
     }
     // Short pieces that run on end to end and turn a little at each joint: a curve drawn in straight pieces.
     {
@@ -1179,7 +1560,7 @@ pub fn find(lines: &[[[f64; 2]; 2]], feet_per_unit: Option<f64>, page: [f64; 2],
         w.from = shift(w.from, origin);
         w.to = shift(w.to, origin);
     }
-    for e in out.open_ends.iter_mut() {
+    for e in out.open_ends.iter_mut().chain(out.cut_ends.iter_mut()) {
         e.1 = shift(e.1, origin);
     }
     for st in out.sets.iter_mut() {

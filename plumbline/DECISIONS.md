@@ -6954,3 +6954,26 @@ trim" on a rake), so that giving a wall its siding brings its corner boards with
 and downspouts are Division 7, beside the gutter. A rake was already a thing. A figure
 is given only where a line names it (as `net_length` is), so a job with none of these
 lines holds nothing new; `plumbline trim <job>` lists them for a house not yet priced.
+
+### Call 186, as built, and two of its rules narrowed (2026-11-23)
+
+The builder fixed items 1 and 4 to 9 and the first half of item 2, and stopped, rightly,
+on two rules of the lead's that existing tests show were wrong as written.
+
+- **Item 2, second sentence, is withdrawn and narrowed.** "A pair whose thickness no
+  other wall on the sheet has is in doubt" would put in doubt the one partition of an
+  ordinary house (a 4 1/2 in partition in a ring of 6 in walls), which the finder's own
+  tests rightly assert is found. **Narrowed: a pair thicker than every other wall found
+  on the sheet, and alone at that thickness, is in doubt** (a 12 in closet shelf among
+  4 1/2 in and 6 in walls; one thin partition is not). Geometry cannot tell a 6 in
+  ledge between two walls from a 6 in partition; that case stays wrong and is said in
+  STATUS. Not built yet.
+- **Item 3, "apart from the plan", is given its measure.** To the letter it puts the
+  second of two houses on one sheet in doubt. **A group of walls is apart from the plan
+  only where it is under half the plan's length of wall**: two plans of like size are
+  both plans; a section or a detail beside a plan is in doubt. The builder offered this
+  as a patch; it is taken, and goes in with the narrowed item 2.
+- **Dashed lines on a renovation plan** (a wall to demolish drawn dashed): item 1
+  stands. They are said ("something overhead or hidden, or on a renovation a wall to be
+  demolished"), counted, and never laid: a person draws or marks a demolished wall
+  themselves.

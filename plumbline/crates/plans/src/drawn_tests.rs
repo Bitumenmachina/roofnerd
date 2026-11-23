@@ -15,6 +15,10 @@ const Q16: f64 = 1.0 / 4.5;
 #[derive(Clone, Default)]
 struct Sheet {
     l: Vec<[P; 2]>,
+    /// Lines drawn dashed (call 186): they go to the finder after the solid ones, marked.
+    d: Vec<[P; 2]>,
+    /// Places where the page cut a line off (the edge of what shows), in the sheet's own feet.
+    cuts: Vec<P>,
 }
 
 impl Sheet {
@@ -78,6 +82,39 @@ impl Sheet {
         }
         self
     }
+    /// A door whose faces run on past its jambs into the opening by `over` (the jamb line stands inside the end of each piece).
+    fn opening_over(&mut self, a: P, b: P, t: f64, lo: f64, hi: f64, over: f64) -> &mut Self {
+        let len = ((b[0] - a[0]).powi(2) + (b[1] - a[1]).powi(2)).sqrt();
+        let u = [(b[0] - a[0]) / len, (b[1] - a[1]) / len];
+        let n = [-u[1], u[0]];
+        for h in [t / 2.0, -t / 2.0] {
+            self.cut([a[0] + n[0] * h, a[1] + n[1] * h], [b[0] + n[0] * h, b[1] + n[1] * h], lo + over, hi - over);
+        }
+        let p = |s: f64, o: f64| [a[0] + u[0] * s + n[0] * o, a[1] + u[1] * s + n[1] * o];
+        for s in [lo, hi] {
+            self.line(p(s, -t / 2.0), p(s, t / 2.0));
+        }
+        self.line(p(lo, 0.0), p(hi, 0.0));
+        self
+    }
+    /// A window as most sheets draw it: both faces broken, the jambs across, and two lines of glass between them, each
+    /// 1/6 of the wall's thickness off the centre line (less than 3 in apart, so they are no wall).
+    fn glass(&mut self, a: P, b: P, t: f64, lo: f64, hi: f64) -> &mut Self {
+        let len = ((b[0] - a[0]).powi(2) + (b[1] - a[1]).powi(2)).sqrt();
+        let u = [(b[0] - a[0]) / len, (b[1] - a[1]) / len];
+        let n = [-u[1], u[0]];
+        for h in [t / 2.0, -t / 2.0] {
+            self.cut([a[0] + n[0] * h, a[1] + n[1] * h], [b[0] + n[0] * h, b[1] + n[1] * h], lo, hi);
+        }
+        let p = |s: f64, o: f64| [a[0] + u[0] * s + n[0] * o, a[1] + u[1] * s + n[1] * o];
+        for s in [lo, hi] {
+            self.line(p(s, -t / 2.0), p(s, t / 2.0));
+        }
+        for o in [t / 6.0, -t / 6.0] {
+            self.line(p(lo, o), p(hi, o));
+        }
+        self
+    }
     /// A pair of lines for a partition from (x, y0) to (x, y1), `t` thick, ending on the faces of the walls.
     fn partition(&mut self, x: f64, y0: f64, y1: f64, t: f64) -> &mut Self {
         self.line([x - t / 2.0, y0], [x - t / 2.0, y1]).line([x + t / 2.0, y0], [x + t / 2.0, y1])
@@ -98,17 +135,30 @@ impl Sheet {
         }
         self
     }
+    /// A dashed line: kept whole by the reader and marked.
+    fn dash(&mut self, a: P, b: P) -> &mut Self {
+        self.d.push([a, b]);
+        self
+    }
     fn turned(&self, degrees: f64) -> Sheet {
         let (s, c) = degrees.to_radians().sin_cos();
-        Sheet { l: self.l.iter().map(|l| l.map(|p| [p[0] * c - p[1] * s, p[0] * s + p[1] * c])).collect() }
+        let turn = |p: P| [p[0] * c - p[1] * s, p[0] * s + p[1] * c];
+        Sheet { l: self.l.iter().map(|l| l.map(turn)).collect(), d: self.d.iter().map(|l| l.map(turn)).collect(), cuts: self.cuts.iter().map(|p| turn(*p)).collect() }
     }
-    /// What a reader hands over: points from the page's corner, the plan's zero put 126 points in from it.
+    fn lowest(&self) -> P {
+        self.l.iter().chain(&self.d).flatten().fold([f64::MAX, f64::MAX], |m, p| [m[0].min(p[0]), m[1].min(p[1])])
+    }
+    /// What a reader hands over: points from the page's corner, the plan's zero put 126 points in from it;
+    /// the solid lines first, the dashed ones after them.
     fn page(&self, k: f64) -> Vec<[[f64; 2]; 2]> {
-        let lo = self.l.iter().flatten().fold([f64::MAX, f64::MAX], |m, p| [m[0].min(p[0]), m[1].min(p[1])]);
-        self.l.iter().map(|l| l.map(|p| [(p[0] - lo[0]) / k + 126.0, (p[1] - lo[1]) / k + 126.0])).collect()
+        let lo = self.lowest();
+        self.l.iter().chain(&self.d).map(|l| l.map(|p| [(p[0] - lo[0]) / k + 126.0, (p[1] - lo[1]) / k + 126.0])).collect()
     }
     fn found(&self, k: f64) -> Drawn {
-        find(&self.page(k), Some(k), [3000.0, 2400.0], [0.0, 0.0])
+        let lo = self.lowest();
+        let dashed: Vec<usize> = (self.l.len()..self.l.len() + self.d.len()).collect();
+        let cuts: Vec<P> = self.cuts.iter().map(|p| [(p[0] - lo[0]) / k + 126.0, (p[1] - lo[1]) / k + 126.0]).collect();
+        find_on(&self.page(k), Some(k), [3000.0, 2400.0], [0.0, 0.0], &Extra { dashed: &dashed, cuts: &cuts })
     }
 }
 
@@ -590,4 +640,325 @@ fn a_room_line_through_a_wall_does_not_end_it_and_does_not_stop_the_solid_line_b
         assert_lengths(&d, &[12.0, 12.0, 16.0, 16.0, 18.0, 18.0], 1.0 / 24.0);
         assert!(d.walls.iter().all(|w| w.doubt.is_none()), "{d:#?}");
     }
+}
+
+// ---- call 186, item 1: a wall's lines are solid ----
+
+#[test]
+fn two_dashed_lines_are_never_a_wall_and_are_said_as_what_they_may_be() {
+    // A beam shown dashed over the living room, wall to wall: 15 ft long, 8 in wide.
+    for turn in [0.0, 33.0] {
+        let mut s = house();
+        s.dash([0.25, 8.0], [18.0 - 0.1875, 8.0]).dash([0.25, 8.0 - 8.0 * IN], [18.0 - 0.1875, 8.0 - 8.0 * IN]);
+        let d = s.turned(turn).found(Q4);
+        check_house(&d, &format!("a dashed beam, turned {turn}"));
+        assert_eq!(d.overhead.len(), 1, "{d:#?}");
+        let o = &d.overhead[0];
+        assert!(o.lines == 2 && near(o.apart, 8.0 * IN, 1.0 / 48.0) && near(o.length, 17.8125 - 0.25, 1.0 / 12.0), "{o:?}");
+        assert_eq!(d.counts.dashed, 2);
+    }
+}
+
+#[test]
+fn a_dashed_pair_between_two_walls_is_not_a_wall_in_doubt_either() {
+    // What a renovation plan draws for a wall to be demolished: a pair of dashed lines, 4 1/2 in apart, wall to
+    // wall. A wall's lines are solid: it is said as dashed, never laid, even with --take (it is not in the walls found).
+    let mut s = house();
+    s.dash([0.25, 4.0], [17.8125, 4.0]).dash([0.25, 4.0 - 4.5 * IN], [17.8125, 4.0 - 4.5 * IN]);
+    let d = s.found(Q4);
+    check_house(&d, "a dashed pair");
+    assert_eq!(d.walls.len(), 5, "no sixth wall, in doubt or not: {d:#?}");
+    assert_eq!(d.overhead.len(), 1);
+}
+
+#[test]
+fn a_dashed_property_line_round_the_plan_is_no_box_and_no_wall() {
+    // Four dashed lines in a ring 10 ft outside the house, and a dashed room line through it.
+    let mut s = house();
+    let (a, b) = (-10.0, 46.0);
+    s.dash([a, a], [b, a]).dash([b, a], [b, 26.0]).dash([b, 26.0], [a, 26.0]).dash([a, 26.0], [a, a]);
+    s.dash([9.0, 0.0], [9.0, 16.0]);
+    let d = s.found(Q4);
+    check_house(&d, "a dashed property line");
+    assert_eq!(d.counts.dashed, 5);
+    assert!(d.boxes.is_empty() && d.overhead.is_empty(), "{d:#?}");
+}
+
+#[test]
+fn a_page_with_no_dashed_lines_is_found_as_before() {
+    let d = house().found(Q4);
+    check_house(&d, "no dashes");
+    assert!(d.overhead.is_empty() && d.counts.dashed == 0);
+}
+
+// ---- call 186, item 4: a pier is part of its wall however short ----
+
+#[test]
+fn a_door_beside_a_window_with_a_pier_under_two_feet_between_them_loses_neither() {
+    // The south wall of a 30 by 16 ft house: a door 10 to 13 ft and a window 5 ft wide a pier further on.
+    for (k, name) in [(Q4, "1/4"), (Q8, "1/8"), (Q2, "1/2")] {
+        for pier in [0.75, 1.0, 1.5] {
+            for turn in [0.0, 33.0] {
+                let mut s = Sheet::default();
+                s.ring(0.0, 0.0, 30.0, 16.0, 0.5);
+                s.opening([0.0, 0.0], [30.0, 0.0], 0.5, 10.0, 13.0, false);
+                s.glass([0.0, 0.0], [30.0, 0.0], 0.5, 13.0 + pier, 18.0 + pier);
+                let d = s.turned(turn).found(k);
+                let what = format!("{name} in to the foot, pier {pier} ft, turned {turn}");
+                assert!(d.walls.iter().all(|w| w.doubt.is_none()), "{what}: {d:#?}");
+                assert_lengths(&d, &[16.0, 16.0, 30.0, 30.0], 1.0 / 12.0);
+                let mut opens: Vec<(bool, f64, f64)> = d.walls.iter().flat_map(|w| w.openings.iter().map(|o| (o.window, o.from, o.to))).collect();
+                opens.sort_by(|a, b| a.1.total_cmp(&b.1));
+                assert_eq!(opens.len(), 2, "{what}: both found: {opens:?}");
+                assert!(!opens[0].0 && near(opens[0].1, 10.0, 1.0 / 12.0) && near(opens[0].2, 13.0, 1.0 / 12.0), "{what}: the door: {opens:?}");
+                assert!(opens[1].0 && near(opens[1].1, 13.0 + pier, 1.0 / 12.0) && near(opens[1].2, 18.0 + pier, 1.0 / 12.0), "{what}: the window: {opens:?}");
+            }
+        }
+    }
+}
+
+#[test]
+fn a_door_in_a_partition_two_feet_from_the_wall_it_meets_is_found() {
+    // A partition 4 1/2 in thick from the south wall to the north, a door 3 ft wide whose near jamb is 9 in from the
+    // south wall's face: the partition's first piece is 9 in long, and it is part of the partition.
+    for (k, name) in [(Q4, "1/4"), (Q2, "1/2")] {
+        for turn in [0.0, 33.0] {
+            let mut s = Sheet::default();
+            s.ring(0.0, 0.0, 30.0, 16.0, 0.5);
+            s.cut([0.0, 0.25], [30.0, 0.25], 14.8, 15.2);
+            s.cut([0.0, 15.75], [30.0, 15.75], 14.8, 15.2);
+            s.partition(15.0, 0.25, 15.75, 0.375);
+            s.opening([15.0, 0.25], [15.0, 15.75], 0.375, 0.75, 3.75, false);
+            let d = s.turned(turn).found(k);
+            let what = format!("{name}, turned {turn}");
+            assert!(d.walls.iter().all(|w| w.doubt.is_none()), "{what}: {d:#?}");
+            assert_lengths(&d, &[16.0, 16.0, 30.0, 30.0, 16.0], 1.0 / 12.0);
+            let opens: Vec<(bool, f64)> = d.walls.iter().flat_map(|w| w.openings.iter().map(|o| (o.window, o.to - o.from))).collect();
+            assert_eq!(opens.len(), 1, "{what}: {opens:?}");
+            assert!(!opens[0].0 && near(opens[0].1, 3.0, 1.0 / 12.0), "{what}: {opens:?}");
+        }
+    }
+}
+
+#[test]
+fn a_pier_is_no_license_for_lettering_to_make_a_wall() {
+    // Rows of stems 8 in apart and as tall as a wall is thick, in two rows 8 in apart (lettering), still make no wall.
+    let mut s = Sheet::default();
+    for row in 0..2 {
+        for i in 0..20 {
+            let x = i as f64 * 10.0 * IN;
+            s.line([x, row as f64 * 8.0 * IN], [x, row as f64 * 8.0 * IN + 6.0 * IN]);
+        }
+    }
+    let d = s.found(Q4);
+    assert!(d.walls.is_empty(), "{d:#?}");
+}
+
+// ---- call 186, item 2: a line is the face of one wall only ----
+
+#[test]
+fn a_line_that_is_a_walls_face_does_not_pair_again_with_a_line_beside_it() {
+    // A counter's back edge 4 1/2 in off the north wall's inner face, 24 ft of its 30. The north wall is the pair
+    // 6 in thick that three other walls match; the counter's line is beside it, said, and no wall.
+    for turn in [0.0, 33.0] {
+        let mut s = Sheet::default();
+        s.ring(0.0, 0.0, 30.0, 20.0, 0.5);
+        s.line([3.0, 19.75 - 4.5 * IN], [27.0, 19.75 - 4.5 * IN]);
+        let d = s.turned(turn).found(Q4);
+        assert_lengths(&d, &[20.0, 20.0, 30.0, 30.0], 1.0 / 24.0);
+        let doubts: Vec<&str> = d.walls.iter().filter_map(|w| w.doubt.as_deref()).collect();
+        assert_eq!(doubts.len(), 1, "turned {turn}: {d:#?}");
+        assert!(doubts[0].contains("already the face of a wall"), "{doubts:?}");
+    }
+}
+
+#[test]
+fn a_wall_in_doubt_does_not_shorten_the_wall_it_lies_beside() {
+    // The judge's counter on the north wall: the west wall was found 2 in short, its end carried to the doubtful pair's line.
+    let mut s = Sheet::default();
+    s.ring(0.0, 0.0, 30.0, 20.0, 0.5);
+    s.line([0.25, 19.75 - 4.5 * IN], [29.75, 19.75 - 4.5 * IN]);
+    let d = s.found(Q4);
+    let west = d.walls.iter().filter(|w| (w.to[0] - w.from[0]).abs() < 1e-6 && w.doubt.is_none()).min_by(|a, b| a.from[0].total_cmp(&b.from[0])).expect("a west wall");
+    assert!(near(west.length(), 20.0, 1.0 / 24.0), "{d:#?}");
+}
+
+// ---- call 186, item 5: what the page cut off ----
+
+#[test]
+fn walls_run_to_the_edge_of_what_the_page_shows_are_cut_off_there_and_do_not_close() {
+    // A 30 by 16 ft house of which the page shows only x < 20 ft: the south and north walls stop at its edge, where the
+    // lines were cut; the east wall is not shown.
+    let mut s = Sheet::default();
+    s.ring(0.0, 0.0, 30.0, 16.0, 0.5);
+    let mut kept = Sheet::default();
+    for l in &s.l {
+        // Cut each line at x = 20 (what a clip shows of it).
+        let (a, b) = (l[0], l[1]);
+        if a[0] > 20.0 && b[0] > 20.0 {
+            continue;
+        }
+        if a[0] <= 20.0 && b[0] <= 20.0 {
+            kept.line(a, b);
+            continue;
+        }
+        let t = (20.0 - a[0]) / (b[0] - a[0]);
+        let y = a[1] + (b[1] - a[1]) * t;
+        kept.line(if a[0] <= 20.0 { a } else { b }, [20.0, y]);
+        kept.cuts.push([20.0, y]);
+    }
+    let d = kept.found(Q4);
+    assert_lengths(&d, &[16.0, 20.0, 20.0], 1.0 / 12.0);
+    assert_eq!(d.cut_ends.len(), 2, "{d:#?}");
+    let west = d.walls.iter().map(|w| w.from[0].min(w.to[0])).fold(f64::MAX, f64::min);
+    assert!(d.cut_ends.iter().all(|(_, p)| near(p[0], west + 20.0, 1.0 / 12.0)), "{:?}", d.cut_ends);
+    assert!(d.open_ends.is_empty(), "cut off is not open: {:?}", d.open_ends);
+}
+
+#[test]
+fn a_wall_that_stops_where_nothing_cut_it_is_an_open_end_and_not_a_cut() {
+    let mut s = Sheet::default();
+    s.ring(0.0, 0.0, 20.0, 12.0, 0.5);
+    s.cut([0.0, 0.25], [20.0, 0.25], 0.0, 20.0);
+    s.cut([0.0, -0.25], [20.0, -0.25], -1.0, 21.0);
+    let d = s.found(Q4);
+    assert!(!d.open_ends.is_empty() && d.cut_ends.is_empty(), "{d:#?}");
+}
+
+// ---- call 186, item 9: layers, single lines, a line across that overshoots ----
+
+#[test]
+fn a_wall_drawn_in_its_layers_is_one_wall_said_once() {
+    // Each wall of a 30 by 20 ft house drawn with six lines: 8 in over all, lines 1/2 in and 1 in in from each face.
+    for (outer, inner, name) in [(8.0 * IN, [7.0 * IN, 6.0 * IN], "8 in, six lines"), (12.0 * IN, [6.0 * IN, 3.0 * IN * 2.0], "12 in, four lines")] {
+        for turn in [0.0, 33.0] {
+            let mut s = Sheet::default();
+            s.ring(0.0, 0.0, 30.0, 20.0, outer);
+            for t in inner {
+                if t != outer {
+                    s.ring(0.0, 0.0, 30.0, 20.0, t);
+                }
+            }
+            let d = s.turned(turn).found(Q4);
+            assert!(d.walls.iter().all(|w| w.doubt.is_none()), "{name} turned {turn}: {d:#?}");
+            assert_lengths(&d, &[20.0, 20.0, 30.0, 30.0], 1.0 / 24.0);
+            assert!(d.walls.iter().all(|w| near(w.thickness, outer, 1.0 / 96.0)), "{name}: the faces are the outermost two lines: {d:#?}");
+            assert!(d.walls.iter().all(|w| w.lines >= 4), "{name}: drawn with its lines said: {d:#?}");
+            assert!(d.open_ends.is_empty(), "{name}: {:?}", d.open_ends);
+        }
+    }
+}
+
+#[test]
+fn a_door_in_a_wall_drawn_in_its_layers_is_found() {
+    let mut s = Sheet::default();
+    for t in [8.0 * IN, 7.0 * IN, 6.0 * IN] {
+        s.ring(0.0, 0.0, 30.0, 20.0, t);
+    }
+    for h in [4.0 * IN, 3.5 * IN, 3.0 * IN, -3.0 * IN, -3.5 * IN, -4.0 * IN] {
+        s.cut([0.0, h], [30.0, h], 10.0, 13.0);
+    }
+    s.line([10.0, -4.0 * IN], [10.0, 4.0 * IN]).line([13.0, -4.0 * IN], [13.0, 4.0 * IN]).line([10.0, 0.0], [13.0, 0.0]);
+    let d = s.found(Q4);
+    assert_lengths(&d, &[20.0, 20.0, 30.0, 30.0], 1.0 / 24.0);
+    let opens: Vec<(f64, f64)> = d.walls.iter().flat_map(|w| w.openings.iter().map(|o| (o.from, o.to))).collect();
+    assert!(opens.len() == 1 && near(opens[0].1 - opens[0].0, 3.0, 1.0 / 12.0), "{opens:?}");
+}
+
+#[test]
+fn a_wall_with_a_lone_line_down_its_middle_stays_a_set_as_the_contract_says_and_is_said() {
+    // Call 181's rule, kept: three evenly spaced lines are a set. Said as a set, with where, in place of "no two lines
+    // 3 in to 14 in apart" which is not true of them.
+    let mut s = Sheet::default();
+    for t in [8.0 * IN, 0.0] {
+        s.ring(0.0, 0.0, 30.0, 20.0, t);
+    }
+    let d = s.found(Q4);
+    assert!(d.walls.is_empty() && !d.sets.is_empty(), "{d:#?}");
+}
+
+#[test]
+fn a_sheet_whose_walls_are_single_lines_is_told_so() {
+    // An L-shaped house as a centre-line outline, one line a wall, and a partition as one line. (A plain rectangle of one
+    // line is a closed box on the sheet and is said as one: its words name a house drawn so.)
+    let mut s = Sheet::default();
+    let l = [[0.0, 0.0], [30.0, 0.0], [30.0, 12.0], [18.0, 12.0], [18.0, 24.0], [0.0, 24.0]];
+    for i in 0..6 {
+        s.line(l[i], l[(i + 1) % 6]);
+    }
+    s.line([9.0, 0.0], [9.0, 24.0]);
+    for turn in [0.0, 33.0] {
+        let d = s.turned(turn).found(Q4);
+        assert!(d.walls.is_empty(), "{d:#?}");
+        assert_eq!(d.single_outlines.len(), 1, "turned {turn}: {d:#?}");
+        assert!(d.single_outlines[0].0 >= 6, "{:?}", d.single_outlines);
+    }
+    // A house of two lines a wall with a room line is not one, nor is it for a symbol drawn with lines end to end.
+    let mut s = house();
+    s.line([9.0, 0.25], [9.0, 15.75]);
+    for (a, b) in [([40.0, 0.0], [43.0, 4.0]), ([43.0, 4.0], [46.0, 0.0]), ([46.0, 0.0], [40.0, 0.0])] {
+        s.line(a, b);
+    }
+    assert!(s.found(Q4).single_outlines.is_empty());
+}
+
+#[test]
+fn a_line_across_a_wall_that_overshoots_its_faces_by_less_than_the_thickness_is_still_a_line_across() {
+    // Where new work meets existing: the cap drawn 2 in past each face of a 6 in wall.
+    for turn in [0.0, 33.0] {
+        let mut s = Sheet::default();
+        s.ring(0.0, 0.0, 30.0, 12.0, 0.5);
+        s.line([12.0, -0.25 - 2.0 * IN], [12.0, 0.25 + 2.0 * IN]);
+        let d = s.turned(turn).found(Q4);
+        assert_lengths(&d, &[12.0, 12.0, 18.0, 30.0, 12.0], 1.0 / 24.0);
+    }
+    // 7 in past each face of a 6 in wall is not an overshoot of the wall's: it is a line through it.
+    let mut s = Sheet::default();
+    s.ring(0.0, 0.0, 30.0, 12.0, 0.5);
+    s.line([12.0, -0.25 - 7.0 * IN], [12.0, 0.25 + 7.0 * IN]);
+    assert_lengths(&s.found(Q4), &[12.0, 12.0, 30.0, 30.0], 1.0 / 24.0);
+}
+
+#[test]
+fn faces_that_run_on_past_a_jamb_into_the_opening_do_not_end_the_wall_at_the_jamb() {
+    // The judge's sheet: every face runs 1 in past the jamb, into the opening. A door 3 ft wide in the south wall, a
+    // second 4 ft wide in the east wall: both found, four walls whole.
+    for (k, name) in [(Q4, "1/4"), (Q2, "1/2")] {
+        for turn in [0.0, 33.0] {
+            let mut s = Sheet::default();
+            s.ring(0.0, 0.0, 30.0, 16.0, 0.5);
+            s.opening_over([0.0, 0.0], [30.0, 0.0], 0.5, 10.0, 13.0, IN);
+            s.opening_over([30.0, 0.0], [30.0, 16.0], 0.5, 5.0, 9.0, IN);
+            let d = s.turned(turn).found(k);
+            let what = format!("{name}, turned {turn}");
+            assert!(d.walls.iter().all(|w| w.doubt.is_none()), "{what}: {d:#?}");
+            assert_lengths(&d, &[16.0, 16.0, 30.0, 30.0], 1.0 / 12.0);
+            let mut opens: Vec<f64> = d.walls.iter().flat_map(|w| w.openings.iter().map(|o| o.to - o.from)).collect();
+            opens.sort_by(|a, b| a.total_cmp(b));
+            assert!(opens.len() == 2 && near(opens[0], 3.0, 1.0 / 12.0) && near(opens[1], 4.0, 1.0 / 12.0), "{what}: {opens:?}");
+        }
+    }
+}
+
+// ---- call 186, item 3 (offered, not part of the main patch: it needs the lead's word) ----
+
+#[test]
+fn a_group_of_walls_far_smaller_than_the_plan_and_apart_from_it_is_in_doubt_as_a_detail_or_a_section() {
+    // The house, and beside it a wall section drawn at 3/8 in (1.5 times the plan's scale): a wall 9 in thick and 12 ft high
+    // with a slab 6 in thick meeting it.
+    for turn in [0.0, 33.0] {
+        let mut s = house();
+        s.line([50.0, 3.75], [50.0, 16.0]).line([50.0 + 0.75, 3.75], [50.0 + 0.75, 16.0]);
+        s.line([44.0, 4.0], [50.375, 4.0]).line([44.0, 3.5], [50.375, 3.5]);
+        let d = s.turned(turn).found(Q4);
+        let apart: Vec<&Wall> = d.walls.iter().filter(|w| w.doubt.as_deref().is_some_and(|d| d.contains("apart from the plan"))).collect();
+        assert!(apart.len() >= 2, "turned {turn}: {d:#?}");
+        // The house is found as it was.
+        assert_eq!(d.walls.iter().filter(|w| w.doubt.is_none()).count(), 5, "turned {turn}: {d:#?}");
+    }
+    // Two houses of like size on one sheet are both plans (the shared test of call 181 stays).
+    let mut s = Sheet::default();
+    s.ring(0.0, 0.0, 20.0, 12.0, 0.5);
+    s.ring(40.0, 0.0, 64.0, 16.0, 0.5);
+    assert!(s.found(Q4).walls.iter().all(|w| w.doubt.is_none()));
 }

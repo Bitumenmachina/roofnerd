@@ -61,6 +61,13 @@ pub struct Page {
     /// The straight lines drawn on the page, each as two points in the page's units,
     /// measured from its lower-left corner, up and to the right.
     pub lines: Vec<[[f64; 2]; 2]>,
+    /// Which of `lines` are dashed, by their place in it (call 186: a wall's lines are solid).
+    pub dashed: Vec<usize>,
+    /// Places on the page, in its own units from its lower-left corner, where a line was cut off at the edge of what
+    /// shows: a clip's edge or the page's own.
+    pub cuts: Vec<[f64; 2]>,
+    /// How many pictures the page shows: nothing is read from a picture.
+    pub pictures: usize,
     /// What reading it could not give, each in a sentence.
     pub lost: Vec<String>,
 }
@@ -130,8 +137,11 @@ struct Lines {
     short: usize,
     /// Lines drawn in white, or in no colour at all: not ink, and not kept.
     white: usize,
-    /// Lines drawn dashed, kept whole.
+    /// Lines drawn dashed, kept whole; and where each is among the lines kept.
     dashed: usize,
+    dashed_at: Vec<usize>,
+    /// Where a line was cut off, at a clip's edge or the page's, among the lines kept (page units, from the lower-left corner).
+    cuts: Vec<[f64; 2]>,
     /// Lines cut to what a square clip shows of them, and lines a clip hides whole.
     cut: usize,
     hidden: usize,
@@ -168,8 +178,9 @@ impl Lines {
         if ![a.x, a.y, b.x, b.y].iter().all(|v| v.is_finite()) {
             return;
         }
-        // What the clips in force show of it.
+        // What the clips in force show of it; the places it was cut off are kept, if the line is.
         let (mut a, mut b) = (a, b);
+        let mut cut_at: Vec<Point> = Vec::new();
         for clip in self.clips.clone().into_iter().flatten() {
             match inside(a, b, clip) {
                 None => {
@@ -179,6 +190,12 @@ impl Lines {
                 Some((c, d)) => {
                     if (c - a).hypot() > 1.0e-6 || (d - b).hypot() > 1.0e-6 {
                         self.cut += 1;
+                        if (c - a).hypot() > 1.0e-6 {
+                            cut_at.push(c);
+                        }
+                        if (d - b).hypot() > 1.0e-6 {
+                            cut_at.push(d);
+                        }
                     }
                     (a, b) = (c, d);
                 }
@@ -194,6 +211,12 @@ impl Lines {
                 Some((c, d)) => {
                     if (c - a).hypot() > 1.0e-6 || (d - b).hypot() > 1.0e-6 {
                         self.off_page_cut += 1;
+                        if (c - a).hypot() > 1.0e-6 {
+                            cut_at.push(c);
+                        }
+                        if (d - b).hypot() > 1.0e-6 {
+                            cut_at.push(d);
+                        }
                     }
                     (a, b) = (c, d);
                 }
@@ -209,6 +232,10 @@ impl Lines {
         }
         if dashed {
             self.dashed += 1;
+            self.dashed_at.push(self.kept.len());
+        }
+        for p in cut_at {
+            self.cuts.push([p.x, self.height - p.y]);
         }
         // The page is drawn from its top; lines are kept from its lower-left corner up.
         self.kept.push([[a.x, self.height - a.y], [b.x, self.height - b.y]]);
@@ -377,7 +404,7 @@ pub fn read(bytes: &[u8], page: usize) -> Result<Page, String> {
             } else {
                 opened.to_rgba8()
             };
-            Ok(Page { sort, pages: 1, size: [f64::from(width), f64::from(height)], picture: Picture { width: shown.width(), height: shown.height(), rgba: shown.into_raw() }, lines: Vec::new(), lost })
+            Ok(Page { sort, pages: 1, size: [f64::from(width), f64::from(height)], picture: Picture { width: shown.width(), height: shown.height(), rgba: shown.into_raw() }, lines: Vec::new(), dashed: Vec::new(), cuts: Vec::new(), pictures: 0, lost })
         }
     }
 }
@@ -513,7 +540,7 @@ fn read_pdf(bytes: &[u8], page: usize) -> Result<Page, String> {
     if lines.over > 0 {
         lost.push(format!("{} lines beyond the first {MOST_LINES} are not kept", lines.over));
     }
-    Ok(Page { sort: Sort::Pdf, pages: count, size: [f64::from(width), f64::from(height)], picture, lines: lines.kept, lost })
+    Ok(Page { sort: Sort::Pdf, pages: count, size: [f64::from(width), f64::from(height)], picture, lines: lines.kept, dashed: lines.dashed_at, cuts: lines.cuts, pictures: lines.pictures, lost })
 }
 
 // ---- The words on a page ----

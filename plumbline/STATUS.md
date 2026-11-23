@@ -9775,6 +9775,40 @@ Unknown, and no house drawn in the window has been tried. `show` and `takeoff` d
 list the new figures for a house not yet priced. **Nothing draws any of it yet**: that
 is call 184 step 1's window half. Not judged.
 
+## Call 186 fixed: the walls of a drawn plan after their judgment (2026-11-23)
+
+`research/worker-report-call186.md` has each cause and the table of the judge's 67
+sheets and ten new ones. No sheet got worse. The lead ran the tests and every
+command-line demonstration on the integration copy.
+
+Now right: a beam shown dashed is said and not laid (150 LF read 135.00); a pier
+between a door and a window keeps both openings (the 60 by 40 house: 440.00 LF and 25
+openings, as by hand; it read 434.67 and 23); a line is one wall's face; walls drawn
+with several lines a side are one wall, "drawn with N lines" (they found nothing
+before); lines running past every jamb no longer shatter a plan; a sheet part picture
+says nothing was read from the picture; a wall cut off at the page's edge is said and
+the walls are not said to close; a scale no drawing is made at is cautioned with the
+nearest; a head at or under the floor is refused; a sheet not lined up says where its
+walls are laid. A real-looking ranch plan the worker drew (poché, swings, a stair,
+cabinets, a dashed beam, dimension strings) at two scales and turned 15 degrees: 7
+walls, 197.83 LF against 197.81 by hand, 12 openings (before: 4 walls, 6 openings).
+
+**Run on the integration copy:** 758 tests pass in the six command-line crates, 0
+fail; all 46 command-line demonstrations pass; the three gates and `portmap.sh` pass.
+
+**Two rules of the lead's were wrong as written** and are narrowed in DECISIONS.md
+("Call 186, as built"): a unique thickness in doubt (it would have doubted every
+house's one partition), and anything apart from the plan in doubt (it needed a
+measure). **The narrowed forms are not built yet**, so today: a closet shelf and a
+bench drawn as two lines are still laid as walls; a wall section beside a plan with no
+frame is still laid as a wall (136.25 LF read where 124).
+
+**Still wrong, by the worker's account:** a window's glass lines give a phantom wall in
+doubt at each window; a lone layered wall is in doubt; a dashed line drawn as many
+short strokes is not seen as dashed; stacked dimension strings with arrowheads. The
+worker wrote the layers' tests after their code and says so. **No architect's sheet
+has been through it.** Not judged a second time.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **As of 2026-11-23 (the lead, after the merge of that day). Read this block first; what
