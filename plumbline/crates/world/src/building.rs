@@ -1251,6 +1251,14 @@ pub fn measures(world: &mut World) -> HashMap<String, BTreeMap<String, Derived>>
     out
 }
 
+/// Which way a floor's joists run with what was said of it, for what a wall carries
+/// (call 176): the same rule as `joist_run`, read from it, so that a count of joists, the
+/// frame as drawn and what crosses a wall can never disagree. `said` is None where the
+/// way was not said (the short way is then taken).
+pub(crate) fn joists_run(ring: &[P2], span: Option<&JoistsSpan>) -> Option<(P2, Option<(bool, Status)>)> {
+    joist_run(ring, span).map(|(run, said, status)| (run, said.map(|long| (long, status))))
+}
+
 /// What is not in a count of joists or rafters, said on every figure of it (call 165).
 pub const NOT_COUNTED: &str = "blocking, hangers and doubled members are not in this count";
 
@@ -1543,7 +1551,7 @@ fn path_number(path: &str) -> u64 {
 /// A wall as the walls round it see it on the plan; the worst status among what its line
 /// and its thickness were worked out from; and the worst among what its base and top rest
 /// on. Or why it cannot be placed.
-fn plan_wall(tree: &Tree, me: &str, w: &Wall) -> Result<(walls::PlanWall, Status, Status, Status), String> {
+pub(crate) fn plan_wall(tree: &Tree, me: &str, w: &Wall) -> Result<(walls::PlanWall, Status, Status, Status), String> {
     use crate::skeleton::P2 as V;
     let [a, b] = w.line_ft().ok_or("its line is not known")?;
     let heights = wall_heights(tree, me, w);

@@ -9147,6 +9147,37 @@ house with its beam and posts tagged; the plumbing reads with its sizes.
 - Not judged; every other window demonstration's pictures are now stale in the Show
   list (the trades row is new) until the next pass reruns them.
 
+## Call 176 built and in the tree: what a wall carries and what it stands on (2026-11-23)
+
+`plumbline carries <job> [<level or wall>]` and `show <job> <wall>` say, for a wall,
+what is drawn standing on it (walls of the level above over its line, an eave, the
+joists of the floor above where their direction is said) and what it stands on (a wall
+below, a footing, a beam), with the length shared and "nothing found under it for N
+LF". Every place says it is worked from what is drawn and is no engineer's finding.
+`check` cautions, and the field list asks with the wall's dollars riding, when a wall
+that comes down or is cut has something standing on it; a beam drawn under the upper
+wall answers it. A header's depth is now said to be a rule of thumb for laying out the
+cripples, and the field list asks the header's size over each new opening in an old
+wall said bearing or not said. `crates/world/src/carries.rs`; the worker's account,
+with where it would mislead on a real house, is `research/worker-report-call176.md`.
+
+`demos/carries.sh` gives every hand figure of the section above ("What a wall
+carries"): P1 carries P2 for 12.00 LF and stands on nothing for 16.00 LF; the south
+walls 24.00 LF each way; the rake carries nothing; $1,440.00 riding on the question; a
+beam answers it.
+
+**Merged by the lead** onto call 177: both workers had written the rule for which way
+joists run; one is kept (`joist_run`) and the other reads it, so a count of joists,
+the frame as drawn and what crosses a wall cannot disagree. **On the tree as
+committed: 600 tests pass, 0 fail; all 44 command-line demonstrations pass; the three
+gates and `portmap.sh` pass; the window builds.**
+
+**Not right.** It is plan lines only: a wall above that lands on a joist and not on a
+wall, a post, a stair opening, a cantilever or a split level is not seen, and a wall
+offset more than its thickness from the one below reads as standing on nothing. The
+window does not show any of it yet (the bearing tint and the top bar's mark are owed).
+Not judged.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **Since this was written (2026-11-18): a second builder, Opus 5.5, under call 129.**

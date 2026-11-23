@@ -146,9 +146,16 @@ pub fn named_with(words: &str, members: &[&str]) -> Option<(f64, f64)> {
     None
 }
 
+/// What is said wherever a header's depth is shown (call 175, as built; call 176): it is
+/// Assumed, and it is a depth to lay the cripples out by, not a size. Nothing here sizes a
+/// header.
+pub const HEADER_DEPTH_IS: &str = "Assumed: a rule of thumb used to lay out the cripples, not a size: an engineer or a span table sizes a header";
+
 /// A header's depth for its span, in feet: a rule of thumb for a one-storey bearing
 /// wall (a 2x6 to 4 ft, a 2x8 to 6 ft, a 2x10 to 8 ft, a 2x12 beyond). The code sizes a
-/// header from what it carries; a drawing of the frame needs a depth to draw.
+/// header from what it carries; a drawing of the frame needs a depth to draw, and the
+/// cripples above it are counted by it. It is not shown as a size: where it is shown it
+/// carries `HEADER_DEPTH_IS`.
 pub fn header_depth(span: f64) -> f64 {
     let nominal = if span <= 4.0 {
         6

@@ -65,6 +65,10 @@ pub struct Question {
     /// Lines that ride on it and have no figure yet (no price entered): they are in
     /// no dollar figure here, and are counted so that is said (J17A-7).
     pub unpriced: usize,
+    /// What the program says of a wall the work opens besides the values to check (call
+    /// 176): what stands on it, and which opening's header is to be sized. Each is a
+    /// sentence, with what it is worked from.
+    pub also: Vec<String>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -127,6 +131,11 @@ pub fn vif(job: &mut Job) -> Vif {
     let estimate = view::estimate(job);
     let storeys = crate::building::storeys_of(job);
     let opened = crate::hidden::opened_walls(&mut job.world);
+    // What stands on a wall the work opens, and the headers of the openings it cuts (call 176).
+    let mut carried = crate::carries::asked(job);
+    for (wall, mut sentences) in crate::carries::headers_asked(job) {
+        carried.entry(wall).or_default().append(&mut sentences);
+    }
     let names: BTreeMap<&str, &str> = elements.iter().map(|e| (e.path.as_str(), e.name.as_str())).collect();
     let storey_name = |path: &str, kind: Kind| -> String {
         if kind == Kind::Storey {
@@ -268,6 +277,7 @@ pub fn vif(job: &mut Job) -> Vif {
                         dollars_status,
                         lines: n,
                         unpriced,
+                        also: Vec::new(),
                     },
                     &mut with,
                     &mut without,
@@ -296,7 +306,8 @@ pub fn vif(job: &mut Job) -> Vif {
             Some(e) => job.world.get::<Cost>(e).map(|c| c.lines.iter().filter_map(typed_unsure).collect()).unwrap_or_default(),
             None => Vec::new(),
         };
-        if labels.is_empty() && asked_hidden.is_empty() && typed.is_empty() {
+        let also: Vec<String> = carried.get(&el.path).cloned().unwrap_or_default();
+        if labels.is_empty() && asked_hidden.is_empty() && typed.is_empty() && also.is_empty() {
             continue;
         }
         let values: Vec<(String, Status, bool)> = crate::editing::takes_among(job, &el.path, &labels)
@@ -308,9 +319,9 @@ pub fn vif(job: &mut Job) -> Vif {
             .collect();
         // What the thing is, where that is itself to be checked (see below). Worked out
         // before the next step adds values that are not of that kind.
-        let identity = values.iter().any(|v| !v.2) || !asked_hidden.is_empty();
+        let identity = values.iter().any(|v| !v.2) || !asked_hidden.is_empty() || !also.is_empty();
         let mut values = values;
-        if values.is_empty() && asked_hidden.is_empty() && typed.is_empty() {
+        if values.is_empty() && asked_hidden.is_empty() && typed.is_empty() && also.is_empty() {
             // Nothing on it is a value `measure` takes, but priced lines whose quantity
             // is in question rest on it. It is a question all the same, to be checked,
             // and their dollars ride on it: left off, an estimator sorting his field
@@ -353,7 +364,7 @@ pub fn vif(job: &mut Job) -> Vif {
         let picked: Vec<&Line> = lines.iter().filter(|l| (l.quantity != Status::Known && l.rests.contains(&el.path)) || (identity && l.on == el.path) || (l.typed && l.on == el.path)).collect();
         counted.extend(picked.iter().map(|l| l.key.clone()));
         let (dollars, dollars_status, n, unpriced) = sum(&picked);
-        place(Question { path: el.path.clone(), name: el.name.clone(), kind: el.kind, storey: storey_name(&el.path, el.kind), room: None, clash: None, in_the_way: None, values, dollars, dollars_status, lines: n, unpriced }, &mut with, &mut without);
+        place(Question { path: el.path.clone(), name: el.name.clone(), kind: el.kind, storey: storey_name(&el.path, el.kind), room: None, clash: None, in_the_way: None, values, dollars, dollars_status, lines: n, unpriced, also }, &mut with, &mut without);
     }
 
     // What is in the way of a wall that comes down: cap it, reroute it or take it out.
@@ -366,7 +377,7 @@ pub fn vif(job: &mut Job) -> Vif {
                 counted.extend(picked.iter().map(|l| l.key.clone()));
                 let (dollars, dollars_status, n, unpriced) = sum(&picked);
                 place(
-                    Question { path: w.thing.clone(), name: w.thing_name.clone(), kind: w.thing_kind, storey: storey_name(&w.thing, w.thing_kind), room: None, clash: None, in_the_way: Some(w), values: Vec::new(), dollars, dollars_status, lines: n, unpriced },
+                    Question { path: w.thing.clone(), name: w.thing_name.clone(), kind: w.thing_kind, storey: storey_name(&w.thing, w.thing_kind), room: None, clash: None, in_the_way: Some(w), values: Vec::new(), dollars, dollars_status, lines: n, unpriced, also: Vec::new() },
                     &mut with,
                     &mut without,
                 );
@@ -488,7 +499,15 @@ impl Question {
                 if !check.is_empty() {
                     to_do.push(format!("{} {check}", if to_do.is_empty() { "Check" } else { "check" }));
                 }
-                format!("{}.", to_do.join("; "))
+                let mut said = if to_do.is_empty() { String::new() } else { format!("{}.", to_do.join("; ")) };
+                // What the program says of what stands on it and of its headers (call 176).
+                for s in &self.also {
+                    if !said.is_empty() {
+                        said.push(' ');
+                    }
+                    said.push_str(s);
+                }
+                said
             }
         }
     }

@@ -20,6 +20,7 @@
 //! * `sample`: a small made-up job for demonstrations and tests.
 
 pub mod building;
+pub mod carries;
 pub mod check;
 pub mod components;
 pub mod derive;
