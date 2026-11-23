@@ -9468,6 +9468,26 @@ is unexplained and one note contradicts its sheet; room lines are not drawn; the
 lists line types the sheet does not use; sheet numbers start again on each level; any
 text passes as a date; no scale bar.
 
+## The scan's walls judged a second time (2026-11-23)
+
+`research/judgment-call179A-scan-walls.md`; DECISIONS.md call 183 has each finding and
+what is decided. **Nothing below is fixed yet.** Held: a seven-room house's walls,
+doors, windows, thicknesses and areas; every angle tried; rooms 120 ft and 6 ft; a
+missing wall said; a tray ceiling, a beam and a neighbour's wall through a window;
+nothing laid Known.
+
+Found: a face used twice, so a wall is laid twice 2.4 in apart and 4.2 LF counted
+twice with `check` passing; a mirror doubling a room (118 LF laid where 64) with "the
+walls found close" said; a soffit and a fireplace front laid as walls; a 10 ft
+partition with a door dropped every time, said only as "not straight" with no place,
+so two rooms become one; a garage wall with a 16 ft door called something hung from
+the ceiling; a curved wall laid as three chords; a closet's walls laid 15 in short and
+"the ceiling slopes" said of flat ceilings; where the scan thins tenfold, 2 of 5 walls
+kept; two storeys in one scan giving duplicate walls and a door laid as a window 9 ft
+up.
+
+The finder has still seen only made-up scans.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **Since this was written (2026-11-18): a second builder, Opus 5.5, under call 129.**

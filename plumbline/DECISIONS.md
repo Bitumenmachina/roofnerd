@@ -6738,3 +6738,53 @@ what a drawing owes a builder.
    the lowest up). A date is a date or is refused.**
 8. **No scale bar, no title in the file.** **A graphic scale under the plan's scale; the
    file's own title is the job's title.** Lettering stays strokes (call 179 D).
+
+### Call 183. What the second judge found in the scan's walls, and what is decided (2026-11-23)
+
+A second judge (Sonnet, cold) took the fixed finder to houses neither the first judge
+nor the builder had tried: `research/judgment-call179A-scan-walls.md`. Held: a
+seven-room house's walls, doors, windows, thicknesses and areas; every angle; rooms 120
+ft and 6 ft; a missing wall said; a tray ceiling, a beam, a neighbour's wall through a
+window; nothing Known. What it broke, worst first, and what is decided. The rule over
+all of them is call 179's: silence is the defect, and nothing uncertain is laid without
+the person's word.
+
+1. **A face is used twice: a partition's face is paired into one wall and laid again
+   as a second wall 2.4 in off it; `check` passes and 4.2 LF is counted twice.** **A
+   face belongs to one wall.** After the find, two walls whose bodies share a length
+   are one wall or one of them is in doubt: never both laid.
+2. **A mirror doubles a 20 by 12 room to 40 by 12, with a phantom wall, "the walls
+   found close", and 118 LF laid where 64 is true.** **The house is what can be reached
+   from the floor that was walked: what is found beyond a wall with no opening leading
+   to it (a mirror's room, a neighbour's wall through glass, a room not walked) is "in
+   doubt: beyond wall N with no way to it", said with where, and laid only when taken.**
+3. **A soffit over cabinets is laid as a 14 ft 6 in wall; a fireplace's front is laid
+   as a wall; neither is in doubt.** **A face seen only above something standing, in
+   the plane of that thing's own front (within 3 in), is that thing's top (a soffit, a
+   cabinet to the ceiling), not a wall behind it: in doubt. Any face whose two ends
+   meet no wall is in doubt, whatever is behind it** (this widens call 179 A3; a wing
+   wall is then asked about, which costs a word and never lays a phantom).
+4. **In the seven-room house a 10 ft partition with a door, and a closet's door wall,
+   are dropped every time; the only word is "7 not straight along the whole length",
+   with no place; two rooms become one.** **A wall with a door in it is a wall: a
+   short wall is found from its pieces either side of the opening and the head over
+   it.** And **every stretch left out is said with where it is (from, to) and how
+   long; where leaving it out leaves two rooms open to one another, that is said.**
+5. **A garage wall with a 16 ft door is "something hung from the ceiling"; a curved
+   wall is laid as three chords and called furniture.** **A wall that is mostly opening
+   is a wall with an opening: its head across and its ends make it.** **A curved face
+   is said to be curved, with its length, and is not laid: curved walls are not found.**
+6. **A flat-ceilinged closet's walls are laid 15 in short without a word, and "the
+   ceiling slopes" is said of flat ceilings.** **The ceiling over a wall is read only
+   where there are enough points to read it; where there are not, the wall takes the
+   house's ceiling and says so. A slope is said only where the ceiling's points fit a
+   slope better than a flat by more than their scatter.**
+7. **Where the scan is ten times thinner at one end, 2 of 5 walls are kept.** **How
+   thick the scan is, is worked place by place; where part of it is too thin to tell a
+   wall, it says which part, by where, and finds what the rest allows.**
+8. **A scan of two storeys gives duplicate walls and an upper door laid as a window
+   with its sill at 9 ft 3 in.** **More than one floor in a scan is said ("the scan
+   holds two levels: floors at 0 and 9 ft 3 in") and one is found at a time: the level
+   asked for, by its floor.**
+9. **Words**: a raw mark where a name belongs in what is said of a find; marks of
+   certainty with no legend in the field list.
