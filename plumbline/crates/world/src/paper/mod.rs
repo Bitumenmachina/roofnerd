@@ -18,15 +18,18 @@
 //!   and its pen (for picking and overrides) only the one thing the PDF needs of its part
 //!   is kept: whether a line's corners are mitred (`Part::mitred`, `render.rs:67`: all but
 //!   lettering, whose strokes turn round so a V's point does not stick out).
+//! * `Drawing::text` and `text_left` also record where each piece of lettering lies (`letters`, ours, call 179 D2).
 //! * `Drawing::text` (`render.rs:428`, `text_turned`, `render.rs:449`) letters text centred
 //!   on a point, turned an angle, in strokes a tenth of its height wide; here a stroke is
 //!   never under half a point.
 
 pub mod cut;
 pub mod font;
+pub mod letters;
 pub mod pdf;
 pub mod pen;
 pub mod size;
+pub mod strings;
 
 /// A colour, 0 to 255 each of red, green and blue.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -57,11 +60,16 @@ pub struct Drawing {
     pub width: f32,
     pub height: f32,
     pub prims: Vec<Prim>,
+    /// Where each piece of lettering lies, as it was drawn (`letters`).
+    pub letters: Vec<letters::Letter>,
+    /// Each letter written that is not lettered as it is (its plain letter, or the
+    /// question mark), as `font::unlike` has it (call 182).
+    pub unlettered: Vec<(char, Option<char>)>,
 }
 
 impl Drawing {
     pub fn new(width: f32, height: f32) -> Drawing {
-        Drawing { width, height, prims: Vec::new() }
+        Drawing { width, height, prims: Vec::new(), letters: Vec::new(), unlettered: Vec::new() }
     }
 
     pub fn fill(&mut self, rings: Vec<Vec<(f32, f32)>>, color: Rgb) {
@@ -82,6 +90,10 @@ impl Drawing {
     pub fn text(&mut self, text: &str, (x, y): (f32, f32), height: f32, angle: f32, color: Rgb) {
         let (s, c) = angle.sin_cos();
         let w = font::width(text, height);
+        self.unlettered.extend(font::unlike(text));
+        if !text.trim().is_empty() {
+            self.letters.push(letters::Letter::centred(text, (x, y), height, angle));
+        }
         for pts in font::strokes(text, -w / 2.0, -height / 2.0, height) {
             let pts = pts.into_iter().map(|(a, b)| (x + a * c - b * s, y + a * s + b * c)).collect();
             self.prims.push(Prim::Line { pts, width: (height / 10.0).max(0.5), color, dash: None, closed: false, round: true });
@@ -90,6 +102,10 @@ impl Drawing {
 
     /// `text` with its left end at `(x, y)` on the baseline, level.
     pub fn text_left(&mut self, text: &str, (x, y): (f32, f32), height: f32, color: Rgb) {
+        self.unlettered.extend(font::unlike(text));
+        if !text.trim().is_empty() {
+            self.letters.push(letters::Letter::centred(text, (x + font::width(text, height) / 2.0, y + height / 2.0), height, 0.0));
+        }
         for pts in font::strokes(text, x, y, height) {
             self.prims.push(Prim::Line { pts, width: (height / 10.0).max(0.5), color, dash: None, closed: false, round: true });
         }

@@ -66,14 +66,34 @@ of "$FLOOR"
 says "$T/of.txt" "= joists 19 EA"
 
 echo
-echo "== An L: 0,0 24,0 24,10 12,10 12,16 0,16, joists north: 20 joists, 250 LF, longest 16 ft, rim 24 + 12 + 12 = 48 LF =="
-EL="$(made "$("$P" floor "$J" "$UPPER" "$FT" --points "0,0 24,0 24,10 12,10 12,16 0,16" "${K[@]}")")"
+echo "== An L: 0,0 24,0 24,10 12,10 12,16 0,16 (drawn 120 ft east of the first floor: a floor is not drawn in another, call 179 B6), joists north: 20 joists, 250 LF, longest 16 ft, rim 24 + 12 + 12 = 48 LF =="
+EL="$(made "$("$P" floor "$J" "$UPPER" "$FT" --points "120,0 144,0 144,10 132,10 132,16 120,16" "${K[@]}")")"
 "$P" line "$J" "$EL" "Floor joists, 2x10 at 16 in" joists --cost-type material >/dev/null
 of "$EL"
 says "$T/of.txt" "= ~ joists 20 EA"
 says "$T/of.txt" "= ~ joist length 250 LF"
 says "$T/of.txt" "= ~ joist longest 16 ft"
 says "$T/of.txt" "= ~ rim length 48 LF"
+
+echo
+echo "== The same L with its notch on the other side (a mark falls on the notch's edge: it is one joist): 19 joists, 250 LF, rim 48 LF =="
+# 17 marks (1.3333 k + 0.0625, k = 1 to 17) and 3 edge joists; mark 9 is at 12.0625, on the notch's edge: the 6 ft edge joist is a part of it.
+# 8 x 10 + 9 x 16 + 10 + 16 = 250.
+EM="$(made "$("$P" floor "$J" "$UPPER" "$FT" --points "40,0 64,0 64,16 52,16 52,10 40,10" "${K[@]}")")"
+"$P" line "$J" "$EM" "Floor joists, 2x10 at 16 in" joists --cost-type material >/dev/null
+of "$EM"
+says "$T/of.txt" "= ~ joists 19 EA"
+says "$T/of.txt" "= ~ joist length 250 LF"
+says "$T/of.txt" "= ~ rim length 48 LF"
+
+echo
+echo "== A U: 0,0 30,0 30,20 20,20 20,8 10,8 10,20 0,20, joists north: 25 joists, 408 LF =="
+# 22 marks and 4 edge joists less the one at east 20, which mark 15 (20.0625) runs the whole of: 25; 356 + 64 - 12 = 408.
+EU="$(made "$("$P" floor "$J" "$UPPER" "$FT" --points "80,0 110,0 110,20 100,20 100,8 90,8 90,20 80,20" "${K[@]}")")"
+"$P" line "$J" "$EU" "Floor joists, 2x10 at 16 in" joists --cost-type material >/dev/null
+of "$EU"
+says "$T/of.txt" "= ~ joists 25 EA"
+says "$T/of.txt" "= ~ joist length 408 LF"
 
 echo
 echo "== A gable roof over 24 by 16, 6 in 12, ridge along the 24 ft: a line on the roof names its rafters: 13 a plane, 26 =="

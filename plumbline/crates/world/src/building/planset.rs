@@ -52,10 +52,27 @@ pub struct LevelOpening {
     /// Its sill and its head above the wall's base.
     pub sill: f64,
     pub head: f64,
-    /// The place it is in: its own mark if it has one, else its wall's.
+    /// The place its own mark puts it in; with no mark it is new (call 179 D1).
     pub place: WorkPlace,
     pub status: Status,
 }
+
+/// A cabinet, fixture, piece of equipment or furnishing set in place, as its outline (call 179 D3).
+#[derive(Clone, Debug)]
+pub struct LevelThing {
+    pub path: String,
+    pub name: String,
+    /// The four corners of its footprint on the plan, feet, in order round it.
+    pub ring: [V2; 4],
+    pub place: WorkPlace,
+    /// Whether it hangs wholly above the height the walls are cut at (a wall box): drawn
+    /// dashed, as what is above the cut is.
+    pub above_cut: bool,
+    /// How sure its place and size are (the worst of the values it is drawn from).
+    pub status: Status,
+}
+
+type V2 = crate::skeleton::P2;
 
 /// A room, with its area at the walls' faces.
 #[derive(Clone, Debug)]
@@ -66,6 +83,19 @@ pub struct LevelRoom {
     /// Square feet, none when the model has no figure for it.
     pub area: Option<f64>,
     pub status: Status,
+    /// Why there is no area, in the model's own words; empty when there is one (call 182).
+    pub why: String,
+}
+
+/// A room line of a level: it parts rooms where no wall stands (call 182: drawn on the plan).
+#[derive(Clone, Debug)]
+pub struct LevelRoomLine {
+    pub path: String,
+    pub a: V2,
+    pub b: V2,
+    /// Whether it stands for a wall that is marked to demolish: on the plan as the walls
+    /// stand today it is not a line.
+    pub stands_for_demolished: bool,
 }
 
 /// Everything a plan set takes from the job for one level.
@@ -79,12 +109,19 @@ pub struct LevelPlan {
     /// The walls that stand at the cut, in the order they were drawn into the job.
     pub walls: Vec<LevelWall>,
     pub openings: Vec<LevelOpening>,
+    /// What is set in place on the level, each as its outline (call 179 D3).
+    pub things: Vec<LevelThing>,
+    /// Things set in place that cannot be drawn, each with why.
+    pub things_left_off: Vec<(String, String)>,
     /// The rooms the work leaves: the model's own figures.
     pub rooms_left: Vec<LevelRoom>,
     /// The rooms as they stand: found among the walls that stand today.
     pub rooms_stand: Vec<LevelRoom>,
-    /// Rooms of the level with no area as they stand, by name.
-    pub rooms_stand_missing: Vec<String>,
+    /// Rooms of the level that cannot be lettered as they stand, each with why in words when it is not
+    /// simply that no wall that stands closes round its point (then the reason is empty).
+    pub rooms_stand_missing: Vec<(String, String)>,
+    /// The room lines of the level (call 182).
+    pub room_lines: Vec<LevelRoomLine>,
     /// Walls of the level left off the plan, each with why: with no line, or not reaching the cut.
     pub walls_left_off: Vec<(String, String)>,
     /// Doors and windows left off the plan, each with why.
@@ -105,6 +142,16 @@ pub fn level_named(job: &mut Job, typed: &str) -> Result<String, String> {
         [] => Err(format!("{typed:?} is not a level of this job{}", if storeys.is_empty() { ": the job has none".to_string() } else { format!("; its levels are {}", storeys.iter().map(|(p, n)| format!("{n} ({p})")).collect::<Vec<_>>().join(", ")) })),
         _ => Err(format!("{typed:?} names more than one level; give its path ({})", named.iter().map(|(p, _)| p.as_str()).collect::<Vec<_>>().join(", "))),
     }
+}
+
+/// The levels of the job, lowest first (by elevation, then as they were drawn in): the order a
+/// plan set's sheets are numbered through (call 182).
+pub fn levels_from_the_lowest(job: &mut Job) -> Vec<String> {
+    let tree = Tree::of(&mut job.world);
+    let mut q = job.world.query::<(&Node, &Kind)>();
+    let mut all: Vec<(f64, u64, String)> = q.iter(&job.world).filter(|(_, k)| **k == Kind::Storey).map(|(n, _)| (tree.levels.get(&n.path).and_then(|l| l.elevation.feet()).unwrap_or(f64::MAX), path_number(&n.path), n.path.clone())).collect();
+    all.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal).then(a.1.cmp(&b.1)));
+    all.into_iter().map(|(_, _, p)| p).collect()
 }
 
 /// Read a level of the job as a plan set draws it, or why it cannot be drawn.
@@ -181,8 +228,9 @@ pub fn level_plan(job: &mut Job, storey: &str) -> Result<LevelPlan, String> {
             openings_left_off.push((path, format!("it does not reach {} above the floor, where the walls are cut", plumbline_roofing::drawing::feet_written(cut))));
             continue;
         }
-        let own = job.world.get::<Work>(e).is_some();
-        let place = if own { crate::view::work_place(&job.world, e) } else { walls[wi].place };
+        // An opening is on the sheets its own mark puts it on, and one with no mark is new
+        // (call 179 D1): a new door in an existing wall is not on the existing plan.
+        let place = crate::view::work_place(&job.world, e);
         openings.push(LevelOpening { path, name, door: kind == Kind::Door, wall: wi, span: [s0, s1], sill, head, place, status: hole.status });
     }
 
@@ -197,14 +245,20 @@ pub fn level_plan(job: &mut Job, storey: &str) -> Result<LevelPlan, String> {
         let Some(point) = *point else { continue };
         let d = figures.get(path).and_then(|m| m.get("floor_area"));
         let (area, status) = d.map_or((None, *point_status), |d| (d.value, d.status));
-        rooms_left.push(LevelRoom { path: path.clone(), name: name.clone(), point, area, status });
+        let why = match (area, d) {
+            (Some(_), _) => String::new(),
+            (None, Some(d)) if !d.note.is_empty() => d.note.clone(),
+            _ => format!("{name} has no area: the job has no figure for it"),
+        };
+        rooms_left.push(LevelRoom { path: path.clone(), name: name.clone(), point, area, status, why });
     }
 
     // The rooms as they stand: the walls that stand today (existing and to demolish), their
     // joins as they are, and the room lines but those that stand for a wall taken down.
     let stand: Vec<usize> = (0..walls.len()).filter(|&i| walls[i].place >= 1).collect();
     let mut rooms_stand = Vec::new();
-    let mut rooms_stand_missing = Vec::new();
+    let mut rooms_stand_missing: Vec<(String, String)> = Vec::new();
+    let mut room_lines: Vec<LevelRoomLine> = Vec::new();
     if !stand.is_empty() {
         let plan_walls: Vec<PlanWall> = stand.iter().map(|&i| walls[i].wall.clone()).collect();
         let bounding: Vec<usize> = stand.iter().enumerate().filter(|(_, &i)| bounds[i]).map(|(k, _)| k).collect();
@@ -236,13 +290,55 @@ pub fn level_plan(job: &mut Job, storey: &str) -> Result<LevelPlan, String> {
                         let (shape, span) = shapes[stand[k]];
                         status = status.max(shape).max(span);
                     }
-                    rooms_stand.push(LevelRoom { path: path.clone(), name: name.clone(), point, area: Some(*area), status });
+                    rooms_stand.push(LevelRoom { path: path.clone(), name: name.clone(), point, area: Some(*area), status, why: String::new() });
                 }
-                _ => rooms_stand_missing.push(name.clone()),
+                (Err(super::rooms::Unbound::Shared(before)), false) => {
+                    let other = rq.get(*before).map_or("another room", |r| r.1.as_str());
+                    rooms_stand.push(LevelRoom { path: path.clone(), name: name.clone(), point, area: None, status: *point_status, why: format!("{name} has no area as the walls stand: its point is in the space {other} has. Part the two with a wall or a room line, and each gets its own.") });
+                }
+                (_, true) => rooms_stand_missing.push((name.clone(), format!("{name}'s point is inside a wall"))),
+                _ => rooms_stand_missing.push((name.clone(), String::new())),
             }
         }
     } else {
-        rooms_stand_missing = rq.iter().map(|(_, n, ..)| n.clone()).collect();
+        rooms_stand_missing = rq.iter().map(|(_, n, ..)| (n.clone(), String::new())).collect();
     }
-    Ok(LevelPlan { title, storey: storey.to_string(), level: level_name, cut, walls, openings, rooms_left, rooms_stand, rooms_stand_missing, walls_left_off, openings_left_off })
+    {
+        // Every room line of the level, and whether it stands for a wall to demolish.
+        let gone: Vec<PlanWall> = walls.iter().filter(|w| w.place == 2).map(|w| w.wall.clone()).collect();
+        let mut q = job.world.query::<(&Node, &Kind, &RoomLine)>();
+        let mut all: Vec<(String, [[f64; 2]; 2])> = q.iter(&job.world).filter(|(n, k, _)| **k == Kind::RoomLine && tree.storey_of(&n.path) == Some(storey)).filter_map(|(n, _, r)| r.line_ft().map(|l| (n.path.clone(), l))).collect();
+        all.sort_by_key(|(p, _)| path_number(p));
+        for (path, [a, b]) in all {
+            let (a, b) = (V(a[0], a[1]), V(b[0], b[1]));
+            let stands_for = |w: &PlanWall| {
+                let half = (w.ext - w.int).abs() / 2.0 + tol;
+                super::on_line(a, w.start, w.end, half) && super::on_line(b, w.start, w.end, half)
+            };
+            room_lines.push(LevelRoomLine { path, a, b, stands_for_demolished: gone.iter().any(stands_for) });
+        }
+    }
+    // What is set in place: cabinets, fixtures, equipment and furnishings, each as the outline
+    // of its footprint (the model's own size and place, turned as it is turned).
+    let mut things = Vec::new();
+    let (drawn, not_drawn) = super::placements(job);
+    for p in drawn {
+        if !matches!(p.kind, Kind::Furnishing | Kind::Equipment | Kind::Fixture) || p.storey.as_deref() != Some(storey) {
+            continue;
+        }
+        let super::Shape::Box { at, size, angle } = p.shape else { continue };
+        let (sin, cos) = angle.to_radians().sin_cos();
+        let ring = [(-1.0, -1.0), (1.0, -1.0), (1.0, 1.0), (-1.0, 1.0)].map(|(sx, sy)| {
+            let (lx, ly) = (sx * size[0] / 2.0, sy * size[1] / 2.0);
+            V(at[0] + lx * cos - ly * sin, at[1] + lx * sin + ly * cos)
+        });
+        let place = job.find(&p.path).map_or(0, |e| crate::view::work_place(&job.world, e));
+        things.push(LevelThing { path: p.path, name: p.name, ring, place, above_cut: at[2] >= elevation + cut, status: p.status });
+    }
+    let things_left_off: Vec<(String, String)> = {
+        let mut q = job.world.query::<(&Node, &Kind)>();
+        let ours: Vec<String> = q.iter(&job.world).filter(|(n, k)| matches!(**k, Kind::Furnishing | Kind::Equipment | Kind::Fixture) && tree.storey_of(&n.path) == Some(storey)).map(|(n, _)| n.path.clone()).collect();
+        not_drawn.into_iter().filter(|(p, _)| ours.contains(p)).collect()
+    };
+    Ok(LevelPlan { title, storey: storey.to_string(), level: level_name, cut, walls, openings, things, things_left_off, rooms_left, rooms_stand, rooms_stand_missing, room_lines, walls_left_off, openings_left_off })
 }

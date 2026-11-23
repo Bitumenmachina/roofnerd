@@ -32,7 +32,7 @@ pub mod snap;
 pub mod stretch;
 
 pub use history::{History, UNDO_LIMIT};
-pub use stretch::{move_wall, Followed, Moved};
+pub use stretch::{move_wall, read_move, way_said, Followed, Moved, Resized, RoofMoved};
 pub use join::{connect, connect_at, fit_all, fitting, split, Fitted, PassedOver};
 pub(crate) use measure::takes_among;
 pub use measure::{measure, measure_on_line, takes, Measured, Reading};
@@ -83,9 +83,27 @@ pub enum OnWall<'a> {
 /// that does not hold (a type that is not there, an opening off its wall's storey), the
 /// job is put back as it was (BIMCraft's `transaction`, `engine.rs:648`: "all or
 /// nothing"). The figures are worked out again before it returns.
+/// What may not be drawn (`building::drawn_faults`), refused if the edit brought it in: a job
+/// that already holds such a thing still opens, says it in `check`, and can still be edited
+/// about anything else; what it cannot do is have one more drawn (call 179, B5 and B6).
+fn new_faults(job: &mut Job, before: &str) -> Result<(), String> {
+    let now = building::drawn_faults(job);
+    if now.is_empty() {
+        return Ok(());
+    }
+    let had: Vec<String> = match file::load(before) {
+        Ok((mut was, _)) => building::drawn_faults(&mut was).into_iter().map(|f| f.0).collect(),
+        Err(_) => Vec::new(),
+    };
+    match now.into_iter().find(|f| !had.contains(&f.0)) {
+        Some((_, said)) => Err(said),
+        None => Ok(()),
+    }
+}
+
 pub fn all_or_nothing<T>(job: &mut Job, f: impl FnOnce(&mut Job) -> Result<T, String>) -> Result<T, String> {
     let before = file::save(job);
-    match f(job).and_then(|v| building::check_whole(job).map(|()| v)) {
+    match f(job).and_then(|v| building::check_whole(job).map(|()| v)).and_then(|v| new_faults(job, &before).map(|()| v)) {
         Ok(v) => {
             job.derive();
             Ok(v)
@@ -255,8 +273,9 @@ pub fn framing_type(job: &mut Job, name: &str, kind: Kind, width: &str, depth: O
             None => None,
             Some(typed) => {
                 let text = typed.trim();
-                let lower = text.to_ascii_lowercase();
-                let number = ["lb/ft", "lbs/ft", "plf", "#/ft"].iter().find_map(|u| lower.strip_suffix(u)).ok_or_else(|| format!("{text:?} is a weight per foot with no unit: write it like \"18 lb/ft\""))?;
+                // The program's own word for a foot of length is LF (a beam is "16 LF"): "18 lb/LF" is read as "18 lb/ft" (call 179, C8).
+                let lower = text.to_ascii_lowercase().replace(" / ", "/");
+                let number = ["lb/ft", "lbs/ft", "lb/lf", "lbs/lf", "plf", "#/ft", "#/lf"].iter().find_map(|u| lower.strip_suffix(u)).ok_or_else(|| format!("{text:?} is a weight per foot with no unit: write it like \"18 lb/ft\" or \"18 lb/LF\""))?;
                 Some(how.val(units::parse_number(number)?, "lb/ft"))
             }
         };
@@ -1469,7 +1488,21 @@ pub fn remove(job: &mut Job, path: &str) -> Result<Vec<String>, String> {
     })
 }
 
-/// The wall type of this thickness with no layers, or a new one named for it ("6 in wall").
+/// A name no other type in the job goes by: this one, or this and a number after it ("6 in wall 2"),
+/// where the job has a type of the name already at another size (call 180, C3: a wall is never
+/// dropped for its type's name).
+fn free_type_name(job: &mut Job, wanted: &str) -> String {
+    let taken = |job: &mut Job, name: &str| -> bool {
+        let root = job.world.get::<Node>(job.root()).map(|n| n.path.clone()).unwrap_or_default();
+        job.children().get(&root).is_some_and(|c| c.contains_key(name))
+    };
+    if !taken(job, wanted) {
+        return wanted.to_string();
+    }
+    (2..).map(|n| format!("{wanted} {n}")).find(|name| !taken(job, name)).unwrap_or_else(|| wanted.to_string())
+}
+
+/// The wall type of this thickness with no layers, or a new one named for it ("6 in wall": a name reads as a name, call 178).
 /// A window draws with a thickness the person typed; this is the type that thickness is.
 pub fn wall_type_for(job: &mut Job, thickness: &str, how: Entered) -> Result<String, String> {
     let wanted = how.length(thickness)?.feet().ok_or("the thickness is not a length this program converts")?;
@@ -1478,7 +1511,10 @@ pub fn wall_type_for(job: &mut Job, thickness: &str, how: Entered) -> Result<Str
     found.sort();
     match found.into_iter().next() {
         Some(path) => Ok(path),
-        None => wall_type(job, &format!("{} wall", thickness.trim()), thickness, how),
+        None => {
+            let name = free_type_name(job, &format!("{} wall", thickness.trim()));
+            wall_type(job, &name, thickness, how)
+        }
     }
 }
 
@@ -1518,7 +1554,10 @@ pub fn floor_type_for(job: &mut Job, thickness: &str, how: Entered) -> Result<St
     found.sort();
     match found.into_iter().next() {
         Some(path) => Ok(path),
-        None => floor_type(job, &format!("floor {}", thickness.trim()), thickness, how),
+        None => {
+            let name = free_type_name(job, &format!("floor {}", thickness.trim()));
+            floor_type(job, &name, thickness, how)
+        }
     }
 }
 
@@ -1530,7 +1569,10 @@ pub fn opening_type_for(job: &mut Job, kind: Kind, width: &str, height: &str, ho
     found.sort();
     match found.into_iter().next() {
         Some(path) => Ok(path),
-        None => opening_type(job, &format!("{} {} by {}", kind.stem(), width.trim(), height.trim()), kind, width, height, how),
+        None => {
+            let name = free_type_name(job, &format!("{} {} by {}", kind.stem(), width.trim(), height.trim()));
+            opening_type(job, &name, kind, width, height, how)
+        }
     }
 }
 

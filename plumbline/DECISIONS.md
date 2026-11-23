@@ -6561,3 +6561,282 @@ was checked by hand against the model. What is wrong is the drawing.
 Lettering as strokes (not text a reader can search) is left: it is what keeps the
 program free of a font's licence and the sheets the same on every machine; said in the
 notes of SPEC.md.
+
+### Call 180. What the second judge found in the load path, the moved wall and the figures, and what is decided (2026-11-23)
+
+A judge (Sonnet, cold, on the program as committed at e7f2efa) took what a wall carries
+(call 176, never judged), the moved wall (calls 170 and 179 B) and the fixed figures
+(call 179 C) to houses nobody had tried. Notes: `research/judgment-calls-176-179BC.md`.
+What held: every wall moved out and in on a box, an L and a T matched the hand
+figures, as did two-storey chains, partitions, the BIM round trip of angled and marked
+walls, and the siding over stone.
+
+**A. What a wall carries (call 176): all or nothing was wrong.**
+1. *Walls whose lines are up to a thickness apart read as standing on one another for
+   the whole length, even when they only touch; a wall at 2 degrees reads as standing
+   on nothing though 14 LF of it lies over the wall below.* **What stands on a wall is
+   worked from the two walls' bodies on the plan, not from a gate on angle and offset:
+   the upper wall stands on the lower for the length over which at least half the upper
+   wall's thickness lies over the lower wall's body.** Where less than half lies over
+   it, for that length it is said "beside it, not on it". Any angle.
+2. *A beam 18 in below a wall reads "ordinary for a partition".* A beam under a wall is
+   under the floor the wall stands on: **a beam in the wall's line whose top is within
+   2 ft below the wall's base is under it.** The same for an eave over a wall: **a roof
+   is over a wall by the plan alone** (the 2 ft test on height is dropped, here and in
+   a move), so a raised eave is not lost.
+3. *A wall two levels up, with nothing drawn between, raises no caution when the wall
+   under it comes down.* **It is said as what it is: "wall X, two levels up, lies over
+   this line with nothing drawn between them"**, on the wall and in the caution.
+4. *An interior wall under a ridge, or the high wall of a shed roof, reads "nothing
+   found standing on it".* The program works eaves only. **Where a roof plane lies over
+   a wall that is not under its eave, it says "a roof is over this wall: whether it
+   bears here is not worked (only eaves are)"**, never "nothing".
+5. *A wall said bearing that stands on nothing raises nothing.* **A caution and a field
+   question: "said bearing, and nothing is found under it for N LF".**
+6. *The dollars riding on a wall that comes down leave out the window in it.* **What
+   rides is everything priced on the wall and on its openings.** Two walls named alike
+   in one sentence are named with their levels.
+
+**B. The moved wall.**
+1. *A roof drawn with an overhang, or a slab whose edge is outside the wall, stays put
+   and nothing is said; the roof's price does not move ($4,185.92 where $4,829.92 by
+   hand).* **A roof's edge goes with the wall it is over (by A2: the plan alone, the
+   edge parallel to the wall and outside it by no more than 4 ft with no other wall
+   between); a floor's edge goes with the wall it lies along within 2 ft.** And the
+   rule that ends the silence: **whenever a moved wall has a floor, a footing or a roof
+   on its level or over it that did not go with it, the move says so by name ("roof 1
+   was left where it was"), and `check` cautions on a roof or floor that no longer
+   reaches, or reaches past, the walls under it.**
+2. *A follower that turns can cross a third wall, unseen.* **Every wall the move
+   changes is tested, not only the one moved; the move is refused if any would cross a
+   wall it does not meet.**
+3. *`--alone` leaves the corners open and says only that a footing has no wall.*
+   **`--alone` says each corner it opens**, and the room's own figure already says its
+   walls do not close.
+4. *"4 ft to the east" is refused.* **Read**, with "toward", "to the" and the compass
+   words spelled out.
+
+**C. Figures.**
+1. *A floor 0.0001 ft out of square gives 18 joists where 19; a house turned and
+   written to four places the same.* **A joist's mark that falls within 1/16 in of an
+   edge is on the edge**: the count does not turn on the last decimal. The square floor
+   nudged and turned joins the tests.
+2. *The rim along a 45 degree chamfer is 48 LF where 52.14.* **The rim is the true
+   length of every edge the joists' ends meet**, not its length measured square to the
+   joists. (For square floors nothing moves.)
+3. *The BIM file read back gives a level 9 ft 1 1/8 in high as 9.625 ft, Known.*
+   **Wrong and Known: a level's height is written and read back to what it was, and
+   everything read from a model is Assumed** (call 175). *A 4 in wall stub can come
+   back turned, and a clash of type names drops a 20 ft wall*: a wall is never dropped
+   for its type's name (the type is told apart by a number after its name, and said).
+4. *Beams lying partly on one another, and pad footings overlapping by half, are
+   accepted and counted twice.* **Refused as walls on one line are: for the length two
+   beams share a line, and where two pads' areas overlap.**
+5. *A door taller than its wall leaves the wall's net area Unknown with no reason.*
+   **Refused when drawn**, saying the wall's height.
+
+### Call 181. Walls found on a drawn plan (2026-11-23; call 172's second)
+
+A plan that is a drawing (a PDF with lines of its own, not a scan of paper) is already
+read for its lines so that a traced wall can snap to them (order of work, step 2). The
+walls are in those lines. As with a scan (call 173), what is found is offered, said in
+full, and laid only on the person's word; the finding is geometry in `crates/plans`;
+laying uses the wall, door and window the model already has; and silence is the defect
+(call 179 A): whatever it cannot tell, it says, with where.
+
+**It needs the sheet's scale.** Nothing is found on a sheet that has not been scaled
+(calibrated from one dimension, as a traced sheet is): it says so.
+
+**What a wall is, on a drawing.** Two lines side by side, parallel, a wall's thickness
+apart (3 in to 14 in at the sheet's scale), each at least 2 ft long at scale, alongside
+one another for that length. Its centre lies between them and its thickness is the
+distance between them: Assumed, its source the sheet, since a drawn thickness is the
+drafter's, not the wall's.
+- **A line across the two lines ends a wall there** (the drawing's own end of one wall
+  and start of the next, as where new work meets existing).
+- **Three or more parallel lines evenly spaced are not walls** (stair treads, siding,
+  hatching, a deck's boards): they are counted and said.
+- **A pair that meets no other wall at either end is "in doubt"** (a counter's edge, a
+  dimension line and its overall, a beam shown dashed): said, and laid only when taken
+  by its number, as a scan's doubtful face is.
+- Lettering, dimension lines, the sheet's border and title block are not walls; what
+  was left out is counted by kind and said.
+
+**Corners and closing.** Walls are carried to meet where their ends come within a
+thickness of one another's line. It says whether the walls found close, and where they
+do not.
+
+**Openings.** A break in both lines of a wall, with the wall going on in line beyond
+it, is an opening, with its width and where it is. Thin lines across the break inside
+the wall's thickness mark a window; none, a door or an open doorway. **A plan does not
+give a head or a sill**: openings are laid only when the person gives them
+(`--doors "6 ft 8 in"`, `--windows "3 ft" "6 ft 8 in"` for sill and head), each
+Assumed, its source "said when the walls were found"; where they are not given, the
+openings are said and the walls are laid whole across them, and it says that the
+walls then stand across N openings and are priced as if solid until the openings are
+set.
+
+**Heights.** A plan gives none: walls are laid to the level's height.
+
+**What is said, and laid.** As call 173: each wall (where, how long, how thick), each
+opening, what was in doubt, what was not taken as walls and why, whether the walls
+close, and what was laid or not. Everything laid is Assumed, its source "found on
+sheet <name>". Nothing is Known. Laying twice from the same sheet onto the same level
+is refused.
+
+**How near.** A drawing's lines are exact: on the made-up sheet of the demonstration a
+wall's line within 1/2 in, its thickness within 1/8 in, an opening's sides within 1 in.
+On a real sheet the program says what it found and a person looks: the demonstration
+runs the public farmhouse plan and prints what it found without a hand figure to hold
+it to, and says so.
+
+The window's half (the offer on the card when a drawn plan is scaled) is a call of its
+own once this is judged.
+
+### Call 182. What the second judge found on the plan set, and what is decided (2026-11-23)
+
+A judge (Sonnet, cold, as an architect and then as a builder) wrote plan sets for an L,
+a T, a wing at 30 degrees, three levels, ten rooms and a kitchen, and read every page
+as a picture: `research/judgment-call179D-planset.md`. **Every string it checked
+matches the model on six jobs, and the room areas agree by hand.** What is wrong is
+what a drawing owes a builder.
+
+1. **Nothing is located.** Every string is one wall's own length; nothing says where a
+   partition, a door, a window or a run of cabinets is. **Each side of the plan carries
+   three strings, as a drafter lays them out: nearest the house, the openings in that
+   outside wall, to their centres, from the wall's ends; next, the partitions that meet
+   that wall, to their lines; outermost, the overall.** A partition that meets no
+   outside wall is located by a string inside the plan from the nearest wall parallel
+   to it. A run of cabinets is located by its start from the corner, lettered along its
+   wall. The notes say what a string is taken to ("openings to their centers, walls to
+   their lines as drawn"). Every string is a chain: its parts add to the string
+   outside it, to the sixteenth, and the demonstration checks each by hand.
+2. **An ampersand or an accented letter is lettered "?".** **The lettering gains the
+   ampersand and the accented Latin letters (a base letter with its mark)**; a letter
+   it still cannot draw is lettered as its plain letter where it has one, and both
+   `plan-set` and its list say how many could not be lettered and which.
+3. **Strings and outlines run through names, areas and figures**, and "lettering
+   faults: 0" is said because only lettering against lettering is tested. **Lettering
+   is tested against every line on the sheet**; a name moves within its room to clear
+   them, and a string that would cross a room's lettering is drawn outside the house.
+   What cannot be cleared is a fault and is said.
+4. **A fault the program knows of is written without a word.** **`plan-set` says every
+   fault it found, in plain words, whether or not the list was asked for.**
+5. **On a wing at an angle the strings do not add to the overall under them, and no
+   angle is lettered.** **A string runs along its own wall. An overall is drawn on a
+   side only where the strings under it are parallel to it and add to it; a wall that
+   meets another at other than a right angle has its angle lettered at the corner.**
+   Extension lines run to the corners they measure from.
+6. **"? SF" is never explained; one sheet says a room is enclosed by nothing while
+   lettering an area for it; room lines are not drawn.** **A room with no area is
+   lettered "AREA NOT KNOWN" and the notes say why in the model's own words; a room
+   line is drawn (a thin long-dashed line) and is in the key; a note never contradicts
+   what is lettered.**
+7. **The key lists line types the sheet does not use; sheet numbers start again on
+   every level; any text is taken as a date.** **The key shows exactly what the sheet
+   draws. Sheets are numbered through the whole set (A-101 to A-10n, the levels from
+   the lowest up). A date is a date or is refused.**
+8. **No scale bar, no title in the file.** **A graphic scale under the plan's scale; the
+   file's own title is the job's title.** Lettering stays strokes (call 179 D).
+
+### Call 183. What the second judge found in the scan's walls, and what is decided (2026-11-23)
+
+A second judge (Sonnet, cold) took the fixed finder to houses neither the first judge
+nor the builder had tried: `research/judgment-call179A-scan-walls.md`. Held: a
+seven-room house's walls, doors, windows, thicknesses and areas; every angle; rooms 120
+ft and 6 ft; a missing wall said; a tray ceiling, a beam, a neighbour's wall through a
+window; nothing Known. What it broke, worst first, and what is decided. The rule over
+all of them is call 179's: silence is the defect, and nothing uncertain is laid without
+the person's word.
+
+1. **A face is used twice: a partition's face is paired into one wall and laid again
+   as a second wall 2.4 in off it; `check` passes and 4.2 LF is counted twice.** **A
+   face belongs to one wall.** After the find, two walls whose bodies share a length
+   are one wall or one of them is in doubt: never both laid.
+2. **A mirror doubles a 20 by 12 room to 40 by 12, with a phantom wall, "the walls
+   found close", and 118 LF laid where 64 is true.** **The house is what can be reached
+   from the floor that was walked: what is found beyond a wall with no opening leading
+   to it (a mirror's room, a neighbour's wall through glass, a room not walked) is "in
+   doubt: beyond wall N with no way to it", said with where, and laid only when taken.**
+3. **A soffit over cabinets is laid as a 14 ft 6 in wall; a fireplace's front is laid
+   as a wall; neither is in doubt.** **A face seen only above something standing, in
+   the plane of that thing's own front (within 3 in), is that thing's top (a soffit, a
+   cabinet to the ceiling), not a wall behind it: in doubt. Any face whose two ends
+   meet no wall is in doubt, whatever is behind it** (this widens call 179 A3; a wing
+   wall is then asked about, which costs a word and never lays a phantom).
+4. **In the seven-room house a 10 ft partition with a door, and a closet's door wall,
+   are dropped every time; the only word is "7 not straight along the whole length",
+   with no place; two rooms become one.** **A wall with a door in it is a wall: a
+   short wall is found from its pieces either side of the opening and the head over
+   it.** And **every stretch left out is said with where it is (from, to) and how
+   long; where leaving it out leaves two rooms open to one another, that is said.**
+5. **A garage wall with a 16 ft door is "something hung from the ceiling"; a curved
+   wall is laid as three chords and called furniture.** **A wall that is mostly opening
+   is a wall with an opening: its head across and its ends make it.** **A curved face
+   is said to be curved, with its length, and is not laid: curved walls are not found.**
+6. **A flat-ceilinged closet's walls are laid 15 in short without a word, and "the
+   ceiling slopes" is said of flat ceilings.** **The ceiling over a wall is read only
+   where there are enough points to read it; where there are not, the wall takes the
+   house's ceiling and says so. A slope is said only where the ceiling's points fit a
+   slope better than a flat by more than their scatter.**
+7. **Where the scan is ten times thinner at one end, 2 of 5 walls are kept.** **How
+   thick the scan is, is worked place by place; where part of it is too thin to tell a
+   wall, it says which part, by where, and finds what the rest allows.**
+8. **A scan of two storeys gives duplicate walls and an upper door laid as a window
+   with its sill at 9 ft 3 in.** **More than one floor in a scan is said ("the scan
+   holds two levels: floors at 0 and 9 ft 3 in") and one is found at a time: the level
+   asked for, by its floor.**
+9. **Words**: a raw mark where a name belongs in what is said of a find; marks of
+   certainty with no legend in the field list.
+
+### Call 184. The plan for "hyper realistic" (2026-11-23; Patrick: "What is your plan for hyper realistic ?")
+
+Call 62 has his words: "editing software for construction that feels like playing a
+hyper realistic video game". Where it stands: the engine's light is already on (a sun
+with soft cascaded shadows, light from a sky, ambient shadow in corners, a filmic fold
+of the range, smoothing over time, relief on brick, siding and shingles). The house
+reads as a house. It does not read as real, and the reason is not the engine: it is
+**what is drawn**. Walls are flat slabs with a pattern on them; roofs stop at the wall
+with no overhang; windows sit flush; inside, floors are bare gray and there are no
+ceilings; cabinets are tan blocks; the house stands on a gray plane. A game looks real
+because of small things that catch light and cast shadow.
+
+**The rule that keeps it honest (the fixed rule, unchanged):** what the house is
+dressed in is what the estimate prices. Every piece of detail below is drawn from a
+priced line or a thing set in place, and each new kind of detail arrives with the line
+that prices it (the envelope reviewer asked for exactly these lines: fascia, soffit,
+gutters, corner boards, casing). Nothing is scenery.
+
+**In this order**, each step shown to Patrick as a before and an after of the same
+view, and judged by a visual judge against VISUAL.md as well as by the lead's eye:
+
+1. **Detail that casts shadow, outside.** Eaves that overhang, with fascia, soffit,
+   gutters and downspouts; windows and doors set back in the wall with casing and sills
+   that stand proud; corner boards; ridge and hip caps and a drip edge; the foundation
+   showing below the siding and a line where the ground meets it; lap siding and
+   shingles with real thickness up close.
+2. **The light finished.** The engine pieces not yet switched on: true reflections of
+   the sky in glass and metal, softer sun shadows that sharpen where things touch,
+   contact shadows under trim, a glow on bright sky, the eye adjusting when walking
+   from outside to in; and a sky with the sun where it would be for the site's north
+   and a time of day, so a sun study is one slider.
+3. **Materials that do not repeat.** Each finish as a full set (colour, roughness,
+   relief) with variation across the wall so brick and siding stop tiling; glass that
+   reflects; metal that looks like metal. Made by the program; a public-domain texture
+   set may be shipped where making one is worse, recorded in LICENSES.md.
+4. **Inside.** Floors in their finish (plank, tile with its grid), ceilings, base and
+   casing, cabinets with doors, drawers, toe kick and a counter that overhangs,
+   fixtures in their real forms, light through the windows across the floor. Walking
+   through a room reads as a room.
+5. **The scan as the real house.** The scan's own colored points shown in 3D with the
+   model built inside them: existing as it truly is, proposed as modeled, and one
+   slider between them. Nothing drawn is more real than the house itself.
+6. **The place.** The ground as the site that is priced (lawn, drive, walks) to a
+   horizon under the sky. Trees and neighbors stay out (QUESTIONS.md Q22's working
+   answer) unless Patrick says otherwise.
+
+Movement stays as call 62 has it (the wheel dives at the pointer, the ground slides
+with the hand, nothing jumps), and gains walking with doors that open.
+
+Built by one window builder at a time, after call 178's clean-up is merged; steps 1
+and 2 first, since they change every picture.

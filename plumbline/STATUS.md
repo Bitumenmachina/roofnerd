@@ -9178,6 +9178,399 @@ offset more than its thickness from the one below reads as standing on nothing. 
 window does not show any of it yet (the bearing tint and the top bar's mark are owed).
 Not judged.
 
+## Call 179 part C fixed: the wrong figures a judge found (2026-11-23)
+
+A worker fixed each, writing the failing check first; the lead ran the tests on its
+working copy (**601 passed, 0 failed** in the six command-line crates; the window's
+code compiles against it) and tried the worst one on a house of its own.
+`research/worker-report-call179C.md` has each cause.
+
+| Found | Cause | Now |
+|---|---|---|
+| The BIM file read back moved every wall | at a square corner one wall's body runs to the outside and the other stops at its face; the reader took the body's length as the wall's | the drawn line is written too and read back; the lead's own L-shaped ring of six walls: 108.00 LF out, 108.00 LF back, 972.00 SF both |
+| A joist counted twice at a notch's edge | a mark's piece was dropped only when the same length as the edge member | the mirrored L 19 joists, 250 LF; the U 25, 408 LF, by hand and as said |
+| A low-silled window taken off the siding twice | net area already lacks the window's part under the stone | siding is net area less the net area below the top of the stone (`net_area_below_wainscot`): sill at 1 ft, 254.00 SF; at 3 ft, 244.00; the judge's 265 was right |
+| A hole's place off the wall after a split | the deepest point of the whole run was taken | where the run's line crosses the wall's or floor's middle |
+| A pipe laid in a slab was "1 hole" | any run meeting a floor was a hole | "laid in", listed and counted apart |
+| An opening past its wall's end or over another; a floor in a floor; a beam or post drawn twice | nothing guarded them | refused when drawn or moved; a job saved before with one still opens, and `check` says it |
+| A door in a wall to demolish lost on read-back | the wall was marked before its door was in | marks go on after the openings |
+| "18 lb/LF" refused; "property sets" said | | read; "what the model says of each thing", "bearing mark" |
+
+**What moved, each by call 179:** the sample house's job cost, $390,174.76 to
+**$390,260.26** (+$85.50: 9 SF of siding at $9.50 under windows whose sills are at 2 ft
+6 in); `sweep-money.sh` step 2 (south wall siding 218.99 to 223.99); one test's second
+overlapping door is now refused when drawn and is put in by hand; `joists.sh`'s L
+floor is drawn clear of the other floor of its level (its figures are the same).
+
+**Not right:** a run whose skin only grazes a wall's face is still a hole; a beam along
+part of another's line, or two posts a hair apart, are not refused; the questions a
+beam asks of its ends (C7) are not built. Not judged again.
+
+## Call 179 part A fixed: the scan's walls a judge broke (2026-11-23)
+
+A worker fixed the nine findings in the finder, each with its failing check first, and
+ran the judge's whole set of houses again with five more nobody had tried; its report,
+with every measure it chose and the full before-and-after table, is
+`research/worker-report-call179A.md`. The lead ran its tests and demonstrations on its
+copy and a house turned to an angle of its own (41 degrees: five walls, closing), then
+merged it over part C's fixes.
+
+| House | Right | Before | Now |
+|---|---|---|---|
+| a 30 ft house at 10 to 40 points a square foot | 5 walls | 0 walls, "furniture", no word | 5 walls, and how thick the scan is said |
+| a wall 30 to 90 % hidden by cabinets | 4 walls, the hidden stretch said | 3 walls at 60 % and over; nothing said | 4 walls, "not seen" said, the walls close |
+| a room packed with tall furniture on three walls | 4 walls | 1 wall | 4 walls, three hidden stretches said |
+| a cabinet bank to the ceiling | not laid on `--lay` alone | laid as a wall across the room | "in doubt", said, laid only when taken by its number |
+| a sloped ceiling; rooms 8 ft and 10 ft | walls, and the ceiling said | "no ceiling"; 1 wall | 4 walls and "the ceiling slopes"; 5 walls and both heights |
+| a closet; a 3 1/2 in wall beside a 12 in | 7; 6 | leaning and phantom walls; laying refused all | 6 (one 2 ft cross wall missing, said); 6, none leaning; laying names what it cannot lay and lays the rest |
+| walls 18 in and 22 in thick | one wall each | two walls each | one wall each |
+| the wrong measure, or the wrong way up | "not likely the house" | six walls laid 15 ft 6 in high | said first; nothing laid without `--anyway` |
+| a level 9 ft high, Known, and a scan 8 ft | the disagreement said | silent | said; walls at the scan's height, Assumed |
+
+It now says whether the walls found close, and where they do not.
+
+**Run on the integration copy with parts A and C together:** 625 tests pass in the six
+command-line crates, 0 fail; all 44 command-line demonstrations pass; the three gates
+and `portmap.sh` pass. The window's crate was not built on it.
+
+**Still wrong, by the worker's own table:** a 4 ft closet wall with a wide doorway is
+not found (said, and the walls "do not close" there); openings on a scan of 10 to 25
+points a square foot can be counted twice or missed (said); under a slope a wall's
+height reads up to 7 in off, and a slope steeper than 6 in to the foot is not read; a
+wall under two ceiling heights is laid at one. One speed test can fail on a loaded
+machine (it asks 20 s). Words the worker left because existing demonstrations quote
+them: a level and a type by their marks in "laid on ...", "it is not a PLY file".
+It has still seen only made-up scans. Not judged again.
+
+## Call 179 part B built: a moved wall takes what is on it (2026-11-23)
+
+`plumbline move` now: refuses a move that would carry a wall across a wall it does not
+meet, naming that wall and how far it can go; reads a length any way the program reads
+one and takes a direction in words ("4 ft west"); says a move as a direction; and a
+moved wall takes with it what lies on its line: the floor's edge, the footing under it
+with the footings that meet its ends, the wall above it up the levels, the roof's edge,
+and a room line that ends on it. Each is said; what lies along the wall but runs past
+its end is said as left behind. `--alone` moves the wall only and says what it left.
+`research/worker-report-call179B.md`.
+
+`demos/stretch.sh` steps 11 to 18, by the hand figures of the contract: the 24 by 16
+box's east wall 4 ft east: floor 384 to **448 SF**, footings 80 to **88 LF**, the room
+364.25 to **426.25 SF**, the roof's plan 384 to 448 SF; the price **rises** ($7,600.00
+to $8,616.00: $800.00 of floor and footing and $216.00 of wall, at made-up prices);
+moved back, every figure as before; 30 ft west refused, the file byte for byte the
+same; across a partition refused at 11 ft 6 in.
+
+**Run on the integration copy with parts A, B and C together:** 625 tests pass in the
+six command-line crates, 0 fail; all 44 command-line demonstrations pass; the three
+gates and `portmap.sh` pass.
+
+**Not right.**
+- The worker wrote demonstration steps and **no unit test**, and did not prove the new
+  steps red on the old program.
+- After `--alone`, `check` says the wall stands off its footing, but cannot say the
+  room reaches past its floor: the room no longer closes, so it has no outline to
+  compare. The caution works only where the room still closes.
+- Only the moved wall is tested for crossing another; a neighbour that follows and
+  turns could cross a third wall unseen.
+- The footing caution is a guess (a wall within 10 ft of a footing with no wall on
+  it) and could fire on a footing drawn before its wall.
+- **The window moves walls with the same function**, so a wall moved in the window now
+  takes its floor, footing and roof along too, and no window demonstration has been
+  run on that (`draww.sh` moves a partition).
+- Not judged.
+
+## Call 179 part D built: the plan set a judge read (2026-11-23)
+
+The sheets now carry what a drawing carries: a sheet number (A-101, A-102, A-103 and
+"sheet n of 3"), a north arrow, a key of the line types drawn as they are drawn, and an
+overall dimension outside the strings on each side. A new door in an existing wall is
+on the proposed plan alone. Lettering is never under 3/32 in, over other lettering or
+out of its box: a long title goes to two lines and is cut at a word; a room too small
+to letter takes a circled mark and a row in a room schedule. Cabinets and fixtures set
+in place are outlined on the proposed plan, and every sheet's notes say what it does
+not show. The file's name ends as a PDF's does or is refused; writing over a plan set
+is said. `research/worker-report-call179D.md`; the pages are in
+`demos/captured/planset/` and the lead read `page3.png`: it reads as a drawing.
+
+**Moved, by call 179 D1:** `crates/cli/tests/call168.rs`: an unmarked door is counted
+on 1 page, not 3 (moved by the lead; the worker rightly left it).
+
+**Run on the integration copy with parts A, B, C and D together:** 628 tests pass in
+the six command-line crates, 0 fail; all 44 command-line demonstrations pass; the
+three gates and `portmap.sh` pass. `tools/committed.sh` has not been run on it, and
+the window's crate has not been built or tested on it: that waits on the window
+builder's work being merged with it.
+
+**Still not right on the sheets** (the worker's reading and the lead's): openings are
+not dimensioned and there are no door swings; where a side has one string its figure
+is printed twice (the string and the overall are the same length); partition strings
+hang into the rooms; on an L-shaped plan the strings will not add to the overall,
+which is the walls' whole extent; wall boxes are unnamed and things are outlines only;
+sheet numbers start again at A-101 on every level and the demolition sheet is not in
+the standard's own series; lettering is checked from where it is drawn, not by reading
+the PDF back. Not judged again.
+
+## The load path, the moved wall and the fixed figures judged (2026-11-23)
+
+A second judge on the program as committed at e7f2efa:
+`research/judgment-calls-176-179BC.md`; DECISIONS.md call 180 has each finding and
+what is decided. **Nothing below is fixed yet.**
+
+**Wrong figures and silences, found:**
+- A roof drawn with an overhang, or a slab edge outside its wall, stays put when the
+  wall moves, with nothing said: a roof priced $4,185.92 stayed there where $4,829.92
+  is right, and `check` says the figures agree.
+- A follower that turns in a move can cross a third wall; nothing refuses it.
+- What a wall carries is all or nothing: walls that only touch read as standing on one
+  another for their whole length; a wall 2 degrees off reads as standing on nothing; a
+  beam 18 in below reads as no support; a wall two levels up over a wall taken out
+  raises nothing; a wall under a ridge reads "nothing found standing on it".
+- A floor a ten-thousandth of a foot out of square counts 18 joists where 19; a rim
+  along a chamfer is 48 LF where 52.14.
+- The BIM file read back gives a level 9 ft 1 1/8 in high as 9.625 ft and calls it
+  Known; a short wall stub can come back turned and cost a real wall.
+- Beams overlapping along a line and pads overlapping by half are counted twice.
+
+**Held, by the judge's hand figures:** every wall moved out and in on a box, an L and
+a T; two-storey chains; partitions; the BIM round trip of angled and marked walls; the
+siding over stone at every sill it tried.
+
+**Two other judges of this round (the scan's walls again; the plan set again) stopped
+at a permission prompt and have found nothing yet.**
+
+## Call 180 fixed: what the second judge found (2026-11-23)
+
+A worker fixed all eight items, each unit test written first and run red (its account,
+with each cause: `research/worker-report-call180.md`). The lead ran the command-line
+crates' tests and every command-line demonstration on the integration copy and tried
+the level's height on a house of its own (9 ft 1 1/8 in out, 9.09375 ft back, Assumed).
+
+- **The BIM file**: a level's height is written and read back as it was; everything
+  read from a model is Assumed; a wall is never dropped for its type's name; a stub
+  comes back as drawn.
+- **A moved wall**: a roof with an overhang and a floor whose edge is outside the wall
+  go with it (the box with a floor 6 in out and a roof 1 ft out: floor 425 to **493.00
+  SF**, roof plan 468 to **540.00 SF**, surface 603.74; back, as before); what does not
+  go is said by name; `check` says where a floor or roof no longer reaches a wall or
+  reaches past it; every wall a move changes is tested for crossing; `--alone` says
+  each corner it opens; "4 ft to the east" is read.
+- **What a wall carries** is worked from the walls' bodies at any angle: offsets of 0,
+  2 and 3 in stand for 24.00 LF; 5, 6 and 12 in are "beside it, not on it"; a wall
+  turned 2 degrees stands for **14.33 LF** (by hand 14.327); a beam within 2 ft below
+  counts; a roof is over a wall by the plan; two levels up is said as that; a wall
+  under a roof that is not its eave says so; a wall said bearing with nothing under it
+  is a caution and a question; the dollars riding include the wall's openings ($1,800
+  and $300: $2,100).
+- **Joists**: a mark within 1/16 in of an edge is on it (the nudged and the turned
+  floor: 19 joists, 304.00 LF); the rim is the true length of the edges the joists'
+  ends meet (the chamfered floor **52.14 LF**: the judge was right).
+- **Refused now**: beams sharing a line; pads overlapping; an opening taller than its
+  wall.
+- **The moved wall has unit tests** (`crates/world/tests/call179b.rs`, five, with the
+  figures by hand; four fail with the footing carry switched off).
+
+**Moved, each by call 180** (the worker's list, read by the lead): four assertions of
+`call176.rs` (offsets now "beside"; the eave by the plan; said bearing with nothing
+under it cautions; names with levels); `call160.rs` (a wall said bearing with no
+footing is itself a question: 2 where 1); `call179c.rs` (a shorter beam on the same
+line refused); one test's 7 ft door in a 6 ft 11 in wall; two steps of `carries.sh`
+and one of `sweep-money.sh`.
+
+**Run on the integration copy (parts A to D of call 179 and call 180 together):** 658
+tests pass in the six command-line crates, 0 fail; all 44 command-line demonstrations
+pass; the three gates and `portmap.sh` pass. The window's crate was not built on it.
+
+**Not right:** a nudge past 1/16 in still loses the edge joist; a move refused for a
+follower does not say how far it could go; another maker's model with no level height
+still gets the distance to the next level (Assumed, said); a round pad is taken as its
+square; a height read back is written in decimal feet where the job wrote feet and
+inches; `SPEC.md` was not brought up to date. Not judged again.
+
+## Walls found on a drawn plan: a demonstration, written before it is built (call 181; 2026-11-23)
+
+`demos/planwalls.sh`, at the command line, from an empty job. The drawing is one the
+program writes itself, so every figure of it is known: no real plan is in the
+repository.
+
+**The house as made** (job A; feet; walls' lines): a ring 36 by 16 of 6 in walls, 9 ft
+high: the west 24 ft of it existing (west wall 16 ft; north and south walls 24 ft
+each), the east 12 ft new (north 12, east 16, south 12). A door 3 ft wide in the new
+east wall, from 6 ft 6 in to 9 ft 6 in north. A window 5 ft wide in the existing south
+wall, from 8 ft to 13 ft east. A room line at east 24 and two rooms. Its plan set is
+written at 1/4 in to the foot and its proposed plan (sheet A-103) taken as the drawing.
+
+**Step 1. Not scaled: nothing found.** The sheet brought into an empty job B and its
+walls asked for before it is scaled: refused, saying the sheet has no scale yet.
+
+**Step 2. Scaled from one dimension.** The overall dimension along the north side, 36
+ft, between its two ends as drawn.
+
+**Step 3. Found, nothing laid.**
+
+| What | By hand | How near |
+|---|---|---|
+| walls found | 6 | exactly |
+| their lengths on their lines | 24, 16, 24 (existing) and 12, 16, 12 (new): 104.00 LF | 1 in each |
+| each wall's thickness | 6 in | 1/8 in |
+| the walls close | yes: every end meets another wall | |
+| openings | 2: a door or doorway 3 ft 0 in wide in the east wall, 6 ft 6 in to 9 ft 6 in from its south end; a window 5 ft 0 in wide in the south wall, 8 ft to 13 ft from its west end | 1 in |
+| in doubt | none | exactly |
+| not taken as walls | the dimension lines, the lettering, the border and title block, the key: said by kind, none laid | |
+| the room line | the plan set does not draw a room line at all (the lead assumed it did): no stray wall where it lies | |
+
+The job holds no wall after this step.
+
+**Step 4. Laid with the openings' heights given** (doors 6 ft 8 in; windows sill 3 ft,
+head 6 ft 8 in), with a wall type named for none (the thickness is on the sheet): 6
+walls, each Assumed, source "found on sheet", none Known; a wall type 6 in made for
+them, Assumed; 1 door 3 ft by 6 ft 8 in; 1 window 5 ft by 3 ft 8 in, sill 3 ft. A room
+placed inside: 35.5 by 15.5 = **550.25 SF** (the two rooms of job A, 368.125 and
+182.125, together), within 1 SF. Walls 104.00 LF; face 104 x 9 = 936 SF; net 936 - 20 -
+18.33 = **897.67 SF** (the door 3 x 6.6667 = 20.00; the window 5 x 3.6667 = 18.33),
+within 1 SF. `check` passes.
+
+**Step 5. Laid with no heights given** (a fresh job): 6 walls, no door, no window; it
+says the walls stand across 2 openings and are priced as if solid until the openings
+are set; net face 936 SF.
+
+**Step 6. Refusals and what is not a wall.**
+- Laid a second time from the same sheet on the same level: refused, the job's file
+  byte for byte the same.
+- A sheet with a stair drawn as twelve treads 10 in apart, 3 ft long, inside the house
+  (the same plan with those lines added by the demonstration's own small PDF writer,
+  or drawn as a deck's boards outside it): still 6 walls; "1 set of 13 evenly spaced
+  lines not taken as walls".
+- Two free lines 8 ft long and 4 in apart in the middle of a room (a beam shown, or a
+  counter's two edges): **1 in doubt**, said with where; not laid by laying alone; laid
+  when taken by its number.
+
+**Step 7. A real sheet, with no hand figure.** The public farmhouse plan (USDA plan
+7213, public domain, fetched by `tools/fetch-plans.sh`; skipped with a word if it is
+not on the machine): scaled from the dimension `demos/first.sh` already scales it by,
+its walls asked for. **The lead was wrong about this sheet: it is a scan of paper with
+no drawn lines.** The program says so, finds nothing and lays nothing, and the
+demonstration asserts that. **Nobody has worked that sheet by hand: what it
+prints is to be looked at, and says so.**
+
+## The plan set judged a second time (2026-11-23)
+
+`research/judgment-call179D-planset.md`; DECISIONS.md call 182 has each finding and
+what is decided. **Nothing below is fixed yet.** Held: every string matches the
+model's plan lengths on six jobs; room areas agree by hand; lettering measures 0.103
+in (the least is 3/32); existing, demolished and new tell apart in black and white.
+
+Found: nothing on a sheet locates a partition, an opening or a cabinet run (every
+string is one wall's own length); an ampersand or an accented letter is lettered "?";
+strings and outlines run through room names and figures while "lettering faults: 0" is
+said; a fault the program knows is written without a word unless the list is asked
+for; on a wing at 30 degrees the strings do not add to the overall under them; "? SF"
+is unexplained and one note contradicts its sheet; room lines are not drawn; the key
+lists line types the sheet does not use; sheet numbers start again on each level; any
+text passes as a date; no scale bar.
+
+## The scan's walls judged a second time (2026-11-23)
+
+`research/judgment-call179A-scan-walls.md`; DECISIONS.md call 183 has each finding and
+what is decided. **Nothing below is fixed yet.** Held: a seven-room house's walls,
+doors, windows, thicknesses and areas; every angle tried; rooms 120 ft and 6 ft; a
+missing wall said; a tray ceiling, a beam and a neighbour's wall through a window;
+nothing laid Known.
+
+Found: a face used twice, so a wall is laid twice 2.4 in apart and 4.2 LF counted
+twice with `check` passing; a mirror doubling a room (118 LF laid where 64) with "the
+walls found close" said; a soffit and a fireplace front laid as walls; a 10 ft
+partition with a door dropped every time, said only as "not straight" with no place,
+so two rooms become one; a garage wall with a 16 ft door called something hung from
+the ceiling; a curved wall laid as three chords; a closet's walls laid 15 in short and
+"the ceiling slopes" said of flat ceilings; where the scan thins tenfold, 2 of 5 walls
+kept; two storeys in one scan giving duplicate walls and a door laid as a window 9 ft
+up.
+
+The finder has still seen only made-up scans.
+
+## Call 181 built: walls found on a drawn plan (2026-11-23)
+
+`plumbline find-walls <job> <sheet> [--lay [--take n] [--doors "<head>"] [--windows
+"<sill>" "<head>"]]`: one verb for a scan and for a sheet (a second word that names a
+drawing of the job is a sheet). From a scaled sheet's own lines it says the walls,
+each opening, what is in doubt, what was not taken as walls by kind, and whether the
+walls close; laid on the word, everything Assumed, source "found on sheet <name>".
+`crates/plans/src/drawn.rs`; the worker's account, its ten more sheets and where it
+will fail: `research/worker-report-call181.md`.
+
+`demos/planwalls.sh`, on a sheet the program wrote (A-103 at 1/4 in), by the hand
+figures above: 6 walls, 104.00 LF, each 6 in, closing; a door or doorway 3 ft 0 in at 6
+ft 6 in to 9 ft 6 in; a window 5 ft 0 in at 8 ft to 13 ft; laid with heights given, 1
+door and 1 window, the room 550.25 SF, wall face 936.00 gross and 897.67 net; with no
+heights, the walls laid solid across 2 openings and that said; a stair's 13 lines not
+walls; two free lines in doubt and laid only when taken.
+
+**Ten more sheets the worker made**: an L, a 1/8 in house with 3 1/2 in partitions, a
+house turned 20 degrees, a 1/2 in cabin with a stair and a deck, hatched walls,
+lettering over a wall, a detail box: right. Two it got wrong and fixed (a curved bay,
+silent, now said; two houses on one sheet, a "19 ft 6 in door", now two houses). One
+left wrong: walls drawn with six lines each for their layers find no wall and say "in
+doubt" 36 times.
+
+**Run on the integration copy:** 686 tests pass in the six command-line crates, 0
+fail; all 45 command-line demonstrations pass; the three gates and `portmap.sh` pass.
+
+**Not right.** The worker wrote the finder before its tests, against its contract, and
+says so. It has seen only sheets the program or the worker drew: **no architect's
+sheet has been through it**, and the one public plan on hand is a scan with no lines.
+By the worker's account it will fail on walls drawn with several lines a side, on
+hatch that reads as evenly spaced lines, on curved walls (said), on several plans or
+details at other scales on one sheet, and a window drawn with one line reads as a
+door. A level with no height refuses to lay. Not judged. No window half.
+
+## Call 182 built: the plan set after its second judgment, and where it met call 181 (2026-11-23)
+
+Every side of a plan now carries its strings, each a chain adding to the sixteenth to
+the one outside it: the openings to their centers, the partitions to their lines, the
+overall; a partition's door is located inside the plan; a wall off square is
+dimensioned along itself with its angle lettered, and a side whose strings cannot add
+has no overall and the notes say why. The ampersand and accented letters are lettered
+(what cannot be is said). Lettering is tested against every line on the sheet and
+names move to clear them; every fault the program knows is said by `plan-set`. A room
+with no area is lettered so, with the model's reason; a room line is drawn in long
+dashes and is in the key; the key shows only what the sheet draws; sheets are numbered
+through the set; a date is a date or refused; a graphic scale; the file's title.
+`research/worker-report-call182.md`. The lead read `hand-house.png` and `page3.png`:
+they read as drawings a builder could lay out from.
+
+By hand, on the 36 by 16 house (a door centered 6 ft and a window centered 30 ft along
+the south wall, a partition at 24 ft with a door centered 8 ft up it): the south side
+reads 6'-0", 24'-0", 6'-0"; then 24'-0", 12'-0"; then 36'-0"; the partition's door
+8'-0" and 8'-0". The sheet reads the same.
+
+**Moved, by call 182** (`crates/cli/tests/call168.rs`, by the lead, each with its
+reason beside it): the longest line on the sheet is the 36 ft overall, 648 points
+(was the 24 ft string, 432); "24'-0\" VIF" is lettered 6 times across the three pages
+(was 3: the wall's own string and the partitions' string); a test's date "x" is a
+real date (anything but a date is now refused). In `demos/planset.sh`: the counts of
+648-point and 288-point lines, and the notes' two sentences.
+
+**Where it met call 181, and what that found.** With the new sheet the drawn-plan
+finder's demonstration failed: 4 walls where 6, every wall 5 in off. Two causes, one on
+each side: the demonstration scaled and placed the sheet by page numbers written for
+the old layout (now worked from the sheet's own lines); and **the finder was wrong**: a
+room line drawn through the joint where new work meets existing merged with the wall's
+end line, and the wall was no longer ended there. A line across a wall is now judged
+from its pieces between the wall's two lines; a room line, grid line or dashed line
+running on through a wall never ends it and never stops the line beside it ending it
+(test written first, run red). No hand figure moved.
+
+**Run on the integration copy with both:** 700 tests pass in the six command-line
+crates, 0 fail; all 45 command-line demonstrations pass; the three gates and
+`portmap.sh` pass.
+
+**Still not right on the sheets:** no door swings, no opening sizes or tags, no wall
+tags, no schedule of doors and windows; a stub wall's own length and a partition's
+thickness are not dimensioned; in a crowded stack of strings a figure can still have a
+station line through it (said as a fault, not cleared: there are no leaders); a cabinet
+run's string carries VIF because the things set are Assumed; a title cut in its box is
+whole only in the file's own title. Not judged again.
+
 ## Call 178 built: the window made clean, and every window demonstration rerun (2026-11-23)
 
 A worker built call 178's items 1 to 11 in the window (item 12 is not built) and
@@ -9228,6 +9621,35 @@ ending); `cabinetsw.sh` ("27.62 SF" in what is said; the saved 27.625 is unchang
 - **This tree does not yet hold today's command-line fixes** (calls 179 to 183): they
   were merged on a separate copy. The merge is the next commit.
 - Not judged.
+
+## The window and the command line in one tree again (2026-11-23)
+
+For most of a day the window's builder held the main copy (call 178) while calls 179
+to 183 were fixed, judged and merged on a second copy and pushed from it. This commit
+merges the two. **It is the first tree that holds both, and what was run on it is
+this, by the lead:**
+
+- the whole workspace builds, the window included;
+- **`cargo test --workspace`: 714 passed, 0 failed (52 runs)**;
+- all 45 command-line demonstrations pass;
+- the three gates, `portmap.sh` (324 items) and `licenses.sh` pass.
+
+**What the merge itself needed** (two risks meeting, settled by the lead):
+- A wall type the program makes: call 178 names it the size first ("6 in wall"), call
+  180 gives it a number after its name where the name is taken. Both are kept ("6 in
+  wall 2"). The two wall-finders' demonstrations quoted the old order and were moved
+  (`findwalls.sh`, `planwalls.sh`, each with its reason beside it).
+- STATUS.md: both copies had added sections; both sets are kept, the command line's
+  first.
+
+**Not run on this tree: any window demonstration.** The 33 that passed were run on
+the window builder's build before the merge. Since then the model under the window
+has changed in ways a person would see there: a wall moved in the window now takes
+its floor, footing and roof with it; openings past a wall's end and overlaps are
+refused; clash counts take "laid in" apart; a made wall type's name. **Until every
+window demonstration is rerun on this tree, their pictures show the window before
+the merge**, and a wall moved in the window is undemonstrated. That rerun is the next
+window builder's first job.
 
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 

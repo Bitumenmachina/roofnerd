@@ -54,18 +54,20 @@ fn a_wall_above_within_the_thickness_stands_on_the_one_below_and_one_farther_off
     let (g, s) = (h.ground.clone(), h.second.clone());
     let below = wall(&mut h, &g, [0.0, 0.0], [20.0, 0.0]);
     let near_by = wall(&mut h, &s, [0.0, 0.5], [20.0, 0.5]);
+    // Call 180, A1: 6 in off, two 6 in walls share one face and no half of the wall above lies over the wall below:
+    // it is beside it, not on it, for the 20 ft (it was read as standing on it).
     let c = of(&mut h.job, &below);
-    assert_eq!(c.carries.len(), 1, "the wall 6 in off is over it: {c:?}");
+    assert_eq!(c.carries.len(), 1, "the wall 6 in off is beside it: {c:?}");
     assert_eq!(c.carries[0].path, near_by);
-    assert!(near(c.carries[0].shared, 20.0));
+    assert!(c.carries[0].beside && near(c.carries[0].shared, 20.0));
     assert!(c.stands_on.is_empty() && near(c.nothing_under, 20.0) && c.lowest);
     let mut h = house();
     let (g, s) = (h.ground.clone(), h.second.clone());
     let below = wall(&mut h, &g, [0.0, 0.0], [20.0, 0.0]);
     let far = wall(&mut h, &s, [0.0, 0.6], [20.0, 0.6]);
-    assert!(of(&mut h.job, &below).carries.is_empty(), "7.2 in off is not over it");
+    assert!(of(&mut h.job, &below).carries.iter().all(|o| o.beside), "7.2 in off is not over it (call 180, A1: it is beside it)");
     let above = of(&mut h.job, &far);
-    assert!(above.stands_on.is_empty() && near(above.nothing_under, 20.0), "7.2 in off is not over it: {above:?}");
+    assert!(above.stands_on.iter().all(|u| u.beside) && near(above.nothing_under, 20.0), "7.2 in off is not over it: {above:?}");
     assert!(!above.lowest, "it is on an upper level, and the words say it stands on the floor alone");
     assert!(above.stands_on_said().iter().any(|l| l.contains("it stands on the floor alone there, which is ordinary for a partition")), "{:?}", above.stands_on_said());
 }
@@ -84,7 +86,11 @@ fn a_wall_above_at_an_angle_stands_on_the_one_below_only_within_one_degree() {
     let (g, s) = (h.ground.clone(), h.second.clone());
     let below = wall(&mut h, &g, [0.0, 0.0], [6.0, 0.0]);
     let _at_two = wall(&mut h, &s, [0.0, 0.0], [6.0, 6.0 * 2.0f64.to_radians().tan()]);
-    assert!(of(&mut h.job, &below).carries.is_empty(), "2 degrees is not the same direction");
+    // Call 180, A1: a wall is no longer said to stand on nothing for being 2 degrees off. Its far end is 6 ft x
+    // sin 2 degrees = 0.209 ft off the line, within half the 6 in thickness (0.25 ft) of the wall below all the way:
+    // it stands on it for its 6 ft (a 24 ft wall at 2 degrees stands on it for 14.33 ft: crates/world/tests/call180.rs).
+    let carried = of(&mut h.job, &below).carries;
+    assert!(carried.len() == 1 && !carried[0].beside && (carried[0].shared - 6.0).abs() < 0.01, "{carried:?}");
 }
 
 #[test]
@@ -166,10 +172,12 @@ fn an_eave_stands_on_the_wall_under_it_and_a_rake_does_not() {
 
 #[test]
 fn an_eave_two_floors_up_is_not_over_the_first_floors_wall() {
-    // The roof's eave is at 18 ft: the first floor's walls top out at 9 ft, 9 ft below it.
+    // The roof's eave is at 18 ft: the first floor's walls top out at 9 ft, 9 ft below it. Call 180, A2: a roof is over a
+    // wall by the plan alone, so the eave is over the first floor's wall too; the wall above stands on it, so nothing of the eave
+    // is left with nothing under it were this one to come down (left 0), and the second floor's wall carries it.
     let (mut h, south1, _) = roofed("18 ft", [Rise::Pitch(6.0), Rise::Gable, Rise::Pitch(6.0), Rise::Gable]);
     let c = of(&mut h.job, &south1);
-    assert!(c.carries.iter().all(|o| o.kind != Kind::Eave), "{c:?}");
+    assert!(c.carries.iter().any(|o| o.kind == Kind::Eave && near(o.shared, 24.0) && o.left == 0.0), "{c:?}");
     // A roof whose eave is at 9 ft is over it.
     let (mut h, south1, _) = roofed("9 ft", [Rise::Pitch(6.0), Rise::Gable, Rise::Pitch(6.0), Rise::Gable]);
     assert!(of(&mut h.job, &south1).carries.iter().any(|o| o.kind == Kind::Eave));
@@ -240,7 +248,7 @@ fn a_wall_that_comes_down_with_a_wall_standing_on_it_is_a_caution_a_question_and
     assert!(lines[0].contains(carries::SAID));
     let cautions = carries::cautions(&mut h.job);
     assert_eq!(cautions.len(), 1);
-    assert!(cautions[0].1.starts_with("Wall 1 is to demolish, and wall 1 on second stands on it for 12.00 LF: once it is down"), "{:?}", cautions[0].1);
+    assert!(cautions[0].1.starts_with("Wall 1 on ground is to demolish, and wall 1 on second stands on it for 12.00 LF: once it is down"), "{:?}", cautions[0].1);
     // The field list asks it, whatever else it asks.
     let q = vif(&mut h.job).questions.into_iter().find(|q| q.path == p1).expect("the partition is on the field list");
     assert!(q.also.iter().any(|a| a.contains("stands on it for 12.00 LF")), "{q:?}");
@@ -320,10 +328,13 @@ fn a_wall_said_not_bearing_with_something_on_it_is_a_caution_and_one_said_bearin
     h.job.set(&p1, "bearing", Some("not bearing"), Status::Assumed, "looks like a partition").unwrap();
     let cautions = carries::cautions(&mut h.job);
     assert_eq!(cautions.len(), 1);
-    assert!(cautions[0].1.contains("is said not bearing, and wall 1 on second stands on it for 12.00 LF"), "{:?}", cautions);
+    assert!(cautions[0].1.contains("is said not bearing, and wall 1 on second stands on it for 12.00 LF") && cautions[0].1.starts_with("Wall 1 on ground is said not bearing"), "{:?}", cautions);
     assert!(cautions[0].1.contains(carries::SAID));
     h.job.set(&p1, "bearing", Some("bearing"), Status::Known, "seen").unwrap();
-    assert!(carries::cautions(&mut h.job).is_empty());
+    // Call 180, A5: said bearing, nothing is said of what stands on it, and what is under it (no footing is drawn) is.
+    let cautions = carries::cautions(&mut h.job);
+    assert_eq!(cautions.len(), 1, "{cautions:?}");
+    assert!(cautions[0].1.contains("said bearing, and nothing is found under it for 16.00 LF (no footing)") && !cautions[0].1.contains("said not bearing"), "{cautions:?}");
     // Said not bearing with nothing on it: nothing is said.
     let mut h = house();
     let g = h.ground.clone();

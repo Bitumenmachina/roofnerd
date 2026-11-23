@@ -86,11 +86,13 @@ fn a_wall_is_asked_only_where_the_work_opens_it() {
     let q = &list.questions[0];
     assert_eq!((q.path.as_str(), q.dollars), (part.as_str(), None), "nothing priced on it: no dollars, which is not $0.00");
     assert_eq!(q.to_do(), "Check whether it is bearing and what is in the wall.");
-    // A word said of a wall the work does not open is kept, and asks nothing.
+    // A word said of a wall the work does not open is kept. (Call 180, A5: a wall said bearing with nothing
+    // drawn under it, no footing here, is itself a question; the house's walls have none.)
     job.set(&outer[0], "bearing", Some("bearing"), Status::Assumed, "guess").unwrap();
-    assert_eq!(vif(&mut job).questions.len(), 1);
+    assert_eq!(vif(&mut job).questions.len(), 2);
+    assert!(vif(&mut job).questions.iter().any(|q| q.path == outer[0] && q.also.iter().any(|a| a.contains("said bearing, and nothing is found under it"))));
     // Said Known, the partition leaves the list.
     job.set(&part, "bearing", Some("not bearing"), Status::Known, "seen").unwrap();
     job.set(&part, "in_the_wall", Some("nothing"), Status::Known, "opened").unwrap();
-    assert!(vif(&mut job).questions.is_empty());
+    assert!(vif(&mut job).questions.iter().all(|q| q.path != part), "the partition leaves the list; the outside wall said bearing with nothing under it stays (call 180, A5)");
 }

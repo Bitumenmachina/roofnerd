@@ -19,8 +19,11 @@
 //! * **Marks** are at each multiple of the spacing from the outline's first side, square to
 //!   the members (its west or south end first); the member at a mark is the line there cut to
 //!   the outline: one piece for each length of it that lies inside.
-//! * A piece that lies within a member's thickness of an edge member beside it, over the same
-//!   length, is that edge member and is not counted twice.
+//! * A mark that lies within a member's thickness of an edge member is that joist where the
+//!   two lie one along the other: the longer is counted and the shorter is not (a mark's piece
+//!   over the same length as the edge member is the edge member; a mark's piece that runs the
+//!   whole of a shorter edge member, as a mark falling on a notch's edge does, is the joist and
+//!   the edge member is a part of it). A member is one joist, counted once (call 179, C3).
 //! * A piece under 6 in long is not a piece: it is left out, and the figure says how many.
 
 use crate::components::P2;
@@ -53,6 +56,10 @@ impl Across {
 
 const EPS: f64 = 1.0e-9;
 
+/// An edge runs with the members, and a mark is on an edge, within 1/16 in (call 180, C1): a floor traced or turned and
+/// written to four places is never square to the last digit, and its count does not turn on it.
+pub const ON_THE_EDGE_FT: f64 = 1.0 / 192.0;
+
 /// The unit vector square to `u` that points east, or north where `u` points that way.
 fn across(u: P2) -> P2 {
     let v = [-u[1], u[0]];
@@ -84,14 +91,15 @@ fn inside(ring: &[P2], a: f64, b: f64) -> bool {
     inside
 }
 
-/// The length of what is square to the members: the outline's edges measured across them
-/// (a floor's rim: the band the joist ends meet).
+/// The rim: the true length of every edge the members' ends meet, that is every edge that does not run with them
+/// (call 180, C2: an edge at an angle is as long as it is, not as long as it is square to the joists).
 pub fn rim_length(outline: &[P2], run: P2) -> Result<f64, String> {
     let u = unit(run)?;
     let v = across(u);
     Ok((0..outline.len()).map(|i| {
         let (p, q) = (outline[i], outline[(i + 1) % outline.len()]);
-        ((q[0] - p[0]) * v[0] + (q[1] - p[1]) * v[1]).abs()
+        let (a, b) = ((q[0] - p[0]) * u[0] + (q[1] - p[1]) * u[1], (q[0] - p[0]) * v[0] + (q[1] - p[1]) * v[1]);
+        if b.abs() <= ON_THE_EDGE_FT && a.abs() > EPS { 0.0 } else { a.hypot(b) }
     }).sum())
 }
 
@@ -141,7 +149,7 @@ fn members_laid(outline: &[P2], run: P2, spacing: f64) -> Result<(Vec<Laid>, usi
     let mut edges: Vec<(f64, f64, f64)> = Vec::new();
     for i in 0..ring.len() {
         let (p, q) = (ring[i], ring[(i + 1) % ring.len()]);
-        if (p[1] - q[1]).abs() > 1.0e-7 || (p[0] - q[0]).abs() <= EPS {
+        if (p[1] - q[1]).abs() > ON_THE_EDGE_FT || (p[0] - q[0]).abs() <= EPS {
             continue;
         }
         let (lo, hi) = (p[0].min(q[0]), p[0].max(q[0]));
@@ -150,10 +158,9 @@ fn members_laid(outline: &[P2], run: P2, spacing: f64) -> Result<(Vec<Laid>, usi
         let b = if inside(&ring, middle, p[1] + 1.0e-4) { p[1] + half } else { p[1] - half };
         edges.push((b, lo, hi));
     }
-    for (at, lo, hi) in &edges {
-        keep(*lo, *hi, *at, &mut pieces);
-    }
     // Marks, from the first side: the line there cut to the outline.
+    let mut marked: Vec<(f64, f64, f64)> = Vec::new();
+    let mut dropped = vec![false; edges.len()];
     let mut k = 0usize;
     loop {
         let b = low + k as f64 * spacing + half;
@@ -174,15 +181,36 @@ fn members_laid(outline: &[P2], run: P2, spacing: f64) -> Result<(Vec<Laid>, usi
             if length <= EPS {
                 continue;
             }
-            // An edge member is that piece, and is counted once.
-            if edges.iter().any(|(eb, lo, hi)| (b - eb).abs() <= MEMBER_THICKNESS_FT + EPS && ((hi - lo) - length).abs() < 1.0e-6 && (lo - pair[0]).abs() < 1.0e-6) {
-                continue;
+            // A member is one joist. Where this piece and an edge member lie one along the other,
+            // within a member's thickness, the longer is the joist (the same length: the edge
+            // member), and the shorter is a part of it and is not counted again.
+            let mut is_an_edge = false;
+            for (i, (eb, lo, hi)) in edges.iter().enumerate() {
+                if (b - eb).abs() > MEMBER_THICKNESS_FT + EPS {
+                    continue;
+                }
+                let (edge_in_piece, piece_in_edge) = (*lo >= pair[0] - 1.0e-6 && *hi <= pair[1] + 1.0e-6, pair[0] >= *lo - 1.0e-6 && pair[1] <= *hi + 1.0e-6);
+                if piece_in_edge {
+                    is_an_edge = true;
+                } else if edge_in_piece {
+                    dropped[i] = true;
+                }
             }
-            keep(pair[0], pair[1], b, &mut pieces);
+            if !is_an_edge {
+                marked.push((pair[0], pair[1], b));
+            }
         }
         if k > 100_000 {
             return Err("that many members are not a floor or a roof: check the spacing".into());
         }
+    }
+    for (i, (at, lo, hi)) in edges.iter().enumerate() {
+        if !dropped[i] {
+            keep(*lo, *hi, *at, &mut pieces);
+        }
+    }
+    for (lo, hi, at) in marked {
+        keep(lo, hi, at, &mut pieces);
     }
     Ok((pieces, left_out))
 }
@@ -230,6 +258,39 @@ mod tests {
         assert_eq!(a.count(), 20);
         assert!(near(a.total(), 250.0) && near(a.longest(), 16.0), "{a:?}");
         assert!(near(rim_length(&l, [0.0, 1.0]).unwrap(), 48.0));
+    }
+
+    /// The L mirrored (the notch at the northwest): 0,0; 24,0; 24,16; 12,16; 12,10; 0,10, joists
+    /// north. Edge joists at 0.0625 (10 ft), 23.9375 (16 ft) and 12.0625 (6 ft, from 10 to 16).
+    /// Marks 1 to 17 at 1.3333k + 0.0625: 1 to 8 are 10 ft (80 LF); mark 9 falls at 12.0625, on
+    /// the notch's edge, and is the joist of 16 ft there, the 6 ft edge member a part of it;
+    /// marks 10 to 17 are 16 ft. Joists 3 edge - 1 + 17 marks = 19; LF 10 + 16 + 8 x 10 + 9 x 16
+    /// = 250; rim 24 + 12 + 12 = 48. The same floor as the L, mirrored: the same figures.
+    #[test]
+    fn an_l_with_its_notch_on_the_other_side_has_19_joists_250_ft_and_48_ft_of_rim_a_mark_on_the_notchs_edge_is_one_joist() {
+        let l = [[0.0, 0.0], [24.0, 0.0], [24.0, 16.0], [12.0, 16.0], [12.0, 10.0], [0.0, 10.0]];
+        let a = members_across(&l, [0.0, 1.0], 16.0 / 12.0).unwrap();
+        assert_eq!(a.count(), 19, "{a:?}");
+        assert!(near(a.total(), 250.0) && near(a.longest(), 16.0), "{a:?}");
+        assert!(near(rim_length(&l, [0.0, 1.0]).unwrap(), 48.0));
+        // The same floor turned a quarter, joists running east: the same 19 and 250.
+        let turned: Vec<P2> = l.iter().map(|p| [p[1], p[0]]).collect();
+        let b = members_across(&turned, [1.0, 0.0], 16.0 / 12.0).unwrap();
+        assert_eq!(b.count(), 19, "{b:?}");
+        assert!(near(b.total(), 250.0), "{b:?}");
+    }
+
+    /// The U: 0,0; 30,0; 30,20; 20,20; 20,8; 10,8; 10,20; 0,20, joists north. Edge joists at
+    /// 0.0625 (20 ft), 29.9375 (20), 9.9375 (12, from 8 to 20) and 20.0625 (12). Marks 1 to 22:
+    /// 1 to 7 are 20 ft (140), 8 to 14 are 8 ft in the notch (56), 15 to 22 are 20 ft (160), and
+    /// mark 15 falls at 20.0625 on the notch's edge and is the 20 ft joist, the 12 ft edge member
+    /// a part of it. Joists 4 edge - 1 + 22 = 25; LF 40 + 12 + 356 = 408.
+    #[test]
+    fn a_u_has_25_joists_and_408_ft_a_mark_on_the_edge_of_its_notch_is_one_joist() {
+        let u = [[0.0, 0.0], [30.0, 0.0], [30.0, 20.0], [20.0, 20.0], [20.0, 8.0], [10.0, 8.0], [10.0, 20.0], [0.0, 20.0]];
+        let a = members_across(&u, [0.0, 1.0], 16.0 / 12.0).unwrap();
+        assert_eq!(a.count(), 25, "{a:?}");
+        assert!(near(a.total(), 408.0), "{a:?}");
     }
 
     /// A gable plane 24 ft along the eave and 8 ft up the slope: an edge rafter at each rake and

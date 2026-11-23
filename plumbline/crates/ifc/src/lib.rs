@@ -235,6 +235,30 @@ impl<'a> Reader<'a> {
         }
         None
     }
+    /// The line a wall is drawn on, where the file gives one (the "Axis" of its shape): its two
+    /// ends on plan, as the file places them. A body may run past this line at a corner.
+    fn axis(&self, product: &'a Entity) -> Option<[[f64; 2]; 2]> {
+        let (_, shape) = self.get(self.arg(product, 6))?;
+        let frame = self.placed(self.arg(product, 5));
+        for rep in Reader::list(self.arg(shape, 2)) {
+            let Some((_, rep)) = self.get(rep) else { continue };
+            if Reader::text(self.arg(rep, 1)) != Some("Axis") {
+                continue;
+            }
+            for item in Reader::list(self.arg(rep, 3)) {
+                let Some((_, line)) = self.get(item) else { continue };
+                if line.name != "IFCPOLYLINE" {
+                    continue;
+                }
+                let points: Vec<P3> = Reader::list(self.arg(line, 0)).iter().filter_map(|p| self.triple(p)).collect();
+                if let [p, q] = points.as_slice() {
+                    let (p, q) = (frame.place([p[0], p[1], 0.0]), frame.place([q[0], q[1], 0.0]));
+                    return Some([[p[0], p[1]], [q[0], q[1]]]);
+                }
+            }
+        }
+        None
+    }
     fn name(&self, e: &'a Entity) -> String {
         Reader::text(self.arg(e, 2)).unwrap_or("").trim().to_string()
     }
@@ -431,21 +455,27 @@ pub fn import(job: &mut Job, bytes: &[u8], name: &str, how: Entered) -> Result<B
     let text = String::from_utf8_lossy(bytes);
     let (assumed, unknown) = if text.contains("'Plumbline_Values'") { (text.matches("(Assumed;").count(), text.matches("(Unknown;").count()) } else { (0, 0) };
     let said_known = how.status == Status::Known;
-    let how = if assumed + unknown > 0 && said_known { Entered { status: Status::Assumed, source: how.source } } else { how };
+    // Everything read from a model is Assumed (call 180, C3): a model is what its maker drew, not what
+    // was measured here, so a model is never Known on the strength of being said to be.
+    let how = if said_known { Entered { status: Status::Assumed, source: how.source } } else { how };
     // What the model holds that is not a thing with a shape, and is not read at all.
     let count = |names: &[&str]| file.entities.values().filter(|e| names.contains(&e.name.as_str())).count();
     let (property_sets, materials) = (count(&["IFCPROPERTYSET", "IFCELEMENTQUANTITY"]), count(&["IFCMATERIAL", "IFCMATERIALLAYERSET", "IFCMATERIALCONSTITUENTSET", "IFCMATERIALPROFILESET"]));
     ed::all_or_nothing(job, |job| {
         let mut out = bring(job, &r, name, how, unit_name, k)?;
+        if said_known && assumed + unknown == 0 {
+            out.notes.push("everything from this model was brought in Assumed, not Known as was said of it: a model is what its maker drew, not what was measured here. Measure it and mark it Known".to_string());
+        }
         if assumed + unknown > 0 {
             out.notes.push(format!(
                 "this model was written by BuildOS and marks {assumed} of its values Assumed and {unknown} Unknown: which value each mark was on is not read back, so {}",
                 if said_known { "everything from it was brought in Assumed, not Known as was said of it" } else { "nothing from it is surer than was said of it as a whole" }
             ));
         }
+        let property_sets = property_sets.saturating_sub(storey_heights(&r).len());
         if property_sets + materials > 0 {
             out.notes.push(format!(
-                "not read: {property_sets} property set{} and {materials} material{} in the model. A thing brought in has its shape, its place and its name, and, where the model gives them, the Status it says (as its mark: new, existing, to demolish or temporary) and the LoadBearing it says, each Assumed; what the model says it is made of, and anything else it says about it, is not brought in",
+                "not read: {property_sets} list{} of what the model says of each thing, and {materials} material{}. A thing brought in has its shape, its place and its name, and, where the model gives them, its work mark (new, existing, to demolish or temporary) and its bearing mark, each Assumed; what the model says it is made of, and anything else it says about each thing, is not brought in",
                 if property_sets == 1 { "" } else { "s" },
                 if materials == 1 { "" } else { "s" }
             ));
@@ -455,6 +485,26 @@ pub fn import(job: &mut Job, bytes: &[u8], name: &str, how: Entered) -> Result<B
         }
         Ok(out)
     })
+}
+
+/// The height each building level is given in the base quantities IFC4 gives a storey
+/// (`GrossHeight`, in the model's unit), by the level's number in the file (call 180, C3).
+fn storey_heights(r: &Reader) -> HashMap<u64, f64> {
+    let mut out = HashMap::new();
+    for rel in r.file.entities.values().filter(|e| e.name == "IFCRELDEFINESBYPROPERTIES") {
+        let Some((_, set)) = r.get(r.arg(rel, 5)) else { continue };
+        if set.name != "IFCELEMENTQUANTITY" || Reader::text(r.arg(set, 2)) != Some("Qto_BuildingStoreyBaseQuantities") {
+            continue;
+        }
+        let height = Reader::list(r.arg(set, 5)).iter().filter_map(|q| r.get(q)).find(|(_, q)| q.name == "IFCQUANTITYLENGTH" && Reader::text(r.arg(q, 0)) == Some("GrossHeight")).and_then(|(_, q)| Reader::number(r.arg(q, 3)));
+        let Some(height) = height else { continue };
+        for thing in Reader::list(r.arg(rel, 4)) {
+            if let V::Ref(id) = thing {
+                out.insert(*id, height);
+            }
+        }
+    }
+    out
 }
 
 fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String, k: f64) -> Result<Brought, String> {
@@ -583,6 +633,7 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
         let mut q = job.world.query::<(&plumbline_world::Node, &building::Level)>();
         q.iter(&job.world).map(|(n, l)| (n.name.clone(), n.path.clone(), l.elevation.feet())).collect()
     };
+    let heights = storey_heights(r);
     let mut storey_path: HashMap<u64, (String, f64)> = HashMap::new();
     let mut shared = Vec::new();
     for (i, (id, called, elevation, placed)) in storeys.iter().enumerate() {
@@ -619,9 +670,14 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
         // height from the level above them, where there is one (R21-30: the lower of
         // the two was told "the model has no level above this one", which was untrue).
         let above = storeys[i + 1..].iter().find(|next| next.2 - elevation > 0.01);
-        let path = match above {
-            Some(next) => ed::storey(job, &called, &feet(*elevation), &feet(next.2 - elevation), entered)?,
-            None => {
+        let path = match (heights.get(id), above) {
+            // The height the model gives the level, where it gives one (a model this program wrote does).
+            (Some(h), _) => ed::storey(job, &called, &feet(*elevation), &format!("{} ft", (h * k * 1.0e6).round() / 1.0e6 + 0.0), entered)?,
+            (None, Some(next)) => {
+                out.notes.push(format!("the model does not give the height of \"{called}\": it was taken as the distance to the floor of the level above, {}, which is the height and the floor's depth", feet(next.2 - elevation)));
+                ed::storey(job, &called, &feet(*elevation), &feet(next.2 - elevation), entered)?
+            }
+            (None, None) => {
                 // The top storey: how tall it is is in nothing the file says.
                 let path = ed::storey(job, &called, &feet(*elevation), "1 ft", entered)?;
                 let e = job.find(&path).ok_or("the new level is not there")?;
@@ -672,6 +728,8 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
 
     // ---- Walls.
     let mut wall_of: HashMap<u64, (String, P3, P3, f64)> = HashMap::new();
+    let mut wall_marks: Vec<(String, u64, String)> = Vec::new();
+    let mut told_apart: Vec<String> = Vec::new();
     for (id, e) in of(&["IFCWALL", "IFCWALLSTANDARDCASE", "IFCWALLELEMENTEDCASE"]) {
         if r.pieces(e) > 1 {
             leave(&e.name, "its body is made of more than one piece: only a body of one piece is read");
@@ -693,10 +751,47 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
             continue;
         }
         // Its length is the longer side of the rectangle, its thickness the shorter.
-        let (length, thickness, way) = if x >= y { (x, y, [along[0], along[1], 0.0]) } else { (y, x, [-along[1], along[0], 0.0]) };
+        // Where the file gives the line the wall is drawn on, the side the line runs along is its length: a
+        // wall shorter than it is thick (a pilaster, a 4 in return) has its longer side across the line (call 180, C3).
+        let x_long = match r.axis(e) {
+            Some([p, q]) => {
+                let (dx, dy) = (q[0] - p[0], q[1] - p[1]);
+                let long = dx.hypot(dy);
+                let wx = frame.turn([along[0], along[1], 0.0]);
+                let wy = frame.turn([-along[1], along[0], 0.0]);
+                if long > 1.0e-9 && ((dx * wx[0] + dy * wx[1]) / long).abs() > 0.9999 {
+                    true
+                } else if long > 1.0e-9 && ((dx * wy[0] + dy * wy[1]) / long).abs() > 0.9999 {
+                    false
+                } else {
+                    x >= y
+                }
+            }
+            None => x >= y,
+        };
+        let (length, thickness, way) = if x_long { (x, y, [along[0], along[1], 0.0]) } else { (y, x, [-along[1], along[0], 0.0]) };
         let middle = frame.place([at[0], at[1], 0.0]);
         let way = frame.turn(way);
-        let (a, b) = ([middle[0] - way[0] * length / 2.0, middle[1] - way[1] * length / 2.0], [middle[0] + way[0] * length / 2.0, middle[1] + way[1] * length / 2.0]);
+        let (mut a, mut b) = ([middle[0] - way[0] * length / 2.0, middle[1] - way[1] * length / 2.0], [middle[0] + way[0] * length / 2.0, middle[1] + way[1] * length / 2.0]);
+        let mut length = length;
+        let mut way = way;
+        // A wall this program wrote carries the line it was drawn on: at a corner the body runs
+        // past that line, or stops short of it, so the line, not the body, is the wall (call 179,
+        // C1). Taken where it lies along the body (the same line, and its middle inside the body);
+        // any other axis is left alone.
+        if let Some([p, q]) = r.axis(e) {
+            let (dx, dy) = (q[0] - p[0], q[1] - p[1]);
+            let long = dx.hypot(dy);
+            let (mx, my) = ((p[0] + q[0]) / 2.0 - middle[0], (p[1] + q[1]) / 2.0 - middle[1]);
+            let (u, v) = (mx * way[0] + my * way[1], mx * way[1] - my * way[0]);
+            if long > 1.0e-9 && ((dx * way[0] + dy * way[1]) / long).abs() > 0.9999 && u.abs() <= length / 2.0 && v.abs() <= thickness / 2.0 + 1.0e-6 {
+                let sign = if dx * way[0] + dy * way[1] >= 0.0 { 1.0 } else { -1.0 };
+                a = p;
+                b = q;
+                length = long;
+                way = [sign * way[0], sign * way[1], 0.0];
+            }
+        }
         let base = if up[2] > 0.0 { middle[2] } else { middle[2] - body.depth };
         let (storey, floor) = storey_of(id, base * k);
         let source = from(e, id);
@@ -707,9 +802,20 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
                 Some(called) => ed::wall_type_named(job, called, &size, entered)?,
                 None => ed::wall_type_for(job, &size, entered)?,
             };
+            if let Some(called) = said_of.get(&id).and_then(|it| it.type_name.as_deref()) {
+                let got = job.find(&wall_type).and_then(|e| job.world.get::<plumbline_world::Node>(e)).map(|n| n.name.clone());
+                if let Some(got) = got.filter(|g| g != called) {
+                    let said = format!("\"{called}\" as \"{got}\"");
+                    if !told_apart.contains(&said) {
+                        told_apart.push(said);
+                    }
+                }
+            }
             let made = ed::walls(job, &storey, &wall_type, &[[tidy(a[0] * k), tidy(a[1] * k)], [tidy(b[0] * k), tidy(b[1] * k)]], false, ed::Top::Height(&feet(body.depth * k)), entered)?;
             let path = made.into_iter().next().ok_or("no wall was made")?;
-            marks(job, &path, id, &source, Kind::Wall)?;
+            // (A wall's mark is put on after its doors and windows are in: a door is not set in a wall that is
+            // coming down, and the model has the door in that wall: call 179, C6.)
+            wall_marks.push((path.clone(), id, source.clone()));
             // The model's own name for the wall, where it has one nothing else on the
             // storey goes by.
             let called = r.name(e);
@@ -734,6 +840,9 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
             }
             Err(why) => leave(&e.name, &format!("this program would not take it: {why}")),
         }
+    }
+    if !told_apart.is_empty() {
+        out.notes.push(format!("the model names a wall type the job already has at another thickness: {} came in with a number after the name, so that no wall was left out for its type's name", told_apart.join(", ")));
     }
     // ---- Doors and windows: each fills a hole, and each hole is in a wall.
     let mut hole_in: HashMap<u64, u64> = HashMap::new();
@@ -773,6 +882,11 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
         match done {
             Ok(_) => made(if kind == Kind::Door { "doors" } else { "windows" }),
             Err(why) => leave(&e.name, &format!("this program would not take it: {why}")),
+        }
+    }
+    for (path, id, source) in &wall_marks {
+        if let Err(why) = marks(job, path, *id, source, Kind::Wall) {
+            out.notes.push(format!("a mark on {path} was not put on it: {why}"));
         }
     }
     for (id, e) in of(&["IFCOPENINGELEMENT", "IFCOPENINGSTANDARDCASE"]) {

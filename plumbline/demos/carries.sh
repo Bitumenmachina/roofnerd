@@ -82,16 +82,17 @@ echo "  the second floor's south wall:"
 wall "$SOUTH2" s2
 hand "$T/s2.txt" "south, second floor, carries" "eave, 24.00 LF" "the roof's eave for 24.00 LF"
 hand "$T/s2.txt" "south, second floor, stands on" "first floor, 24.00 LF" "[$SOUTH1] (wall) for 24.00 LF"
-echo "  the second floor's east wall (a rake is over it, which does not bear on it):"
+echo "  the second floor's east wall (a rake is over it; call 180, A4: a roof over a wall that is not under its eave is said, never \"nothing\"):"
 wall "$EAST2" e2
-hand "$T/e2.txt" "east, second floor, carries" "nothing" "nothing found standing on it"
+hand "$T/e2.txt" "east, second floor, carries" "a roof is over it, not worked" "a roof is over this wall: whether it bears here is not worked (only eaves are)"
+lacks "$T/e2.txt" "nothing found standing on it"
 hand "$T/e2.txt" "east, second floor, stands on" "first floor, 16.00 LF" "[$EAST1] (wall) for 16.00 LF"
-lacks "$T/e2.txt" "eave"
+lacks "$T/e2.txt" "the roof's eave"
 echo "  the second floor's north wall carries the other eave, and its partition, P2, carries nothing:"
 wall "$NORTH2" n2
 says "$T/n2.txt" "the roof's eave for 24.00 LF"
 wall "$P2" p2
-hand "$T/p2.txt" "P2 carries" "nothing" "nothing found standing on it"
+hand "$T/p2.txt" "P2 carries" "a roof is over it, not worked" "a roof is over this wall: whether it bears here is not worked (only eaves are)"
 hand "$T/p2.txt" "P2 stands on" "P1, 12.00 LF" "[$P1] (wall) for 12.00 LF"
 lacks "$T/p2.txt" "nothing found under it"
 # Every wall of the ten says what the figures are, and the same figures are in `show` of a wall.

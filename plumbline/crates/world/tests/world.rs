@@ -5482,7 +5482,13 @@ fn j12_6_an_opening_that_does_not_fit_leaves_no_opening_area_and_each_one_is_nam
     let mut o = job.world.get::<plumbline_world::Opening>(e).cloned().unwrap();
     o.offset = Val::known(Len::One(9.5), "ft", "made-up plan");
     job.put(&window, o).unwrap();
-    let second = ed::opening(&mut job, &wall[0], Kind::Door, &dt, ed::OnWall::Offset("2.5 ft"), "0 ft", how).unwrap();
+    // (Call 179, B5: a door drawn over another is refused now. The second is put in by hand, as a job saved
+    // before holds it, and the wall's figures are still not given and still name both.)
+    let refused = ed::opening(&mut job, &wall[0], Kind::Door, &dt, ed::OnWall::Offset("2.5 ft"), "0 ft", how).unwrap_err();
+    assert!(refused.contains("lie over each other"), "{refused}");
+    let second = job.add(&wall[0], Kind::Door, "door 2").unwrap();
+    let held = plumbline_world::Opening { type_name: Val::known(dt.clone(), "", "made-up plan"), offset: Val::known(Len::One(2.5), "ft", "made-up plan"), sill: Val::known(Len::One(0.0), "ft", "made-up plan") };
+    job.put(&second, held).unwrap();
     job.derive();
     for figure in ["opening_area", "net_area"] {
         let d = measure_of(&mut job, &wall[0], figure);
@@ -5684,8 +5690,19 @@ fn j13_2_4_a_hole_is_a_hole_whatever_stands_over_it_and_a_door_that_is_not_cut_f
     let (mut job, s, wt, dt2, _) = drawn();
     let _ = dt;
     let pipe = ed::segment_type(&mut job, "3/4 in", Kind::Pipe, "3/4 in", None, how).unwrap();
-    let wall = ed::walls(&mut job, &s, &wt, &[[0.0, 0.0], [10.0, 0.0]], false, ed::Top::Height("6 ft 11 in"), how).unwrap();
+    // (Call 180, C5: a door taller than its wall is refused when it is drawn, so the wall is cut down to 6 ft 11 in
+    // after the door is in it, as a job saved before has it.)
+    let wall = ed::walls(&mut job, &s, &wt, &[[0.0, 0.0], [10.0, 0.0]], false, ed::Top::Height("9 ft"), how).unwrap();
     ed::opening(&mut job, &wall[0], Kind::Door, &dt2, ed::OnWall::Offset("5 ft"), "0 ft", how).unwrap();
+    let low = ed::walls(&mut job, &s, &wt, &[[0.0, 40.0], [10.0, 40.0]], false, ed::Top::Height("6 ft 11 in"), how).unwrap();
+    {
+        let (here, there) = (job.find(&wall[0]).unwrap(), job.find(&low[0]).unwrap());
+        let height = job.world.get::<Wall>(there).unwrap().height.clone();
+        let mut w = job.world.get::<Wall>(here).cloned().unwrap();
+        w.height = height;
+        job.put(&wall[0], w).unwrap();
+    }
+    ed::remove(&mut job, &low[0]).unwrap();
     ed::runs(&mut job, &s, Kind::Pipe, &pipe, &[[5.0, -3.0], [5.0, 3.0]], "3 ft", None, how).unwrap();
     let got = clashes_of(&mut job, None);
     assert!(got.len() == 1 && got[0].3 && got[0].5 == Status::Assumed, "{got:?}");

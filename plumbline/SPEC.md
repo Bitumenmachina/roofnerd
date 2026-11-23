@@ -1056,6 +1056,60 @@ priced with it is said to be priced and not drawn. Where a wall's end corners wi
 another wall's end, it is drawn past its center line's end to where the two center
 lines cross and half the other wall's thickness on.
 
+### 5.20 The plan set on paper (calls 168, 179 and 182)
+
+`plan-set` writes a level's plan as it stands, its demolition plan and its proposed plan as
+a PDF of line work. What a sheet carries, and what it does not:
+
+- **Which sheets a thing is on** is its own work mark (a thing with no mark is new): a new
+  door in an existing wall is on the proposed plan only; one marked existing is on all three,
+  heavy where it stands, light where it stays; one to demolish is dashed on the demolition
+  plan and not on the proposed.
+- **Each sheet has** its number (the National CAD Standard's form: A for architectural, 1 for
+  plans, then its order in the set: A-101, A-102, A-103) and "sheet n of m" in the title box;
+  a north arrow (plan north, up the sheet; true north is not in the model, and the notes say
+  so); a key of the line types the sheet draws, each as the sheet draws it; and, outside the
+  dimension strings on each of the four sides, the overall dimension: the extent of the
+  walls' lines as drawn, written as the strings are, with VIF when any length on the sheet is
+  not Known.
+- **Lettering** is strokes, not text: no font, so no font licence and the same sheet on every
+  machine; a reader cannot search it. It is never under 3/32 in (the standard's least
+  capital), never over other lettering and never across a box's edge: a title that does not fit
+  goes to two lines and is then cut at a word with an ellipsis; a room too small for its name
+  and area at that height takes a numbered mark and a row in the room schedule at the side of
+  the sheet; a dimension too long for its string is set past its end. `--list` says, page by
+  page, the smallest piece, and every piece under the least, over another or out of its box.
+- **Cabinets and fixtures set in place** are drawn on the proposed plan (and on a level with
+  no mark) as the outlines of their footprints, dashed where they hang above the cut. What a
+  sheet does not show (pipes, ducts, wiring, the frame; cabinets and fixtures on the sheets
+  that do not draw them) is said in its notes.
+- The plan set's name ends `.pdf`; a plan set already there is written over and it says so;
+  a file there that is not a PDF is not.
+- **Strings that locate** (call 182). On each side of the plan up to three strings, nearest the
+  house first: the openings in that outside wall to their centers, from the wall's ends; the
+  walls that meet it, to their lines; the overall. Every string is a chain of whole sixteenths of
+  an inch from its first station, so its parts add to the string outside it exactly; a string that
+  says in one part what the overall says is not drawn twice. A partition that meets no outside
+  wall is located by a string inside the plan from the nearest wall parallel to it; a wall with
+  openings in it, inside the plan, by a string along it (door 8'-0" from the south wall's line,
+  8'-0" to the north wall's); a run of cabinets or fixtures against a wall by its start from the
+  wall's first end, its length and what is left. A wall off square is dimensioned along itself
+  (its own length, the model's figure) and the angle between walls is lettered at the corner; an
+  overall is drawn on a side only where the strings under it are level or plumb and add to it,
+  and the notes say where there is none and why. Extension lines run from the corner measured.
+  Every figure carries VIF where what fixes it is not Known.
+- **Lettering is tested against every line on the sheet** (strings, walls, outlines, room lines,
+  the cut walls' fill), not only against other lettering; a name moves within its room to clear
+  them; what cannot be cleared is a fault, said by `plan-set` whenever the set is written and
+  on the sheet. The ampersand and the accented Latin capitals are lettered; a letter with no
+  glyph is lettered as its plain letter where it has one, else as `?`, and `plan-set` and its
+  list say how many and which.
+- A room with no area is lettered AREA NOT KNOWN and the notes say why in the model's words; a
+  room line is drawn (thin, long dashes) and is in the key. The key lists what the sheet draws.
+  Sheets are numbered through the whole set (the levels from the lowest up); a date is a day of
+  the calendar (2026-11-22 or 11/22/2026) or is refused; a graphic scale (four blocks) is on
+  every sheet; the file's title is the job's title.
+
 ## 6. Cost code scheme
 
 Which scheme is primary is an open question (QUESTIONS.md Q1). Every code stores its

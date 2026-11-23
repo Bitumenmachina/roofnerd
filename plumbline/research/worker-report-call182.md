@@ -1,0 +1,12 @@
+# W-182 report (worker, wtH). Patch: review/call182.patch. Red runs: review/red-old-run.txt (the whole new demo run on the old binary, every failure kept).
+Done: items 4, 2, 1, 5, 3, 6, 7, 8. demos/planset.sh PASS on the new binary. Tests: 473 pass, 3 fail (call168.rs, not mine to edit, see below). Gates PASS (language, egress, clientdata --all; portmap with BIMCRAFT=/home/user/ipedrax/bimcraft: 324 items).
+## Per item (red on old / green)
+4  red: kitchen+island, plan-set without --list printed only "wrote ..."; old demo: "FAIL: it does not say: not right on the pages as written". green: step 8e (crowded job): plan-set says "N things are not right on the pages as written", each "page 1 of 1, FLOOR PLAN: the lettering ...", N equals the list's count; the sheet's own notes say it too.
+2  red: "Café & Bar" and "Cafe ? Bar" gave identical PDF bytes on the old binary (8f). green: files differ; "unlettered: 0 letters"; Łódź/Ω job: "unlettered: 3 letters ... Ł as L, Ź as Z, Ω as ?"; plan-set says "3 letters could not be lettered as written".
+1  red: old has no strings section ("it does not say: south, openings: ..."). green: steps 11, 11a, 11c; hand figures below.
+5  red/green steps 11a, 11b (angles 150, 118, 178; no overall S/N/W; each wall off square dimensioned along itself).
+3  red: old binary "lettering faults: 0" on all three pages of the judge's reno while its strings run through HALL, LINEN, CLOSET (review/h/jj/Bold3.png); island kitchen: old "lettering faults: 1" (8g red). green: faults tested against every line and cut wall (unit test), names move, 8g/11c faults 0; all 15 judge jobs now write with 0 faults.
+6,7,8 steps 12, 13, 14 (all red on old, see red-old-run.txt).
+## Hand figures, item 1 (36 ft x 16 ft house, partition at 24 ft, door 3 ft @6, window 5 ft @30, partition door 2'-8" @8)
+south openings 6'-0" 24'-0" 6'-0" = 36'-0"; partitions 24'-0" 12'-0"; overall 36'-0"; north partitions 24'-0" 12'-0" + overall; west, east overall 16'-0" alone; partition door 8'-0" 8'-0" = 16'-0". Sheet reads exactly these (demo step 11; a script sums every string line of every list to the sixteenth).
+L: north 20+20=40, east 16+14=30. Wing: 20'-0" 12'-0" 11'-3 15/16" along their walls, angles 150, 118 (118.015), 178 (178.015). Where strings cannot add the sheet and its notes say "NO OVERALL ON THE SOUTH, NORTH, WEST SIDES: A WALL OFF SQUARE MAKES THE PLAN RUN PAST THE WALLS THERE..." (or, with no wall off square, that the walls do not reach across the whole plan, e.g. a proposed plan with a demolished wall).

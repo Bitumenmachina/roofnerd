@@ -64,6 +64,29 @@ says "$T/wall2.txt" "net length       40 LF"
 says "$T/wall2.txt" "quantity: Stone veneer wainscot, 3 ft 40 LF"
 says "$T/wall2.txt" "quantity: Lap siding 255 SF"
 
+echo "   a window with its sill under the stone's 3 ft (call 179, C2): the wall of step 1 with the window's sill at 1 ft"
+W3="$("$P" wall "$J" "$S" "$WT" --points "0,40 40,40" --height "10 ft" "${K[@]}" | grep -oE 'wall-[0-9]+' | head -1)"
+"$P" door "$J" "$W3" "$DT" --offset "6 ft" --sill "0 ft" "${K[@]}" >/dev/null
+"$P" window "$J" "$W3" "$NT" --offset "24 ft" --sill "1 ft" "${K[@]}" >/dev/null
+"$P" apply "$J" "$W3" "Exterior wall, 2x6, lap siding over a stone wainscot" --source "made-up finish schedule" >/dev/null
+"$P" show "$J" > "$T/show.txt"; block "$T/show.txt" "$W3" > "$T/wall3.txt"
+# Net 355 as before. Below 3 ft: 3 x 40 = 120 less the door's 3 x 3 = 9 less the window's 5 x 2 = 10: 101. Siding 355 - 101 = 254
+# (was 244 with the sill at 3 ft: 10 SF more is bought, the window's part under 3 ft being already out of the net). The stone 37 LF.
+says "$T/wall3.txt" "net area         355 SF"
+says "$T/wall3.txt" "net area below wainscot 101 SF"
+says "$T/wall3.txt" "net length       37 LF"
+says "$T/wall3.txt" "quantity: Stone veneer wainscot, 3 ft 37 LF"
+says "$T/wall3.txt" "quantity: Lap siding 254 SF"
+says "$T/wall3.txt" "quantity: Hang the siding 254 SF"
+echo "   the judge's wall: no door, the window's sill at 1 ft (net 375, under 3 ft 120 less 10 = 110, siding 265)"
+W4="$("$P" wall "$J" "$S" "$WT" --points "0,60 40,60" --height "10 ft" "${K[@]}" | grep -oE 'wall-[0-9]+' | head -1)"
+"$P" window "$J" "$W4" "$NT" --offset "20 ft" --sill "1 ft" "${K[@]}" >/dev/null
+"$P" apply "$J" "$W4" "Exterior wall, 2x6, lap siding over a stone wainscot" --source "made-up finish schedule" >/dev/null
+"$P" show "$J" > "$T/show.txt"; block "$T/show.txt" "$W4" > "$T/wall4.txt"
+says "$T/wall4.txt" "net area         375 SF"
+says "$T/wall4.txt" "net area below wainscot 110 SF"
+says "$T/wall4.txt" "quantity: Lap siding 265 SF"
+
 echo
 echo "== 2. Base is not bought across a doorway: the sample whole house =="
 "$P" sixteen "$T/sixteen.json" >/dev/null
@@ -95,15 +118,18 @@ block "$T/s.txt" "$N" > "$T/north.txt"; block "$T/s.txt" "$SO" > "$T/south.txt"
 # North: no door, 370 SF net, 40 LF: stone 40.00 LF; siding 370 - 120 = 250.
 says "$T/north.txt" "quantity: Stone veneer wainscot, 3 ft 40 LF"
 says "$T/north.txt" "quantity: Cedar lap siding, installed 250 SF"
-# South: the front door, 3 ft: net_length 37, net 329.99; the stone 37 LF (was 40) and siding 329.99 - 111 = 218.99 (was 329.99).
+# South: the front door, 3 ft: net_length 37, net 329.99; the stone 37 LF (was 40). Below 3 ft: 120 less the door 9 less its two
+# windows with their sills at 2 1/2 ft, 2 x 5 ft x 1/2 ft = 5: 106, and the siding is 329.99 - 106 = 223.99 (call 179, C2: 218.99 took
+# those 5 SF off twice; it was 329.99 before call 175).
 says "$T/south.txt" "net area         329.99 SF"
 says "$T/south.txt" "quantity: Stone veneer wainscot, 3 ft 37 LF"
-says "$T/south.txt" "quantity: Cedar lap siding, installed 218.99 SF"
+says "$T/south.txt" "quantity: Cedar lap siding, installed 223.99 SF"
 # The totals. Before: the job cost $394,677.48. By hand the fall is the base (427.20), 3 LF less stone at
-# $95 (285.00) and 399 SF less siding at $9.50 (3,790.50): 4,502.70, to the cent of each line's rounding.
+# $95 (285.00) and 399 SF less siding at $9.50 (3,790.50): 4,502.70, less the 9 SF of windows below the stone that call 179 (C2)
+# no longer takes off twice, at $9.50 (85.50): 4,417.20, to the cent of each line's rounding.
 "$P" estimate "$T/sixteen.json" > "$T/est.txt"
 JC="$(grep -E '^  Job cost ' "$T/est.txt" | head -1 | grep -oE '[0-9,]+\.[0-9]+' | head -1 | tr -d ,)"
-awk -v jc="$JC" 'BEGIN { was = 394677.48; fall = was - jc; printf "    job cost was $394,677.48, now $%.2f: it falls by $%.2f (by hand $4,502.70)\n", jc, fall; if (fall < 4502.65 || fall > 4502.75) exit 1 }' || { echo "FAIL: the job cost did not fall by what was worked by hand"; exit 1; }
+awk -v jc="$JC" 'BEGIN { was = 394677.48; fall = was - jc; printf "    job cost was $394,677.48, now $%.2f: it falls by $%.2f (by hand $4,417.20)\n", jc, fall; if (fall < 4417.15 || fall > 4417.25) exit 1 }' || { echo "FAIL: the job cost did not fall by what was worked by hand"; exit 1; }
 
 echo
 echo
@@ -163,6 +189,49 @@ says "$T/clash4.txt" "Through a wall or a floor (a hole to cut): 2 "
 [ "$(grep -c " 1 hole, 4.00 in round" "$T/clash4.txt")" = 2 ] || { echo "FAIL: not one line for each floor"; cat "$T/clash4.txt"; exit 1; }
 "$P" vif "$J4" > "$T/vif4.txt"
 echo
+echo "== 4b. A hole is where the run passes through, however the run is split (call 179, C4) =="
+echo "   a 20 ft wall of 6 in on y = 0, a pipe of 4 in at 4 ft from (6, -3) to (6, 3), cut at (6, -1): the hole is at (6, 0, 4) before and after"
+J9="$T/nine.json"
+"$P" new "$J9" "A hole after a split (not a real job)" >/dev/null
+L9="$(made "$("$P" level "$J9" ground --elevation "0 ft" --height "9 ft" "${K[@]}")")"
+W9T="$(made "$("$P" type "$J9" wall "wall 6 in" --thickness "6 in" "${K[@]}")")"
+P9T="$(made "$("$P" type "$J9" pipe "pipe 4 in" --round "4 in" "${K[@]}")")"
+"$P" wall "$J9" "$L9" "$W9T" --points "0,0 20,0" --height "9 ft" "${K[@]}" >/dev/null
+R9="$(made "$("$P" run "$J9" "$L9" pipe "$P9T" --points "6,-3 6,3" --height "4 ft" "${K[@]}")")"
+"$P" clashes "$J9" > "$T/clash9.txt"
+says "$T/clash9.txt" "1 hole, 4.00 in round, at (6, 0, 4)"
+"$P" split "$J9" "$R9" --at "6,-1" "${K[@]}" >/dev/null
+"$P" clashes "$J9" > "$T/clash9.txt"
+says "$T/clash9.txt" "1 hole, 4.00 in round, at (6, 0, 4)"
+saysnt "$T/clash9.txt" "-1.375"
+echo "   a pipe cut again at (6, 0.1), across the wall: still one hole, at (6, 0, 4)"
+"$P" split "$J9" "$(made "$("$P" show "$J9" | grep -E 'pipe-[0-9]+' | tail -1)")" --at "6,0.1" "${K[@]}" >/dev/null
+"$P" clashes "$J9" > "$T/clash9.txt"
+says "$T/clash9.txt" "at (6, 0, 4)"
+says "$T/clash9.txt" "Through a wall or a floor (a hole to cut): 1 "
+
+echo
+echo "== 4c. A pipe laid in a slab is laid in, not a hole (call 179, C5) =="
+echo "   a floor 10 in thick with its top at 9 ft (8 ft 2 in to 9 ft); a pipe of 1 in from (2, 5) to (10, 5) at 8.6 ft lies inside it"
+J10="$T/ten.json"
+"$P" new "$J10" "Laid in a slab (not a real job)" >/dev/null
+G10="$(made "$("$P" level "$J10" ground --elevation "0 ft" --height "9 ft" "${K[@]}")")"
+S10="$(made "$("$P" level "$J10" second --elevation "9 ft" --height "9 ft" "${K[@]}")")"
+F10T="$(made "$("$P" type "$J10" floor "floor 10 in" --thickness "10 in" "${K[@]}")")"
+P10T="$(made "$("$P" type "$J10" pipe "pipe 1 in" --round "1 in" "${K[@]}")")"
+"$P" floor "$J10" "$S10" "$F10T" --points "0,0 12,0 12,10 0,10" "${K[@]}" >/dev/null
+"$P" run "$J10" "$G10" pipe "$P10T" --points "2,5 10,5" --height "8.6 ft" "${K[@]}" >/dev/null
+"$P" clashes "$J10" > "$T/clash10.txt"
+says "$T/clash10.txt" "Through a wall or a floor (a hole to cut): 0"
+says "$T/clash10.txt" "Laid in a floor or a wall (it runs inside it, along its length: no hole to cut): 1"
+saysnt "$T/clash10.txt" "1 hole"
+echo "   the same pipe rising from 8 ft to 9 ft 6 in comes out of the slab: one hole, and the first pipe is still the one laid in"
+"$P" run "$J10" "$G10" pipe "$P10T" --points "6,8" --height "8 ft" --rises-to "9.5 ft" "${K[@]}" >/dev/null
+"$P" clashes "$J10" > "$T/clash10.txt"
+says "$T/clash10.txt" "Through a wall or a floor (a hole to cut): 1"
+says "$T/clash10.txt" "Laid in a floor or a wall (it runs inside it, along its length: no hole to cut): 1"
+echo
+
 echo "== 7. The BIM file says existing, demolished and new in its own word =="
 echo "   one wall existing, one to demolish, one new (said bearing), a door in the existing wall to demolish, and a roof, written out and read back"
 J7="$T/seven.json"
@@ -215,5 +284,111 @@ echo "    types by their names: exterior wall 2x6 on 3 walls, entry door 3 ft on
 "$P" takeoff "$T/back.json" | sed -n '/^ground/,/^  .* floors/p' | sed -E 's/^ *[~?=] / /; s/^ +//' > "$T/take7-back.txt"
 diff <(grep -E "^(walls|to build|existing|to demolish)" "$T/take7-was.txt") <(grep -E "^(walls|to build|existing|to demolish)" "$T/take7-back.txt") > /dev/null && echo "    the takeoff of the job read back says what the first job's did (walls, to build, existing, to demolish)" || { echo "FAIL: the takeoff of the job read back is not the first job's"; diff "$T/take7-was.txt" "$T/take7-back.txt"; exit 1; }
 if grep -q 'roof slabs' "$T/import7.txt"; then echo "    NOT DONE (item 7): the roof is not read back: $(grep -m1 'roof slabs' "$T/import7.txt" | sed 's/^ *//')"; fi
+echo
+echo "== 7b. A wall the BIM file holds is read back on the line it was drawn on, to its length (call 179, C1) =="
+echo "   a ring 20 ft by 12 ft of 6 in walls, the last wall 4 in, a door 3 ft at 5 ft on the south wall and a window 4 ft at 8 ft on the east wall, written out and read back"
+J8="$T/eight.json"
+"$P" new "$J8" "A ring read back (not a real job)" >/dev/null
+L8="$(made "$("$P" level "$J8" ground --elevation "0 ft" --height "9 ft" "${K[@]}")")"
+W8T="$(made "$("$P" type "$J8" wall "wall 6 in" --thickness "6 in" "${K[@]}")")"
+W8U="$(made "$("$P" type "$J8" wall "wall 4 in" --thickness "4 in" "${K[@]}")")"
+D8T="$(made "$("$P" type "$J8" door "door 3 ft" --width "3 ft" --height "7 ft" "${K[@]}")")"
+N8T="$(made "$("$P" type "$J8" window "window 4 ft" --width "4 ft" --height "4 ft" "${K[@]}")")"
+"$P" wall "$J8" "$L8" "$W8T" --points "0,0 20,0 20,12 0,12" --height "9 ft" "${K[@]}" > "$T/ring8.txt"
+R1="$(grep -oE 'wall-[0-9]+' "$T/ring8.txt" | awk '!s[$0]++' | sed -n 1p)"; R2="$(grep -oE 'wall-[0-9]+' "$T/ring8.txt" | awk '!s[$0]++' | sed -n 2p)"
+"$P" wall "$J8" "$L8" "$W8U" --points "0,12 0,0" --height "9 ft" "${K[@]}" >/dev/null
+"$P" door "$J8" "$R1" "$D8T" --offset "5 ft" --sill "0 ft" "${K[@]}" >/dev/null
+"$P" window "$J8" "$R2" "$N8T" --offset "8 ft" --sill "3 ft" "${K[@]}" >/dev/null
+"$P" export ifc "$J8" "$T/eight.ifc" >/dev/null
+"$P" new "$T/eight-back.json" "Read back (not a real job)" >/dev/null
+"$P" import ifc "$T/eight-back.json" "$T/eight.ifc" --status Known --source "its own file" > "$T/import8.txt"
+says "$T/import8.txt" "4 walls"
+says "$T/import8.txt" "1 door"
+says "$T/import8.txt" "1 window"
+lines8() { "$P" show "$1" | grep -E "wall line|plan length|face area|net area|opening area|^ +[a-z]+-[0-9]+  (door|window)" | grep -v "follows from a flagged input" | grep -v "(its own file: " | sed -E 's/^( *[=~?])* *//; s/-[0-9]{4}//; s/  +/ /g' | sort; }
+lines8 "$J8" > "$T/ring-was.txt"; lines8 "$T/eight-back.json" > "$T/ring-back.txt"
+# By hand: the lines (0,0)-(20,0), (20,0)-(20,12), (20,12)-(0,12), (0,12)-(0,0): 20, 12, 20, 12 ft, the same wall by wall.
+for w in "(0, 0) to (20, 0) ft" "(20, 0) to (20, 12) ft" "(20, 12) to (0, 12) ft" "(0, 12) to (0, 0) ft"; do says "$T/ring-back.txt" "wall line $w"; done
+[ "$(grep -c 'plan length 20 LF' "$T/ring-back.txt")" = 2 ] && [ "$(grep -c 'plan length 12 LF' "$T/ring-back.txt")" = 2 ] || { echo "FAIL: the walls read back are not 20, 12, 20 and 12 LF"; cat "$T/ring-back.txt"; exit 1; }
+echo "    read back: 20, 12, 20 and 12 LF, each on its own line (as drawn)"
+diff "$T/ring-was.txt" "$T/ring-back.txt" > /dev/null && echo "    every wall's line, length, face area, opening area and net area, and its door and window, are the first job's" || { echo "FAIL: the job read back is not the first job's, wall by wall"; diff "$T/ring-was.txt" "$T/ring-back.txt"; exit 1; }
+if python3 -I -c "import ifcopenshell" 2>/dev/null; then
+  python3 -I tools/ifc-check.py "$T/eight.ifc" > /dev/null || { echo "FAIL: the outside checker does not pass the file"; exit 1; }
+  echo "    outside checker: passes the file"
+fi
+echo
+echo "== 7c. A door in a wall to demolish is read back in it (call 179, C6) =="
+echo "   a wall to demolish with a door in it to demolish, written out and read back: 1 wall, 1 door, both to demolish"
+J11="$T/eleven.json"
+"$P" new "$J11" "A demolished door (not a real job)" >/dev/null
+L11="$(made "$("$P" level "$J11" ground --elevation "0 ft" --height "9 ft" "${K[@]}")")"
+W11T="$(made "$("$P" type "$J11" wall "wall 6 in" --thickness "6 in" "${K[@]}")")"
+D11T="$(made "$("$P" type "$J11" door "door 3 ft" --width "3 ft" --height "7 ft" "${K[@]}")")"
+W11="$("$P" wall "$J11" "$L11" "$W11T" --points "0,0 20,0" --height "9 ft" "${K[@]}" | grep -oE 'wall-[0-9]+' | head -1)"
+DOOR11="$(made "$("$P" door "$J11" "$W11" "$D11T" --offset "5 ft" --sill "0 ft" "${K[@]}")")"
+"$P" mark "$J11" "$DOOR11" demolish "${K[@]}" >/dev/null
+"$P" mark "$J11" "$W11" demolish "${K[@]}" >/dev/null
+"$P" export ifc "$J11" "$T/eleven.ifc" >/dev/null
+"$P" new "$T/eleven-back.json" "Read back (not a real job)" >/dev/null
+"$P" import ifc "$T/eleven-back.json" "$T/eleven.ifc" --status Known --source "its own file" > "$T/import11.txt"
+says "$T/import11.txt" "1 wall"
+says "$T/import11.txt" "1 door"
+says "$T/import11.txt" "not brought in: 0 things"
+"$P" show "$T/eleven-back.json" > "$T/back11.txt"
+[ "$(grep -c "~ work             to demolish" "$T/back11.txt")" = 2 ] || { echo "FAIL: the wall and its door are not each read back to demolish"; exit 1; }
+echo "    the wall and the door are each to demolish"
+echo "   what is said of the model is in a builder's words"
+saysnt "$T/import11.txt" "property set"
+saysnt "$T/import11.txt" "LoadBearing"
+saysnt "$T/import11.txt" "Status"
+says "$T/import11.txt" "of what the model says of each thing"
+echo "   the figures the BIM file's quantities were worked from are named in words"
+if grep -qE "plan_length|face_area|net_area|section_area" "$T/eleven.ifc"; then echo "FAIL: a quantity in the BIM file is named as the program holds it"; grep -nE "plan_length|face_area|net_area|section_area" "$T/eleven.ifc" | head -3; exit 1; fi
+grep -q "plan length" "$T/eleven.ifc" && echo "    plan length, face area"
+
+echo
+echo "== 7d. What may not be drawn (call 179, B5 and B6) =="
+echo "   a door 3 ft wide hung with its middle at the end of a 20 ft wall; two windows over each other; a floor in a floor; a beam, a post and a pad drawn twice"
+J12="$T/twelve.json"
+"$P" new "$J12" "Not drawn twice (not a real job)" >/dev/null
+L12="$(made "$("$P" level "$J12" ground --elevation "0 ft" --height "9 ft" "${K[@]}")")"
+W12T="$(made "$("$P" type "$J12" wall "wall 6 in" --thickness "6 in" "${K[@]}")")"
+D12T="$(made "$("$P" type "$J12" door "door 3 ft" --width "3 ft" --height "7 ft" "${K[@]}")")"
+N12T="$(made "$("$P" type "$J12" window "window 5 ft" --width "5 ft" --height "5 ft" "${K[@]}")")"
+F12T="$(made "$("$P" type "$J12" floor "floor 10 in" --thickness "10 in" "${K[@]}")")"
+B12T="$(made "$("$P" type "$J12" beam "beam 3 1/2 x 11 7/8" --width "3 1/2 in" --depth "11 7/8 in" "${K[@]}")")"
+O12T="$(made "$("$P" type "$J12" post "post 3 1/2" --width "3 1/2 in" --depth "3 1/2 in" "${K[@]}")")"
+A12T="$(made "$("$P" type "$J12" pad "pad 24" --width "24 in" --depth "24 in" "${K[@]}")")"
+W12="$("$P" wall "$J12" "$L12" "$W12T" --points "0,0 20,0" --height "9 ft" "${K[@]}" | grep -oE 'wall-[0-9]+' | head -1)"
+refuses() { if "$@" > "$T/refused.txt" 2>&1; then echo "FAIL: this was taken: $*"; cat "$T/refused.txt"; exit 1; fi; }
+refuses "$P" door "$J12" "$W12" "$D12T" --offset "20 ft" --sill "0 ft" "${K[@]}"; says "$T/refused.txt" "ends 21.50 ft along a wall 20.00 ft long: an opening lies within its wall"
+refuses "$P" door "$J12" "$W12" "$D12T" --offset "0 ft" --sill "0 ft" "${K[@]}"; says "$T/refused.txt" "starts 1.50 ft before the start of its wall"
+"$P" door "$J12" "$W12" "$D12T" --offset "1.5 ft" --sill "0 ft" "${K[@]}" >/dev/null
+echo "    a door whose edge is at the end of the wall (middle at 1.5 ft) is taken"
+"$P" window "$J12" "$W12" "$N12T" --offset "10 ft" --sill "3 ft" "${K[@]}" >/dev/null
+refuses "$P" window "$J12" "$W12" "$N12T" --offset "10.5 ft" --sill "3 ft" "${K[@]}"; says "$T/refused.txt" "lie over each other"
+"$P" window "$J12" "$W12" "$N12T" --offset "15 ft" --sill "3 ft" "${K[@]}" >/dev/null
+echo "    a second window touching the first (5 ft on) is taken"
+"$P" floor "$J12" "$L12" "$F12T" --points "0,0 24,0 24,16 0,16" "${K[@]}" >/dev/null
+refuses "$P" floor "$J12" "$L12" "$F12T" --points "6,4 12,4 12,8 6,8" "${K[@]}"; says "$T/refused.txt" "two floors in one place would be counted twice"
+"$P" floor "$J12" "$L12" "$F12T" --points "24,0 34,0 34,16 24,16" "${K[@]}" >/dev/null
+echo "    a floor beside it, sharing an edge, is taken"
+"$P" beam "$J12" "$L12" "$B12T" --points "0,0 10,0" --top "9 ft" "${K[@]}" >/dev/null
+refuses "$P" beam "$J12" "$L12" "$B12T" --points "10,0 0,0" --top "9 ft" "${K[@]}"; says "$T/refused.txt" "two beams in one place would be counted twice"
+"$P" post "$J12" "$L12" "$O12T" --at "3,3" --height "8 ft" "${K[@]}" >/dev/null
+refuses "$P" post "$J12" "$L12" "$O12T" --at "3,3" --height "8 ft" "${K[@]}"; says "$T/refused.txt" "two posts in one place would be counted twice"
+"$P" pad "$J12" "$L12" "$A12T" --at "3,3" --thickness "18 in" --top "-1 ft" "${K[@]}" >/dev/null
+refuses "$P" pad "$J12" "$L12" "$A12T" --at "3,3" --thickness "18 in" --top "-1 ft" "${K[@]}"; says "$T/refused.txt" "two pad footings in one place would be counted twice"
+"$P" structure "$J12" > "$T/structure12.txt"
+says "$T/structure12.txt" "Beam 1"
+saysnt "$T/structure12.txt" "Beam 2"
+"$P" check "$J12" > "$T/check12.txt"
+saysnt "$T/check12.txt" "lie over each other"
+saysnt "$T/check12.txt" "would be counted twice"
+echo "   (a job saved before that holds one still opens and says it in check: the unit test a_job_that_already_holds_such_a_thing_still_opens_says_so_and_can_be_changed)"
+echo "   weight per foot, typed as the program writes a foot of length"
+"$P" type "$J12" beam "W8x18 beam" --width "5.25 in" --depth "8.14 in" --weight "18 lb/LF" "${K[@]}" >/dev/null && echo "    \"18 lb/LF\" is read"
+if "$P" type "$J12" beam "W8x19 beam" --width "5.25 in" --depth "8.14 in" --weight "18" "${K[@]}" > "$T/w.txt" 2>&1; then echo "FAIL: 18 with no unit was taken"; exit 1; fi
+says "$T/w.txt" "a weight per foot with no unit"
 echo
 echo "  PASS (so far): items 1, 2, 3, 4 and 7 (the roof is not read back: see the line above)"

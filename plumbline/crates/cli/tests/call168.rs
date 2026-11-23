@@ -56,9 +56,12 @@ fn the_three_pages_come_out_to_the_figures_worked_by_hand() {
     }
     // Kitchen is lettered only on the proposed plan.
     assert_eq!(said.matches("KITCHEN 182 SF").count(), 1);
-    let page = ok(&d, &["page", "set.pdf", "--page", "3", "--lines", "--longer-than", "400"]);
+    // The longest line on the sheet is now the overall dimension, 36 ft at 1/4 in: 648
+    // points (call 182, item 1: each side carries its strings and an overall; before, the
+    // longest was the south wall's own 24 ft string, 432 points).
+    let page = ok(&d, &["page", "set.pdf", "--page", "3", "--lines", "--longer-than", "600"]);
     assert!(page.contains("864 by 648 points (12 by 9 in)"), "{page}");
-    assert!(page.contains(": 432.00 points (6.0000 in)"), "{page}");
+    assert!(page.contains(": 648.00 points (9.0000 in)"), "{page}");
     let again = ok(&d, &["plan-set", "job.json", &s, "again.pdf", "--date", "2026-11-22"]);
     assert!(again.starts_with("wrote again.pdf"));
     assert_eq!(std::fs::read(d.join("set.pdf")).unwrap(), std::fs::read(d.join("again.pdf")).unwrap());
@@ -69,7 +72,10 @@ fn a_length_that_is_not_known_carries_vif_and_a_scale_that_does_not_fit_is_refus
     let d = folder("planset-vif");
     let (s, _) = house(&d, &["--status", "Assumed", "--source", "made-up sketch"]);
     let said = ok(&d, &["plan-set", "job.json", &s, "set.pdf", "--date", "2026-11-22", "--list"]);
-    assert_eq!(said.matches("24'-0\" VIF").count(), 3, "{said}");
+    // On each of the three pages the 24 ft wall is lettered on its own string and again on
+    // the string of partitions outside it (call 182, item 1): 6 where it was 3. The note
+    // still counts the model's one length to verify, once a page.
+    assert_eq!(said.matches("24'-0\" VIF").count(), 6, "{said}");
     assert_eq!(said.matches("1 LENGTH IS TO VERIFY IN FIELD (VIF).").count(), 3);
     let before = std::fs::read(d.join("job.json")).unwrap();
     let (good, why) = run(&d, &["plan-set", "job.json", &s, "small.pdf", "--scale", "1/2 in", "--paper", "ARCH A"]);
@@ -86,8 +92,10 @@ fn a_door_is_its_gap_with_no_swing_and_a_level_with_no_mark_has_one_page() {
     let (s, south) = house(&d, &[]);
     let t = id(&ok(&d, &[&["type", "job.json", "door", "door 3 ft", "--width", "3 ft", "--height", "7 ft"], &K[..]].concat()), "type-");
     ok(&d, &[&["door", "job.json", &south, &t, "--offset", "12 ft", "--sill", "0 ft"], &K[..]].concat());
-    let said = ok(&d, &["plan-set", "job.json", &s, "set.pdf", "--date", "x", "--list"]);
-    assert_eq!(said.matches(": door, gap 3'-0\"").count(), 3, "{said}");
+    let said = ok(&d, &["plan-set", "job.json", &s, "set.pdf", "--date", "2026-11-22", "--list"]);
+    // An unmarked door is new work: it is on the proposed plan alone, not on the existing
+    // or the demolition plan (call 179, D1; it was drawn on all three).
+    assert_eq!(said.matches(": door, gap 3'-0\"").count(), 1, "{said}");
     assert!(said.contains(", no swing") && said.contains("DOOR SWINGS ARE NOT SET."));
     let p = folder("planset-plain");
     ok(&p, &["new", "j.json", "Plain (not a real job)"]);
