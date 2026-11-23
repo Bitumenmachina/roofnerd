@@ -9799,9 +9799,15 @@ fail; all 46 command-line demonstrations pass; the three gates and `portmap.sh` 
 **Two rules of the lead's were wrong as written** and are narrowed in DECISIONS.md
 ("Call 186, as built"): a unique thickness in doubt (it would have doubted every
 house's one partition), and anything apart from the plan in doubt (it needed a
-measure). **The narrowed forms are not built yet**, so today: a closet shelf and a
-bench drawn as two lines are still laid as walls; a wall section beside a plan with no
-frame is still laid as a wall (136.25 LF read where 124).
+measure). **The narrowed forms were built the same day** (`demos/planwalls.sh` steps 8.10 and
+8.11; 760 tests in the command-line crates and 46 command-line demonstrations pass on
+the integration copy with them): a closet shelf thicker than every other wall, and
+alone at that thickness by 3 in or more, is in doubt and not laid (the judge's two
+shelf sheets read 135.00 LF where 141.00); a wall section beside a plan is in doubt
+(135.00 where 153.92; 124.00 where 136.25). **Still wrong:** a 6 in ledge between 8 in
+and 4 1/2 in walls is laid as a wall (geometry cannot tell it from a partition); the
+smaller of two houses on one sheet is put in doubt when it has under half the larger
+one's wall, and a person must take its four walls by their numbers.
 
 **Still wrong, by the worker's account:** a window's glass lines give a phantom wall in
 doubt at each window; a lone layered wall is in doubt; a dashed line drawn as many

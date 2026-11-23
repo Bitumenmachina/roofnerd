@@ -74,6 +74,9 @@ const CURVE_TURN: f64 = 35.0;
 /// Two walls are of one thickness if they are drawn within 1/4 in of it: what a sheet's walls are, said by how many of them
 /// are that thick (call 186).
 const THICK_SAME: f64 = INCH / 4.0;
+/// A pair is thicker than the other walls only if it is thicker than the thickest of them by at least this: 3 in, the least a wall
+/// is drawn (call 186, narrowed). An 8 in garage wall among 6 1/2 in walls is an ordinary house; a 12 in shelf among 8 in walls is not.
+const THICK_MORE: f64 = THIN_LEAST;
 /// A group of walls that meet one another is apart from the plan if it is under this share of the plan's length: two plans of
 /// like size on one sheet are both plans, a detail or a section beside one is far smaller (experiment, call 186 item 3).
 const APART_SHARE: f64 = 0.5;
@@ -1367,6 +1370,17 @@ pub fn find_on(lines: &[[[f64; 2]; 2]], feet_per_unit: Option<f64>, page: [f64; 
                     cands[i].doubt = Some(format!("apart from the plan: it meets no wall of the largest group of walls on the sheet ({} of wall), and the group it is in is {} long: another plan, a detail or a section", inch_said(plan_len), inch_said(total[&r])));
                 }
             }
+        }
+    }
+    // A pair thicker than every other wall found, and alone at that thickness, is in doubt (call 186, narrowed): a closet
+    // shelf, a bench, a ledge. A thin partition is not, nor two thick walls, nor a sheet of one wall.
+    for i in 0..nw {
+        if cands[i].doubt.is_some() || cands[i].loser {
+            continue;
+        }
+        let others: Vec<f64> = (0..nw).filter(|&j| j != i && !cands[j].loser).map(|j| cands[j].thick).collect();
+        if !others.is_empty() && others.iter().all(|&t| cands[i].thick >= t + THICK_MORE) {
+            cands[i].doubt = Some(format!("two lines {} apart, thicker than every other wall found on the sheet ({} at most) and the only one that thick (a closet shelf, a bench, a ledge)", inch_said(cands[i].thick).replace("0' ", ""), inch_said(others.iter().cloned().fold(0.0, f64::max)).replace("0' ", "")));
         }
     }
 

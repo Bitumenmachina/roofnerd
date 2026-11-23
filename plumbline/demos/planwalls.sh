@@ -393,6 +393,14 @@ elif name == "overshoot":   # 30 x 16 ft, a door 3 ft wide at 10 to 13 ft in the
     s.ring(0, 0, 30, 16, 0.5); s.opening((0, 0), (30, 0), 0.5, 10, 13, "door", over=1 / 12)
 elif name == "cut":   # 30 x 16 ft, 6 in walls, a cover over the page that shows only the west 20 ft
     s.ring(0, 0, 30, 16, 0.5); clip = "100 100 %.1f 600" % (O + 20 * K - 100)
+elif name == "section":   # 30 x 16 ft, 6 in walls, and beside it a wall section drawn 1.5 times larger: a wall 9 in thick, 12 ft high, a slab 6 in thick meeting it
+    s.ring(0, 0, 30, 16, 0.5)
+    s.line((50, 3.75), (50, 16)); s.line((50.75, 3.75), (50.75, 16)); s.line((44, 4), (50.375, 4)); s.line((44, 3.5), (50.375, 3.5))
+elif name == "shelf":   # 30 x 16 ft, 6 in walls, a 4 1/2 in partition at 18 ft, and a closet shelf 12 in deep, 17 ft 6 in long, from the west wall to the partition
+    s.ring(0, 0, 30, 16, 0.5)
+    s.cut((0, 0.25), (30, 0.25), 17.8, 18.2); s.cut((0, 15.75), (30, 15.75), 17.8, 18.2)
+    s.line((18 - 0.1875, 0.25), (18 - 0.1875, 15.75)); s.line((18 + 0.1875, 0.25), (18 + 0.1875, 15.75))
+    s.line((0.25, 8), (17.8125, 8)); s.line((0.25, 9), (17.8125, 9))
 elif name == "picture":   # the west 15 ft as lines (south, north, west, and a partition at 15 ft), the east half a picture
     for y in (0.25, -0.25): s.line((-0.25, y), (15.1875, y))
     for y in (15.75, 16.25): s.line((-0.25, y), (15.1875, y))
@@ -541,5 +549,32 @@ OUT="$("$P" find-walls "$JW" "$DW")"
 says "cautioned again when walls are found" "caution: " "$OUT"
 OUT="$("$P" calibrate "$JW" "$DW" --from "$FROM" --to "$TO" --distance "36 ft" --status Assumed --source "read off the drawing")"
 lacks "a scale drawings are made at is not cautioned" "caution: " "$OUT"
+
+echo
+echo "-- 8.10 A section drawn beside the plan, far smaller than it, is apart from the plan and in doubt --"
+# By hand: the house is 4 walls, 30 + 30 + 16 + 16 = 92 LF; the section's two walls (the 9 in wall 12 ft 3 in, the slab 6 ft 4 in) are a group of 18 ft 7 in,
+# under half of 92 ft: both in doubt, said apart from the plan, and only the 4 walls are laid.
+sheet_of section
+JU="$T/u.json"; DU="$(new_job "$JU" "$T/section.pdf" 1)"; scale_wide "$JU" "$DU" 121.5 670.5 "30 ft 6 in"
+OUT="$("$P" find-walls "$JU" "$DU")"
+echo "$OUT" | sed 's/^/    | /' | head -14
+says "4 walls and the 2 of the section in doubt" "walls found: 6, 2 of them in doubt" "$OUT"
+says "apart from the plan" "apart from the plan: it meets no wall of the largest group of walls on the sheet (92' 0\" of wall)" "$OUT"
+LAID="$("$P" find-walls "$JU" "$DU" --lay)"
+says "only the house is laid" "laid on ground: 4 walls" "$LAID"
+
+echo
+echo "-- 8.11 A pair thicker than every other wall, and alone at that thickness, is in doubt; a thin partition is not --"
+# By hand: 5 walls found (92 + the 4 1/2 in partition 16 = 108 LF), the 12 in shelf the sixth, in doubt: 12 in is thicker than 6 in and 4 1/2 in, and nothing else is.
+sheet_of shelf
+JH="$T/h.json"; DH="$(new_job "$JH" "$T/shelf.pdf" 1)"; scale_wide "$JH" "$DH" 121.5 670.5 "30 ft 6 in"
+OUT="$("$P" find-walls "$JH" "$DH")"
+echo "$OUT" | sed 's/^/    | /' | head -14
+says "6 found, 1 in doubt" "walls found: 6, 1 of them in doubt" "$OUT"
+says "why" "thicker than every other wall found on the sheet (6\" at most) and the only one that thick (a closet shelf, a bench, a ledge)" "$OUT"
+LAID="$("$P" find-walls "$JH" "$DH" --lay)"
+says "the 5 walls laid, the shelf not" "laid on ground: 5 walls" "$LAID"
+TAKE="$("$P" takeoff "$JH")"
+grep -E "walls [0-9]+ +108\.00 LF" <<<"$TAKE" >/dev/null && echo "    takeoff: walls 108.00 LF (the 4 1/2 in partition found, the shelf not)" || { echo "FAIL: not 108.00 LF"; echo "$TAKE" | head; exit 1; }
 echo
 echo "PASS: the walls, doors and windows of a drawn plan were found as worked by hand, said in full, laid only on the word, all Assumed and sourced to the sheet, and what is not a wall was left out and counted"

@@ -962,3 +962,61 @@ fn a_group_of_walls_far_smaller_than_the_plan_and_apart_from_it_is_in_doubt_as_a
     s.ring(40.0, 0.0, 64.0, 16.0, 0.5);
     assert!(s.found(Q4).walls.iter().all(|w| w.doubt.is_none()));
 }
+
+// ---- call 186, as built: item 2 narrowed ----
+
+fn thick_doubts(d: &Drawn) -> usize {
+    d.walls.iter().filter(|w| w.doubt.as_deref().is_some_and(|x| x.contains("thicker than every other wall"))).count()
+}
+
+#[test]
+fn a_pair_thicker_than_every_other_wall_and_alone_at_that_thickness_is_in_doubt() {
+    // A 12 in closet shelf, 17 ft long, between the west wall and a 4 1/2 in partition in a ring of 6 in walls.
+    for turn in [0.0, 33.0] {
+        let mut s = Sheet::default();
+        s.ring(0.0, 0.0, 30.0, 16.0, 0.5);
+        s.cut([0.0, 0.25], [30.0, 0.25], 17.8, 18.2);
+        s.cut([0.0, 15.75], [30.0, 15.75], 17.8, 18.2);
+        s.partition(18.0, 0.25, 15.75, 0.375);
+        s.line([0.25, 8.0], [17.8125, 8.0]).line([0.25, 9.0], [17.8125, 9.0]);
+        let d = s.turned(turn).found(Q4);
+        assert_eq!(thick_doubts(&d), 1, "turned {turn}: {d:#?}");
+        assert_eq!(d.walls.iter().filter(|w| w.doubt.is_none()).count(), 5, "turned {turn}");
+    }
+}
+
+#[test]
+fn a_thin_partition_a_pair_of_thick_walls_and_a_lone_wall_are_not_in_doubt_for_their_thickness() {
+    // One 4 1/2 in partition in a ring of 6 in walls: found (the shared house).
+    assert_eq!(thick_doubts(&house().found(Q4)), 0);
+    // One 3 1/2 in partition among 12 in walls: found.
+    let mut s = Sheet::default();
+    s.ring(0.0, 0.0, 24.0, 16.0, 1.0);
+    s.line([12.0, 0.5], [12.0, 15.5]).line([12.0 + 3.5 * IN, 0.5], [12.0 + 3.5 * IN, 15.5]);
+    s.cut([0.0, 0.5], [24.0, 0.5], 11.99, 12.0 + 3.5 * IN + 0.01);
+    s.cut([0.0, 15.5], [24.0, 15.5], 11.99, 12.0 + 3.5 * IN + 0.01);
+    let d = s.found(Q4);
+    assert_eq!(thick_doubts(&d), 0, "{d:#?}");
+    assert!(d.walls.iter().all(|w| w.doubt.is_none()));
+    // Two 12 in walls among 6 in walls: both found, neither is alone at its thickness.
+    let mut s = Sheet::default();
+    s.ring(0.0, 0.0, 40.0, 16.0, 0.5);
+    for x in [10.0, 30.0] {
+        s.partition(x, 0.25, 15.75, 1.0);
+        s.cut([0.0, 0.25], [40.0, 0.25], x - 0.51, x + 0.51);
+        s.cut([0.0, 15.75], [40.0, 15.75], x - 0.51, x + 0.51);
+    }
+    let d = s.found(Q4);
+    assert_eq!(thick_doubts(&d), 0, "{d:#?}");
+    // One 8 in wall (a garage wall) alone among 6 1/2 in walls: thicker, but not by a wall's least (3 in): found.
+    let mut s = Sheet::default();
+    s.ring(0.0, 0.0, 40.0, 16.0, 6.5 / 12.0);
+    s.partition(20.0, 6.5 / 24.0, 16.0 - 6.5 / 24.0, 8.0 / 12.0);
+    s.cut([0.0, 6.5 / 24.0], [40.0, 6.5 / 24.0], 19.6, 20.4);
+    s.cut([0.0, 16.0 - 6.5 / 24.0], [40.0, 16.0 - 6.5 / 24.0], 19.6, 20.4);
+    assert_eq!(thick_doubts(&s.found(Q4)), 0);
+    // A sheet with one wall only: its thickness is not in doubt (it meets nothing, and says that).
+    let mut s = Sheet::default();
+    s.line([0.0, 0.0], [20.0, 0.0]).line([0.0, 1.0], [20.0, 1.0]);
+    assert_eq!(thick_doubts(&s.found(Q4)), 0);
+}
