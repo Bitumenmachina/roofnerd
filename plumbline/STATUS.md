@@ -10154,6 +10154,43 @@ Worked by hand (every figure is the model's; the window draws what it is handed)
   with no trim lines, dot for dot but for the switch itself).
 - **A click on a corner board** selects its wall; on the window's casing, the window.
 
+## The judge's findings fixed: a demonstration, written before it is built (call 191; 2026-11-23)
+
+New steps in `demos/planwalls.sh` (A and B) and `demos/trim.sh` (C); made-up sheets at
+1/4 in to the foot; a wall's length counted as those demonstrations count it.
+
+Worked by hand:
+
+- **A1.** A sheet with a U-shaped plan, three walls of 80 ft (west, south and east
+  of an 80 by 80 ft square, open to the north): 80 + 80 + 80 = **240 LF**; and a 30 by
+  30 ft house (**120 LF**) standing inside the U, 25 ft clear of its walls. Listed as
+  2 drawings, 240 ft and 120 ft. `--plan 1 --lay`: the U's three walls only, takeoff
+  **240.00 LF** (it laid 360). `--plan 2 --lay` on a fresh job: **120.00 LF**.
+- **A2.** Two houses in line, a 30 ft south wall and a 28 ft south wall on one line
+  with 15 ft of bare paper between: two walls, **30 + 28 = 58 LF** on that line, the
+  15 ft gap said with where, no door found in it, and the two houses listed as two
+  drawings. The same two with a garage door drawn in a 16 ft gap of ONE house's wall
+  (a line across it): one wall, a 16 ft opening.
+- **A4.** A clean roof plan of 108 LF, and beside it three groups of wall that meet
+  nothing, 30, 30 and 20 LF, each more than 8 ft from the others: 80 ft found apart
+  from the largest drawing, over half of 108: nothing laid, and it says 80 ft is in
+  doubt. With one group of 20 LF alone beside it (under half): the 108 LF is laid,
+  the 20 set apart, as before.
+- **B6.** A sheet scaled by hand and marked Known at 1/4 in to the foot;
+  `--scale-by 1` with a string that would make it 1/8 in: refused, the Known scale
+  named; with `--anyway`: taken, Assumed, and it says 1/4 in was replaced by 1/8 in.
+- **B7.** A sheet with one string: listed with "nothing else on the sheet to check it
+  against"; the scale taken from it says so again.
+- **B8.** The 30 by 20 ft house laid from its sheet (100.00 LF), then the sheet's
+  scale changed: the 4 laid walls are each named as where the old scale put them.
+- **C10.** The trim house with the north eave's fascia priced on `plan_length`
+  instead of its true length: that line is in "Left out" with why; the totals read
+  1 piece, 26.00 LF drawn, 52.00 LF priced, and say 26.00 LF is priced and not drawn.
+- **C11.** The roof drawn alone with a soffit line: "no figure", and no "0 SF".
+- **C12.** A hip roof 26 by 18 ft on plan with a 9 in overhang and soffit on all four
+  eaves: 2 x (26 + 18) x 0.75 = **66.00 SF** priced, as it is today, and the figure
+  says 4 corners, 4 x 0.75 x 0.75 = **2.25 SF**, are in two runs each.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **As of 2026-11-23 (the lead, after the merge of that day). Read this block first; what

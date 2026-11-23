@@ -7245,3 +7245,67 @@ only where it was better.
   job is byte for byte the command line's.
 - **The sheet's clash tables** each say their count by name, and "Laid in a floor or a
   wall" is a table of its own; the window's counts are the model's.
+
+### Call 191. What the judge of the sheet's scale, two drawings and the trim pieces found, and what is decided (2026-11-23)
+
+A cold judge (Sonnet, on the program as committed at d8d74cb, from empty jobs and
+sheets it made up; `research/judgment-scale-plan-trim.md`). The lead read every
+finding. Each that is so moves what the program does or says, so each is decided
+here first.
+
+**A. Laying from a sheet with more than one drawing.**
+1. *`--plan <n>` took a box, not the drawing.* A plan shaped like a U (240 LF) with
+   another house (120 LF) inside the box round it: `--plan 1 --lay` laid both, 360 LF.
+   **`--plan <n>` takes the walls of that drawing and no others**: the ones the
+   listing counted. What it lays is what it listed, wall for wall.
+2. *Two houses in line, 15 ft apart, became one wall 73 LF long with a "14 ft 6 in
+   door".* **A gap wider than 8 ft is an opening only where something is drawn in
+   it** (a leaf, a swing, a line across: a garage door is drawn). A bare gap wider
+   than that is two walls, and the gap is said with where. No wall is laid across
+   white paper.
+3. *What makes a drawing.* Walls that meet are one drawing; walls that do not meet
+   are of one drawing when they are within 8 ft of one another (the same 8 ft: what
+   could be an opening), not 15.
+4. **Nothing is laid unasked while much of the sheet is in doubt.** Where the wall
+   found outside the largest drawing (set apart, or in other drawings) is together
+   at least half of it, nothing is laid until the person says which (`--plan`,
+   `--within`), and it says how much is in doubt. This is what keeps a roof plan
+   from being laid when the floor plan beside it falls into pieces. A small thing
+   beside a plan (a section, under half) is set apart and the plan is laid, as
+   call 186 has it.
+5. A `--within` box that cuts a wall says which walls it cut. Laying a second
+   drawing onto a level that holds the first says what to do about it.
+
+**B. The sheet's scale.**
+6. **A scale that is Known is not replaced by a string read off the sheet** without
+   the person's word (`--anyway`); when it is replaced the message says what it was
+   and what it is now, and it is Assumed.
+7. **One string alone is said to be alone**: "1 dimension string: nothing else on
+   the sheet to check it against". A scale taken from it carries that caution.
+8. **Walls laid from a sheet are said when its scale changes**, as traced walls
+   are: each is where the old scale put it and is named.
+9. A string of no length ("0'-0"") is not a dimension. Dimension-like strings that
+   could not be read (inches alone, metric) are counted and said beside the ones
+   that were.
+
+**C. The trim pieces.**
+10. **A priced line whose piece is not drawn is always said.** A fascia line priced
+    on another figure (a plan length, a typed number) was dropped without a word and
+    the totals were said to agree at 62 LF where the estimate prices 88. Every line
+    that prices a kind of trim is either drawn or in "Left out" with why, and each
+    kind's total is set against all that the estimate prices for it.
+11. **No figure is not zero.** A soffit whose overhang is Unknown reads "no figure",
+    never "0 pieces come to 0 SF; the lines price 0 SF".
+12. **Soffit at a corner where two eaves meet is in both runs, and that is how
+    soffit is taken off**: total eave length times the overhang's width, with waste
+    added on top (checked 2026-11-23 against published takeoff guides: BYU-Idaho's
+    construction estimating text, books.byui.edu/construction_estimat/exterior_finishes_es;
+    Angi's and Hunker's soffit guides: none takes the corners out). The judge's hand
+    figure took them out (30.25 SF on a hip roof with a 2 ft 9 in overhang; 2.25 SF
+    at 9 in). The formula stays. **The eave's figure says it**: how much of the
+    soffit is corner counted in two runs.
+13. The list prints a quantity as the estimate prints it (2 places), so two totals
+    that are the same to the cent do not read as different in the fourth place.
+
+Not fixed here, and said in STATUS.md: a door's casing at a wall's end overlaps the
+corner board (a drawing matter, for the window's half).
