@@ -10128,6 +10128,32 @@ What is not right (each is a drawing matter; no quantity or price rests on it):
 - Not tested: a labor line left out; two lines pricing the same piece; walls that
   meet off square.
 
+## The outside trim drawn: a demonstration, written before it is built (call 184 step 1, the window's half; 2026-11-23)
+
+`demos/trimw.sh`, in the window, on the house of "The outside trim priced" (24 by 16
+ft, 9 ft walls, a gable roof 1 ft out all round, a window and a door in the south
+wall), made at the command line with its trim lines given, then opened.
+
+Worked by hand (every figure is the model's; the window draws what it is handed):
+
+- **Opened**: the Show list has a switch "Trim" reading **27** (2 fascia, 4 rake
+  fascia, 2 soffits, 4 rake soffits, 8 corner boards, 7 pieces of casing).
+- **From the street corner**: each outside corner shows its two boards from the
+  ground to the wall's top, the eave has a fascia with a soffit behind it, the window
+  and the door are cased. The picture differs from the same view with the Trim switch
+  off at the eaves, the corners and round the two openings, and nowhere else on the
+  walls' faces (measured: of the dots that differ, at least nine in ten lie within
+  the strips where the model's pieces are).
+- **A piece casts a shadow**: with the sun high in the south (the Sun set to noon in
+  June), the south wall just under the soffit is darker than the same wall 3 ft
+  lower, and darker than it is there with the Trim switch off.
+- **Only what is priced**: the fascia line taken off the north eave at the command
+  line and the job opened again: the switch reads **26** and the north eave has no
+  fascia where the south still has.
+- **Switch off**: the house as it was drawn before this (the same picture as the job
+  with no trim lines, dot for dot but for the switch itself).
+- **A click on a corner board** selects its wall; on the window's casing, the window.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **As of 2026-11-23 (the lead, after the merge of that day). Read this block first; what
