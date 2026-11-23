@@ -6788,3 +6788,55 @@ the person's word.
    asked for, by its floor.**
 9. **Words**: a raw mark where a name belongs in what is said of a find; marks of
    certainty with no legend in the field list.
+
+### Call 184. The plan for "hyper realistic" (2026-11-23; Patrick: "What is your plan for hyper realistic ?")
+
+Call 62 has his words: "editing software for construction that feels like playing a
+hyper realistic video game". Where it stands: the engine's light is already on (a sun
+with soft cascaded shadows, light from a sky, ambient shadow in corners, a filmic fold
+of the range, smoothing over time, relief on brick, siding and shingles). The house
+reads as a house. It does not read as real, and the reason is not the engine: it is
+**what is drawn**. Walls are flat slabs with a pattern on them; roofs stop at the wall
+with no overhang; windows sit flush; inside, floors are bare gray and there are no
+ceilings; cabinets are tan blocks; the house stands on a gray plane. A game looks real
+because of small things that catch light and cast shadow.
+
+**The rule that keeps it honest (the fixed rule, unchanged):** what the house is
+dressed in is what the estimate prices. Every piece of detail below is drawn from a
+priced line or a thing set in place, and each new kind of detail arrives with the line
+that prices it (the envelope reviewer asked for exactly these lines: fascia, soffit,
+gutters, corner boards, casing). Nothing is scenery.
+
+**In this order**, each step shown to Patrick as a before and an after of the same
+view, and judged by a visual judge against VISUAL.md as well as by the lead's eye:
+
+1. **Detail that casts shadow, outside.** Eaves that overhang, with fascia, soffit,
+   gutters and downspouts; windows and doors set back in the wall with casing and sills
+   that stand proud; corner boards; ridge and hip caps and a drip edge; the foundation
+   showing below the siding and a line where the ground meets it; lap siding and
+   shingles with real thickness up close.
+2. **The light finished.** The engine pieces not yet switched on: true reflections of
+   the sky in glass and metal, softer sun shadows that sharpen where things touch,
+   contact shadows under trim, a glow on bright sky, the eye adjusting when walking
+   from outside to in; and a sky with the sun where it would be for the site's north
+   and a time of day, so a sun study is one slider.
+3. **Materials that do not repeat.** Each finish as a full set (colour, roughness,
+   relief) with variation across the wall so brick and siding stop tiling; glass that
+   reflects; metal that looks like metal. Made by the program; a public-domain texture
+   set may be shipped where making one is worse, recorded in LICENSES.md.
+4. **Inside.** Floors in their finish (plank, tile with its grid), ceilings, base and
+   casing, cabinets with doors, drawers, toe kick and a counter that overhangs,
+   fixtures in their real forms, light through the windows across the floor. Walking
+   through a room reads as a room.
+5. **The scan as the real house.** The scan's own colored points shown in 3D with the
+   model built inside them: existing as it truly is, proposed as modeled, and one
+   slider between them. Nothing drawn is more real than the house itself.
+6. **The place.** The ground as the site that is priced (lawn, drive, walks) to a
+   horizon under the sky. Trees and neighbors stay out (QUESTIONS.md Q22's working
+   answer) unless Patrick says otherwise.
+
+Movement stays as call 62 has it (the wheel dives at the pointer, the ground slides
+with the hand, nothing jumps), and gains walking with doors that open.
+
+Built by one window builder at a time, after call 178's clean-up is merged; steps 1
+and 2 first, since they change every picture.
