@@ -6561,3 +6561,76 @@ was checked by hand against the model. What is wrong is the drawing.
 Lettering as strokes (not text a reader can search) is left: it is what keeps the
 program free of a font's licence and the sheets the same on every machine; said in the
 notes of SPEC.md.
+
+### Call 180. What the second judge found in the load path, the moved wall and the figures, and what is decided (2026-11-23)
+
+A judge (Sonnet, cold, on the program as committed at e7f2efa) took what a wall carries
+(call 176, never judged), the moved wall (calls 170 and 179 B) and the fixed figures
+(call 179 C) to houses nobody had tried. Notes: `research/judgment-calls-176-179BC.md`.
+What held: every wall moved out and in on a box, an L and a T matched the hand
+figures, as did two-storey chains, partitions, the BIM round trip of angled and marked
+walls, and the siding over stone.
+
+**A. What a wall carries (call 176): all or nothing was wrong.**
+1. *Walls whose lines are up to a thickness apart read as standing on one another for
+   the whole length, even when they only touch; a wall at 2 degrees reads as standing
+   on nothing though 14 LF of it lies over the wall below.* **What stands on a wall is
+   worked from the two walls' bodies on the plan, not from a gate on angle and offset:
+   the upper wall stands on the lower for the length over which at least half the upper
+   wall's thickness lies over the lower wall's body.** Where less than half lies over
+   it, for that length it is said "beside it, not on it". Any angle.
+2. *A beam 18 in below a wall reads "ordinary for a partition".* A beam under a wall is
+   under the floor the wall stands on: **a beam in the wall's line whose top is within
+   2 ft below the wall's base is under it.** The same for an eave over a wall: **a roof
+   is over a wall by the plan alone** (the 2 ft test on height is dropped, here and in
+   a move), so a raised eave is not lost.
+3. *A wall two levels up, with nothing drawn between, raises no caution when the wall
+   under it comes down.* **It is said as what it is: "wall X, two levels up, lies over
+   this line with nothing drawn between them"**, on the wall and in the caution.
+4. *An interior wall under a ridge, or the high wall of a shed roof, reads "nothing
+   found standing on it".* The program works eaves only. **Where a roof plane lies over
+   a wall that is not under its eave, it says "a roof is over this wall: whether it
+   bears here is not worked (only eaves are)"**, never "nothing".
+5. *A wall said bearing that stands on nothing raises nothing.* **A caution and a field
+   question: "said bearing, and nothing is found under it for N LF".**
+6. *The dollars riding on a wall that comes down leave out the window in it.* **What
+   rides is everything priced on the wall and on its openings.** Two walls named alike
+   in one sentence are named with their levels.
+
+**B. The moved wall.**
+1. *A roof drawn with an overhang, or a slab whose edge is outside the wall, stays put
+   and nothing is said; the roof's price does not move ($4,185.92 where $4,829.92 by
+   hand).* **A roof's edge goes with the wall it is over (by A2: the plan alone, the
+   edge parallel to the wall and outside it by no more than 4 ft with no other wall
+   between); a floor's edge goes with the wall it lies along within 2 ft.** And the
+   rule that ends the silence: **whenever a moved wall has a floor, a footing or a roof
+   on its level or over it that did not go with it, the move says so by name ("roof 1
+   was left where it was"), and `check` cautions on a roof or floor that no longer
+   reaches, or reaches past, the walls under it.**
+2. *A follower that turns can cross a third wall, unseen.* **Every wall the move
+   changes is tested, not only the one moved; the move is refused if any would cross a
+   wall it does not meet.**
+3. *`--alone` leaves the corners open and says only that a footing has no wall.*
+   **`--alone` says each corner it opens**, and the room's own figure already says its
+   walls do not close.
+4. *"4 ft to the east" is refused.* **Read**, with "toward", "to the" and the compass
+   words spelled out.
+
+**C. Figures.**
+1. *A floor 0.0001 ft out of square gives 18 joists where 19; a house turned and
+   written to four places the same.* **A joist's mark that falls within 1/16 in of an
+   edge is on the edge**: the count does not turn on the last decimal. The square floor
+   nudged and turned joins the tests.
+2. *The rim along a 45 degree chamfer is 48 LF where 52.14.* **The rim is the true
+   length of every edge the joists' ends meet**, not its length measured square to the
+   joists. (For square floors nothing moves.)
+3. *The BIM file read back gives a level 9 ft 1 1/8 in high as 9.625 ft, Known.*
+   **Wrong and Known: a level's height is written and read back to what it was, and
+   everything read from a model is Assumed** (call 175). *A 4 in wall stub can come
+   back turned, and a clash of type names drops a 20 ft wall*: a wall is never dropped
+   for its type's name (the type is told apart by a number after its name, and said).
+4. *Beams lying partly on one another, and pad footings overlapping by half, are
+   accepted and counted twice.* **Refused as walls on one line are: for the length two
+   beams share a line, and where two pads' areas overlap.**
+5. *A door taller than its wall leaves the wall's net area Unknown with no reason.*
+   **Refused when drawn**, saying the wall's height.

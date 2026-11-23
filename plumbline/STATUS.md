@@ -9310,6 +9310,34 @@ sheet numbers start again at A-101 on every level and the demolition sheet is no
 the standard's own series; lettering is checked from where it is drawn, not by reading
 the PDF back. Not judged again.
 
+## The load path, the moved wall and the fixed figures judged (2026-11-23)
+
+A second judge on the program as committed at e7f2efa:
+`research/judgment-calls-176-179BC.md`; DECISIONS.md call 180 has each finding and
+what is decided. **Nothing below is fixed yet.**
+
+**Wrong figures and silences, found:**
+- A roof drawn with an overhang, or a slab edge outside its wall, stays put when the
+  wall moves, with nothing said: a roof priced $4,185.92 stayed there where $4,829.92
+  is right, and `check` says the figures agree.
+- A follower that turns in a move can cross a third wall; nothing refuses it.
+- What a wall carries is all or nothing: walls that only touch read as standing on one
+  another for their whole length; a wall 2 degrees off reads as standing on nothing; a
+  beam 18 in below reads as no support; a wall two levels up over a wall taken out
+  raises nothing; a wall under a ridge reads "nothing found standing on it".
+- A floor a ten-thousandth of a foot out of square counts 18 joists where 19; a rim
+  along a chamfer is 48 LF where 52.14.
+- The BIM file read back gives a level 9 ft 1 1/8 in high as 9.625 ft and calls it
+  Known; a short wall stub can come back turned and cost a real wall.
+- Beams overlapping along a line and pads overlapping by half are counted twice.
+
+**Held, by the judge's hand figures:** every wall moved out and in on a box, an L and
+a T; two-storey chains; partitions; the BIM round trip of angled and marked walls; the
+siding over stone at every sill it tried.
+
+**Two other judges of this round (the scan's walls again; the plan set again) stopped
+at a permission prompt and have found nothing yet.**
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **Since this was written (2026-11-18): a second builder, Opus 5.5, under call 129.**
