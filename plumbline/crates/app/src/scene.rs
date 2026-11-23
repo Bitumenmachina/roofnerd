@@ -58,6 +58,34 @@ pub struct Ground;
 /// The light that casts the shadows. On plan it casts none.
 #[derive(Component)]
 pub struct KeyLight;
+/// The sun as it is seen in the sky: a small bright disc where the light comes from.
+#[derive(Component)]
+pub struct SunDisc;
+
+/// Where the site is, north of the equator, in degrees, for a sun study. A job holds no
+/// site yet, so the sun is worked for a middle latitude and the card says so.
+pub const SITE_LATITUDE: f32 = 40.0;
+
+/// Where the sun is: the way to it in the view's own axes (east is x, north is against z,
+/// up is y) and how high it stands above the horizon, in degrees. Plan north is up the
+/// plan. The standard sun position: the day's declination from the month (the middle of
+/// it), the hour angle from the hour, and the height and the bearing from those and the
+/// latitude. `hour` is sun time: the sun is due south at 12.
+pub fn sun_at(hour: u32, month: u32) -> (Vec3, f32) {
+    let rad = std::f32::consts::PI / 180.0;
+    const DAYS_BEFORE: [f32; 12] = [0.0, 31.0, 59.0, 90.0, 120.0, 151.0, 181.0, 212.0, 243.0, 273.0, 304.0, 334.0];
+    let day = DAYS_BEFORE[(month.clamp(1, 12) - 1) as usize] + 15.0;
+    let declination = 23.44 * rad * (2.0 * std::f32::consts::PI * (284.0 + day) / 365.0).sin();
+    let hour_angle = (hour as f32 - 12.0) * 15.0 * rad;
+    let latitude = SITE_LATITUDE * rad;
+    let up = (latitude.sin() * declination.sin() + latitude.cos() * declination.cos() * hour_angle.cos()).clamp(-1.0, 1.0);
+    let height = up.asin();
+    // The bearing from north, turning east: due east in the morning, west in the afternoon.
+    let toward = ((declination.sin() - up * latitude.sin()) / (height.cos() * latitude.cos()).max(1e-4)).clamp(-1.0, 1.0).acos();
+    let bearing = if hour_angle <= 0.0 { toward } else { 2.0 * std::f32::consts::PI - toward };
+    let level = height.cos();
+    (Vec3::new(bearing.sin() * level, up, -bearing.cos() * level), height / rad)
+}
 
 /// Whether the full picture is drawn (ambient occlusion, edges steadied over several
 /// frames) or the plain one. The plain one is for a machine with no graphics card; ask
@@ -212,7 +240,9 @@ pub fn setup(mut commands: Commands, mut store: ResMut<GizmoConfigStore>, mut me
     // casts the shadows; and the sky, which lights every surface by how much of the sky
     // and how much of the ground it faces, and which glass and metal reflect
     // (`skylight`). There is no second lamp and no flat light from everywhere.
-    let key_at = Transform::from_xyz(-76.0, 64.0, -8.0).looking_at(Vec3::ZERO, Vec3::Y);
+    // (Where the sun is comes from the sun study, `sun_at`: a mid-morning in spring to begin
+    // with. `sun_study` moves it when the study changes.)
+    let key_at = Transform::from_translation(sun_at(10, 4).0 * 100.0).looking_at(Vec3::ZERO, Vec3::Y);
     let linear = |c: Color| { let l = c.to_linear(); [l.red, l.green, l.blue] };
     let (falls, reflects) = crate::skylight::light(linear(theme::sky_horizon()), linear(theme::sky_overhead()), linear(theme::yard()));
     let sky_light = EnvironmentMapLight { diffuse_map: images.add(falls), specular_map: images.add(reflects), intensity: SKY_LIGHT, ..default() };
@@ -231,7 +261,13 @@ pub fn setup(mut commands: Commands, mut store: ResMut<GizmoConfigStore>, mut me
         dome.insert_attribute(Mesh::ATTRIBUTE_COLOR, colours);
     }
     let over = materials.add(StandardMaterial { base_color: Color::WHITE, unlit: true, cull_mode: None, fog_enabled: false, ..default() });
-    commands.spawn((Mesh3d(meshes.add(dome)), MeshMaterial3d(over), Transform::from_scale(Vec3::splat(15_000.0)), bevy::light::NotShadowCaster, Pickable::IGNORE, Sky));
+    // The sun in the sky: a small disc, brighter than the sky, where the light comes from. It
+    // is a child of the dome, so it goes where the dome goes and is hidden with it on plan.
+    let sun_face = materials.add(StandardMaterial { base_color: Color::LinearRgba(LinearRgba::rgb(14.0, 12.4, 9.6)), unlit: true, fog_enabled: false, ..default() });
+    let sun_ball = meshes.add(Sphere::new(0.5).mesh().ico(2).expect("a sphere"));
+    commands.spawn((Mesh3d(meshes.add(dome)), MeshMaterial3d(over), Transform::from_scale(Vec3::splat(15_000.0)), bevy::light::NotShadowCaster, Pickable::IGNORE, Sky)).with_children(|d| {
+        d.spawn((Mesh3d(sun_ball), MeshMaterial3d(sun_face), Transform::from_translation(sun_at(10, 4).0 * 0.97).with_scale(Vec3::splat(0.03)), bevy::light::NotShadowCaster, Pickable::IGNORE, SunDisc));
+    });
     // The ground far off fades into the sky at the horizon, in the horizon's own light.
     // PLUMBLINE_FOG="r,g,b" (linear) tries another colour for the far haze, for setting it by eye.
     let haze = std::env::var("PLUMBLINE_FOG").ok().and_then(|v| { let f: Vec<f32> = v.split(',').filter_map(|x| x.trim().parse().ok()).collect(); (f.len() == 3).then(|| LinearRgba::rgb(f[0], f[1], f[2])) }).unwrap_or(HAZE);
@@ -1449,8 +1485,29 @@ pub fn ground_tone(doc: Res<Doc>, ground: Query<&MeshMaterial3d<StandardMaterial
     }
 }
 
+/// The sun where the sun study puts it: the light that casts the shadows comes from there,
+/// and the disc in the sky is there. It changes light only. Below the horizon there is no
+/// sun and no light from it (the sky's own light is not changed); within eight degrees of
+/// it the sun's light is let in gradually, as a low sun is.
+pub fn sun_study(doc: Res<Doc>, mut last: Local<Option<(u32, u32)>>, mut light: Query<(&mut Transform, &mut DirectionalLight), (With<KeyLight>, Without<SunDisc>)>, mut disc: Query<(&mut Transform, &mut Visibility), (With<SunDisc>, Without<KeyLight>)>) {
+    let now = (doc.sun.hour, doc.sun.month);
+    if *last == Some(now) {
+        return;
+    }
+    *last = Some(now);
+    let (toward, height) = sun_at(now.0, now.1);
+    for (mut t, mut sun) in &mut light {
+        *t = Transform::from_translation(toward * 100.0).looking_at(Vec3::ZERO, Vec3::Y);
+        sun.illuminance = SUN_LIGHT * (height / 8.0).clamp(0.0, 1.0);
+    }
+    for (mut t, mut seen) in &mut disc {
+        t.translation = toward * 0.97;
+        *seen = if height > 0.0 { Visibility::Inherited } else { Visibility::Hidden };
+    }
+}
+
 /// Ease the camera toward where it is going, and set the lens for the view it is in.
-pub fn place_camera(mut orbit: ResMut<Orbit>, doc: Res<Doc>, time: Res<Time>, mut camera: Query<(&mut Transform, &mut Projection, Option<&mut DistanceFog>, &mut Tonemapping), (With<MainCamera>, Without<Sky>)>, mut sun: Query<&mut DirectionalLight, With<KeyLight>>, mut sky: Query<(&mut Transform, &mut Visibility), (With<Sky>, Without<MainCamera>)>) {
+pub fn place_camera(mut orbit: ResMut<Orbit>, doc: Res<Doc>, time: Res<Time>,  mut camera: Query<(&mut Transform, &mut Projection, Option<&mut DistanceFog>, &mut Tonemapping), (With<MainCamera>, Without<Sky>)>, mut sun: Query<&mut DirectionalLight, With<KeyLight>>, mut sky: Query<(&mut Transform, &mut Visibility), (With<Sky>, Without<MainCamera>)>) {
     // A plan is a drawing, not a view: it has no shadows to hide what is on the floor.
     for mut light in &mut sun {
         if light.shadow_maps_enabled == doc.plan {

@@ -26,4 +26,8 @@ bevy = { version = "=0.20.1", default-features = false, features = [
   "bevy_ui", "bevy_ui_render", "bevy_input_focus", "default_font",
   "ktx2", "zstd_rust", "tonemapping_luts",
   "bevy_anti_alias", "bevy_post_process", "hdr",
+  # The light finished (call 184, step 2): the table the engine's environment light is
+  # worked from (without it the shader falls back on an analytic guess), the noise
+  # texture its filtering uses (a placeholder without it). (Soft shadows and contact shadows were tried and left off: call 184 report.)
+  "dfg_lut", "bluenoise_texture",
 ] }

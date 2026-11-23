@@ -231,6 +231,26 @@ pub struct Beside {
     pub job: Job,
 }
 
+/// Where the sun is, for a sun study: a time of day (a whole hour, 6 in the morning to 6
+/// in the evening) and a month. A way of looking, like the switches: it changes the
+/// light and nothing else, no figure moves and nothing of it is saved in the job (call
+/// 184, step 2). The default is a mid-morning in spring.
+#[derive(Clone, Copy, PartialEq)]
+pub struct SunStudy {
+    /// The card with its two settings is open.
+    pub open: bool,
+    /// The hour, 6 to 18, on the clock as it is on the site (sun time).
+    pub hour: u32,
+    /// The month, 1 to 12.
+    pub month: u32,
+}
+
+impl Default for SunStudy {
+    fn default() -> SunStudy {
+        SunStudy { open: false, hour: 10, month: 4 }
+    }
+}
+
 /// What of the building is on show.
 #[derive(Clone, PartialEq)]
 pub struct Show {
@@ -296,6 +316,8 @@ impl Show {
 
 #[derive(Resource)]
 pub struct Doc {
+    /// Where the sun is (call 184, step 2); a way of looking, never saved.
+    pub sun: SunStudy,
     /// The trade whose button was pressed last and the switches as it set them
     /// (call 177): its button reads on while they are still so.
     pub trade: Option<(&'static str, Show)>,

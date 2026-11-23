@@ -9651,6 +9651,45 @@ window demonstration is rerun on this tree, their pictures show the window befor
 the merge**, and a wall moved in the window is undemonstrated. That rerun is the next
 window builder's first job.
 
+## The window on the merged tree, a moved wall that says what followed, and the sun (contract 184; 2026-11-23)
+
+Built by the window builder (Sonnet); accepted by the lead by its diff, its pictures
+(every light pair, the Sun pictures and the moved wall's read by the lead) and the
+runs named here.
+
+- **Every window demonstration passes on the tree as merged at 90aed89** (33, and the
+  new `demos/movew.sh`): this was owed since that merge. Final run on the frozen
+  build of this section's source. Six failed first and were run again: three when the
+  disk filled (the lead's test build, not the program), `roomlinew` once (its check
+  "red over blue by more than 20" reads 20: it sits on its bound and wants a wider
+  sample), and `glassw` and `tradesw` because the sun moved (below).
+- **`demos/movew.sh`**: the east wall of a house moved 4 ft in the window. The card
+  says, in the model's sentences, the two walls that followed and grew 4 ft and the
+  floor that went with it, 384.00 SF now 448.00 SF; the saved job is byte for byte
+  the command line's `move`; the price goes from $7,600.00 to $8,616.00 on the
+  sheet; one Undo gives the opened job back byte for byte; a move 30 ft west across
+  the house is refused in the model's words and changes nothing.
+- **The Sun** (`demos/lightw.sh`, pictures `demos/captured/light/`): a button beside
+  3D, Plan, Walk and Frame; time of day and month; the shadow lies west-northwest at
+  ten in the morning, east at five, due north at noon in December.
+- **`tradesw.sh`** now also checks that the sheet's clash counts are the model's (in
+  the same space 12, set against 10, holes 47, laid in 18).
+
+Changed, and named: the light in every picture (DECISIONS.md, "Call 184 step 2, as
+built"); the expectations of `glassw.sh` and `tradesw.sh` that moved with it, each
+with its reason in the script. The lead moved both ends of `glassw`'s bounds where
+the builder had widened one, and ran it again on the same build: it passes.
+
+What is not right:
+- On plan, with the Details panel open, the east side of the house is under the panel.
+- The sky does not change colour with the hour: dawn and dusk are lit like noon.
+- The Sun card has buttons only; the site's latitude is assumed.
+- The Move tool has no "Alone" switch in the window (call 171 asked for one); its
+  card shows four lines and a "More" button.
+- The clash marks on the model count only those in view.
+- `roomlinew`'s colour check sits on its bound.
+- The look: the light is a little better and the house still reads as a model.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **As of 2026-11-23 (the lead, after the merge of that day). Read this block first; what

@@ -362,6 +362,7 @@ pub fn rebuild(mut commands: Commands, doc: Res<Doc>, snap: Res<Snapshot>, plans
         }
         top_bar(root, fonts, &doc, &snap);
         views(root, fonts, &doc);
+        sun_card(root, fonts, &doc);
         status_line(root, fonts, &doc);
     });
 }
@@ -402,6 +403,52 @@ fn views(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc) {
             });
         }
         on_click(&mut button(bar, fonts, "Frame", "F", false), |doc| doc.press(KeyCode::KeyF));
+        // Where the sun is (call 184, step 2): its card opens beneath.
+        on_click(&mut button(bar, fonts, "Sun", "", doc.sun.open), |doc| {
+            doc.sun.open = !doc.sun.open;
+            doc.touch();
+        });
+    });
+}
+
+/// The sun's two settings, under the view buttons: a time of day and a month, each stepped
+/// earlier and later, and where the sun then is. It changes the light and nothing else:
+/// no figure moves and nothing of it is kept in the job.
+fn sun_card(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc) {
+    if !doc.sun.open {
+        return;
+    }
+    let (toward, height) = crate::scene::sun_at(doc.sun.hour, doc.sun.month);
+    let hour = match doc.sun.hour {
+        12 => "12:00 noon".to_string(),
+        h if h < 12 => format!("{h}:00 am"),
+        h => format!("{}:00 pm", h - 12),
+    };
+    const MONTHS: [&str; 12] = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    let bearing = toward.x.atan2(-toward.z).to_degrees().rem_euclid(360.0);
+    let point = ["north", "northeast", "east", "southeast", "south", "southwest", "west", "northwest"][((bearing + 22.5) / 45.0) as usize % 8];
+    let where_it_is = if height > 0.0 { format!("The sun stands {:.0} degrees high, in the {point}.", height) } else { "The sun is below the horizon: no light from it.".to_string() };
+    let mut node = Node { top: px(TOP_H + 44.0), right: px(RIGHT_W), flex_direction: FlexDirection::Column, row_gap: px(6.0), padding: UiRect::all(px(10.0)), ..default() };
+    node.border_radius = BorderRadius::all(px(theme::BUTTON_RADIUS + 6.0));
+    p.spawn(docked(node)).with_children(|c| {
+        let row = |c: &mut ChildSpawnerCommands, label: &str, before: &str, value: String, after: &str, step: fn(&mut Doc, bool)| {
+            c.spawn(Node { align_items: AlignItems::Center, column_gap: px(6.0), ..default() }).with_children(|r| {
+                r.spawn(Node { width: px(78.0), ..default() }).with_child(text(fonts, label, 12.0, Weight::Medium, theme::ink_soft()));
+                on_click(&mut button(r, fonts, before, "", false), move |doc| step(doc, false));
+                r.spawn(Node { width: px(84.0), justify_content: JustifyContent::Center, ..default() }).with_child((text(fonts, value, 12.0, Weight::Semibold, theme::ink()), TextLayout::no_wrap()));
+                on_click(&mut button(r, fonts, after, "", false), move |doc| step(doc, true));
+            });
+        };
+        row(c, "Time of day", "Earlier", hour, "Later", |doc, later| {
+            doc.sun.hour = if later { (doc.sun.hour + 1).min(18) } else { doc.sun.hour.saturating_sub(1).max(6) };
+            doc.touch();
+        });
+        row(c, "Month", "Month before", MONTHS[(doc.sun.month.clamp(1, 12) - 1) as usize].to_string(), "Month after", |doc, later| {
+            doc.sun.month = if later { doc.sun.month % 12 + 1 } else { (doc.sun.month + 10) % 12 + 1 };
+            doc.touch();
+        });
+        c.spawn(text(fonts, where_it_is, 11.0, Weight::Regular, theme::ink_soft()));
+        c.spawn(text(fonts, format!("Worked for a site {} degrees north: the job holds no site yet.", crate::scene::SITE_LATITUDE as u32), 11.0, Weight::Regular, theme::ink_faint()));
     });
 }
 

@@ -98,12 +98,20 @@ import sys
 from PIL import Image
 out = sys.argv[1]
 pic = lambda n: Image.open(f"{out}/{n:02d}-model.png").convert("RGB")
-def door(c):                     # the door's brown, (104, 80, 58) as lit; selected it is (116, 97, 100)
+# Call 184, step 2 (the sun is where it would be at ten in the morning in April, not a fixed lamp
+# at the viewer's left): what the program draws is lit differently, and the colours these tests
+# look for move with it. The door's brown reads (127, 96, 67) where it read (104, 80, 58), and
+# selected (141, 116, 108) where it read (116, 97, 100); the bare roof's blue grey reads
+# (159, 167, 177) where it read (140, 150, 163); the same places with the roof off read (196, 192,
+# 185), which neither test takes. Both ends of each bound are moved by as much as the colour moved
+# (the lead, on accepting it: a bound widened at one end only would take the old light and the new,
+# and a gate is not loosened), so the colours of the old light no longer pass.
+def door(c):                     # the door's brown, (127, 96, 67) as lit; selected it is (141, 116, 108)
     r, g, b = c
-    return (r > g > b and 85 < r < 125 and 35 <= r - b <= 62 and b < 76) or (105 < r < 128 and 88 < g < 106 and 90 < b < 110 and r > b)
-def roof(c):                     # the bare roof's blue grey: (140, 150, 163)
+    return (r > g > b and 108 < r < 148 and 35 <= r - b <= 62 and b < 76) or (130 < r < 153 and 107 < g < 125 and 98 < b < 118 and r > b)
+def roof(c):                     # the bare roof's blue grey: (159, 167, 177)
     r, g, b = c
-    return b > g > r and 125 < r < 155 and 150 < b < 178
+    return b > g > r and 144 < r < 174 and 164 < b < 192
 def run(im, x, y):               # the stretch of door on a row that holds x: its two ends
     if not door(im.getpixel((x, y))): return None
     a = b = x

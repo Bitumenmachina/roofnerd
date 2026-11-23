@@ -165,6 +165,12 @@ tags
 shot                                    # 11 the clashes marked, each saying its room
 sheet "Clashes"; sleep 6; park
 shot                                    # 12 the sheet's list of clashes: room first
+# The tables further down the sheet are read as the wheel brings them on screen.
+: > "\$T/counts.txt"
+for i in 1 2 3 4 5 6 7 8; do
+  grep -P '^(sheet|away)\tCount of' "\$PLUMBLINE_MAP" >> "\$T/counts.txt" || true
+  xdotool mousemove 2000 600; sleep 0.5; for j in 1 2 3 4 5 6; do xdotool click 5; sleep 1.5; done; sleep 3
+done
 close_window
 SESSION
 chmod +x "$T/session2.sh"
@@ -197,10 +203,21 @@ def check(what, got, good, want):
     global ok
     ok = ok and good
     print("    %-66s %s  %s" % (what, got, "as wanted" if good else "FAIL: wanted " + want))
-WALL, ROOF, SHADOW, FRAME = (860, 540, 900, 580), (880, 290, 920, 310), (1140, 550, 1170, 570), (700, 480, 1100, 600)
+# Call 184, step 2 (the sun moved): the house's shadow lay to the right of it, at (1140, 550) to
+# (1170, 570), under the old fixed sun; the sun is now where it would be at ten in the morning in
+# April and the shadow lies to the left, so the place sampled is (390, 690) to (420, 710). On 01
+# it reads (141, 144, 146), on 04 with the ground away (186, 198, 211): the same test, the
+# shadow's place moved with the sun.
+WALL, ROOF, SHADOW, FRAME = (860, 540, 900, 580), (880, 290, 920, 310), (390, 690, 420, 710), (700, 480, 1100, 600)
 cedar = lambda c: c[0] - c[2] > 24                      # warm: the siding
 wrapped = lambda c: c[2] >= c[0] and c[0] > 130         # pale and cool: the weather barrier
-lumber = lambda p: p[0] > 150 and p[0] - p[2] > 35 and p[0] > p[1] > p[2]
+# Call 184, step 2: in the new light the siding is lit to (169, 130, 95), which the old test
+# (red over 150, well over blue, red over green over blue) took for lumber: 0.75 of the wall on 01
+# against 0.10 allowed. Lumber is yellower than cedar: red is under 28 over green, where the
+# siding's is 39 (the lumber of 03 reads (163, 146, 120), red over green by 17). The test is
+# narrowed, not loosened; on 03 it still finds 0.58 of the wall, and on 10 the roof 0.73 and the
+# floor 1.00 as before.
+lumber = lambda p: p[0] > 150 and p[0] - p[2] > 35 and p[0] > p[1] > p[2] and p[0] - p[1] < 28
 framed = lambda n: sum(1 for p in pixels(n, FRAME) if lumber(p)) / len(pixels(n, FRAME))
 # 01, as it opens: cedar on the wall, the roof on, the house's shadow on the ground.
 w1, r1, s1, f1 = mean(1, WALL), mean(1, ROOF), mean(1, SHADOW), framed(1)
@@ -338,6 +355,22 @@ cl = [re.sub(r" #\d+$", "", t[0]) for t in cl]
 check("16 the clashes' marks each say a room (or that it is outside any)", cl[:4], len(cl) >= 2 and all(t.startswith("clash in ") or t == "clash outside any room" for t in cl), "at least two, each \"in <room>\" or \"outside any room\"")
 sys.exit(0 if ok else 1)
 PY
+
+echo
+echo "== The window's clash counts are the model's (calls 175, 177, 179 C5): in the same space, set against, holes, laid in =="
+# The tables' counts as the sheet window says them, from the program's map, against what the
+# command line's `clashes` says of the same house: each table's first number.
+"$P" clashes "$J2" > "$T/clashes.txt"
+window_count() { { grep -F "Count of $1" "$T/counts.txt" || true; } | head -1 | sed -E "s/.*Count of $1: ([0-9]+).*/\\1/"; }
+model_n() { grep -E "^$1" "$T/clashes.txt" | head -1 | grep -oE '\): [0-9]+|: [0-9]+' | tail -1 | grep -oE '[0-9]+'; }
+for pair in "In the same space|In the same space" "Set against: not clashes|Set against" "Through a wall or a floor: holes to cut|Through a wall or a floor" "Laid in a floor or a wall: no hole to cut|Laid in a floor or a wall"; do
+  win="${pair%%|*}"; mod="${pair##*|}"
+  w="$(window_count "$win")"; m="$(model_n "$mod")"
+  [ -n "$m" ] || { echo "FAIL: the command line gives no count for: $mod"; cat "$T/clashes.txt"; exit 1; }
+  # A table with nothing in it is not drawn: the model's 0 is the window's none.
+  [ "${w:-0}" = "$m" ] || { echo "FAIL: $win: the window says ${w:-nothing}, the model says $m"; cat "$T/counts.txt"; exit 1; }
+  echo "    $win: $m in the window and in the model"
+done
 
 echo
 echo "== A switch changes what is drawn and no figure =="

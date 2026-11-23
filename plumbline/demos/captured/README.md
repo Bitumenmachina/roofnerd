@@ -32,6 +32,8 @@ such reading, and STATUS.md says where each thing it found stands).
 | `layoutsw` (`01` to `10`) | `demos/layoutsw.sh` |
 | `layers` (`01` to `05`; `06` to `17` are the trades' buttons, call 177) | `demos/tradesw.sh` |
 | `money` | `demos/moneyw.sh` |
+| `movew` (`01` to `07`: a wall moved in the window, its floor, footing and roof with it, one Undo, a move refused) | `demos/movew.sh` |
+| `light` (`<n>-before.png` and `<n>-after.png`: the same views before and after the light of call 184, step 2) | `demos/lightw.sh` |
 | `pagew` | `demos/pagew.sh` |
 | `plan` | `demos/planw.sh` |
 | `price` | `demos/pricew.sh` |

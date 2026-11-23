@@ -811,7 +811,18 @@ pub fn pick(doc: &mut Doc, at: [f64; 2], source: Option<String>) {
             doc.draw.swallow = true;
             Some(match doc.selected.clone() {
                 None => Err("nothing is selected".to_string()),
-                Some(sel) => ed::move_by(&mut doc.job, &sel, east, north, how(traced)).map(|()| format!("Moved {sel} {} east, {} north.", units::feet_as_ft_in(east, 16), units::feet_as_ft_in(north, 16))),
+                // A wall takes with it what lies on its line (calls 170, 179 B and 180): the
+                // walls that meet it, its floor's edge, its footing, the wall above and the
+                // roof's edge. What went and what was left is the model's own account of it
+                // (call 171, item 1), said in full. One step: one Undo takes all of it back.
+                Some(sel) => ed::move_wall(&mut doc.job, &sel, east, north, how(traced), false).map(|moved| {
+                    let mut said = format!("Moved {} {}.", moved.names.get(&sel).cloned().unwrap_or_else(|| sel.clone()), ed::way_said(east, north));
+                    for line in moved.said() {
+                        said.push_str("\n");
+                        said.push_str(&line);
+                    }
+                    said
+                }),
             })
         }
     };

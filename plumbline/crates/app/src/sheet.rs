@@ -160,7 +160,10 @@ fn table(p: &mut ChildSpawnerCommands, fonts: &Fonts, title: &str, count: String
         theme::card_shadow(),
     ))
     .with_children(|c| {
-        c.spawn(Node { align_items: AlignItems::Baseline, column_gap: px(8.0), padding: UiRect { left: px(16.0), right: px(16.0), top: px(13.0), bottom: px(11.0) }, ..default() }).with_children(|h| {
+        // The table's title and its count are on the map, so that a script (and what is said of
+        // the clashes in particular) can read the count the window gives: "Count of In the same
+        // space: 3  ·  3 to verify in the field".
+        c.spawn((Node { align_items: AlignItems::Baseline, column_gap: px(8.0), padding: UiRect { left: px(16.0), right: px(16.0), top: px(13.0), bottom: px(11.0) }, ..default() }, theme::Named { name: format!("Count of {title}: {count}"), scrolls: true })).with_children(|h| {
             h.spawn(text(fonts, title, 14.0, Weight::Semibold, theme::ink()));
             h.spawn(text(fonts, count, 12.0, Weight::Regular, theme::ink_faint()));
         });
@@ -590,6 +593,9 @@ fn clashes(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
     let hard = found.in_the_same_space();
     let against = found.set_against();
     let holes = found.hole_rows();
+    // A run laid in a floor or a wall along its length is no hole and no clash, and is said
+    // apart (call 179, C5; the command line's "Laid in a floor or a wall").
+    let laid = found.laid_in();
     if hard.is_empty() && holes.is_empty() {
         nothing(p, fonts, &format!("Nothing is in the same space as anything else: {} things tested.", found.tested));
     }
@@ -628,6 +634,9 @@ fn clashes(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
                 });
             }
         });
+    }
+    if !laid.is_empty() {
+        list(p, "Laid in a floor or a wall: no hole to cut", laid, None);
     }
     let count = match found.left_out.len() {
         0 => "everything with a shape was; what follows never is".to_string(),

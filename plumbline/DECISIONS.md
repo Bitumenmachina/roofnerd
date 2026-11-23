@@ -6840,3 +6840,31 @@ with the hand, nothing jumps), and gains walking with doors that open.
 
 Built by one window builder at a time, after call 178's clean-up is merged; steps 1
 and 2 first, since they change every picture.
+
+**Call 184 step 2 (the light), as built, and call 171 item 1 in the window (2026-11-23).**
+Built by the window builder, each piece measured against a before picture and kept
+only where it was better.
+
+- **Kept: the sun is where the sun would be.** A "Sun" button: time of day and month,
+  for a site 40 degrees north (the job holds no site yet, and the card says so). It
+  opens at ten in the morning in April. It changes the light and nothing in the job.
+  **This moves the light in every picture** (the shadow that lay to the right of the
+  house lies to its left), so the colours three window checks looked for moved with
+  it: `glassw.sh` (the door's and the roof's colour, both ends of each bound moved by
+  as much as the colour moved, so the old light no longer passes) and `tradesw.sh`
+  (the shadow's place; and its test for bare lumber gained a condition, because the
+  siding in the new light passed the old one). The reason is beside each in the script.
+- **Tried and left off, with the measure**: soft shadow edges (no different at a
+  small size, smeared at a large one), contact shadows (nothing to see at a window
+  head), glow (darkened every surface by a twentieth, or touched only the roof's
+  edge against the sky). Their code is not in the tree.
+- **Not built**: the eye adjusting between outdoors and in (a room is lit by the same
+  sky as the yard, so there is nothing to adjust to until rooms are darker inside).
+- **The lead's reading of the pairs**: a little more real, not a transformation. It
+  still reads as a model. Call 184 said the light alone would not do it; step 1 (the
+  outside trim drawn, casting its own shadow) is where the look changes.
+- **A wall moved in the window says what followed it** (call 171 item 1): the Move
+  tool uses the model's own move, and its card reads the model's sentences. The saved
+  job is byte for byte the command line's.
+- **The sheet's clash tables** each say their count by name, and "Laid in a floor or a
+  wall" is a table of its own; the window's counts are the model's.
