@@ -6943,3 +6943,14 @@ the sheet. What it broke, worst first. The rule over all of it is call 179's.
    lines", said once. A sheet whose walls are single lines is told so ("walls here are
    drawn as single lines: a thickness cannot be read"). A line across a wall that runs
    past its faces by less than the wall's thickness is still a line across.**
+
+### Call 185, as built (2026-11-23)
+
+Built as decided; every hand figure came out. Two choices the builder made and the lead
+keeps: the new lines sit inside the assemblies a person already gives a thing (fascia,
+soffit and downspouts in the eave's "Gutter" assembly; corner boards in the two
+lap-siding wall assemblies; exterior casing in "Window" and "Entry door"; a new "Rake
+trim" on a rake), so that giving a wall its siding brings its corner boards with it;
+and downspouts are Division 7, beside the gutter. A rake was already a thing. A figure
+is given only where a line names it (as `net_length` is), so a job with none of these
+lines holds nothing new; `plumbline trim <job>` lists them for a house not yet priced.

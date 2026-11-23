@@ -104,15 +104,15 @@ lines = [l["description"] for l in wall["pl::cost"]["lines"]]
 assemblies = sum(1 for e in d.values() if e["attributes"].get("pl::class") == "Condition")
 is_now = wall["pl::condition"]
 print("    in the file: %d assemblies; the south wall is %r (%s) with %d lines" % (assemblies, is_now["value"], is_now["status"], len(lines)))
-# 40 starter assemblies: 34 when this was written, 37 with call 159 (taking down a partition), 40 with
-# call 164 (a beam, a post, a pad footing). The count was left behind because no window
+# 41 starter assemblies: 34 when this was written, 37 with call 159 (taking down a partition), 40 with
+# call 164 (a beam, a post, a pad footing), 41 with call 185 (rake trim). The count was left behind because no window
 # demonstration was rerun when the library grew.
-ok = assemblies == 40 and is_now["value"] == "Exterior wall, 2x6, brick veneer" and is_now["status"] == "Assumed"
+ok = assemblies == 41 and is_now["value"] == "Exterior wall, 2x6, brick veneer" and is_now["status"] == "Assumed"
 # Framing, sheathing, barrier, insulation, gypsum board, paint and the framing labor,
 # which the two assemblies share; then brick and its ties. The siding and its labor are gone.
 ok = ok and lines == ["Studs, 2x6 at 16 in", "Plates, 2x6", "Headers, two plies", "Rough sills, 2x6", "Wall sheathing", "Weather barrier", "Batt insulation", "Gypsum board, hung and finished", "Paint, two coats", "Frame and sheathe the wall", "Brick veneer", "Brick ties and flashing"]
 if not ok:
-    print("FAIL: wanted 40 starter assemblies and the brick assembly's twelve lines, the shared ones first:", assemblies, lines); sys.exit(1)
+    print("FAIL: wanted 41 starter assemblies and the brick assembly's twelve lines, the shared ones first:", assemblies, lines); sys.exit(1)
 PY
 says "the house is dressed in it" "($SOUTH): brick veneer, on its south face (the line \"Brick veneer\")" "$("$P" finishes "$J")"
 

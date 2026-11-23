@@ -167,7 +167,7 @@ fn the_starter_library_comes_in_whole_goes_out_as_it_was_and_has_no_price_in_it(
     let dir = folder("starter");
     assert!(run(&dir, &["new", "j.json", "Starter (not a real job)"]).0);
     let (ok, said) = run(&dir, &["import", "assemblies", "j.json", "starter"]);
-    assert!(ok && said.contains("set: 40") && said.contains("not used: 0"), "{said}");
+    assert!(ok && said.contains("set: 41") && said.contains("not used: 0"), "{said}");
     assert!(run(&dir, &["export", "assemblies", "j.json", "out.csv"]).0);
     let out = std::fs::read_to_string(dir.join("out.csv")).unwrap();
     let shipped = include_str!("../../../library/sixteen-divisions.csv");
@@ -199,7 +199,7 @@ fn the_starter_library_comes_in_whole_goes_out_as_it_was_and_has_no_price_in_it(
     assert_eq!(divisions.into_iter().collect::<Vec<_>>(), (1..=16).collect::<Vec<u8>>());
     // Brought in a second time, it is the same as the job already has.
     let (ok, said) = run(&dir, &["import", "assemblies", "j.json", "starter"]);
-    assert!(ok && said.contains("set: 0") && said.contains("the same as the job already has: 191"), "{said}");
+    assert!(ok && said.contains("set: 0") && said.contains("the same as the job already has: 200"), "{said}");
     std::fs::remove_dir_all(&dir).unwrap();
 }
 
@@ -226,7 +226,7 @@ fn an_assembly_is_changed_for_another_and_what_they_share_keeps_its_price() {
     assert!(!ok && said.contains("--change"), "{said}");
     assert_eq!(std::fs::read(dir.join("j.json")).unwrap(), before);
     let (ok, said) = run(&dir, &["apply", "j.json", "wall-0004", "Exterior wall, 2x6, brick veneer", "--source", "the plans", "--change"]);
-    assert!(ok && said.contains("has gained 2 cost lines") && said.contains("Brick veneer") && said.contains("2 cost lines of the assembly it had came off") && said.contains("Lap siding") && said.contains("Hang the siding"), "{said}");
+    assert!(ok && said.contains("has gained 2 cost lines") && said.contains("Brick veneer") && said.contains("3 cost lines of the assembly it had came off") && said.contains("Lap siding") && said.contains("Hang the siding"), "{said}");
     // The framing labor is in both assemblies (call 92), so it stayed: it is not gained and did not come off.
     assert!(!said.contains("Frame and sheathe the wall"), "{said}");
     let said = run(&dir, &["estimate", "j.json"]).1;

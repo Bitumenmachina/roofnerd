@@ -265,13 +265,17 @@ impl Kind {
             &[("plan_area", "SF"), ("slope_factor", ""), ("surface_area", "SF"), ("squares", "SQ")]
         } else if self == Kind::Parapet {
             &[("plan_length", "LF"), ("face_area", "SF")]
+        } else if matches!(self, Kind::Eave | Kind::Rake) {
+            // Its overhang only where a line of it names it (call 185).
+            &[("plan_length", "LF"), ("true_length", "LF"), ("overhang", "ft")]
         } else if self.is_run() {
             &[("plan_length", "LF"), ("true_length", "LF")]
         } else if self == Kind::Wall {
-            // The last four only where what is priced on it names its framing (call 137).
-            &[("plan_length", "LF"), ("height", "ft"), ("face_area", "SF"), ("opening_area", "SF"), ("net_area", "SF"), ("thickness", "ft"), ("studs", "EA"), ("plate_length", "LF"), ("header_length", "LF"), ("sill_length", "LF"), ("net_length", "LF")]
+            // The four after the thickness only where what is priced on it names its framing (call 137); the last three only where a line names them (calls 175, 185).
+            &[("plan_length", "LF"), ("height", "ft"), ("face_area", "SF"), ("opening_area", "SF"), ("net_area", "SF"), ("thickness", "ft"), ("studs", "EA"), ("plate_length", "LF"), ("header_length", "LF"), ("sill_length", "LF"), ("net_length", "LF"), ("outside_corners", "EA"), ("corner_board_length", "LF")]
         } else if matches!(self, Kind::Door | Kind::Window) {
-            &[("width", "ft"), ("height", "ft"), ("opening_area", "SF")]
+            // Its casing only where a line of it names it (call 185).
+            &[("width", "ft"), ("height", "ft"), ("opening_area", "SF"), ("casing_length", "LF")]
         } else if self == Kind::Roof {
             // The whole roof, from its planes and lines (call 134).
             &[("surface_area", "SF"), ("squares", "SQ"), ("eave_length", "LF"), ("rake_length", "LF"), ("hip_length", "LF"), ("ridge_length", "LF"), ("valley_length", "LF"), ("headwall_length", "LF"), ("rafters", "EA"), ("rafter_length", "LF"), ("rafter_longest", "ft")]

@@ -9743,6 +9743,38 @@ picture; no word on a scale no drawing is made at; a door 1 in high from a head 
 walls laid at the page's own offsets unsaid; layered walls as dozens "in doubt"; lines
 overshooting jambs shattering a plan.
 
+## Call 185 built: the outside trim priced (2026-11-23)
+
+`crates/world/src/trim.rs`: an eave's and a rake's `overhang` (to the outside face of
+the wall under it, found as a roof over a wall is found), a wall's `outside_corners`
+and `corner_board_length`, an opening's `casing_length`; starter lines for fascia,
+soffit, downspouts (no quantity until a person types it), rake trim, corner boards and
+exterior casing; `plumbline trim <job>`. `research/worker-report-call185.md`.
+
+`demos/trim.sh`, every hand figure of the section above as said: eaves 26 LF, rakes
+10.0623 LF, overhang 0.75 ft at all six, Assumed; fascia 52.00 and 40.25 LF; soffit
+39.00 and 30.19 SF; corner boards 72.00 LF (the L-shaped house 90.00, its two
+inside-corner walls one corner each); casing 16.00 and 16.33 LF; the dollars to the
+cent; a roof with no wall under an edge: overhang Unknown with the reason, soffit "no
+figure"; the four sample houses' files and estimates the same bytes as before.
+
+**Moved, by the library growing** (40 to 41 assemblies, 191 to 200 lines; labor lines
+28): the counts in `crates/cli/tests/cli.rs`, `demos/library.sh`, `shingle.sh`,
+`framing.sh`, `joists.sh`, `foundation.sh`; and one that is not a bare count: changing
+a wall from lap siding to brick now takes 3 lines off (corner boards with the siding
+and its labor), where it took 2. `demos/pricew.sh` (a window demonstration) was edited
+to 41 by reading and not run.
+
+**Run on the integration copy:** 736 tests pass in the six command-line crates, 0
+fail; all 46 command-line demonstrations pass; the three gates and `portmap.sh` pass.
+
+**Not right.** A roof entered as planes by hand, with no footprint (the sample house's
+is), has no overhang: it says why. The corner rule goes by the walls' end points, so a
+house whose walls overshoot or stop short of their corners reads "not closed" and
+Unknown, and no house drawn in the window has been tried. `show` and `takeoff` do not
+list the new figures for a house not yet priced. **Nothing draws any of it yet**: that
+is call 184 step 1's window half. Not judged.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **As of 2026-11-23 (the lead, after the merge of that day). Read this block first; what

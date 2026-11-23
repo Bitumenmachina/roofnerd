@@ -969,10 +969,10 @@ pub fn measures(world: &mut World) -> HashMap<String, BTreeMap<String, Derived>>
     let mut holes: HashMap<String, Vec<Hole>> = HashMap::new();
     // In the order of their paths, whatever order the world holds them in: a wall's
     // list of openings, and so what its figures cite, is the same every time.
-    let mut q = world.query::<(&Node, &Kind, Option<&Opening>)>();
-    let mut openings: Vec<(&Node, &Kind, Option<&Opening>)> = q.iter(world).collect();
+    let mut q = world.query::<(&Node, &Kind, Option<&Opening>, Option<&Cost>)>();
+    let mut openings: Vec<(&Node, &Kind, Option<&Opening>, Option<&Cost>)> = q.iter(world).collect();
     openings.sort_by_key(|(n, ..)| path_number(&n.path));
-    for (node, kind, opening) in openings {
+    for (node, kind, opening, cost) in openings {
         if !kind.is_opening() {
             continue;
         }
@@ -981,7 +981,7 @@ pub fn measures(world: &mut World) -> HashMap<String, BTreeMap<String, Derived>>
         let hole = match opening {
             None => {
                 let input = [format!("{me}#{K_OPENING}")];
-                for (name, unit) in kind.measures() {
+                for (name, unit) in kind.measures().iter().filter(|(n, _)| !crate::trim::GIVEN_WHERE_NAMED.contains(n)) {
                     m.insert(name.to_string(), Derived::refused(unit, "", &input, "no opening entered"));
                 }
                 Hole { path: me.clone(), span: None, area: None, status: Status::Unknown, area_status: Status::Unknown, inputs: input.to_vec() }
@@ -1004,6 +1004,11 @@ pub fn measures(world: &mut World) -> HashMap<String, BTreeMap<String, Derived>>
                 hole
             }
         };
+        // Its casing, where a line of it names it (call 185).
+        if crate::trim::names(cost, crate::trim::CASING_LENGTH) {
+            let casing = crate::trim::casing(*kind, m.get("width"), m.get("height"), &hole.inputs);
+            m.insert(crate::trim::CASING_LENGTH.into(), casing);
+        }
         out.entry(me.clone()).or_default().extend(m);
         if let Some(parent) = node.parent.as_ref().filter(|_| !gone.contains(me)) {
             holes.entry(parent.clone()).or_default().push(hole);
@@ -1029,6 +1034,11 @@ pub fn measures(world: &mut World) -> HashMap<String, BTreeMap<String, Derived>>
         let mut sq = world.query::<(&Node, &Kind, &Placed)>();
         sq.iter(world).filter(|(_, k, _)| matches!(**k, Kind::Furnishing | Kind::Equipment | Kind::Fixture)).map(|(n, _, p)| (n.path.clone(), p.what.value.clone().unwrap_or_else(|| n.name.clone()), tree.storey_of(&n.path).map(str::to_string), p.clone())).collect()
     };
+    // Each wall's outside corners, where a line of it names them: worked from every wall of its level (call 185).
+    let corner_figures = {
+        let wanted = crate::trim::naming(world, &[Kind::Wall], &[crate::trim::OUTSIDE_CORNERS, crate::trim::CORNER_BOARD_LENGTH]);
+        if wanted.is_empty() { HashMap::new() } else { crate::trim::corners(world, Some(&wanted)) }
+    };
     let mut q = world.query::<(&Node, &Kind, Option<&Wall>, Option<&Floor>, Option<&Segment>, Option<&Cost>, Option<&MadeOf>, Option<&Condition>, Option<&Placed>, Option<&Stood>, Option<&JoistsSpan>)>();
     for (node, kind, wall, floor, segment, cost, made_of, condition, placed, column, joists_span) in q.iter(world) {
         let me = &node.path;
@@ -1038,7 +1048,7 @@ pub fn measures(world: &mut World) -> HashMap<String, BTreeMap<String, Derived>>
                 let input = [format!("{me}#{K_WALL}")];
                 let f_len = format!("length of the wall's line on the plan{}", wall.filter(|w| w.line.unit == units::IN).map(|_| " ÷ 12 (entered in inches)").unwrap_or_default());
                 let Some(w) = wall else {
-                    for (name, unit) in kind.measures() {
+                    for (name, unit) in kind.measures().iter().filter(|(n, _)| !crate::trim::GIVEN_WHERE_NAMED.contains(n)) {
                         m.insert(name.to_string(), Derived::refused(unit, "", &input, "no wall line entered"));
                     }
                     out.entry(me.clone()).or_default().extend(m);
@@ -1216,6 +1226,11 @@ pub fn measures(world: &mut World) -> HashMap<String, BTreeMap<String, Derived>>
                     Err(why) => Derived::refused("ft", f, &t_inputs, &why),
                 };
                 m.insert("thickness".into(), thick);
+                // Its outside corners and the corner board they take, where a line of it names them (call 185).
+                if let Some([n, l]) = corner_figures.get(me) {
+                    m.insert(crate::trim::OUTSIDE_CORNERS.into(), n.clone());
+                    m.insert(crate::trim::CORNER_BOARD_LENGTH.into(), l.clone());
+                }
                 // Its frame, counted, where what is priced on it names the lumber and the
                 // spacing it is framed with (call 137): the frame the window draws, laid out
                 // by the same rule (`framing::frame`), from the same line (`finish::framing_of`).
