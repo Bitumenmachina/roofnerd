@@ -9452,6 +9452,22 @@ doubt, left out, whether they close) and asserts only that it finishes, finds at
 one wall and lays nothing Known. **Nobody has worked that sheet by hand: what it
 prints is to be looked at, and says so.**
 
+## The plan set judged a second time (2026-11-23)
+
+`research/judgment-call179D-planset.md`; DECISIONS.md call 182 has each finding and
+what is decided. **Nothing below is fixed yet.** Held: every string matches the
+model's plan lengths on six jobs; room areas agree by hand; lettering measures 0.103
+in (the least is 3/32); existing, demolished and new tell apart in black and white.
+
+Found: nothing on a sheet locates a partition, an opening or a cabinet run (every
+string is one wall's own length); an ampersand or an accented letter is lettered "?";
+strings and outlines run through room names and figures while "lettering faults: 0" is
+said; a fault the program knows is written without a word unless the list is asked
+for; on a wing at 30 degrees the strings do not add to the overall under them; "? SF"
+is unexplained and one note contradicts its sheet; room lines are not drawn; the key
+lists line types the sheet does not use; sheet numbers start again on each level; any
+text passes as a date; no scale bar.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **Since this was written (2026-11-18): a second builder, Opus 5.5, under call 129.**

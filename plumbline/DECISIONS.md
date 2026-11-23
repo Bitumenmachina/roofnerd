@@ -6692,3 +6692,49 @@ it to, and says so.
 
 The window's half (the offer on the card when a drawn plan is scaled) is a call of its
 own once this is judged.
+
+### Call 182. What the second judge found on the plan set, and what is decided (2026-11-23)
+
+A judge (Sonnet, cold, as an architect and then as a builder) wrote plan sets for an L,
+a T, a wing at 30 degrees, three levels, ten rooms and a kitchen, and read every page
+as a picture: `research/judgment-call179D-planset.md`. **Every string it checked
+matches the model on six jobs, and the room areas agree by hand.** What is wrong is
+what a drawing owes a builder.
+
+1. **Nothing is located.** Every string is one wall's own length; nothing says where a
+   partition, a door, a window or a run of cabinets is. **Each side of the plan carries
+   three strings, as a drafter lays them out: nearest the house, the openings in that
+   outside wall, to their centres, from the wall's ends; next, the partitions that meet
+   that wall, to their lines; outermost, the overall.** A partition that meets no
+   outside wall is located by a string inside the plan from the nearest wall parallel
+   to it. A run of cabinets is located by its start from the corner, lettered along its
+   wall. The notes say what a string is taken to ("openings to their centers, walls to
+   their lines as drawn"). Every string is a chain: its parts add to the string
+   outside it, to the sixteenth, and the demonstration checks each by hand.
+2. **An ampersand or an accented letter is lettered "?".** **The lettering gains the
+   ampersand and the accented Latin letters (a base letter with its mark)**; a letter
+   it still cannot draw is lettered as its plain letter where it has one, and both
+   `plan-set` and its list say how many could not be lettered and which.
+3. **Strings and outlines run through names, areas and figures**, and "lettering
+   faults: 0" is said because only lettering against lettering is tested. **Lettering
+   is tested against every line on the sheet**; a name moves within its room to clear
+   them, and a string that would cross a room's lettering is drawn outside the house.
+   What cannot be cleared is a fault and is said.
+4. **A fault the program knows of is written without a word.** **`plan-set` says every
+   fault it found, in plain words, whether or not the list was asked for.**
+5. **On a wing at an angle the strings do not add to the overall under them, and no
+   angle is lettered.** **A string runs along its own wall. An overall is drawn on a
+   side only where the strings under it are parallel to it and add to it; a wall that
+   meets another at other than a right angle has its angle lettered at the corner.**
+   Extension lines run to the corners they measure from.
+6. **"? SF" is never explained; one sheet says a room is enclosed by nothing while
+   lettering an area for it; room lines are not drawn.** **A room with no area is
+   lettered "AREA NOT KNOWN" and the notes say why in the model's own words; a room
+   line is drawn (a thin long-dashed line) and is in the key; a note never contradicts
+   what is lettered.**
+7. **The key lists line types the sheet does not use; sheet numbers start again on
+   every level; any text is taken as a date.** **The key shows exactly what the sheet
+   draws. Sheets are numbered through the whole set (A-101 to A-10n, the levels from
+   the lowest up). A date is a date or is refused.**
+8. **No scale bar, no title in the file.** **A graphic scale under the plan's scale; the
+   file's own title is the job's title.** Lettering stays strokes (call 179 D).
