@@ -113,6 +113,8 @@ pub struct Moved {
     pub left: Vec<String>,
     /// Moved alone: what would have gone with it, left where it was.
     pub left_where_it_was: Vec<String>,
+    /// Moved alone: each corner it opened (call 180, B3): the wall that met it, how far its end is from it now.
+    pub opened: Vec<(String, f64)>,
 }
 
 fn feet_said(x: f64) -> String {
@@ -147,7 +149,20 @@ pub fn way_said(east: f64, north: f64) -> String {
 /// directions ("4 ft west", "3 ft 6 in north and 2 ft east", "25' 6\" south"). One distance
 /// along each way at most.
 pub fn read_move(text: &str) -> Result<(f64, f64), String> {
-    let typed = text.trim();
+    // Said as a builder says it aloud (call 180, B4): "4 ft to the east", "4 ft toward the east", "4 ft eastward".
+    let mut said = format!(" {} ", text.trim());
+    for filler in [" to the ", " toward the ", " towards the ", " toward ", " towards ", " going ", " heading "] {
+        while let Some(at) = said.to_ascii_lowercase().find(filler) {
+            said.replace_range(at..at + filler.len(), " ");
+        }
+    }
+    for (long, short) in [("eastwards", "east"), ("westwards", "west"), ("northwards", "north"), ("southwards", "south"), ("eastward", "east"), ("westward", "west"), ("northward", "north"), ("southward", "south")] {
+        while let Some(at) = said.to_ascii_lowercase().find(long) {
+            said.replace_range(at..at + long.len(), short);
+        }
+    }
+    let said = said.trim().to_string();
+    let typed = if text.trim().is_empty() { text.trim() } else { said.as_str() };
     if typed.is_empty() {
         return Err("say how far, like \"4 ft west\", \"3 ft 6 in north and 2 ft east\", or \"4,0\" (feet east, feet north)".into());
     }
@@ -262,6 +277,9 @@ impl Moved {
         if nothing && (self.alone || self.held_on.is_empty()) {
             out.push(if self.alone { "moved alone: nothing followed it".to_string() } else { "no wall meets it: nothing followed it".to_string() });
         }
+        for (w, apart) in &self.opened {
+            out.push(format!("the corner of {} and {me} is open, {} apart", self.called(w), feet_said(*apart)));
+        }
         if self.alone && !self.left_where_it_was.is_empty() {
             out.push(format!("it left where they were: {}", list_said(&self.left_where_it_was)));
         }
@@ -362,6 +380,33 @@ impl Map {
         } else {
             None
         }
+    }
+}
+
+impl Map {
+    /// Where a corner of a floor's outline or a roof's footprint that lies along the wall, but off its
+    /// line (an edge drawn outside the wall), goes (call 180, B1): the same distance along the new
+    /// line and the same distance off it, and where it is past the wall's end, past its new end.
+    /// A point on the wall's line goes as `at` has it.
+    fn carry(&self, p: P) -> P {
+        if let Some(q) = self.at(p) {
+            return q;
+        }
+        let len = geom::dist(self.a, self.b);
+        let new_len = geom::dist(self.fin[0], self.fin[1]);
+        if len <= 1.0e-12 || new_len <= 1.0e-12 {
+            return add(p, self.square);
+        }
+        let (u, nu) = (scale(sub(self.b, self.a), 1.0 / len), scale(sub(self.fin[1], self.fin[0]), 1.0 / new_len));
+        let (s, n) = (dot(sub(p, self.a), u), cross(u, sub(p, self.a)));
+        let base = if s <= 0.0 {
+            add(self.fin[0], scale(nu, s))
+        } else if s >= len {
+            add(self.fin[1], scale(nu, s - len))
+        } else {
+            add(self.fin[0], scale(sub(self.fin[1], self.fin[0]), s / len))
+        };
+        add(base, scale([-nu[1], nu[0]], n))
     }
 }
 
@@ -651,6 +696,28 @@ fn step(job: &mut Job, path: &str, d: P, how: Entered, names: &HashMap<String, S
 
     // Not into a wall it does not meet (call 179, B3), after the refusals above that say more.
     refuse_crossing(bodies, path, d, &called)?;
+    // Nor a wall that follows it and turns (call 180, B2): every wall the move changes is tested, as it
+    // would stand, against every wall of its level it did not meet and that would stand where it is.
+    for (follower, now) in lines.iter().filter(|(p, _)| p.as_str() != path) {
+        let Some(x) = bodies.iter().find(|b| b.path == *follower) else { continue };
+        for y in bodies.iter().filter(|y| y.storey == x.storey && y.path != *follower && y.path != path) {
+            if lines_meet(x.line, y.line) {
+                continue;
+            }
+            let y_now = lines.get(&y.path).copied().unwrap_or(y.line);
+            if bodies_cross(&rect(*now, x.thick), &rect(y_now, y.thick)) {
+                return Err(format!(
+                    "{} follows {} and would cross {}, a wall it does not meet, if {} were moved {}: move it less, or take {} out of the way first",
+                    called(follower),
+                    called(path),
+                    called(&y.path),
+                    called(path),
+                    way_said(d[0], d[1]),
+                    called(&y.path)
+                ));
+            }
+        }
+    }
 
     // Do it. Each wall written back in its own unit; the moved wall's own figures are
     // what a plain move writes, but for an end that was held.
@@ -743,7 +810,7 @@ fn carried(map: &Map, line: [P; 2]) -> ([P; 2], [bool; 2]) {
 /// along it by the move's square part. When not `write`, nothing is changed and what would
 /// have gone is named in `would`. What lies along the wall but cannot go with it (it runs
 /// past the wall's end, so moving it would turn it) is said in `report.left`.
-fn bring_along(job: &mut Job, mo: &Motion, goes: &carries::GoesWith, how: Entered, names: &HashMap<String, String>, write: bool, report: &mut Moved, would: &mut Vec<String>) -> Result<(), String> {
+fn bring_along(job: &mut Job, mo: &Motion, goes: &carries::GoesWith, bodies: &[carries::Body], how: Entered, names: &HashMap<String, String>, write: bool, report: &mut Moved, would: &mut Vec<String>) -> Result<(), String> {
     let called = |p: &str| names.get(p).cloned().unwrap_or_else(|| p.to_string());
     let wall = called(&mo.path);
     let map = &mo.map;
@@ -791,7 +858,9 @@ fn bring_along(job: &mut Job, mo: &Motion, goes: &carries::GoesWith, how: Entere
         report.footings.push(Followed { path: fp.clone(), grew_by: geom::dist(now[0], now[1]) - geom::dist(line[0], line[1]), turned: false });
     }
 
-    // Floors of this level with an edge on it.
+    // Floors of this level with an edge along it (within its thickness, or within 2 ft of it: a slab drawn
+    // a little outside the walls), as the walls' bodies lie.
+    let me = bodies.iter().find(|b| b.path == mo.path);
     let floors: Vec<(String, crate::Floor)> = {
         let mut q = job.world.query::<(&Node, &Kind, &crate::Floor)>();
         let mut v: Vec<(String, crate::Floor)> = q.iter(&job.world).filter(|(n, k, _)| **k == Kind::Floor && n.parent == mo.level).map(|(n, _, f)| (n.path.clone(), f.clone())).collect();
@@ -801,22 +870,33 @@ fn bring_along(job: &mut Job, mo: &Motion, goes: &carries::GoesWith, how: Entere
     for (fp, f) in floors {
         let Some(ring) = f.boundary_ft() else { continue };
         let n = ring.len();
-        let edges_on: Vec<usize> = (0..n).filter(|i| on_line([ring[*i], ring[(*i + 1) % n]])).collect();
-        if edges_on.is_empty() {
+        let Some(me) = me else { continue };
+        let edges = carries::edges_with(me, &ring, bodies, carries::FLOOR_REACH_FT, false);
+        if edges.is_empty() {
+            if write {
+                if let Some((_, e)) = carries::edges_beyond(me, &ring, bodies, carries::FLOOR_REACH_FT, false).first() {
+                    report.left.push(format!("{} was left where it was: its edge along {wall} is {} off it, more than {} ft", called(&fp), feet_said(e.across), carries::FLOOR_REACH_FT));
+                }
+            }
             continue;
         }
-        if edges_on.iter().any(|i| map.at(ring[*i]).is_none() || map.at(ring[(*i + 1) % n]).is_none()) {
+        if edges.iter().any(|(_, e)| e.runs_past) {
             report.left.push(format!("{} has an edge along {wall} that runs past the end of it: it was left where it is, and would turn if moved", called(&fp)));
             continue;
         }
-        let now: Vec<P> = ring.iter().map(|p| map.at(*p).unwrap_or(*p)).collect();
+        let mut goes_with_it: Vec<bool> = (0..n).map(|i| map.at(ring[i]).is_some()).collect();
+        for (i, _) in &edges {
+            goes_with_it[*i] = true;
+            goes_with_it[(*i + 1) % n] = true;
+        }
+        let now: Vec<P> = (0..n).map(|i| if goes_with_it[i] { map.carry(ring[i]) } else { ring[i] }).collect();
         if !write {
             would.push(called(&fp));
             continue;
         }
         let (unit, was) = (f.boundary.unit.clone(), f.boundary.value.clone().ok_or_else(|| format!("{fp}'s outline is not known"))?);
         let div = units::coord_divisor(&unit)?;
-        let put: Vec<P> = (0..n).map(|i| if map.at(ring[i]).is_some() { [tidy(now[i][0] * div), tidy(now[i][1] * div)] } else { was[i] }).collect();
+        let put: Vec<P> = (0..n).map(|i| if goes_with_it[i] { [tidy(now[i][0] * div), tidy(now[i][1] * div)] } else { was[i] }).collect();
         let mut g = f.clone();
         g.boundary = Val { value: Some(put), unit, status: f.boundary.status.max(how.status), source: after(&f.boundary.source, &note, how.source) };
         building::check_floor(&fp, Kind::Floor, &g)?;
@@ -824,38 +904,58 @@ fn bring_along(job: &mut Job, mo: &Motion, goes: &carries::GoesWith, how: Entere
         report.floors.push(Resized { path: fp.clone(), wall: mo.path.clone(), before: geom::plan_area(&ring), after: geom::plan_area(&now) });
     }
 
-    // Roofs with an edge over it, whose eave is about as high as its top.
+    // Roofs with an edge over it, by the plan alone (call 180, A2 and B1): the edge outside it by no more than
+    // 4 ft with no other wall between, whatever the height of the eave.
     let mut seen: Vec<String> = Vec::new();
-    for (rp, _) in &goes.roofs {
-        if seen.contains(rp) {
+    let all_roofs: Vec<(String, Vec<P>)> = {
+        let mut q = job.world.query::<(&Node, &Footprint)>();
+        let mut v: Vec<(String, Vec<P>)> = q.iter(&job.world).filter_map(|(n, f)| Some((n.path.clone(), f.points_ft()?))).collect();
+        v.sort_by_key(|(p, _)| number_of(p));
+        v
+    };
+    for (rp, ring) in all_roofs {
+        if seen.contains(&rp) || report.roofs.iter().any(|r| r.path == rp) {
             continue;
         }
         seen.push(rp.clone());
-        let Some(e) = job.find(rp) else { continue };
-        let Some(fp) = job.world.get::<Footprint>(e).cloned() else { continue };
-        let Some(ring) = fp.points_ft() else { continue };
+        let Some(me) = me else { continue };
         let n = ring.len();
-        let edges_on: Vec<usize> = (0..n).filter(|i| on_line([ring[*i], ring[(*i + 1) % n]])).collect();
-        if edges_on.iter().any(|i| map.at(ring[*i]).is_none() || map.at(ring[(*i + 1) % n]).is_none()) {
-            report.left.push(format!("{} has an edge over {wall} that runs past the end of it: it was left where it is, and would turn if moved", called(rp)));
+        let edges = carries::edges_with(me, &ring, bodies, carries::ROOF_REACH_FT, true);
+        if edges.is_empty() {
+            if write {
+                if let Some((_, e)) = carries::edges_beyond(me, &ring, bodies, carries::ROOF_REACH_FT, true).first() {
+                    report.left.push(format!("{} was left where it was: its edge over {wall} is {} outside it, more than {} ft", called(&rp), feet_said(e.across), carries::ROOF_REACH_FT));
+                }
+            }
             continue;
         }
-        let now: Vec<P> = ring.iter().map(|p| map.at(*p).unwrap_or(*p)).collect();
+        if edges.iter().any(|(_, e)| e.runs_past) {
+            report.left.push(format!("{} has an edge over {wall} that runs past the end of it: it was left where it is, and would turn if moved", called(&rp)));
+            continue;
+        }
+        let mut goes_with_it: Vec<bool> = (0..n).map(|i| map.at(ring[i]).is_some()).collect();
+        for (i, _) in &edges {
+            goes_with_it[*i] = true;
+            goes_with_it[(*i + 1) % n] = true;
+        }
+        let now: Vec<P> = (0..n).map(|i| if goes_with_it[i] { map.carry(ring[i]) } else { ring[i] }).collect();
         if !write {
-            would.push(called(rp));
+            would.push(called(&rp));
             continue;
         }
-        let before = roof_figures(job, rp);
+        let Some(e) = job.find(&rp) else { continue };
+        let Some(fp) = job.world.get::<Footprint>(e).cloned() else { continue };
+        let before = roof_figures(job, &rp);
         let (unit, was) = (fp.points.unit.clone(), fp.points.value.clone().ok_or_else(|| format!("{rp}'s footprint is not known"))?);
         let div = units::coord_divisor(&unit)?;
-        let put: Vec<P> = (0..n).map(|i| if map.at(ring[i]).is_some() { [tidy(now[i][0] * div), tidy(now[i][1] * div)] } else { was[i] }).collect();
+        let put: Vec<P> = (0..n).map(|i| if goes_with_it[i] { [tidy(now[i][0] * div), tidy(now[i][1] * div)] } else { was[i] }).collect();
         let mut g = fp.clone();
         g.points = Val { value: Some(put), unit, status: fp.points.status.max(how.status), source: after(&fp.points.source, &note, how.source) };
-        let kind = job.kind(rp).ok_or_else(|| format!("no element {rp}"))?;
-        crate::check::footprint(rp, kind, &g)?;
-        job.put(rp, g)?;
-        solve::solve(job, rp)?;
-        let figures = roof_figures(job, rp);
+        let kind = job.kind(&rp).ok_or_else(|| format!("no element {rp}"))?;
+        crate::check::footprint(&rp, kind, &g)?;
+        job.put(&rp, g)?;
+        solve::solve(job, &rp)?;
+        let figures = roof_figures(job, &rp);
         report.roofs.push(RoofMoved { path: rp.clone(), wall: mo.path.clone(), plan: (before.0, figures.0), surface: (before.1, figures.1) });
     }
 
@@ -974,6 +1074,18 @@ pub fn move_wall(job: &mut Job, path: &str, east: f64, north: f64, how: Entered,
             // The wall alone: and what would have gone with it, said as left where it was.
             let mut left: Vec<String> = Vec::new();
             if let Some(b) = bodies.iter().find(|b| b.path == path) {
+                // Each corner it opens: a wall of its level with an end on it, now that end is off it (call 180, B3).
+                let (a2, b2) = (add(b.line[0], d), add(b.line[1], d));
+                for o in bodies.iter().filter(|o| o.storey == b.storey && o.path != path) {
+                    for p in o.line {
+                        if geom::point_to_segment(p, b.line[0], b.line[1]) <= TOL {
+                            let apart = geom::point_to_segment(p, a2, b2);
+                            if apart > TOL && !report.opened.iter().any(|(w, _)| *w == o.path) {
+                                report.opened.push((o.path.clone(), apart));
+                            }
+                        }
+                    }
+                }
                 // The walls on its level that meet it would follow.
                 for o in bodies.iter().filter(|o| o.storey == b.storey && o.path != path) {
                     if (0..2).any(|i| geom::point_to_segment(o.line[i], b.line[0], b.line[1]) <= TOL) {
@@ -988,7 +1100,7 @@ pub fn move_wall(job: &mut Job, path: &str, east: f64, north: f64, how: Entered,
                 let mut would = Vec::new();
                 for (i, (_, goes)) in chain.iter().enumerate() {
                     if i == 0 {
-                        bring_along(job, &mo, goes, how, &names, false, &mut report, &mut would)?;
+                        bring_along(job, &mo, goes, &bodies, how, &names, false, &mut report, &mut would)?;
                     }
                 }
                 left.extend(would);
@@ -1010,7 +1122,7 @@ pub fn move_wall(job: &mut Job, path: &str, east: f64, north: f64, how: Entered,
         }
         let mut would = Vec::new();
         for (mo, goes) in &motions {
-            bring_along(job, mo, goes, how, &names, true, &mut report, &mut would)?;
+            bring_along(job, mo, goes, &bodies, how, &names, true, &mut report, &mut would)?;
         }
         Ok(report)
     })

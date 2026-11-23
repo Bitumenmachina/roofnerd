@@ -56,6 +56,10 @@ impl Across {
 
 const EPS: f64 = 1.0e-9;
 
+/// An edge runs with the members, and a mark is on an edge, within 1/16 in (call 180, C1): a floor traced or turned and
+/// written to four places is never square to the last digit, and its count does not turn on it.
+pub const ON_THE_EDGE_FT: f64 = 1.0 / 192.0;
+
 /// The unit vector square to `u` that points east, or north where `u` points that way.
 fn across(u: P2) -> P2 {
     let v = [-u[1], u[0]];
@@ -87,14 +91,15 @@ fn inside(ring: &[P2], a: f64, b: f64) -> bool {
     inside
 }
 
-/// The length of what is square to the members: the outline's edges measured across them
-/// (a floor's rim: the band the joist ends meet).
+/// The rim: the true length of every edge the members' ends meet, that is every edge that does not run with them
+/// (call 180, C2: an edge at an angle is as long as it is, not as long as it is square to the joists).
 pub fn rim_length(outline: &[P2], run: P2) -> Result<f64, String> {
     let u = unit(run)?;
     let v = across(u);
     Ok((0..outline.len()).map(|i| {
         let (p, q) = (outline[i], outline[(i + 1) % outline.len()]);
-        ((q[0] - p[0]) * v[0] + (q[1] - p[1]) * v[1]).abs()
+        let (a, b) = ((q[0] - p[0]) * u[0] + (q[1] - p[1]) * u[1], (q[0] - p[0]) * v[0] + (q[1] - p[1]) * v[1]);
+        if b.abs() <= ON_THE_EDGE_FT && a.abs() > EPS { 0.0 } else { a.hypot(b) }
     }).sum())
 }
 
@@ -144,7 +149,7 @@ fn members_laid(outline: &[P2], run: P2, spacing: f64) -> Result<(Vec<Laid>, usi
     let mut edges: Vec<(f64, f64, f64)> = Vec::new();
     for i in 0..ring.len() {
         let (p, q) = (ring[i], ring[(i + 1) % ring.len()]);
-        if (p[1] - q[1]).abs() > 1.0e-7 || (p[0] - q[0]).abs() <= EPS {
+        if (p[1] - q[1]).abs() > ON_THE_EDGE_FT || (p[0] - q[0]).abs() <= EPS {
             continue;
         }
         let (lo, hi) = (p[0].min(q[0]), p[0].max(q[0]));

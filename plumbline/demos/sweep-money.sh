@@ -305,7 +305,7 @@ R1="$(grep -oE 'wall-[0-9]+' "$T/ring8.txt" | awk '!s[$0]++' | sed -n 1p)"; R2="
 says "$T/import8.txt" "4 walls"
 says "$T/import8.txt" "1 door"
 says "$T/import8.txt" "1 window"
-lines8() { "$P" show "$1" | grep -E "wall line|plan length|face area|net area|opening area|^ +[a-z]+-[0-9]+  (door|window)" | sed -E 's/^ *[=~?]* *//; s/-[0-9]{4}//; s/  +/ /g' | sort; }
+lines8() { "$P" show "$1" | grep -E "wall line|plan length|face area|net area|opening area|^ +[a-z]+-[0-9]+  (door|window)" | grep -v "follows from a flagged input" | grep -v "(its own file: " | sed -E 's/^( *[=~?])* *//; s/-[0-9]{4}//; s/  +/ /g' | sort; }
 lines8 "$J8" > "$T/ring-was.txt"; lines8 "$T/eight-back.json" > "$T/ring-back.txt"
 # By hand: the lines (0,0)-(20,0), (20,0)-(20,12), (20,12)-(0,12), (0,12)-(0,0): 20, 12, 20, 12 ft, the same wall by wall.
 for w in "(0, 0) to (20, 0) ft" "(20, 0) to (20, 12) ft" "(20, 12) to (0, 12) ft" "(0, 12) to (0, 0) ft"; do says "$T/ring-back.txt" "wall line $w"; done

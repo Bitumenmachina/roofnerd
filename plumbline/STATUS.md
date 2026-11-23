@@ -9338,6 +9338,54 @@ siding over stone at every sill it tried.
 **Two other judges of this round (the scan's walls again; the plan set again) stopped
 at a permission prompt and have found nothing yet.**
 
+## Call 180 fixed: what the second judge found (2026-11-23)
+
+A worker fixed all eight items, each unit test written first and run red (its account,
+with each cause: `research/worker-report-call180.md`). The lead ran the command-line
+crates' tests and every command-line demonstration on the integration copy and tried
+the level's height on a house of its own (9 ft 1 1/8 in out, 9.09375 ft back, Assumed).
+
+- **The BIM file**: a level's height is written and read back as it was; everything
+  read from a model is Assumed; a wall is never dropped for its type's name; a stub
+  comes back as drawn.
+- **A moved wall**: a roof with an overhang and a floor whose edge is outside the wall
+  go with it (the box with a floor 6 in out and a roof 1 ft out: floor 425 to **493.00
+  SF**, roof plan 468 to **540.00 SF**, surface 603.74; back, as before); what does not
+  go is said by name; `check` says where a floor or roof no longer reaches a wall or
+  reaches past it; every wall a move changes is tested for crossing; `--alone` says
+  each corner it opens; "4 ft to the east" is read.
+- **What a wall carries** is worked from the walls' bodies at any angle: offsets of 0,
+  2 and 3 in stand for 24.00 LF; 5, 6 and 12 in are "beside it, not on it"; a wall
+  turned 2 degrees stands for **14.33 LF** (by hand 14.327); a beam within 2 ft below
+  counts; a roof is over a wall by the plan; two levels up is said as that; a wall
+  under a roof that is not its eave says so; a wall said bearing with nothing under it
+  is a caution and a question; the dollars riding include the wall's openings ($1,800
+  and $300: $2,100).
+- **Joists**: a mark within 1/16 in of an edge is on it (the nudged and the turned
+  floor: 19 joists, 304.00 LF); the rim is the true length of the edges the joists'
+  ends meet (the chamfered floor **52.14 LF**: the judge was right).
+- **Refused now**: beams sharing a line; pads overlapping; an opening taller than its
+  wall.
+- **The moved wall has unit tests** (`crates/world/tests/call179b.rs`, five, with the
+  figures by hand; four fail with the footing carry switched off).
+
+**Moved, each by call 180** (the worker's list, read by the lead): four assertions of
+`call176.rs` (offsets now "beside"; the eave by the plan; said bearing with nothing
+under it cautions; names with levels); `call160.rs` (a wall said bearing with no
+footing is itself a question: 2 where 1); `call179c.rs` (a shorter beam on the same
+line refused); one test's 7 ft door in a 6 ft 11 in wall; two steps of `carries.sh`
+and one of `sweep-money.sh`.
+
+**Run on the integration copy (parts A to D of call 179 and call 180 together):** 658
+tests pass in the six command-line crates, 0 fail; all 44 command-line demonstrations
+pass; the three gates and `portmap.sh` pass. The window's crate was not built on it.
+
+**Not right:** a nudge past 1/16 in still loses the edge joist; a move refused for a
+follower does not say how far it could go; another maker's model with no level height
+still gets the distance to the next level (Assumed, said); a round pad is taken as its
+square; a height read back is written in decimal feet where the job wrote feet and
+inches; `SPEC.md` was not brought up to date. Not judged again.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **Since this was written (2026-11-18): a second builder, Opus 5.5, under call 129.**

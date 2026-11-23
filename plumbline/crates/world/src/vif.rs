@@ -232,6 +232,17 @@ pub fn vif(job: &mut Job) -> Vif {
         (Some(cents(priced.iter().filter_map(|l| l.amount).sum())), priced.iter().map(|l| l.status).max().unwrap_or(Status::Known), priced.len(), unpriced)
     };
 
+    // What is in a wall rides with it: the doors and windows in each wall (call 180, A6).
+    let openings_of: BTreeMap<String, Vec<String>> = {
+        let mut q = job.world.query::<(&crate::components::Node, &Kind)>();
+        let mut m: BTreeMap<String, Vec<String>> = BTreeMap::new();
+        for (n, k) in q.iter(&job.world) {
+            if let (true, Some(parent)) = (k.is_opening(), n.parent.as_ref()) {
+                m.entry(parent.clone()).or_default().push(n.path.clone());
+            }
+        }
+        m
+    };
     let mut with: Vec<Question> = Vec::new();
     let mut without: Vec<Question> = Vec::new();
     let mut counted: BTreeSet<(String, String)> = BTreeSet::new();
@@ -362,7 +373,7 @@ pub fn vif(job: &mut Job) -> Vif {
         // What rides on a measurement is a line whose quantity is itself in question:
         // a line of a Known length at an Assumed price is not made surer by a tape,
         // and its dollars do not send anyone to measure (call 83, M21-2).
-        let picked: Vec<&Line> = lines.iter().filter(|l| (l.quantity != Status::Known && l.rests.contains(&el.path)) || (identity && l.on == el.path) || (l.typed && l.on == el.path)).collect();
+        let picked: Vec<&Line> = lines.iter().filter(|l| (l.quantity != Status::Known && l.rests.contains(&el.path)) || (identity && l.on == el.path) || (identity && el.kind == Kind::Wall && openings_of.get(&el.path).is_some_and(|o| o.contains(&l.on))) || (l.typed && l.on == el.path)).collect();
         counted.extend(picked.iter().map(|l| l.key.clone()));
         let (dollars, dollars_status, n, unpriced) = sum(&picked);
         place(Question { path: el.path.clone(), name: el.name.clone(), kind: el.kind, storey: storey_name(&el.path, el.kind), room: None, clash: None, in_the_way: None, values, dollars, dollars_status, lines: n, unpriced, also }, &mut with, &mut without);

@@ -1488,6 +1488,20 @@ pub fn remove(job: &mut Job, path: &str) -> Result<Vec<String>, String> {
     })
 }
 
+/// A name no other type in the job goes by: this one, or this and a number after it ("wall 6 in 2"),
+/// where the job has a type of the name already at another size (call 180, C3: a wall is never
+/// dropped for its type's name).
+fn free_type_name(job: &mut Job, wanted: &str) -> String {
+    let taken = |job: &mut Job, name: &str| -> bool {
+        let root = job.world.get::<Node>(job.root()).map(|n| n.path.clone()).unwrap_or_default();
+        job.children().get(&root).is_some_and(|c| c.contains_key(name))
+    };
+    if !taken(job, wanted) {
+        return wanted.to_string();
+    }
+    (2..).map(|n| format!("{wanted} {n}")).find(|name| !taken(job, name)).unwrap_or_else(|| wanted.to_string())
+}
+
 /// The wall type of this thickness with no layers, or a new one named for it ("wall 6 in").
 /// A window draws with a thickness the person typed; this is the type that thickness is.
 pub fn wall_type_for(job: &mut Job, thickness: &str, how: Entered) -> Result<String, String> {
@@ -1497,7 +1511,10 @@ pub fn wall_type_for(job: &mut Job, thickness: &str, how: Entered) -> Result<Str
     found.sort();
     match found.into_iter().next() {
         Some(path) => Ok(path),
-        None => wall_type(job, &format!("wall {}", thickness.trim()), thickness, how),
+        None => {
+            let name = free_type_name(job, &format!("wall {}", thickness.trim()));
+            wall_type(job, &name, thickness, how)
+        }
     }
 }
 
@@ -1537,7 +1554,10 @@ pub fn floor_type_for(job: &mut Job, thickness: &str, how: Entered) -> Result<St
     found.sort();
     match found.into_iter().next() {
         Some(path) => Ok(path),
-        None => floor_type(job, &format!("floor {}", thickness.trim()), thickness, how),
+        None => {
+            let name = free_type_name(job, &format!("floor {}", thickness.trim()));
+            floor_type(job, &name, thickness, how)
+        }
     }
 }
 
@@ -1549,7 +1569,10 @@ pub fn opening_type_for(job: &mut Job, kind: Kind, width: &str, height: &str, ho
     found.sort();
     match found.into_iter().next() {
         Some(path) => Ok(path),
-        None => opening_type(job, &format!("{} {} by {}", kind.stem(), width.trim(), height.trim()), kind, width, height, how),
+        None => {
+            let name = free_type_name(job, &format!("{} {} by {}", kind.stem(), width.trim(), height.trim()));
+            opening_type(job, &name, kind, width, height, how)
+        }
     }
 }
 

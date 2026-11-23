@@ -296,7 +296,9 @@ fn two_beams_posts_or_pads_are_not_drawn_in_one_place() {
     }
     ed::beams(&mut job, &level, &wide, &[[0.0, 0.0], [10.0, 0.0]], "8 ft", known()).unwrap();
     ed::beams(&mut job, &level, &wide, &[[0.0, 4.0], [10.0, 4.0]], "9 ft", known()).unwrap();
-    ed::beams(&mut job, &level, &wide, &[[0.0, 0.0], [5.0, 0.0]], "9 ft", known()).unwrap();
+    // (Call 180, C4: a shorter beam on the same line, at the same top, shares 5 ft of it and is refused; it was accepted.)
+    let said = refused(ed::beams(&mut job, &level, &wide, &[[0.0, 0.0], [5.0, 0.0]], "9 ft", known()));
+    assert!(said.contains("two beams in one place would be counted twice") && said.contains("5 ft"), "{said}");
     ed::post(&mut job, &level, &post_type, [3.0, 3.0], Some("8 ft"), None, known()).unwrap();
     let said = refused(ed::post(&mut job, &level, &post_type, [3.0, 3.0], Some("8 ft"), None, known()));
     assert!(said.contains("two posts in one place would be counted twice"), "{said}");

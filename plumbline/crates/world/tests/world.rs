@@ -5690,8 +5690,19 @@ fn j13_2_4_a_hole_is_a_hole_whatever_stands_over_it_and_a_door_that_is_not_cut_f
     let (mut job, s, wt, dt2, _) = drawn();
     let _ = dt;
     let pipe = ed::segment_type(&mut job, "3/4 in", Kind::Pipe, "3/4 in", None, how).unwrap();
-    let wall = ed::walls(&mut job, &s, &wt, &[[0.0, 0.0], [10.0, 0.0]], false, ed::Top::Height("6 ft 11 in"), how).unwrap();
+    // (Call 180, C5: a door taller than its wall is refused when it is drawn, so the wall is cut down to 6 ft 11 in
+    // after the door is in it, as a job saved before has it.)
+    let wall = ed::walls(&mut job, &s, &wt, &[[0.0, 0.0], [10.0, 0.0]], false, ed::Top::Height("9 ft"), how).unwrap();
     ed::opening(&mut job, &wall[0], Kind::Door, &dt2, ed::OnWall::Offset("5 ft"), "0 ft", how).unwrap();
+    let low = ed::walls(&mut job, &s, &wt, &[[0.0, 40.0], [10.0, 40.0]], false, ed::Top::Height("6 ft 11 in"), how).unwrap();
+    {
+        let (here, there) = (job.find(&wall[0]).unwrap(), job.find(&low[0]).unwrap());
+        let height = job.world.get::<Wall>(there).unwrap().height.clone();
+        let mut w = job.world.get::<Wall>(here).cloned().unwrap();
+        w.height = height;
+        job.put(&wall[0], w).unwrap();
+    }
+    ed::remove(&mut job, &low[0]).unwrap();
     ed::runs(&mut job, &s, Kind::Pipe, &pipe, &[[5.0, -3.0], [5.0, 3.0]], "3 ft", None, how).unwrap();
     let got = clashes_of(&mut job, None);
     assert!(got.len() == 1 && got[0].3 && got[0].5 == Status::Assumed, "{got:?}");

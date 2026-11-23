@@ -324,11 +324,12 @@ from BIMCraft at the same commit is listed here by hand, and is checked by its o
 | `named_with` | ours |  |  | the lumber and spacing a priced line names, for the words that say which member it is (framing, stud; joist; rafter): `named` with its words given (call 165). As `named`: `grep -rn '2x4\|2x6\|nominal' crates/core/src/timber.rs`: nothing |
 | `MEMBER_THICKNESS_FT` | ours |  |  | a joist or rafter is 1 1/2 in thick; BIMCraft lays out nothing across a floor or a roof: `grep -rn 'joist' crates/core/src/timber.rs`: nothing |
 | `SHORTEST_PIECE_FT` | ours |  |  | a piece under 6 in is not a piece (call 165); `grep -rn 'joist' crates/core/src/timber.rs`: nothing |
+| `ON_THE_EDGE_FT` | ours |  |  | an edge runs with the members, and a mark is on an edge, within 1/16 in (call 180, C1); `grep -rn 'ON_THE_EDGE' crates/` in BIMCraft: nothing |
 | `Across` | ours |  |  | what is laid across an outline: the length of each member; `grep -rn 'struct Across' crates/`: nothing |
 | `count` | ours |  |  | how many members; `grep -rn 'struct Across' crates/`: nothing |
 | `total` | ours |  |  | the lengths of the members added; `grep -rn 'struct Across' crates/`: nothing |
 | `longest` | ours |  |  | the longest member; `grep -rn 'struct Across' crates/`: nothing |
-| `rim_length` | ours |  |  | the outline's edges measured square to the joists: the band their ends meet; `grep -rn 'fn rim_length' crates/`: nothing |
+| `rim_length` | ours |  |  | the true length of every edge the members' ends meet (call 180, C2; it was each edge measured square to the joists); `grep -rn 'fn rim_length' crates/`: nothing |
 | `members_across` | ours |  |  | joists across a floor and rafters across a roof plane, on the spacing's multiples from one end as `timber.rs` lays a wall's studs (`layout`, `crates/core/src/timber.rs:70`, already ported as `framing::frame`); BIMCraft lays out nothing across a floor or a roof (`research/structure-port-survey.md`): `grep -rn 'fn members_across' crates/`: nothing |
 | `JoistsSpan` | ours |  |  | which way a floor's joists run, with how sure that is; `grep -rn 'struct JoistsSpan' crates/`: nothing |
 | `SHORT_WAY` | ours |  |  | one of the two ways joists run; `grep -rn 'joists_span' crates/`: nothing |

@@ -306,6 +306,16 @@ pub fn export(job: &mut Job, file: &str, when: &str) -> Result<Written, String> 
         let id = o.add(format!("IFCBUILDINGSTOREY({},$,{},$,$,#{at},$,$,.ELEMENT.,{})", o.id(&s.path), name_or_none(&s.name), real(elevation)));
         level_of.insert(s.path.clone(), (id, at, elevation));
         level_ids.push(id);
+        // Its height, as it was entered (call 180, C3): a level is not "as tall as it is to the
+        // next one up" (that is the height and the floor's depth), so the height is written, in the
+        // base quantities IFC4 gives a storey, with how sure it is and where it came from.
+        if let Some(height) = job.find(&s.path).and_then(|e| job.world.get::<Level>(e)).map(|l| l.height.clone()) {
+            if let Some(feet) = height.feet() {
+                let quantity = o.add(format!("IFCQUANTITYLENGTH('GrossHeight',{},$,{},{})", text(&format!("{:?}", height.status)), real(feet), text(&height.source)));
+                let set = o.add(format!("IFCELEMENTQUANTITY({},$,'Qto_BuildingStoreyBaseQuantities',$,$,(#{quantity}))", o.id(&format!("{} quantities", s.path))));
+                o.add(format!("IFCRELDEFINESBYPROPERTIES({},$,$,$,(#{id}),#{set})", o.id(&format!("{} has quantities", s.path))));
+            }
+        }
         count("levels");
     }
     if no_elevation > 0 {

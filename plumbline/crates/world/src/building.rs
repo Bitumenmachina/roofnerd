@@ -534,6 +534,7 @@ pub fn drawn_faults(job: &mut Job) -> Vec<(String, String)> {
         }
         let Some(line) = w.get::<Wall>(*e).and_then(|c| c.line_ft()) else { continue };
         let length = geom::dist(line[0], line[1]);
+        let wall_high = w.get::<Wall>(*e).and_then(|c| plan_wall(&tree, &n.path, c).ok()).map(|(placed, _, _, _)| placed.top - placed.base);
         let mut spans: Vec<(&str, [f64; 4])> = Vec::new();
         for (c, ce) in &nodes {
             if c.parent.as_deref() != Some(n.path.as_str()) || !w.get::<Kind>(*ce).is_some_and(|k| k.is_opening()) {
@@ -546,7 +547,13 @@ pub fn drawn_faults(job: &mut Job) -> Vec<(String, String)> {
             }
             let Some(o) = w.get::<Opening>(*ce) else { continue };
             let Some(span) = hole_of(&tree, &c.path, o).0.span else { continue };
-            let [from, to, _, _] = span;
+            let [from, to, _, head] = span;
+            // A door or a window does not go above the top of its wall (call 180, C5).
+            if let Some(high) = wall_high {
+                if head > high + tol {
+                    out.push((format!("{} over the top", c.path), format!("{} goes up {} from the floor and its wall is only {} high: an opening lies within the height of its wall", c.path, ft_in_said(head), ft_in_said(high))));
+                }
+            }
             if from < -tol {
                 out.push((format!("{} off the start", c.path), format!("{} starts {} ft before the start of its wall: an opening lies within its wall", c.path, view::figure_shown(-from, 2))));
             } else if to > length + tol {
@@ -570,29 +577,68 @@ pub fn drawn_faults(job: &mut Job) -> Vec<(String, String)> {
         }
     }
     // Beams, posts and pad footings: not two in one place.
-    let beams: Vec<(&str, Option<&str>, [P2; 2], (f64, f64))> = nodes.iter().filter(|(_, e)| w.get::<Kind>(*e) == Some(&Kind::Beam)).filter_map(|(n, e)| {
+    // (Call 180, C4: for the length they share a line, within the width of the beam, and not only where one lies exactly on the other.)
+    let beams: Vec<(&str, Option<&str>, [P2; 2], (f64, f64), f64)> = nodes.iter().filter(|(_, e)| w.get::<Kind>(*e) == Some(&Kind::Beam)).filter_map(|(n, e)| {
         let s = w.get::<Segment>(*e)?;
-        Some((n.path.as_str(), n.parent.as_deref(), s.line_ft()?, s.offsets_ft()?))
+        let wide = tree.segment_types.get(s.type_name.value.as_deref()?).and_then(|t| t.width.feet()).unwrap_or(0.0);
+        Some((n.path.as_str(), n.parent.as_deref(), s.line_ft()?, s.offsets_ft()?, wide))
     }).collect();
-    for (i, (a, level, line, top)) in beams.iter().enumerate() {
-        for (b, other, its, their_top) in &beams[i + 1..] {
-            let same_ends = |p: P2, q: P2| geom::dist(p, q) <= tol;
-            let one_line = (same_ends(line[0], its[0]) && same_ends(line[1], its[1])) || (same_ends(line[0], its[1]) && same_ends(line[1], its[0]));
-            let along = if same_ends(line[0], its[0]) { (top.0 - their_top.0).abs().max((top.1 - their_top.1).abs()) } else { (top.0 - their_top.1).abs().max((top.1 - their_top.0).abs()) };
-            if level == other && one_line && along <= tol && gone.contains(*a) == gone.contains(*b) {
-                out.push((format!("{b} over {a}"), format!("{b} lies where {a} is: two beams in one place would be counted twice")));
+    for (i, (a, level, line, top, wide_a)) in beams.iter().enumerate() {
+        for (b, other, its, their_top, wide_b) in &beams[i + 1..] {
+            if level != other || gone.contains(*a) != gone.contains(*b) {
+                continue;
             }
+            let (la, lb) = (geom::dist(line[0], line[1]), geom::dist(its[0], its[1]));
+            if la <= tol || lb <= tol {
+                continue;
+            }
+            let (u, v) = ([(line[1][0] - line[0][0]) / la, (line[1][1] - line[0][1]) / la], [(its[1][0] - its[0][0]) / lb, (its[1][1] - its[0][1]) / lb]);
+            // On one line: running within a degree of the same way, their lines within a beam's width of one another.
+            if (u[0] * v[1] - u[1] * v[0]).abs() > 0.017_452_406_437_283_512 {
+                continue;
+            }
+            let (along, across) = (|p: P2| (p[0] - line[0][0]) * u[0] + (p[1] - line[0][1]) * u[1], |p: P2| ((p[1] - line[0][1]) * u[0] - (p[0] - line[0][0]) * u[1]).abs());
+            if across(its[0]).max(across(its[1])) > wide_a.max(*wide_b).max(tol) + tol {
+                continue;
+            }
+            let (lo, hi) = (along(its[0]).min(along(its[1])).max(0.0), along(its[0]).max(along(its[1])).min(la));
+            if hi - lo <= tol {
+                continue;
+            }
+            // And at one height over what they share: the top of each at the two ends of the stretch.
+            let height = |t: (f64, f64), len: f64, at: f64| t.0 + (t.1 - t.0) * (at / len);
+            let flip = along(its[0]) > along(its[1]);
+            let (theirs_at_lo, theirs_at_hi) = {
+                let (s0, s1) = (along(its[0]), along(its[1]));
+                let (first, second) = if flip { (their_top.1, their_top.0) } else { (their_top.0, their_top.1) };
+                let (s_lo, s_hi) = (s0.min(s1), s0.max(s1));
+                let on = |at: f64| first + (second - first) * ((at - s_lo) / (s_hi - s_lo).max(1.0e-12));
+                (on(lo), on(hi))
+            };
+            if (height(*top, la, lo) - theirs_at_lo).abs() > tol || (height(*top, la, hi) - theirs_at_hi).abs() > tol {
+                continue;
+            }
+            out.push((format!("{b} over {a}"), format!("{b} shares a line with {a} for {}: two beams in one place would be counted twice", ft_in_said(hi - lo))));
         }
     }
     for kind in [Kind::Post, Kind::PadFooting] {
-        let columns: Vec<(&str, Option<&str>, P2, (f64, f64))> = nodes.iter().filter(|(_, e)| w.get::<Kind>(*e) == Some(&kind)).filter_map(|(n, e)| {
+        let columns: Vec<(&str, Option<&str>, P2, (f64, f64), [f64; 2])> = nodes.iter().filter(|(_, e)| w.get::<Kind>(*e) == Some(&kind)).filter_map(|(n, e)| {
             let c = w.get::<Stood>(*e)?;
             let (base, height) = (c.base_offset.feet()?, c.height.feet()?);
-            Some((n.path.as_str(), n.parent.as_deref(), c.at_ft()?, (base, base + height)))
+            // Its footprint: its type's width by its depth, or across for a round one or one with no depth.
+            let t = tree.segment_types.get(c.type_name.value.as_deref()?);
+            let across = t.and_then(|t| t.width.feet()).unwrap_or(0.0);
+            let deep = t.and_then(|t| t.depth.as_ref().and_then(|d| d.feet())).unwrap_or(across);
+            Some((n.path.as_str(), n.parent.as_deref(), c.at_ft()?, (base, base + height), [across, deep]))
         }).collect();
-        for (i, (a, level, at, span)) in columns.iter().enumerate() {
-            for (b, other, its, theirs) in &columns[i + 1..] {
-                if level == other && geom::dist(*at, *its) <= tol && span.0 < theirs.1 - tol && theirs.0 < span.1 - tol && gone.contains(*a) == gone.contains(*b) {
+        for (i, (a, level, at, span, size)) in columns.iter().enumerate() {
+            for (b, other, its, theirs, their_size) in &columns[i + 1..] {
+                if level != other || gone.contains(*a) != gone.contains(*b) || !(span.0 < theirs.1 - tol && theirs.0 < span.1 - tol) {
+                    continue;
+                }
+                // (Call 180, C4: pad footings whose plan areas overlap, not only the same point.)
+                let overlap = if kind == Kind::PadFooting { (at[0] - its[0]).abs() < (size[0] + their_size[0]) / 2.0 - tol && (at[1] - its[1]).abs() < (size[1] + their_size[1]) / 2.0 - tol } else { false };
+                if geom::dist(*at, *its) <= tol || overlap {
                     out.push((format!("{b} over {a}"), format!("{b} lies where {a} is: two {} in one place would be counted twice", if kind == Kind::Post { "posts" } else { "pad footings" })));
                 }
             }
@@ -650,6 +696,34 @@ pub fn reach_cautions(job: &mut Job) -> Vec<(String, String)> {
         if past > tol {
             let nearest = there.iter().min_by(|a, b| reach(Some(&a.1)).total_cmp(&reach(Some(&b.1)))).map(|(f, _)| f.name.clone()).unwrap_or_default();
             out.push((format!("{} past its floor", n.path), format!("{} reaches {} past {nearest}: the floor is drawn smaller than the room (a wall was moved, or the floor was drawn short)", if n.name.is_empty() { n.path.clone() } else { n.name.clone() }, ft_in_said(past))));
+        }
+    }
+    // A floor or a roof that no longer reaches the walls under it, or reaches past them (call 180, B1): an edge
+    // along a wall with no other wall between, the wall outside it by more than its thickness, or the edge
+    // beyond a wall inside it by more than a floor's 2 ft or an eave's 4 ft. A floor is looked at against the
+    // walls of its own level, a roof against every wall (a roof is over a wall by the plan alone).
+    {
+        let roofs: Vec<(&Node, Vec<P2>)> = nodes.iter().filter(|(_, e)| w.get::<Kind>(*e) == Some(&Kind::Roof)).filter_map(|(n, e)| Some((*n, w.get::<Footprint>(*e)?.points_ft()?))).filter(|(n, _)| !gone.contains(&n.path)).collect();
+        let several = bodies.iter().map(|b| b.storey.as_str()).collect::<std::collections::BTreeSet<_>>().len() > 1;
+        let called = |path: &str, storey: &str| match (tree.names.get(path), tree.names.get(storey)) {
+            (Some(n), Some(l)) if several && !l.is_empty() => format!("{n} on {l}"),
+            (Some(n), _) => n.clone(),
+            _ => path.to_string(),
+        };
+        let things: Vec<(&Node, &Vec<P2>, bool)> = floors.iter().map(|(n, r)| (*n, r, false)).chain(roofs.iter().map(|(n, r)| (*n, r, true))).collect();
+        for (thing, ring, is_roof) in things {
+            let reach = if is_roof { crate::carries::ROOF_REACH_FT } else { crate::carries::FLOOR_REACH_FT };
+            for b in bodies.iter().filter(|b| !gone.contains(&b.path) && (is_roof || Some(b.storey.as_str()) == thing.parent.as_deref())) {
+                let found = crate::carries::edges_all(b, ring, &bodies.iter().filter(|o| !gone.contains(&o.path)).cloned().collect::<Vec<_>>(), is_roof);
+                let Some((_, e)) = found.iter().filter(|(_, e)| (!e.wall_inside && e.across > b.thick + tol) || (e.wall_inside && e.outward && e.across > reach + tol)).min_by(|x, y| x.1.across.total_cmp(&y.1.across)) else { continue };
+                let name = if thing.name.is_empty() { thing.path.clone() } else { thing.name.clone() };
+                let wall = called(&b.path, &b.storey);
+                out.push((format!("{} off {}", b.path, thing.path), if e.wall_inside {
+                    format!("{name} reaches {} past {wall}: more than {} ft, the most a {} is drawn out from a wall that goes with it", ft_in_said(e.across), reach, if is_roof { "roof's eave" } else { "floor's edge" })
+                } else {
+                    format!("{wall} stands {} outside {name}: {name} no longer reaches it", ft_in_said(e.across))
+                }));
+            }
         }
     }
     // Footings with no wall on them, and a wall that stands off one.

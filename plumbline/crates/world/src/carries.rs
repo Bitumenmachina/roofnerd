@@ -46,8 +46,18 @@ const SAME_WAY: f64 = 0.017_452_406_437_283_512;
 const TOL: f64 = crate::check::FIT_TOLERANCE_FT;
 /// How far from a wall's top an eave's height may be for the eave to be over that wall, in feet.
 pub const EAVE_REACH_FT: f64 = 2.0;
-/// How far from a wall's base (or top) a beam's top may be for the beam to be under (or in line with) it, in feet.
-pub const BEAM_REACH_FT: f64 = 1.0;
+/// How far below a wall's base a beam's top may be for the beam to be under the floor the wall stands on, in feet
+/// (call 180, A2: it was a foot, either way). A beam through the floor, above the base, is not under it.
+pub const BEAM_REACH_FT: f64 = 2.0;
+/// How far clear of a lower wall's face an upper wall's line may be and still be "beside it, not on it", in feet
+/// (call 180, A1; the call names no distance, and 12 in on 6 in walls reads beside).
+pub const BESIDE_FT: f64 = 1.0;
+/// The sine of 10 degrees: a wall within it of the way another runs can be beside it.
+const BESIDE_ANGLE: f64 = 0.173_648_177_666_930_3;
+/// How far outside a wall a floor's edge may be and go with it, in feet (call 180, B1).
+pub const FLOOR_REACH_FT: f64 = 2.0;
+/// How far outside a wall a roof's eave may be and go with it, in feet (call 180, B1).
+pub const ROOF_REACH_FT: f64 = 4.0;
 
 /// What stands on a wall.
 #[derive(Clone, Debug, PartialEq)]
@@ -63,6 +73,10 @@ pub struct On {
     /// How much of it would have nothing under it if this wall were taken out: what is
     /// drawn under it besides this wall is not counted out.
     pub left: f64,
+    /// It is beside this wall, not on it (call 180, A1): said, and not counted as standing here.
+    pub beside: bool,
+    /// How many levels up it is: 1 is the next level, 2 has nothing drawn between (call 180, A3).
+    pub up: usize,
 }
 
 /// What a wall stands on.
@@ -75,6 +89,10 @@ pub struct Under {
     pub shared: f64,
     /// It is marked to demolish: it is listed and is not counted.
     pub comes_down: bool,
+    /// It is beside this wall, not under it (call 180, A1): said, and not counted as under it.
+    pub beside: bool,
+    /// How many levels down it is: 1 is the next level, 2 has nothing drawn between (call 180, A3).
+    pub down: usize,
 }
 
 /// How the joists of the floor above lie to a wall.
@@ -122,10 +140,21 @@ pub struct Carry {
     pub status: Status,
     /// The things whose positions are not Known and the figures rest on, by name.
     pub rests_on: Vec<String>,
+    /// The roofs that are over this wall by the plan and have no eave on it: whether one bears here is not worked.
+    pub roofs_over: Vec<String>,
 }
 
 fn fig(x: f64) -> String {
     format!("{} LF", view::figure(x, 2))
+}
+
+fn levels_word(n: usize) -> String {
+    match n {
+        2 => "two".to_string(),
+        3 => "three".to_string(),
+        4 => "four".to_string(),
+        n => n.to_string(),
+    }
 }
 
 impl Carry {
@@ -134,12 +163,21 @@ impl Carry {
         let mut out = Vec::new();
         for o in &self.carries {
             let what = if o.kind == Kind::Eave { "the roof's eave".to_string() } else { format!("{} [{}]", o.name, o.path) };
-            out.push(if o.comes_down { format!("{what} for {}, which comes down: not counted", fig(o.shared)) } else { format!("{what} for {}", fig(o.shared)) });
+            if o.beside {
+                out.push(format!("{what} is beside it, not on it, for {}", fig(o.shared)));
+            } else if o.up > 1 {
+                out.push(if o.comes_down { format!("{what}, {} levels up, lies over this line with nothing drawn between them, for {}, which comes down: not counted", levels_word(o.up), fig(o.shared)) } else { format!("{what}, {} levels up, lies over this line with nothing drawn between them, for {}", levels_word(o.up), fig(o.shared)) });
+            } else {
+                out.push(if o.comes_down { format!("{what} for {}, which comes down: not counted", fig(o.shared)) } else { format!("{what} for {}", fig(o.shared)) });
+            }
         }
         match &self.joists {
             Some(Joists { way: JoistWay::Cross, .. }) => out.push("the joists of the floor above cross it".to_string()),
             Some(Joists { way: JoistWay::NotSaid, .. }) => out.push("which way the joists of the floor above run is not said".to_string()),
             _ => {}
+        }
+        if !self.roofs_over.is_empty() {
+            out.push("a roof is over this wall: whether it bears here is not worked (only eaves are)".to_string());
         }
         if out.is_empty() {
             out.push("nothing found standing on it".to_string());
@@ -152,7 +190,13 @@ impl Carry {
         let mut out = Vec::new();
         for u in &self.stands_on {
             let what = format!("{} [{}] ({})", u.name, u.path, u.kind.said());
-            out.push(if u.comes_down { format!("{what} for {}, which comes down: not counted", fig(u.shared)) } else { format!("{what} for {}", fig(u.shared)) });
+            if u.beside {
+                out.push(format!("{what} is beside it, not on it, for {}", fig(u.shared)));
+            } else if u.down > 1 {
+                out.push(if u.comes_down { format!("{what}, {} levels down, is under this line with nothing drawn between them, for {}, which comes down: not counted", levels_word(u.down), fig(u.shared)) } else { format!("{what}, {} levels down, is under this line with nothing drawn between them, for {}", levels_word(u.down), fig(u.shared)) });
+            } else {
+                out.push(if u.comes_down { format!("{what} for {}, which comes down: not counted", fig(u.shared)) } else { format!("{what} for {}", fig(u.shared)) });
+            }
         }
         if self.nothing_under > TOL {
             out.push(if self.lowest { format!("nothing found under it for {} (no footing)", fig(self.nothing_under)) } else { format!("nothing found under it for {}: it stands on the floor alone there, which is ordinary for a partition", fig(self.nothing_under)) });
@@ -174,7 +218,7 @@ impl Carry {
 
     /// Whether anything is found standing on it that does not come down.
     pub fn is_carrying(&self) -> bool {
-        self.carries.iter().any(|o| !o.comes_down) || matches!(&self.joists, Some(j) if j.way == JoistWay::Cross)
+        self.carries.iter().any(|o| !o.comes_down && !o.beside) || matches!(&self.joists, Some(j) if j.way == JoistWay::Cross)
     }
 }
 
@@ -212,8 +256,14 @@ struct BeamRec {
 struct EaveRec {
     path: String,
     line: [P2; 2],
-    height: Option<f64>,
+    /// The outline of the roof it is an eave of.
+    ring: Vec<P2>,
     status: Status,
+}
+
+struct RoofRec {
+    path: String,
+    ring: Vec<P2>,
 }
 
 struct FloorRec {
@@ -233,7 +283,9 @@ struct Drawn {
     footings: Vec<FootRec>,
     beams: Vec<BeamRec>,
     eaves: Vec<EaveRec>,
+    roofs: Vec<RoofRec>,
     floors: Vec<FloorRec>,
+    bodies: Vec<Body>,
 }
 
 fn number(path: &str) -> u64 {
@@ -297,6 +349,13 @@ fn gather(job: &mut Job) -> Drawn {
             beams.push(BeamRec { name: tree.called(&path), line, top: elevation + (first + second) / 2.0, status, path });
         }
     }
+    let mut roofs: Vec<RoofRec> = Vec::new();
+    {
+        let mut q = job.world.query::<(&Node, &Footprint)>();
+        let mut all: Vec<(String, Vec<P2>)> = q.iter(&job.world).filter_map(|(n, f)| Some((n.path.clone(), f.points_ft()?))).collect();
+        all.sort_by_key(|(p, _)| number(p));
+        roofs.extend(all.into_iter().map(|(path, ring)| RoofRec { path, ring }));
+    }
     let mut eaves = Vec::new();
     {
         let mut q = job.world.query::<(&Node, &Kind, &Run)>();
@@ -304,11 +363,12 @@ fn gather(job: &mut Job) -> Drawn {
         all.sort_by_key(|(p, _)| number(p));
         for (path, r) in all {
             let Some(line) = r.ends_ft() else { continue };
-            // Its height: its plane's eave height.
-            let plane = r.planes.first().and_then(|p| job.find(p)).and_then(|e| job.world.get::<Outline>(e));
-            let height = plane.and_then(|o| o.eave_height.feet());
-            let status = r.ends.status.max(plane.map(|o| o.eave_height.status).unwrap_or(Status::Unknown));
-            eaves.push(EaveRec { path, line, height, status });
+            // Its roof, by its plane: a roof is over a wall by the plan alone, so the eave's height is not asked (call 180, A2).
+            let plane = r.planes.first().and_then(|p| job.find(p));
+            let roof = plane.and_then(|e| job.world.get::<Node>(e)).and_then(|n| n.parent.clone());
+            let Some(ring) = roof.and_then(|r| roofs.iter().find(|x| x.path == r)).map(|x| x.ring.clone()) else { continue };
+            let height_status = plane.and_then(|e| job.world.get::<Outline>(e)).map(|o| o.eave_height.status).unwrap_or(Status::Unknown);
+            eaves.push(EaveRec { path, line, ring, status: r.ends.status.max(height_status) });
         }
     }
     let mut floors = Vec::new();
@@ -322,7 +382,8 @@ fn gather(job: &mut Job) -> Drawn {
             floors.push(FloorRec { name: tree.called(&path), path: path.clone(), storey: storey.to_string(), ring, run, status: f.boundary.status.max(span.as_ref().map(|s| s.0.status).unwrap_or(Status::Known)) });
         }
     }
-    Drawn { storeys, walls, footings, beams, eaves, floors }
+    let bodies = walls.iter().map(|w| Body { path: w.path.clone(), storey: w.storey.clone(), line: w.line, thick: w.thick, base: w.base, top: w.top }).collect();
+    Drawn { storeys, walls, footings, beams, eaves, roofs, floors, bodies }
 }
 
 impl Drawn {
@@ -339,6 +400,39 @@ impl Drawn {
     fn below(&self, storey: &str) -> Option<&str> {
         let at = self.storeys.iter().position(|s| s.1 == storey)?;
         self.storeys[..at].iter().rev().find(|s| s.0 < self.storeys[at].0 - TOL).map(|s| s.1.as_str())
+    }
+    /// The levels above `storey`, nearest first, each with how many levels up it is (levels at one
+    /// height are one level).
+    fn levels_above(&self, storey: &str) -> Vec<(String, usize)> {
+        let Some(at) = self.storeys.iter().position(|s| s.1 == storey) else { return Vec::new() };
+        let (mut out, mut up, mut last) = (Vec::new(), 0, self.storeys[at].0);
+        for s in &self.storeys[at + 1..] {
+            if s.0 <= self.storeys[at].0 + TOL {
+                continue;
+            }
+            if s.0 > last + TOL {
+                up += 1;
+                last = s.0;
+            }
+            out.push((s.1.clone(), up));
+        }
+        out
+    }
+    /// The levels below `storey`, nearest first, each with how many levels down it is.
+    fn levels_below(&self, storey: &str) -> Vec<(String, usize)> {
+        let Some(at) = self.storeys.iter().position(|s| s.1 == storey) else { return Vec::new() };
+        let (mut out, mut down, mut last) = (Vec::new(), 0, self.storeys[at].0);
+        for s in self.storeys[..at].iter().rev() {
+            if s.0 >= self.storeys[at].0 - TOL {
+                continue;
+            }
+            if s.0 < last - TOL {
+                down += 1;
+                last = s.0;
+            }
+            out.push((s.1.clone(), down));
+        }
+        out
     }
 }
 
@@ -367,6 +461,74 @@ pub(crate) fn over(wall: [P2; 2], thick: f64, other: [P2; 2]) -> Option<Span> {
         return None;
     }
     let (a, b) = (along(other[0]).min(along(other[1])).max(0.0), along(other[0]).max(along(other[1])).min(long));
+    (b - a > TOL).then_some((a, b))
+}
+
+/// The values of s in `range` for which `lo <= a0 + a1 s <= hi`, as a stretch (call 180, A1).
+fn lin(a0: f64, a1: f64, lo: f64, hi: f64, range: Span) -> Option<Span> {
+    let (mut l, mut h) = range;
+    if a1.abs() < 1.0e-12 {
+        if a0 < lo - 1.0e-9 || a0 > hi + 1.0e-9 {
+            return None;
+        }
+    } else {
+        let (x, y) = ((lo - a0) / a1, (hi - a0) / a1);
+        let (x, y) = if x <= y { (x, y) } else { (y, x) };
+        l = l.max(x);
+        h = h.min(y);
+    }
+    (h - l > 1.0e-9).then_some((l, h))
+}
+
+/// Where the wall `up` (a line and a thickness) stands on the wall `down`, and how much of it is beside it (call
+/// 180, A1): worked from the two bodies on the plan, at any angle. A point of `up`'s line stands on `down` while at
+/// least half of `up`'s thickness lies over `down`'s body: with the two bodies' widths `t_up` and `t_down` that is
+/// while the line is within `t_down / 2` of `down`'s line (and `t_down` is at least half of `t_up`), and over
+/// `down`'s length. The stretch is in feet along `up` from its first end. The second figure is the length of `up`
+/// that is not on `down` but is beside it: within `BESIDE_FT` of its face, where the walls run within 10 degrees of
+/// the same way, over `down`'s length.
+pub(crate) fn bearing(up: [P2; 2], t_up: f64, down: [P2; 2], t_down: f64) -> (Option<Span>, f64) {
+    let (lu, ld) = (length(up), length(down));
+    if lu <= TOL || ld <= TOL {
+        return (None, 0.0);
+    }
+    let (u, v) = ([(up[1][0] - up[0][0]) / lu, (up[1][1] - up[0][1]) / lu], [(down[1][0] - down[0][0]) / ld, (down[1][1] - down[0][1]) / ld]);
+    let from = [up[0][0] - down[0][0], up[0][1] - down[0][1]];
+    let (d0, d1) = (v[0] * from[1] - v[1] * from[0], v[0] * u[1] - v[1] * u[0]);
+    let (q0, q1) = (from[0] * v[0] + from[1] * v[1], u[0] * v[0] + u[1] * v[1]);
+    // Where the walls run across each other, the upper wall's body only grazes the end of a lower wall at a corner: half its
+    // thickness lies over the lower body there exactly, and it is not standing on it. The lower wall's length is
+    // taken less half the upper's thickness at each end (a joint is not a bearing).
+    let across = (u[0] * v[1] - u[1] * v[0]).abs() > BESIDE_ANGLE;
+    let (qlo, qhi) = if across { (t_up / 2.0, ld - t_up / 2.0) } else { (0.0, ld) };
+    if qhi <= qlo {
+        return (None, 0.0);
+    }
+    let Some(range) = lin(q0, q1, qlo, qhi, (0.0, lu)) else { return (None, 0.0) };
+    let a = t_down / 2.0 + 1.0e-7;
+    // Across the lower wall the upper one stands on it only where it passes over the whole of it; a wall that
+    // ends on the lower wall's line is a joint (half of the lower wall's thickness lies under its end).
+    let stands = if t_down + TOL >= t_up / 2.0 { lin(d0, d1, -a, a, range).filter(|s| s.1 - s.0 > TOL && (!across || s.1 - s.0 >= t_down - 1.0e-6)) } else { None };
+    let mut beside = 0.0;
+    if (u[0] * v[1] - u[1] * v[0]).abs() <= BESIDE_ANGLE {
+        for (lo, hi) in [(a, a + BESIDE_FT), (-a - BESIDE_FT, -a)] {
+            if let Some(s) = lin(d0, d1, lo, hi, range) {
+                beside += s.1 - s.0;
+            }
+        }
+    }
+    (stands, if beside > TOL { beside } else { 0.0 })
+}
+
+/// A stretch of wall `other`, given along `other`, as a stretch along `wall`, clipped to it.
+fn along_wall(wall: [P2; 2], other: [P2; 2], span: Span) -> Option<Span> {
+    let (lw, lo) = (length(wall), length(other));
+    if lw <= TOL || lo <= TOL {
+        return None;
+    }
+    let (w, o) = ([(wall[1][0] - wall[0][0]) / lw, (wall[1][1] - wall[0][1]) / lw], [(other[1][0] - other[0][0]) / lo, (other[1][1] - other[0][1]) / lo]);
+    let at = |s: f64| ((other[0][0] + o[0] * s) - wall[0][0]) * w[0] + ((other[0][1] + o[1] * s) - wall[0][1]) * w[1];
+    let (a, b) = (at(span.0).min(at(span.1)).max(0.0), at(span.0).max(at(span.1)).min(lw));
     (b - a > TOL).then_some((a, b))
 }
 
@@ -449,31 +611,76 @@ fn inside_floor(wall: [P2; 2], thick: f64, ring: &[P2]) -> Vec<Span> {
 
 // ---------------------------------------------------------------- the figures
 
+/// What lies over a wall from the levels above, nearest level first (call 180, A1 and A3): each wall that
+/// stands on it, with the stretch of that wall that does, and each that is beside it. The search stops at the
+/// first level that has a wall standing on it: what is above that stands on that.
+struct Hit<'a> {
+    wall: &'a WallRec,
+    span: Option<Span>,
+    beside: f64,
+    levels: usize,
+}
+
+fn walls_above<'a>(d: &'a Drawn, w: &WallRec) -> Vec<Hit<'a>> {
+    let mut out = Vec::new();
+    for (storey, up) in d.levels_above(&w.storey) {
+        let here: Vec<Hit> = d.walls.iter().filter(|u| u.storey == storey).filter_map(|u| {
+            let (span, beside) = bearing(u.line, u.thick, w.line, w.thick);
+            (span.is_some() || beside > 0.0).then_some(Hit { wall: u, span, beside, levels: up })
+        }).collect();
+        let stood = here.iter().any(|h| h.span.is_some());
+        out.extend(here);
+        if stood {
+            break;
+        }
+    }
+    out
+}
+
+fn walls_below<'a>(d: &'a Drawn, w: &WallRec, leaving: Option<&str>) -> Vec<Hit<'a>> {
+    let mut out = Vec::new();
+    for (storey, down) in d.levels_below(&w.storey) {
+        let here: Vec<Hit> = d.walls.iter().filter(|o| o.storey == storey && Some(o.path.as_str()) != leaving).filter_map(|o| {
+            let (span, beside) = bearing(w.line, w.thick, o.line, o.thick);
+            (span.is_some() || beside > 0.0).then_some(Hit { wall: o, span, beside, levels: down })
+        }).collect();
+        let stood = here.iter().any(|h| h.span.is_some() && !h.wall.comes_down);
+        out.extend(here);
+        if stood {
+            break;
+        }
+    }
+    out
+}
+
 /// What stands under `w` and is counted, as stretches along `w`; `leaving` is a wall taken
 /// out of the count (the wall it would stand on, were it to come down).
 fn supports(d: &Drawn, w: &WallRec, leaving: Option<&str>) -> (Vec<Under>, Vec<Span>) {
     let mut under = Vec::new();
     let mut counted: Vec<Span> = Vec::new();
-    if let Some(below) = d.below(&w.storey) {
-        for o in d.walls.iter().filter(|o| o.storey == below && Some(o.path.as_str()) != leaving) {
-            if let Some(s) = over(w.line, w.thick, o.line) {
-                if !o.comes_down {
-                    counted.push(s);
-                }
-                under.push(Under { kind: Kind::Wall, path: o.path.clone(), name: d.called(o), shared: s.1 - s.0, comes_down: o.comes_down });
+    for h in walls_below(d, w, leaving) {
+        let o = h.wall;
+        if let Some(s) = h.span {
+            if !o.comes_down {
+                counted.push(s);
             }
+            under.push(Under { kind: Kind::Wall, path: o.path.clone(), name: d.called(o), shared: s.1 - s.0, comes_down: o.comes_down, beside: false, down: h.levels });
+        }
+        if h.beside > 0.0 {
+            under.push(Under { kind: Kind::Wall, path: o.path.clone(), name: d.called(o), shared: h.beside, comes_down: o.comes_down, beside: true, down: h.levels });
         }
     }
     for f in d.footings.iter().filter(|f| f.storey == w.storey) {
         if let Some(s) = over(w.line, w.thick, f.line) {
             counted.push(s);
-            under.push(Under { kind: Kind::Footing, path: f.path.clone(), name: f.name.clone(), shared: s.1 - s.0, comes_down: false });
+            under.push(Under { kind: Kind::Footing, path: f.path.clone(), name: f.name.clone(), shared: s.1 - s.0, comes_down: false, beside: false, down: 1 });
         }
     }
-    for b in d.beams.iter().filter(|b| (b.top - w.base).abs() <= BEAM_REACH_FT + 1.0e-9) {
+    // A beam is under the floor the wall stands on: its top within 2 ft below the wall's base, and not above it (call 180, A2).
+    for b in d.beams.iter().filter(|b| b.top <= w.base + TOL && b.top >= w.base - BEAM_REACH_FT - TOL) {
         if let Some(s) = over(w.line, w.thick, b.line) {
             counted.push(s);
-            under.push(Under { kind: Kind::Beam, path: b.path.clone(), name: b.name.clone(), shared: s.1 - s.0, comes_down: false });
+            under.push(Under { kind: Kind::Beam, path: b.path.clone(), name: b.name.clone(), shared: s.1 - s.0, comes_down: false, beside: false, down: 1 });
         }
     }
     (under, merged(counted))
@@ -482,7 +689,7 @@ fn supports(d: &Drawn, w: &WallRec, leaving: Option<&str>) -> (Vec<Under>, Vec<S
 /// The stretches of `w` that a beam carries at `w`'s top: what a beam drawn in its line
 /// answers, were `w` taken out.
 fn beams_at_top(d: &Drawn, w: &WallRec) -> Vec<Span> {
-    d.beams.iter().filter(|b| (b.top - w.top).abs() <= BEAM_REACH_FT + 1.0e-9).filter_map(|b| over(w.line, w.thick, b.line)).collect()
+    d.beams.iter().filter(|b| b.top <= w.top + TOL && b.top >= w.top - BEAM_REACH_FT - TOL).filter_map(|b| over(w.line, w.thick, b.line)).collect()
 }
 
 fn carry_of(d: &Drawn, w: &WallRec) -> Carry {
@@ -497,29 +704,50 @@ fn carry_of(d: &Drawn, w: &WallRec) -> Carry {
     };
     rest(&w.name, w.status, &mut status);
     let mut carries = Vec::new();
-    if let Some(above) = d.above(&w.storey) {
-        for u in d.walls.iter().filter(|u| u.storey == above) {
-            let Some(s) = over(w.line, w.thick, u.line) else { continue };
+    // What stands on the wall above are stretches along the wall above; as stretches along this wall they are:
+    let mut above_spans: Vec<Span> = Vec::new();
+    for h in walls_above(d, w) {
+        let u = h.wall;
+        if let Some(span) = h.span {
             // What would have nothing under it if this wall came out: its own length over
             // this wall, less what else is drawn under it.
-            let left = match over(u.line, u.thick, w.line) {
-                Some(mine) => left_of(mine, &supports(d, u, Some(&w.path)).1),
-                None => 0.0,
-            };
+            let left = left_of(span, &supports(d, u, Some(&w.path)).1);
             rest(&d.called(u), u.status, &mut status);
-            carries.push(On { kind: Kind::Wall, path: u.path.clone(), name: d.called(u), shared: s.1 - s.0, comes_down: u.comes_down, left });
+            if !u.comes_down {
+                above_spans.extend(along_wall(w.line, u.line, span));
+            }
+            carries.push(On { kind: Kind::Wall, path: u.path.clone(), name: d.called(u), shared: span.1 - span.0, comes_down: u.comes_down, left, beside: false, up: h.levels });
+        }
+        if h.beside > 0.0 {
+            carries.push(On { kind: Kind::Wall, path: u.path.clone(), name: d.called(u), shared: h.beside, comes_down: u.comes_down, left: 0.0, beside: true, up: h.levels });
         }
     }
     let answered = beams_at_top(d, w);
+    let others: Vec<&Body> = d.bodies.iter().filter(|b| b.path != w.path).collect();
+    let me = d.bodies.iter().find(|b| b.path == w.path);
+    let mut eave_roofs: Vec<&str> = Vec::new();
     for e in &d.eaves {
-        // Over this wall where it is about as high as the wall's top; one whose height is not known is taken as over it, Unknown.
-        if !e.height.map(|h| (h - w.top).abs() <= EAVE_REACH_FT + 1.0e-9).unwrap_or(true) {
+        // Over this wall by the plan alone (call 180, A2): the eave along it within its thickness, or outside it by no more
+        // than 4 ft with no other wall between, whatever the height of the eave.
+        let Some(me) = me else { continue };
+        let Some(on) = edge_on(me, e.line, &others, &e.ring) else { continue };
+        if !(on.across <= w.thick + TOL || (on.across <= ROOF_REACH_FT + TOL && on.outward)) {
             continue;
         }
-        let Some(s) = over(w.line, w.thick, e.line) else { continue };
+        let Some(s) = along_wall(w.line, e.line, (0.0, length(e.line))) else { continue };
         rest("the roof's eave", e.status, &mut status);
-        carries.push(On { kind: Kind::Eave, path: e.path.clone(), name: "the roof's eave".to_string(), shared: s.1 - s.0, comes_down: false, left: left_of(s, &answered) });
+        if let Some(roof) = d.roofs.iter().find(|r| r.ring == e.ring) {
+            eave_roofs.push(roof.path.as_str());
+        }
+        let mut covered = answered.clone();
+        covered.extend(above_spans.iter().copied());
+        carries.push(On { kind: Kind::Eave, path: e.path.clone(), name: "the roof's eave".to_string(), shared: s.1 - s.0, comes_down: false, left: left_of(s, &covered), beside: false, up: 1 });
     }
+    // A roof over the wall by the plan whose eave is not on it: whether it bears here is not worked (call 180, A4).
+    let mid = [(w.line[0][0] + w.line[1][0]) / 2.0, (w.line[0][1] + w.line[1][1]) / 2.0];
+    // (Not where a wall is drawn standing on this one: the roof is over that wall, and it is the one it is said of.)
+    let walled_over = carries.iter().any(|o| o.kind == Kind::Wall && !o.beside);
+    let roofs_over: Vec<String> = d.roofs.iter().filter(|r| !walled_over && !eave_roofs.contains(&r.path.as_str()) && (crate::vif::inside(&r.ring, mid) || crate::geom::point_to_outline(mid, &r.ring) <= w.thick + TOL)).map(|r| r.path.clone()).collect();
     // The joists of the floor above, where the wall lies across the inside of it.
     let mut joists: Option<Joists> = None;
     if let Some(above) = d.above(&w.storey) {
@@ -577,6 +805,7 @@ fn carry_of(d: &Drawn, w: &WallRec) -> Carry {
         bearing: w.bearing,
         status,
         rests_on: rests.into_iter().map(|r| r.0).collect(),
+        roofs_over,
     }
 }
 
@@ -611,12 +840,13 @@ fn capital(name: &str) -> String {
 /// these figures are.
 fn standing_on_opened(c: &Carry, how: &crate::hidden::Opened) -> Vec<String> {
     let mut out = Vec::new();
-    for o in c.carries.iter().filter(|o| !o.comes_down) {
+    for o in c.carries.iter().filter(|o| !o.comes_down && !o.beside) {
         let what = if o.kind == Kind::Eave { "the roof's eave".to_string() } else { o.name.clone() };
+        let lead = if o.up > 1 { format!("{what}, {} levels up, lies over this line with nothing drawn between them,", levels_word(o.up)) } else { format!("{what} stands on it") };
         match how {
-            crate::hidden::Opened::Down if o.left > TOL => out.push(format!("{what} stands on it for {}: once it is down, nothing is found under {} for {}", fig(o.shared), if o.kind == Kind::Eave { "the roof there" } else { "that wall" }, fig(o.left))),
+            crate::hidden::Opened::Down if o.left > TOL => out.push(format!("{lead} for {}: once it is down, nothing is found under {} for {}", fig(o.shared), if o.kind == Kind::Eave { "the roof there" } else { "that wall" }, fig(o.left))),
             crate::hidden::Opened::Down => {}
-            crate::hidden::Opened::Cut(by) => out.push(format!("{what} stands on it for {} and the work cuts it for {}: the header over each opening carries what stands on it", fig(o.shared), by.join(" and "))),
+            crate::hidden::Opened::Cut(by) => out.push(format!("{lead} for {} and the work cuts it for {}: the header over each opening carries what stands on it", fig(o.shared), by.join(" and "))),
         }
     }
     if let Some(j) = c.joists.as_ref().filter(|j| j.way == JoistWay::Cross) {
@@ -625,6 +855,9 @@ fn standing_on_opened(c: &Carry, how: &crate::hidden::Opened) -> Vec<String> {
             crate::hidden::Opened::Down => {}
             crate::hidden::Opened::Cut(by) => out.push(format!("the joists of the floor above cross it and the work cuts it for {}: the header over each opening carries them", by.join(" and "))),
         }
+    }
+    if matches!(how, crate::hidden::Opened::Down) && !c.roofs_over.is_empty() {
+        out.push("a roof is over it: whether it bears here is not worked (only eaves are), so what it carries is not said".to_string());
     }
     out
 }
@@ -635,18 +868,28 @@ fn standing_on_opened(c: &Carry, how: &crate::hidden::Opened) -> Vec<String> {
 /// carries is no longer left with nothing under it, and nothing is said of it.
 pub fn asked(job: &mut Job) -> BTreeMap<String, Vec<String>> {
     let opened = crate::hidden::opened_walls(&mut job.world);
-    let mut out = BTreeMap::new();
-    if opened.is_empty() {
-        return out;
-    }
+    let mut out: BTreeMap<String, Vec<String>> = BTreeMap::new();
     for c in all(job) {
-        let Some(how) = opened.get(&c.path) else { continue };
-        let said = standing_on_opened(&c, how);
+        let mut said: Vec<String> = Vec::new();
+        if let Some(how) = opened.get(&c.path) {
+            said.extend(standing_on_opened(&c, how).into_iter().map(|s| format!("{} ({SAID}).", capital(&s))));
+        }
+        if let Some(s) = bearing_on_nothing(&c) {
+            said.push(format!("Is anything under it? It is {s} ({SAID})."));
+        }
         if !said.is_empty() {
-            out.insert(c.path.clone(), said.into_iter().map(|s| format!("{} ({SAID}).", capital(&s))).collect());
+            out.insert(c.path.clone(), said);
         }
     }
     out
+}
+
+/// A wall said bearing with nothing under it (call 180, A5): the sentence, or none.
+fn bearing_on_nothing(c: &Carry) -> Option<String> {
+    match c.bearing {
+        Some((Bearing::Bearing, _)) if c.nothing_under > TOL => Some(format!("said bearing, and nothing is found under it for {}{}", fig(c.nothing_under), if c.lowest { " (no footing)" } else { "" })),
+        _ => None,
+    }
 }
 
 /// The cautions of call 176, each with its wall's path: a wall the work opens with
@@ -656,20 +899,26 @@ pub fn cautions(job: &mut Job) -> Vec<(String, String)> {
     let opened = crate::hidden::opened_walls(&mut job.world);
     let mut out = Vec::new();
     for c in all(job) {
+        // Two walls named alike in one sentence are named with their levels (call 180, A6).
+        let bare = |n: &str| n.split(" on ").next().unwrap_or(n).to_string();
+        let me = if c.carries.iter().any(|o| o.kind == Kind::Wall && bare(&o.name) == c.name) { format!("{} on {}", c.name, c.storey_name) } else { c.name.clone() };
         if let Some(how) = opened.get(&c.path) {
             let is = match how {
                 crate::hidden::Opened::Down => "is to demolish".to_string(),
                 crate::hidden::Opened::Cut(by) => format!("is cut for {}", by.join(" and ")),
             };
             for s in standing_on_opened(&c, how) {
-                out.push((c.path.clone(), format!("{} {is}, and {s} ({SAID}).", capital(&c.name))));
+                out.push((c.path.clone(), format!("{} {is}, and {s} ({SAID}).", capital(&me))));
             }
         }
         if matches!(c.bearing, Some((Bearing::NotBearing, _))) {
-            for o in c.carries.iter().filter(|o| !o.comes_down) {
+            for o in c.carries.iter().filter(|o| !o.comes_down && !o.beside) {
                 let what = if o.kind == Kind::Eave { "the roof's eave".to_string() } else { o.name.clone() };
-                out.push((c.path.clone(), format!("{} is said not bearing, and {what} stands on it for {} ({SAID}).", capital(&c.name), fig(o.shared))));
+                out.push((c.path.clone(), format!("{} is said not bearing, and {what} stands on it for {} ({SAID}).", capital(&me), fig(o.shared))));
             }
+        }
+        if let Some(s) = bearing_on_nothing(&c) {
+            out.push((c.path.clone(), format!("{} is {s} ({SAID}).", capital(&me))));
         }
     }
     out
@@ -770,30 +1019,116 @@ pub struct GoesWith {
     pub roofs: Vec<(String, usize)>,
 }
 
+/// An edge of a floor's outline or a roof's footprint that lies along a wall (call 180, B1): parallel to it
+/// within 1 degree, over some of its length, with no other wall between them.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct EdgeOn {
+    /// How far the edge is from the wall's line, in feet.
+    pub across: f64,
+    /// It extends past either end of the wall by more than it is from the wall's line: moving it with
+    /// the wall's end would turn it.
+    pub runs_past: bool,
+    /// It lies on the outer side of the wall: the wall is inside the outline and the edge is beyond it.
+    pub outward: bool,
+    /// The wall is inside the outline (or on it).
+    pub wall_inside: bool,
+}
+
+fn bodies_of(d: &Drawn) -> Vec<Body> {
+    d.walls.iter().map(|w| Body { path: w.path.clone(), storey: w.storey.clone(), line: w.line, thick: w.thick, base: w.base, top: w.top }).collect()
+}
+
+/// `edge` against `wall`, with `others` the walls that may lie between them and `ring` the outline it is an edge of.
+pub fn edge_on(wall: &Body, edge: [P2; 2], others: &[&Body], ring: &[P2]) -> Option<EdgeOn> {
+    let (long, elong) = (length(wall.line), length(edge));
+    if long <= TOL || elong <= TOL {
+        return None;
+    }
+    let u = [(wall.line[1][0] - wall.line[0][0]) / long, (wall.line[1][1] - wall.line[0][1]) / long];
+    let e = [(edge[1][0] - edge[0][0]) / elong, (edge[1][1] - edge[0][1]) / elong];
+    if (u[0] * e[1] - u[1] * e[0]).abs() > SAME_WAY {
+        return None;
+    }
+    let n = |p: P2| u[0] * (p[1] - wall.line[0][1]) - u[1] * (p[0] - wall.line[0][0]);
+    let s = |p: P2| u[0] * (p[0] - wall.line[0][0]) + u[1] * (p[1] - wall.line[0][1]);
+    let lateral = (n(edge[0]) + n(edge[1])) / 2.0;
+    let across = lateral.abs();
+    let (lo, hi) = (s(edge[0]).min(s(edge[1])), s(edge[0]).max(s(edge[1])));
+    if hi.min(long) - lo.max(0.0) <= TOL {
+        return None;
+    }
+    if across > wall.thick + TOL {
+        for o in others {
+            let ol = length(o.line);
+            if ol <= TOL || (u[0] * (o.line[1][1] - o.line[0][1]) - u[1] * (o.line[1][0] - o.line[0][0])).abs() / ol > SAME_WAY {
+                continue;
+            }
+            let ln = (n(o.line[0]) + n(o.line[1])) / 2.0;
+            if ln * lateral <= 0.0 || ln.abs() <= wall.thick / 2.0 + TOL || ln.abs() - o.thick / 2.0 > across + TOL {
+                continue;
+            }
+            let (a, b) = (s(o.line[0]).min(s(o.line[1])), s(o.line[0]).max(s(o.line[1])));
+            if hi.min(b).min(long) - lo.max(a).max(0.0) > TOL {
+                return None;
+            }
+        }
+    }
+    let mid = [(wall.line[0][0] + wall.line[1][0]) / 2.0, (wall.line[0][1] + wall.line[1][1]) / 2.0];
+    let toward = if lateral >= 0.0 { 1.0 } else { -1.0 };
+    let probe = [mid[0] - u[1] * toward * (across + 0.1), mid[1] + u[0] * toward * (across + 0.1)];
+    let wall_in = crate::vif::inside(ring, mid) || crate::geom::point_to_outline(mid, ring) <= wall.thick + TOL;
+    let outward = across <= wall.thick + TOL || (wall_in && !crate::vif::inside(ring, probe));
+    let runs_past = lo < -(across + TOL) || hi > long + across + TOL;
+    Some(EdgeOn { across, runs_past, outward, wall_inside: wall_in })
+}
+
+/// The edges of `ring` that go with `wall` when it is moved: those lying along it within its
+/// thickness, and those a floor has within `reach` of it (2 ft), or a roof outside it within
+/// `reach` (4 ft: the eave), with no other wall between (call 180, B1). A roof is over a wall by
+/// the plan alone, whatever its eave's height (A2).
+pub fn edges_with(wall: &Body, ring: &[P2], bodies: &[Body], reach: f64, roof: bool) -> Vec<(usize, EdgeOn)> {
+    let others: Vec<&Body> = bodies.iter().filter(|o| o.path != wall.path && (roof || o.storey == wall.storey)).collect();
+    (0..ring.len())
+        .filter_map(|i| edge_on(wall, [ring[i], ring[(i + 1) % ring.len()]], &others, ring).map(|e| (i, e)))
+        .filter(|(_, e)| e.across <= wall.thick + TOL || (e.across <= reach + TOL && (!roof || e.outward)))
+        .collect()
+}
+
+/// The edges that lie along `wall` with no other wall between and are farther than the wall's
+/// thickness off but not within `reach`: what a move leaves where it was, and what `check` says is
+/// drawn out of reach of the wall (call 180, B1).
+pub fn edges_all(wall: &Body, ring: &[P2], bodies: &[Body], roof: bool) -> Vec<(usize, EdgeOn)> {
+    let others: Vec<&Body> = bodies.iter().filter(|o| o.path != wall.path && (roof || o.storey == wall.storey)).collect();
+    (0..ring.len()).filter_map(|i| edge_on(wall, [ring[i], ring[(i + 1) % ring.len()]], &others, ring).map(|e| (i, e))).collect()
+}
+
+pub fn edges_beyond(wall: &Body, ring: &[P2], bodies: &[Body], reach: f64, roof: bool) -> Vec<(usize, EdgeOn)> {
+    let others: Vec<&Body> = bodies.iter().filter(|o| o.path != wall.path && (roof || o.storey == wall.storey)).collect();
+    (0..ring.len())
+        .filter_map(|i| edge_on(wall, [ring[i], ring[(i + 1) % ring.len()]], &others, ring).map(|e| (i, e)))
+        .filter(|(_, e)| e.across > reach + TOL && e.outward)
+        .collect()
+}
+
 /// What lies on `wall`'s line, as the job is now drawn.
 pub fn goes_with(job: &mut Job, wall: &str) -> Result<GoesWith, String> {
-    let roofs: Vec<(String, Vec<P2>, Option<f64>)> = {
+    let roofs: Vec<(String, Vec<P2>)> = {
         let mut q = job.world.query::<(&Node, &Footprint)>();
-        let mut all: Vec<(String, Vec<P2>, Option<f64>)> = q.iter(&job.world).filter_map(|(n, f)| Some((n.path.clone(), f.points_ft()?, f.eave_height.feet()))).collect();
-        all.sort_by_key(|(p, _, _)| number(p));
+        let mut all: Vec<(String, Vec<P2>)> = q.iter(&job.world).filter_map(|(n, f)| Some((n.path.clone(), f.points_ft()?))).collect();
+        all.sort_by_key(|(p, _)| number(p));
         all
     };
     let d = gather(job);
+    let all = bodies_of(&d);
+    let me = all.iter().find(|w| w.path == wall).ok_or_else(|| format!("{wall} cannot be placed (its line, its type or its level is not known)"))?;
     let w = d.walls.iter().find(|w| w.path == wall).ok_or_else(|| format!("{wall} cannot be placed (its line, its type or its level is not known)"))?;
     let mut out = GoesWith::default();
-    if let Some(above) = d.above(&w.storey) {
-        out.walls = d.walls.iter().filter(|u| u.storey == above && over(w.line, w.thick, u.line).is_some()).map(|u| u.path.clone()).collect();
-    }
+    out.walls = walls_above(&d, w).into_iter().filter(|h| h.span.is_some()).map(|h| h.wall.path.clone()).collect();
     out.footings = d.footings.iter().filter(|f| f.storey == w.storey && over(w.line, w.thick, f.line).is_some()).map(|f| f.path.clone()).collect();
-    out.floors = d.floors.iter().filter(|f| f.storey == w.storey && (0..f.ring.len()).any(|i| over(w.line, w.thick, [f.ring[i], f.ring[(i + 1) % f.ring.len()]]).is_some())).map(|f| f.path.clone()).collect();
-    for (path, ring, eave) in roofs {
-        if !eave.map(|h| (h - w.top).abs() <= EAVE_REACH_FT + 1.0e-9).unwrap_or(false) {
-            continue;
-        }
-        for i in 0..ring.len() {
-            if over(w.line, w.thick, [ring[i], ring[(i + 1) % ring.len()]]).is_some() {
-                out.roofs.push((path.clone(), i + 1));
-            }
+    out.floors = d.floors.iter().filter(|f| f.storey == w.storey && !edges_with(me, &f.ring, &all, FLOOR_REACH_FT, false).is_empty()).map(|f| f.path.clone()).collect();
+    for (path, ring) in roofs {
+        for (i, _) in edges_with(me, &ring, &all, ROOF_REACH_FT, true) {
+            out.roofs.push((path.clone(), i + 1));
         }
     }
     Ok(out)
