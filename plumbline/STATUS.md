@@ -10632,7 +10632,24 @@ product is not chosen"). By hand:
    (the width typed on the panel with the house in view): the two files are the same
    to the byte. The bench is a way of looking.
 
-Not built yet.
+**Built (2026-11-24).** `research/worker-report-call195A.md`; pictures in
+`demos/captured/benchw/`, read by the lead: the vanity stands alone on a lined floor
+and reads as a base cabinet with its top, its three sizes in the Assumed colour,
+nothing under a panel (02); at 48 in the message names the 2 that follow and how the
+size is checked (03); the house is back where it was, to the dot (05, 06); the
+water heater on the bench (07). `demos/benchw.sh` holds the eight points on the
+builder's last build; `itemlibw`, `itemneww`, `itemsw` and `movew` passed there. The
+window's nine new tests were red first. **Not right**: the water heater is a plain
+pale cylinder and only just reads as a tank; the bench's floor floats in an empty
+grey-blue; the top bar still shows the job's price and counts while one item is
+looked at; the window does the model's work for a typed size (DECISIONS.md, "Call
+195, step A, as built"); an item whose size is not known has a test and no
+picture; `benchw` runs on the sample whole house, not the smaller job the
+demonstration named, so there is a house to put away. **`glassw`'s wheel check is
+on its edge again**: 110 dots (2.04) twice on one build, 109 (2.02) on the next,
+and 2.02 and 1.88 on the build before any of this: the check wants the step that
+waits until two pictures agree (owed, below), and no reading of it today says
+anything about the bench.
 
 ## The bench, step B: an item carries its cost. A demonstration, written before it is built (call 196; 2026-11-24)
 

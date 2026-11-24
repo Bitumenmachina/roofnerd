@@ -7743,6 +7743,24 @@ layers as material layer sets, types, a MasterFormat classification on each
 element, a designer's runs and equipment as things in the model. The second window
 judge (2026-11-24) is the first to try the two through the window.
 
+**Call 195, step A, as built (2026-11-24, by a Sonnet window builder under
+`handoff/contracts/contract-195A.md`; `research/worker-report-call195A.md`; accepted by
+the lead on its pictures and its runs).** The bench is one piece of the window's own
+state, never saved: the item on it, and the view that was left. The item is drawn by
+the same code that draws it set down; the house, its sheets, runs, clash marks, the
+tools, Plan and Walk are put away; the Items list and the item's panel stay. Esc on
+the bench leaves it and takes nothing else with it. BIMCraft has no place where one
+family is looked at alone that could be ported (searched whole; the report says where).
+**Call 197's points 8 and 9 are in with it**: a size typed on an item that differs
+is Assumed, "typed in the window; not yet checked against its maker's sheet"; the
+same size again is Known, "checked on site"; the message says which, how many
+follow, and that the name still reads the old size. No existing expectation moved.
+**Not right, and owed to the model**: there is no change in the model for "an
+item's size as typed", so the window runs the measuring change and then sets the
+size back to Assumed and mends how sure the things set down are. That is the window
+doing the model's work; a change `item_size` in `crates/world` takes its place (with
+the next command-line job on items), and the window then calls it.
+
 ### Call 196. The bench, step B, designed: how an item carries its cost (2026-11-24; the lead's design, not built)
 
 Call 195 left step B to the lead because it is what a number means. This is the
