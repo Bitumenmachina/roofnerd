@@ -14,6 +14,15 @@
 #   07 the same, Trim off                                         08 the sun at noon in June, the eave and corner close, with trim
 #   09 the same, Trim off                                         10 the street view with no trim line priced (as before)
 #
+# Call 193, point A (STATUS.md, "The window judged (2026-11-24), and its findings fixed"): the house is dressed in what the
+# estimate prices, trim too. Three houses, each 24 by 16 ft with lap siding, a window and a door, in three more programs:
+#  - (1) no trim line priced: no corner board and no outside casing is drawn, the window and the door are their units alone,
+#    the roof has its own edge, and the Show list has no Trim switch (pictures 11);
+#  - (2) the window's "Casing and trim at the window" priced by the each (the starter's line; its "Exterior casing" taken off): the
+#    window is cased with the window's own standard casing, the door (no such line) is not (12);
+#  - (3) casing and corner boards priced by their lengths: the model's 8 + 7 = 15 pieces, and the switch reads 15 (13).
+# Measured: each picture against the first, round the pieces (the places are the third house's map).
+#
 # Worked by hand (STATUS.md):
 #  - Opened: the switch "Trim" reads 27 (2 fascia, 4 rake fascia, 2 soffits, 4 rake soffits, 8 corner boards, 7 pieces of casing:
 #    the window's four, the door's three), on. The window's map lists 27 pieces.
@@ -330,6 +339,109 @@ for dy in (-1, 0, 1):
     for dx in (-1, 0, 1):
         core &= m[1 + dy:m.shape[0] - 1 + dy, 1 + dx:m.shape[1] - 1 + dx]
 check("Trim off is the job with no trim line priced: no patch of the house differs", core.sum() == 0, f"{int(core.sum())} patches of 3 by 3 dots differ ({int(m.sum())} single dots, on the edges)")
+sys.exit(0 if ok else 1)
+PY
+
+echo
+echo "== Call 193 A: three houses, 24 by 16 ft, lap siding, a window and a door: no trim priced, casing by the each, casing and corner boards by their lengths =="
+# house193 <file> <title> <window: none|each|length> <door: none|length> <corner boards: no|yes>
+house193() {
+  local H="$1" S WT NT DT SO EA NO WE WI DO
+  "$P" new "$H" "$2" >/dev/null
+  S="$(made "$("$P" level "$H" ground --elevation "0 ft" --height "9 ft" "${A[@]}")")"
+  WT="$(made "$("$P" type "$H" wall "wall 6 in" --thickness "6 in" "${A[@]}")")"
+  NT="$(made "$("$P" type "$H" window "window 3 ft" --width "3 ft" --height "5 ft" "${A[@]}")")"
+  DT="$(made "$("$P" type "$H" door "door 3 ft" --width "3 ft" --height "6 ft 8 in" "${A[@]}")")"
+  read -r SO EA NO WE <<<"$("$P" wall "$H" "$S" "$WT" --points "0,0 24,0 24,16 0,16" --closed --height "9 ft" "${A[@]}" | grep -oE 'wall-[0-9]+' | tr '\n' ' ')"
+  WI="$(made "$("$P" window "$H" "$SO" "$NT" --offset "18 ft" --sill "2.5 ft" "${A[@]}")")"
+  DO="$(made "$("$P" door "$H" "$SO" "$DT" --offset "6 ft" --sill "0 ft" "${A[@]}")")"
+  "$P" roof "$H" "Main roof" --points "-1,-1 25,-1 25,17 -1,17" --pitch 6:12 --eave-height "9 ft" "${A[@]}" >/dev/null
+  local R2; R2="$(grep -oE 'roof-[0-9]+' "$H" | head -1)"
+  "$P" set "$H" "$R2" edge:2 gable "${A[@]}" >/dev/null
+  "$P" set "$H" "$R2" edge:4 gable "${A[@]}" >/dev/null
+  "$P" import assemblies "$H" starter >/dev/null
+  for w in $SO $EA $NO $WE; do "$P" apply "$H" "$w" "Exterior wall, 2x6, lap siding" --source "$L" >/dev/null; [ "$5" = yes ] || "$P" remove-line "$H" "$w" "Corner boards" >/dev/null; done
+  case "$3" in
+    each) "$P" apply "$H" "$WI" "Window" --source "$L" >/dev/null; "$P" remove-line "$H" "$WI" "Exterior casing" >/dev/null ;;
+    length) "$P" apply "$H" "$WI" "Window" --source "$L" >/dev/null ;;
+  esac
+  [ "$4" = length ] && "$P" apply "$H" "$DO" "Entry door" --source "$L" >/dev/null
+  echo "$WI $DO"
+}
+H1="$T/h1.json"; H2="$T/h2.json"; H3="$T/h3.json"
+read -r W1 D1 <<<"$(house193 "$H1" "No trim priced (not a real job)" none none no)"
+read -r W2 D2 <<<"$(house193 "$H2" "Casing by the each (not a real job)" each none no)"
+read -r W3 D3 <<<"$(house193 "$H3" "Casing and corner boards by length (not a real job)" length length yes)"
+[ "$W1" = "$W3" ] && [ "$D1" = "$D3" ] && [ "$W2" = "$W3" ] || { echo "FAIL: the three houses were not made the same way ($W1 $W2 $W3 / $D1 $D2 $D3)"; exit 1; }
+[ -z "$("$P" trim "$H1" --pieces | grep -E '^ *(fascia|soffit|corner boards|casing)' || true)" ] || { echo "FAIL: house 1 has trim priced"; exit 1; }
+"$P" trim "$H3" --pieces | grep -E '^ *(corner boards|casing)' | sed 's/^/    /'
+for n in 1 2 3; do
+  OUTH="$T/h$n"; mkdir -p "$OUTH"
+  cat > "$T/session-h$n.sh" <<SESSION
+#!/bin/bash
+export APP="$APP" T="$T" OUT="$OUTH" ICD="$ICD" LOG="$T/app-h$n.log"
+. "$PWD/demos/window.sh"
+open_window "$T/h$n.json"
+on "Show panel Job"; on "Show panel Details"; on "Show panel Tools"
+park; sleep 6
+cp "\$PLUMBLINE_MAP" "$T/map-h$n.txt"
+shot                                    # the street view
+close_window
+SESSION
+  chmod +x "$T/session-h$n.sh"
+  timeout 900 xvfb-run -a -s "-screen 0 2500x980x24" "$T/session-h$n.sh" || true
+  cp "$OUTH/01-model.png" "$OUT/1$n-model.png" 2>/dev/null || { echo "FAIL: no picture 1$n"; exit 1; }
+  cp "$OUTH/01-sheet.png" "$OUT/1$n-sheet.png" 2>/dev/null || true
+done
+[ -z "$(grep -P '^count\tTrim' "$T/map-h1.txt")" ] && [ -z "$(grep -P '^trim\t' "$T/map-h1.txt")" ] || { echo "FAIL: house 1, with no trim priced, lists trim"; exit 1; }
+! awk -F'\t' '$2=="Show Trim"' "$T/map-h1.txt" | grep -q . || { echo "FAIL: house 1 offers a Trim switch"; exit 1; }
+echo "    house 1, no trim priced: no Trim count, no pieces, no Trim switch"
+[ "$(awk -F'\t' '$1=="count" && $2=="Trim" {print $3}' "$T/map-h3.txt")" = 15 ] || { echo "FAIL: the switch of house 3 does not read 15"; grep -P '^count' "$T/map-h3.txt" || echo none; exit 1; }
+[ "$(grep -c -P '^trim\t' "$T/map-h3.txt")" = 15 ] || { echo "FAIL: house 3's map does not list 15 pieces"; exit 1; }
+echo "    house 3, casing and corner boards by their lengths: the switch reads 15, the map lists 15 pieces (8 corner boards, 7 of casing)"
+python3 -W ignore -I - "$OUT" "$T" "$W3" "$D3" <<'PY'
+import sys, math
+import numpy as np
+from PIL import Image
+out, T, win, door = sys.argv[1:5]
+def load(n): return np.asarray(Image.open(f"{out}/{n}-model.png").convert("RGB")).astype(int)
+p1, p2, p3 = load("11")[:915], load("12")[:915], load("13")[:915]
+rows = []
+for line in open(f"{T}/map-h3.txt"):
+    f = line.rstrip("\n").split("\t")
+    if f[0] == "trim": rows.append((f[1], f[2], *map(float, f[3:8])))
+def strip_mask(kind, of, margin=14):
+    m = np.zeros(p1.shape[:2], bool)
+    for k, o, x1, y1, x2, y2, w in rows:
+        if k != kind or (of and o != of): continue
+        n = max(2, int(math.hypot(x2 - x1, y2 - y1) / 2))
+        for t in np.linspace(0, 1, n):
+            x, y = int(x1 + t * (x2 - x1)), int(y1 + t * (y2 - y1))
+            m[max(0, y - margin):y + margin + 1, max(0, x - margin):x + margin + 1] = True
+    return m
+def differs(a, b, mask): return int((np.abs(a - b).max(axis=2) > 24)[mask].sum())
+ok = True
+def check(what, good, said):
+    global ok
+    ok = ok and good
+    print(("  ok   " if good else "  FAIL ") + what + ": " + said)
+mw, md, mc = strip_mask("casing", win), strip_mask("casing", door), strip_mask("corner boards", "")
+a = differs(p1, p2, mw); b = differs(p1, p2, md); c = differs(p1, p2, mc)
+check("(2) the window is cased where (1) is not", a >= 100, f"{a} dots differ round the window's casing")
+check("(2) the door, with no casing line, is as in (1)", b <= 80, f"{b} dots differ round the door's casing")
+check("(2) the corners, with no corner board priced, are as in (1)", c <= 80, f"{c} dots differ along the corner boards")
+a = differs(p1, p3, mw); b = differs(p1, p3, md); c = differs(p1, p3, mc)
+check("(3) the window is cased by the model's casing", a >= 100, f"{a} dots differ round the window's casing")
+check("(3) the door is cased by the model's casing", b >= 100, f"{b} dots differ round the door's casing")
+check("(3) the corner boards are there", c >= 100, f"{c} dots differ along the corner boards")
+# nothing else of the house differs between (1) and (2): the picture, but for round the window
+m = (np.abs(p1 - p2).max(axis=2) > 24)[110:]
+core = m[1:-1, 1:-1].copy()
+for dy in (-1, 0, 1):
+    for dx in (-1, 0, 1):
+        core &= m[1 + dy:m.shape[0] - 1 + dy, 1 + dx:m.shape[1] - 1 + dx]
+outside = core & ~mw[110:][1:-1, 1:-1]
+check("(1) and (2) are one house but for the window's casing", outside.sum() == 0, f"{int(outside.sum())} patches of 3 by 3 dots differ away from the window's casing")
 sys.exit(0 if ok else 1)
 PY
 echo

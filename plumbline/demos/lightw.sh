@@ -55,6 +55,14 @@ if [ -n "${SUN:-}" ]; then
   for i in 1 2 3 4 5 6; do on "Earlier"; done            # 6 in the morning: the sun low in the east, in front of the eye
   park
   shot                                  # 08 the sun low, where the glow is
+  # The hour stops at 6 in the morning and 6 at night, and says so (call 193, H).
+  on "Earlier"
+  park
+  shot                                  # 09 6:00 am, Earlier pressed: it says it goes no earlier
+  for i in 1 2 3 4 5 6 7 8 9 10 11 12; do on "Later"; done   # 6 at night
+  on "Later"
+  park
+  shot                                  # 10 6:00 pm, Later pressed: it says it goes no later
 fi
 close_window
 SESSION
@@ -63,4 +71,10 @@ timeout 1500 xvfb-run -a -s "-screen 0 2500x980x24" "$T/session.sh" || true
 if [ -s "$T/missing.txt" ]; then echo "FAIL: the session stopped: a button it was to click was not on screen"; cat "$T/missing.txt"; exit 1; fi
 if grep -q "panicked" "$T/app.log"; then echo "FAIL: the program panicked"; grep -A3 panicked "$T/app.log" | head; exit 1; fi
 for n in 01 02 03 04; do [ "$OUT/$n-model.png" -nt "$T/start" ] || { echo "FAIL: no picture $n from this run"; exit 1; }; done
+if [ -n "${SUN:-}" ]; then
+  for n in 05 06 07 08 09 10; do [ "$OUT/$n-model.png" -nt "$T/start" ] || { echo "FAIL: no picture $n from this run"; exit 1; }; done
+  grep -qF "The sun card goes no earlier than 6:00 am." "$T/map.txt.said" || { echo "FAIL: Earlier at 6:00 am said nothing"; cat "$T/map.txt.said"; exit 1; }
+  grep -qF "The sun card goes no later than 6:00 pm." "$T/map.txt.said" || { echo "FAIL: Later at 6:00 pm said nothing"; cat "$T/map.txt.said"; exit 1; }
+  echo "    the Sun's hour stops at 6:00 am and 6:00 pm, and says so"
+fi
 echo "  pictures saved to $OUT"

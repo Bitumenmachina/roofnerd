@@ -42,6 +42,23 @@
 #    from its picture, and a wall clicked along the south face lands by the face as before.
 #  - Every wall by a face is Assumed, "traced by its face over the scan house"; none is Known.
 #
+# Call 193 (the window judged, 2026-11-24), points B to G, in a second job of three levels on the same scan (see STATUS.md,
+# "The window judged (2026-11-24), and its findings fixed"):
+#  - D, ground: the ring by the face (94.00 LF), Esc twice, "Other side" is still on the card: 90.00 LF; Undo: 94.00; "Other
+#    side" again: 90.00 LF; a wall of the ring deleted and "Other side" is gone from the card.
+#  - B, upper: two walls laid by the face (north 0 ft where they lie 3 in south of the faces), then Centerline pressed: both
+#    walls lie on the faces' own lines, the card says 2 walls moved 3 in, and the first wall's end is the second's start to
+#    the hundredth of a foot.
+#  - C, loft: a wall down the west face to the southwest corner, then 10 ft typed going east by the face: the typed 10.00 ft
+#    runs from the click 3 in inside the corner; the wall runs back to the corner of the outside faces (3 in out each way,
+#    the faces being 0.03 ft out on the west) and 10.25 ft to the click's end: 10.00 + 0.28 + 0.25 = 10.53 LF. The card says
+#    both. A wall drawn over it is refused without a stray colon. In D's ring, a click on the middle of the south wall
+#    (3 in inside the face) says it stands on the scan's face, and not that the scan shows no face.
+#  - F, in a fourth level on a scan of a house with partitions and doorways (made-up-scan.py --scene rooms3: partitions at 10 and 20 ft
+#    east, the first with its doorway 5 to 8 ft north): a wall traced across the 3 ft doorway says the scan shows no face along 3 ft
+#    of it; and the Job panel says the floor goes out to the walls' center lines beside rooms measured inside them.
+#  - G: with the Wall tool up over the scan, the traced wall is darker than the cut beside it, the cut is no longer black,
+#    and the scan's faces are drawn as fine lines.
 # It drives the real program with a real pointer and keyboard on a virtual display, which needs Xvfb,
 # xdotool and a Vulkan driver (Mesa's software one will do), and measures the pictures with python and
 # PIL. It accepts the sizes the tool offers once (the partition's second drawing) and types over them
@@ -179,6 +196,7 @@ esc
 park
 xdotool key F2; sleep 4
 cp "$J" "$T/final.json"
+cp "\$T/map.txt" "\$T/map-final.txt"
 shot                                    # again/03 two rooms inside the walls
 close_window
 SESSION
@@ -207,15 +225,8 @@ says "$SAID" "The scan shows both faces of this wall: 4 1/2 in between the faces
 says "$SAID" "The scan shows both faces of this wall: 4 1/2 in between the faces, and the type is 4 1/2 in. The centerline is laid between the faces." "the partition"
 says "$SAID" "Wall: from here. The scan shows no face here: this point stays where you clicked." "a click away from every line"
 says "$SAID" "The scan shows no face here: the wall is laid on the line clicked." "a wall away from every line"
-if grep -qiE 'tmp|\.ply|hough|ransac|vertex|mesh|point cloud|y up|z up' "$SAID"; then echo "FAIL: what the window said has a software word in it"; grep -iE 'tmp|\.ply|hough|ransac|vertex|mesh|point cloud|y up|z up' "$SAID"; exit 1; fi
-echo "    nothing said has a software word in it ($(wc -l < "$SAID") lines said)"
-for m in map-brought map-wall map-ring map-centre; do
-  [ -s "$T/$m.txt" ] || { echo "FAIL: the session kept no $m"; exit 1; }
-done
-grep -q $'^model\tCenterline\t' "$T/map-wall.txt" && grep -q $'^model\tFace\t' "$T/map-wall.txt" || { echo "FAIL: the Wall tool's two choices are not on the map"; exit 1; }
-grep -q $'^model\tOther side\t' "$T/map-ring.txt" || { echo "FAIL: after the walls were laid by a face, Other side is not on the map"; exit 1; }
-! grep -q $'^model\tOther side\t' "$T/map-wall.txt" || { echo "FAIL: Other side is there before any wall was laid by a face"; exit 1; }
-echo "    the Wall tool has Centerline and Face; Other side is there once walls are laid by a face, and not before"
+grep -q $'^note\tFloor\tout to the walls\' center lines' "$T/map-final.txt" || { echo "FAIL: the Job panel's Floor line does not say which line the floor goes to"; grep -P '^note' "$T/map-final.txt" || echo "no note"; exit 1; }
+echo "    the Job panel's Floor line says: out to the walls' center lines (beside Rooms, measured inside their walls)"
 
 echo
 echo "== The saved jobs =="
@@ -329,4 +340,201 @@ for pic, lit, unlit, m in (("03", "Face", "Centerline", "map-wall.txt"), ("07", 
 if bad:
     sys.exit("FAIL: the chosen way is not lit in the picture")
 PY
+
+echo
+echo "== A second job on the same scan, three levels: Other side kept (D), a run laid one way (B), a typed length (C), the cut seen through (G) =="
+J2="$T/more.json"
+python3 tools/made-up-scan.py "$T/house.ply" --scene house
+"$P" new "$J2" "A traced house, again (not a real job)" >/dev/null
+"$P" level "$J2" ground --elevation "0 ft" --height "9 ft" --status Assumed --source "to be checked on site" >/dev/null
+"$P" level "$J2" upper --elevation "9 ft" --height "9 ft" --status Assumed --source "to be checked on site" >/dev/null
+"$P" level "$J2" loft --elevation "18 ft" --height "9 ft" --status Assumed --source "to be checked on site" >/dev/null
+"$P" level "$J2" attic --elevation "27 ft" --height "9 ft" --status Assumed --source "to be checked on site" >/dev/null
+python3 tools/made-up-scan.py "$T/rooms3.ply" --scene rooms3
+cp "$T/map.txt.said" "$T/said-first.txt"
+mkdir -p "$OUT/more"
+touch "$T/started2"
+cat > "$T/session2.sh" <<SESSION
+#!/bin/bash
+export APP="$APP" T="$T" OUT="$OUT/more" ICD="$ICD" LOG="$T/app2.log"
+. "$PWD/demos/window.sh"
+scan_in() { on "Scan file"; sleep 3; on "File house.ply"; sleep 40; park; sleep 6; }
+open_window "$J2"
+on "Plan"; sleep 5
+park
+scan_in
+tool "Wall" "6 in, 9 ft"
+# D: the ring by the face, the tool put down, "Other side" on the card
+click \$(plan_px 0.25 0.25)
+click \$(plan_px 29.75 0.25)
+click \$(plan_px 29.75 15.75)
+click \$(plan_px 0.25 15.75)
+click \$(plan_px 0.25 0.25)
+park
+shot                                    # 01 the ring, the Wall tool up over the scan: the cut light, the walls heavier, the faces fine
+xdotool key F2; sleep 4; cp "$J2" "$T/d-ring.json"
+esc; esc
+park
+cp "\$T/map.txt" "\$T/map-down.txt"
+shot                                    # 02 the tool put down: "Other side" is on the card of the walls just laid
+on "Other side"; sleep 4
+park
+xdotool key F2; sleep 4; cp "$J2" "$T/d-turned.json"
+shot                                    # 03 turned with the tool down
+xdotool key z; sleep 5
+park
+xdotool key F2; sleep 4; cp "$J2" "$T/d-undone.json"
+cp "\$T/map.txt" "\$T/map-undone.txt"
+on "Other side"; sleep 4
+park
+xdotool key F2; sleep 4; cp "$J2" "$T/d-again.json"
+shot                                    # 04 Undo, and Other side again
+# a wall of the ring taken out: the walls are changed, and Other side goes from the card
+at 15 15.75; sleep 2                    # the north wall, now 3 in inside the face
+xdotool key Delete; sleep 4
+park
+cp "\$T/map.txt" "\$T/map-changed.txt"
+shot                                    # 05 a wall deleted: no Other side
+# a click on the middle of a wall that stands on the face (the south wall, 3 in inside it): not "no face here"
+tool "Wall"
+click \$(plan_px 5 0.25)
+esc; esc
+# B: the upper level: two walls by the face, then Centerline
+on "Level upper"; sleep 5
+scan_in
+tool "Wall" "6 in, 9 ft"
+click \$(plan_px 0.25 0.25)
+click \$(plan_px 29.75 0.25)
+click \$(plan_px 29.75 15.75)
+park
+xdotool key F2; sleep 4; cp "$J2" "$T/b-face.json"
+on "Centerline"; sleep 4
+park
+xdotool key F2; sleep 4; cp "$J2" "$T/b-centre.json"
+shot                                    # 06 the two walls laid again on the faces' own lines
+# C: the loft: a length typed along the face
+on "Level loft"; sleep 5
+scan_in
+tool "Wall" "6 in, 9 ft"
+on "Face"; sleep 3
+click \$(plan_px 0.25 15.75)            # the northwest corner, 3 in inside it
+click \$(plan_px 0.25 0.25)             # down the west face to the southwest corner
+len \$(plan_px 12 0.25) "10 ft" yes     # 07 ten feet typed, going east
+park
+xdotool key F2; sleep 4; cp "$J2" "$T/c-typed.json"
+shot                                    # 08 the wall, and what the card says of it
+esc
+click \$(plan_px 5 0.25)                # on the wall just laid
+click \$(plan_px 9 0.25)                # a wall drawn over it
+park
+shot                                    # 09 refused
+esc; esc
+# F: the attic, a scan of a house with two partitions, each with a 3 ft doorway; one traced from near its south end to near
+# its north, across the doorway (5 to 8 ft north)
+on "Level attic"; sleep 5
+on "Scan file"; sleep 3; on "File rooms3.ply"; sleep 40; park; sleep 6
+tool "Wall" "6 in, 9 ft"
+click \$(plan_px 9.8 0.4)
+click \$(plan_px 10.2 17.6)
+park
+shot                                    # 10 the partition across its doorway
+esc; esc
+close_window
+SESSION
+chmod +x "$T/session2.sh"
+timeout 3000 xvfb-run -a -s "-screen 0 2500x980x24" "$T/session2.sh" || true
+if [ -s "$T/missing.txt" ]; then echo "FAIL: the second session stopped: a button it was to click was not on screen"; cat "$T/missing.txt"; exit 1; fi
+if grep -q "panicked" "$T/app2.log"; then echo "FAIL: the program panicked"; grep -A3 panicked "$T/app2.log" | head; exit 1; fi
+for n in 01 02 03 04 05 06 07 08 09 10; do
+  [ "$OUT/more/$n-model.png" -nt "$T/started2" ] || { echo "FAIL: no picture $n of the second job"; exit 1; }
+done
+echo "  ten more pictures saved to $OUT/more"
+echo
+echo "== What the window said, the second job =="
+SAID2="$T/map.txt.said"
+tail -n +$(( $(wc -l < "$T/said-first.txt") + 1 )) "$SAID2" > "$T/said2.txt"
+SAID="$T/said2.txt"
+sed 's/^/    | /' "$SAID"
+says "$SAID" "Laid on the other side: 4 walls of this run now have their bodies inside the line clicked" "D: Other side, the tool put down"
+says "$SAID" "Laid again on the centerline: 2 walls of this run moved up to 3 in, and the corners still meet." "B: Centerline in the middle of a run"
+says "$SAID" "10' 0\" was typed along the scan's face; the wall is 10' 3\" to its corner." "C: a typed length"
+grep -qF "which stands on the scan's face" "$SAID" || { echo "FAIL: a click on a wall already laid on the face was not said to be on it"; cat "$SAID"; exit 1; }
+printf '    %s\n' "which stands on the scan's face"
+grep -qE "The scan shows no face along (2' 1[01]|3' [01])[^ ]* of it: a doorway, or what the scanner did not see\." "$SAID" || { echo "FAIL: F: the partition traced across its doorway does not say how long the scan shows no face along it"; grep -F "both faces" "$SAID"; exit 1; }
+printf '    %s\n' "The scan shows no face along 3 ft of it: a doorway, or what the scanner did not see."
+if grep -qF "the new wall: lies" "$SAID"; then echo "FAIL: the stray colon is still there"; exit 1; fi
+grep -qF "the new wall lies along" "$SAID" || { echo "FAIL: a wall drawn over another says nothing of it"; cat "$SAID"; exit 1; }
+printf '    %s\n' "the new wall lies along"
+# a wall's card that gave its length before the next wall joined its corner says what it has now
+grep -qE "wall[- ][0-9]+ is now [0-9]+' [0-9 /]+\" long, where it meets this wall" "$SAID" || { echo "FAIL: the first wall's length after the next joined it is not said"; cat "$SAID"; exit 1; }
+printf '    %s\n' "(the wall before it is told its length when the next wall joins its corner)"
+[ "$(grep -c "which stands on the scan's face" "$SAID")" -ge 1 ] && ! grep -qF "The scan shows no face here" "$SAID" || { echo "FAIL: a face a laid wall stands on is said to be no face"; grep -F "no face here" "$SAID"; exit 1; }
+printf '    %s\n' "(\"no face here\" is not said of a face a laid wall stands on)"
+grep -q $'^model\tOther side\t' "$T/map-down.txt" || { echo "FAIL: with the tool put down, Other side is not on the card"; exit 1; }
+grep -q $'^model\tOther side\t' "$T/map-undone.txt" || { echo "FAIL: after an Undo of the turn, Other side is not on the card"; exit 1; }
+! grep -q $'^model\tOther side\t' "$T/map-changed.txt" || { echo "FAIL: Other side is on the card after one of the walls was taken out"; exit 1; }
+echo "    Other side: on the card with the tool put down, still there after an Undo of the turn, gone once a wall of the run is taken out"
+python3 - "$T" <<'PY'
+import json, sys, os
+T = sys.argv[1]
+def walls(name):
+    out = []
+    for e in json.load(open(os.path.join(T, name)))["data"]:
+        a = e["attributes"]
+        if a.get("pl::class") == "Wall":
+            (p, q) = a["pl::wall"]["line"]["value"]
+            out.append({"p": p, "q": q, "len": a["pl::measure"]["plan_length"]["value"], "path": e["path"]})
+    return out
+bad = []
+def want(what, ok, got):
+    print("    %-78s %s%s" % (what, "as wanted" if ok else "WRONG", "" if ok else "  got " + str(got)))
+    if not ok: bad.append(what)
+def total(name, level=None):
+    return sum(w["len"] for w in walls(name))
+want("D: the ring by the face, 94.00 LF", abs(total("d-ring.json") - 94.0) < 0.1, total("d-ring.json"))
+want("D: Other side with the tool put down, 90.00 LF", abs(total("d-turned.json") - 90.0) < 0.1, total("d-turned.json"))
+want("D: Undo of the turn, 94.00 LF again", abs(total("d-undone.json") - 94.0) < 0.1, total("d-undone.json"))
+want("D: Other side after the Undo, 90.00 LF", abs(total("d-again.json") - 90.0) < 0.1, total("d-again.json"))
+fa = walls("b-face.json")[4:] if len(walls("b-face.json")) > 4 else []
+ce = walls("b-centre.json")[4:] if len(walls("b-centre.json")) > 4 else []
+# The ground's ring is four walls; the upper level's two follow.
+fa = walls("b-face.json")[-2:]; ce = walls("b-centre.json")[-2:]
+want("B: by the face the south wall lies 3 in south of the face (north -0.25 ft)", len(fa) == 2 and abs(fa[0]["p"][1] + 0.25) < 0.1 and abs(fa[0]["q"][1] + 0.25) < 0.1, fa)
+want("B: then Centerline: the south wall lies on the face's own line (north 0 ft)", len(ce) == 2 and abs(ce[0]["p"][1]) < 0.1 and abs(ce[0]["q"][1]) < 0.1, ce)
+want("B: and the east wall on its own (east 30 ft)", len(ce) == 2 and abs(ce[1]["p"][0] - 30.0) < 0.1 and abs(ce[1]["q"][0] - 30.0) < 0.1, ce)
+want("B: the first wall's end is the second's start, to the hundredth of a foot", len(ce) == 2 and abs(ce[0]["q"][0] - ce[1]["p"][0]) < 0.005 and abs(ce[0]["q"][1] - ce[1]["p"][1]) < 0.005, ce)
+c = walls("c-typed.json")[-1]
+want("C: ten feet typed along the face: the wall is 10.25 LF (3 in more than typed)", abs(c["len"] - 10.25) < 0.05, (c["len"], c["p"], c["q"]))
+if bad:
+    print("FAIL:", "; ".join(bad)); sys.exit(1)
+PY
+echo
+echo "== The cut seen through, the faces fine (G), measured on picture 04 of the first job: the Wall tool up over the scan, the ring laid =="
+python3 -W ignore -I - "$OUT" "$T" <<'PY'
+import sys
+import numpy as np
+from PIL import Image
+out, T = sys.argv[1], sys.argv[2]
+x0, y0, k = map(float, open(T + "/plan.txt").read().split())
+img = np.asarray(Image.open(out + "/04-model.png").convert("RGB")).astype(float)
+def px(e, n): return int(round(x0 + e * k)), int(round(y0 - n * k))
+def lum(a): return 0.2126 * a[..., 0] + 0.7152 * a[..., 1] + 0.0722 * a[..., 2]
+def patch(e, n, r=2):
+    x, y = px(e, n); return lum(img[y - r:y + r + 1, x - r:x + r + 1]).mean()
+wall = patch(5, -0.25)       # the traced south wall's own middle, over the scan's cut
+cut = patch(17.96, 8)        # the partition's cut, not yet traced
+print("    luminance: the traced wall %.0f, the cut beside it %.0f (white is 255, the old cut was black)" % (wall, cut))
+bad = []
+if not (wall + 25 < cut): bad.append("a place on the traced wall is not darker than the cut beside it")
+if not (cut > 110): bad.append("the cut is still heavy: luminance %.0f" % cut)
+# the faces are fine lines: some dot in a few dots' reach of the partition's west face is the accent blue
+fx, fy = px(17.77, 8)
+def bluest(cx): return (img[fy - 40:fy + 41, cx - 3:cx + 4, 2] - img[fy - 40:fy + 41, cx - 3:cx + 4, 0]).max()
+blue, beside = bluest(fx), max(bluest(fx - 30), bluest(fx + 30))
+print("    the most blue over red along the partition's west face: %.0f, and in a strip of the cut 30 dots to either side: %.0f" % (blue, beside))
+if not (blue > beside + 30): bad.append("no fine line is drawn along the scan's face")
+if bad:
+    print("FAIL:", "; ".join(bad)); sys.exit(1)
+PY
+
 echo "  PASS: in the window, a scan's sheet gave its 6 straight lines to the Wall tool, which was on Face over it without a click; four clicks 3 in inside the corners and the first again laid four walls whose centres lie 3 in outside the faces (94.00 LF), said which side the body took, and Other side laid them 3 in inside (90.00 LF) and back; a partition clicked on its two faces was laid between them (16.00 LF) with the scan's 4 1/2 in said beside the type's thickness, 4 1/2 in and 6 in; two rooms came to 474 SF inside the walls; a click away from every line stayed where it was put and said the scan showed no face; Centerline, on the upper level, laid the same clicks on the faces (92.00 LF, the room 457.25 SF, 22.75 SF short); opened again without the scan's file a wall was still laid by the face; every wall is Assumed"

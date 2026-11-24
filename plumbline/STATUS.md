@@ -10415,6 +10415,46 @@ says (DECISIONS.md, call 193, A to H). The steps the fixes come to, new ones in
   cut is darker than the cut beside it).
 - **H.** The Sun at 6:00 pm, "Later" pressed: it says it goes no later.
 
+## Call 193 built: the window judge's findings fixed (2026-11-24)
+
+Built by the window builder (Sonnet) on the tree at 0e52bd3; accepted by the lead by
+its diff, its pictures (the sample house before and after, `tracew` 04, `trimw` 11
+to 13 read by the lead) and the runs named here and in the merge that follows.
+
+- **First, the merged tree in the window** (owed since the merge at 51cf498): `trimw`,
+  `tracew` (94.00 LF), `movew` and `tradesw` passed on the frozen merged build, first
+  run each.
+- Each of the eight points (DECISIONS.md, "Call 193, as built") was reproduced on
+  that build, fixed, and is walked by a step of `tracew.sh` (B, C, D, F, G),
+  `movew.sh` (E), `trimw.sh` (A: three houses, trim priced by nothing, by the each,
+  and by its length) or `lightw.sh` (H).
+- On the builder's frozen build of this source: `trimw`, `tracew`, `movew`, `lightw`,
+  `dressw`, `glassw`, `pricew`, `renow`, `tradesw`, `firstw`, `scanw`, `planw` and
+  `gablew` pass; `cargo test --workspace` 865 passed.
+
+Changed, and named:
+- **A house is dressed in trim only where the estimate prices it.** Every picture of
+  a house with openings or siding and no trim priced by a length changes: the sample
+  whole house shows its windows as units alone and has no corner boards (its doors
+  are cased: that casing is priced by the each). No existing check measured what
+  went away.
+- The scan under a tracing is drawn light and a wall over it is filled.
+- `demos/gablew.sh`: one expectation moved from 1 to 2 unpriced lines, by call 185's
+  added line, with the reason beside it (DECISIONS.md says why it was late).
+
+What is not right:
+- **The sample whole house now looks barer than it did**, because it prices no
+  outside trim by a length. It should price its trim (fascia, soffit, corner boards,
+  casing), which changes its price and every figure that rests on it: a call of its
+  own, next.
+- The roof's own edge is still 8 in deep and dark, so an eave with nothing priced
+  reads as if it had a dark board.
+- A wall over any level that has a scan is filled, not only a traced one.
+- "No face along" is said only where the scan's faces are cut at the doorway (gaps
+  over 1 ft 6 in).
+- The sentence said when a drag ends over a panel has not been run by a demonstration.
+- `trimw`'s new checks on the casing are loose (pale casing on pale siding).
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **As of 2026-11-24 (the lead). Read this block first; what is below it is older and is

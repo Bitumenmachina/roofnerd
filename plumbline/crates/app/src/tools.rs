@@ -128,7 +128,7 @@ impl Tool {
             Tool::RoomLine => "Parts two rooms where no wall stands: click each end. Esc ends.",
             Tool::Cabinets => "Click a wall's face, on the room's side. The run starts where you click; type another start in Starts at. Then type the boxes, like B18 SB36 B24. Esc ends.",
             Tool::Roof => "Click each corner of the roof's outline, then the first again to close it.",
-            Tool::Move => "Click a point on it, then where that point goes.",
+            Tool::Move => "Click a point on it, then where that point goes; or press on it and drag.",
             Tool::Fitting => "Click where runs meet.",
             Tool::Join => "Click where a run ends at a fixture or a piece of equipment.",
             Tool::Scale => "Click the two ends of a dimension on the drawing, then type the dimension.",
@@ -182,6 +182,10 @@ pub struct Draw {
     pub sheets: Vec<crate::plans::SheetFaces>,
     /// The run of walls last laid by a scan's face: what "Other side" lays on the other side.
     pub faced: Option<Faced>,
+    /// The length typed for the wall now being laid, in feet, while its pick is made (call 193, C).
+    pub typed: Option<f64>,
+    /// Where the Move tool's button went down, on screen: a drag from there is a move (call 193, E).
+    pub pressed_at: Option<Vec2>,
 }
 
 /// A run of walls laid by the faces of a scan's sheet (call 190): the clicks, the walls they made, and
@@ -207,6 +211,15 @@ pub struct Faced {
     /// way it runs).
     pub seen: Vec<crate::plans::Seen>,
     pub body_left: Vec<Option<bool>>,
+    /// What each wall was drawn from before the faces laid it: its source when it stands on the center line.
+    pub traced: String,
+    /// The length each wall's card gave, so that a wall a later wall joined at its corner can be told of
+    /// the length it has now (call 193, F).
+    pub said: Vec<f64>,
+    /// The lines the run's walls take in each way it can be laid (face with the body one side, face with
+    /// the body the other, center line): the walls standing on any of them are the run, as laid or after
+    /// an Undo (call 193, D).
+    pub states: Vec<Vec<[[f64; 2]; 2]>>,
 }
 
 /// What the window enters is Assumed, and says where it came from: the window itself, or
@@ -288,6 +301,9 @@ fn size(text: &str) -> Result<[f64; 3], String> {
 
 /// Why something could not be done, as the screen says it: what, and why.
 pub fn cant(doc: &mut Doc, what: &str, why: impl std::fmt::Display) {
+    // The model names the two things it found one over the other as "the new wall: lies along wall 1 ..."; the
+    // colon is not a builder's (call 193, F).
+    let why = why.to_string().replace(": lies along ", " lies along ");
     doc.say(Tone::Refused, format!("Can't {what}: {why}"));
 }
 
@@ -927,9 +943,103 @@ fn inches(feet: f64) -> String {
     units::show_length(&units::Len::One((feet * 12.0 * 16.0).round() / 16.0), "in")
 }
 
+/// Whether these walls are there on these lines.
+fn walls_stand_on(job: &mut plumbline_world::Job, walls: &[String], lines: &[[[f64; 2]; 2]]) -> bool {
+    walls.len() == lines.len() && walls.iter().zip(lines).all(|(w, l)| wall_line(job, w).is_some_and(|now| near(now[0], l[0], 1e-6) && near(now[1], l[1], 1e-6)))
+}
+
 /// Whether the run is still as it was laid: its walls are there on the lines they were laid on.
 fn run_stands(job: &mut plumbline_world::Job, run: &Faced) -> bool {
-    run.walls.len() == run.lines.len() && run.walls.iter().zip(&run.lines).all(|(w, l)| wall_line(job, w).is_some_and(|now| near(now[0], l[0], 1e-6) && near(now[1], l[1], 1e-6)))
+    walls_stand_on(job, &run.walls, &run.lines)
+}
+
+/// A line as the walls keep it: to the ten thousandth of a foot.
+fn tidy_line(l: &[[f64; 2]; 2]) -> [[f64; 2]; 2] {
+    let t = |x: f64| (x * 1.0e4).round() / 1.0e4 + 0.0;
+    [[t(l[0][0]), t(l[0][1])], [t(l[1][0]), t(l[1][1])]]
+}
+
+/// The lines a run's walls take, kept as they are kept.
+fn laid_lines(laying: &crate::plans::ByFace) -> Vec<[[f64; 2]; 2]> {
+    laying.lines.iter().map(tidy_line).collect()
+}
+
+/// The three ways a run can lie: laid by the face with the bodies one side, with them the other, and on the
+/// center line. The lines of each, in that order.
+fn run_states(run: &Faced, faces: &[crate::plans::SheetFace]) -> Vec<Vec<[[f64; 2]; 2]>> {
+    [(false, false), (false, true), (true, false)]
+        .into_iter()
+        .map(|(centre, flipped)| laid_lines(&crate::plans::by_face(&run.clicks, run.closed, faces, if centre { 0.0 } else { run.thickness }, flipped)))
+        .collect()
+}
+
+/// The faces of the sheet a run was laid by.
+fn faces_of(doc: &Doc, run: &Faced) -> Vec<crate::plans::SheetFace> {
+    doc.draw.sheets.iter().find(|f| f.path == run.drawing).map(|f| f.faces.clone()).unwrap_or_default()
+}
+
+/// Whether the run's walls stand in any of the ways it can be laid (the lines of each kept in `states`):
+/// what an Undo of a turn leaves, and what the panel looks at to offer "Other side".
+pub fn run_stands_any(snap: &Snapshot, run: &Faced) -> bool {
+    let line_of = |path: &str| {
+        snap.drawn.iter().find(|p| p.path == path).and_then(|p| match &p.shape {
+            plumbline_world::building::Shape::Wall { a, b, .. } => Some([*a, *b]),
+            _ => None,
+        })
+    };
+    run.states.iter().any(|lines| run.walls.len() == lines.len() && run.walls.iter().zip(lines).all(|(w, l)| line_of(w).is_some_and(|now| near(now[0], l[0], 1e-3) && near(now[1], l[1], 1e-3))))
+}
+
+/// A run whose walls stand in another of the ways it can be laid than the way it remembers (an Undo of a
+/// turn, or of a change of Centerline and Face, took them back) takes that way up again: it can be turned
+/// again (call 193, D).
+fn resync(doc: &mut Doc) {
+    let Some(mut run) = doc.draw.faced.take() else { return };
+    if !run_stands(&mut doc.job, &run) {
+        let faces = faces_of(doc, &run);
+        for (centre, flipped) in [(false, false), (false, true), (true, false)] {
+            if (centre, flipped) == (run.centre, run.flipped) {
+                continue;
+            }
+            let laying = crate::plans::by_face(&run.clicks, run.closed, &faces, if centre { 0.0 } else { run.thickness }, flipped);
+            let lines = laid_lines(&laying);
+            if walls_stand_on(&mut doc.job, &run.walls, &lines) {
+                run.centre = centre;
+                run.flipped = flipped;
+                run.lines = lines;
+                run.seen = laying.seen.clone();
+                run.body_left = laying.body_left.clone();
+                // The buttons say how the walls lie.
+                doc.draw.face_choice = Some(!centre);
+                break;
+            }
+        }
+    }
+    doc.draw.faced = Some(run);
+}
+
+/// How many of a run's walls lay differently, and the most any of them moved: its line sideways, or, where
+/// none moved sideways, an end along it, in feet (call 193, B).
+pub fn moved_by(before: &[[[f64; 2]; 2]], after: &[[[f64; 2]; 2]]) -> (usize, f64) {
+    let (mut count, mut sideways, mut along) = (0, 0.0_f64, 0.0_f64);
+    for (b, a) in before.iter().zip(after) {
+        let ends = (b[0][0] - a[0][0]).hypot(b[0][1] - a[0][1]).max((b[1][0] - a[1][0]).hypot(b[1][1] - a[1][1]));
+        if ends <= 1.0e-4 {
+            continue;
+        }
+        count += 1;
+        // The new middle's distance from the old line.
+        let (d, mid) = ([b[1][0] - b[0][0], b[1][1] - b[0][1]], [(a[0][0] + a[1][0]) / 2.0 - b[0][0], (a[0][1] + a[1][1]) / 2.0 - b[0][1]]);
+        let length = d[0].hypot(d[1]).max(1.0e-9);
+        sideways = sideways.max(((d[0] * mid[1] - d[1] * mid[0]) / length).abs());
+        along = along.max(ends);
+    }
+    (count, if sideways > 1.0e-4 { sideways } else { along })
+}
+
+/// The length each wall of the run has now, in feet.
+fn run_lengths(job: &mut plumbline_world::Job, run: &Faced) -> Vec<f64> {
+    run.walls.iter().map(|w| job.find(w).and_then(|e| job.world.get::<plumbline_world::Measure>(e)).and_then(|m| m.0.get("plan_length").and_then(|d| d.value)).unwrap_or(0.0)).collect()
 }
 
 /// Each wall of a run on the line the faces gave it, saying by its source which were laid by a face.
@@ -946,7 +1056,7 @@ fn relay(job: &mut plumbline_world::Job, run: &Faced, laying: &crate::plans::ByF
         let line = [[tidy(line[0][0]), tidy(line[0][1])], [tidy(line[1][0]), tidy(line[1][1])]];
         let source = match seen {
             Seen::Nothing => w.line.source.clone(),
-            _ if !by_face => w.line.source.clone(),
+            _ if !by_face => run.traced.clone(),
             _ => format!("traced by its face over the scan {}", run.name),
         };
         w.line = plumbline_world::Val { value: Some(line), unit: w.line.unit.clone(), status: w.line.status.max(Status::Assumed), source };
@@ -980,6 +1090,21 @@ fn face_said(run: &Faced, seen: &crate::plans::Seen) -> String {
     }
 }
 
+/// A laid wall of the plan the point is on, that has a face of the sheet within its thickness and the usual reach
+/// of the point: what a click on a wall already standing on a face is by.
+fn wall_on_a_face(doc: &Doc, faces: &[crate::plans::SheetFace], at: [f64; 2]) -> Option<String> {
+    let (_, _, _, _, scene) = doc.draw.scene.as_ref()?;
+    scene.walls.iter().find_map(|(a, b, thick, path)| {
+        let (u, len2) = ([b[0] - a[0], b[1] - a[1]], (b[0] - a[0]).powi(2) + (b[1] - a[1]).powi(2));
+        if len2 < 1e-9 {
+            return None;
+        }
+        let t = (((at[0] - a[0]) * u[0] + (at[1] - a[1]) * u[1]) / len2).clamp(0.0, 1.0);
+        let d = (at[0] - (a[0] + u[0] * t)).hypot(at[1] - (a[1] + u[1] * t));
+        (d <= thick / 2.0 + 0.05 && faces.iter().any(|f| f.distance(at) <= thick + crate::plans::ON_FACE_FT)).then(|| path.clone())
+    })
+}
+
 /// A wall's pick over a scan's sheet, set by the scan's face (call 190): the click lands on the face the
 /// sheet shows, and the wall is laid with its center half its thickness to the side away from the room, or
 /// between the two faces where the sheet shows both. A click with no face near stays where the hand put it
@@ -997,13 +1122,22 @@ fn wall_by_face(doc: &mut Doc, storey: &str, at: [f64; 2], s: &[&str], traced: &
         if centre {
             return ByFace::From("Wall: from here. Click the next point, or type a length.".to_string());
         }
-        let said = if crate::plans::on_a_face(&faces, at) { "Wall: from here, on the scan's face. Click the next point, or type a length.".to_string() } else { "Wall: from here. The scan shows no face here: this point stays where you clicked. Click the next point, or type a length.".to_string() };
+        let said = if crate::plans::on_a_face(&faces, at) {
+            "Wall: from here, on the scan's face. Click the next point, or type a length.".to_string()
+        } else if let Some(wall) = wall_on_a_face(doc, &faces, at) {
+            // A wall laid on a face stands off it by half its thickness: that is the face the point is by.
+            format!("Wall: from here, on {wall}, which stands on the scan's face. Click the next point, or type a length.")
+        } else {
+            "Wall: from here. The scan shows no face here: this point stays where you clicked. Click the next point, or type a length.".to_string()
+        };
         return ByFace::From(said);
     };
     let (a, b) = (*a, *b);
+    resync(doc);
+    let typed = doc.draw.typed.take();
     let mut run = match doc.draw.faced.take() {
         Some(run) if run.storey == storey && run.drawing == scan.path && run.centre == centre && !run.closed && run.clicks.last().is_some_and(|l| near(*l, a, 1e-6)) && (run.thickness - thick).abs() < 1e-9 && run_stands(&mut doc.job, &run) => run,
-        _ => Faced { storey: storey.to_string(), drawing: scan.path.clone(), name: scan.name.clone(), clicks: vec![a], closed: false, walls: Vec::new(), lines: Vec::new(), thickness: thick, flipped: false, centre, seen: Vec::new(), body_left: Vec::new() },
+        _ => Faced { storey: storey.to_string(), drawing: scan.path.clone(), name: scan.name.clone(), clicks: vec![a], closed: false, walls: Vec::new(), lines: Vec::new(), thickness: thick, flipped: false, centre, seen: Vec::new(), body_left: Vec::new(), traced: traced.to_string(), said: Vec::new(), states: Vec::new() },
     };
     let closes = run.clicks.len() >= 3 && near(b, run.clicks[0], CLOSES_FT);
     if !closes {
@@ -1020,13 +1154,15 @@ fn wall_by_face(doc: &mut Doc, storey: &str, at: [f64; 2], s: &[&str], traced: &
     match result {
         Ok(()) => {
             run.closed = closes;
-            run.lines = laying.lines.iter().map(|l| [[(l[0][0] * 1.0e4).round() / 1.0e4 + 0.0, (l[0][1] * 1.0e4).round() / 1.0e4 + 0.0], [(l[1][0] * 1.0e4).round() / 1.0e4 + 0.0, (l[1][1] * 1.0e4).round() / 1.0e4 + 0.0]]).collect();
+            run.lines = laid_lines(&laying);
             run.seen = laying.seen.clone();
             run.body_left = laying.body_left.clone();
+            run.states = run_states(&run, &faces);
             doc.draw.picked = vec![b];
             doc.job.derive();
             let last = run.walls.last().cloned().unwrap_or_default();
-            let long = doc.job.find(&last).and_then(|e| doc.job.world.get::<plumbline_world::Measure>(e)).and_then(|m| m.0.get("plan_length").and_then(|d| d.value));
+            let lengths = run_lengths(&mut doc.job, &run);
+            let long = lengths.last().copied();
             let mut said = match long {
                 Some(feet) => format!("Added {last}, {} long.", units::feet_as_ft_in(feet, 16)),
                 None => format!("Added {last}."),
@@ -1034,6 +1170,36 @@ fn wall_by_face(doc: &mut Doc, storey: &str, at: [f64; 2], s: &[&str], traced: &
             if let (Some(seen), false) = (run.seen.last(), centre) {
                 said.push(' ');
                 said.push_str(&face_said(&run, seen));
+            }
+            // A length typed along the face is that; the wall runs on to its corner (call 193, C).
+            if let (Some(typed), Some(feet)) = (typed, long) {
+                if (typed - feet).abs() > 1.0 / 32.0 {
+                    said.push_str(&format!(" {} was typed along the scan's face; the wall is {} to its corner.", units::feet_as_ft_in(typed, 16), units::feet_as_ft_in(feet, 16)));
+                }
+            }
+            // Where the stretch has a face for only part of its length (call 193, F).
+            if matches!(run.seen.last(), Some(crate::plans::Seen::Face { .. } | crate::plans::Seen::Both { .. })) {
+                let bare = crate::plans::bare_length(&faces, a, b);
+                if bare >= 0.25 {
+                    said.push_str(&format!(" The scan shows no face along {} of it: a doorway, or what the scanner did not see.", units::feet_as_ft_in(bare, 16)));
+                }
+            }
+            // A wall whose card gave its length before this wall joined its corner is told what it has now.
+            run.said.resize(lengths.len().saturating_sub(1), 0.0);
+            let mut grew = Vec::new();
+            for (i, (now, was)) in lengths.iter().zip(run.said.iter_mut()).enumerate() {
+                if (*now - *was).abs() > 1.0 / 32.0 && *was > 0.0 {
+                    grew.push(format!("{} is now {} long, where it meets this wall", run.walls[i], units::feet_as_ft_in(*now, 16)));
+                }
+                *was = *now;
+            }
+            run.said = lengths.clone();
+            if !grew.is_empty() {
+                let mut sentence = grew.join("; ");
+                if let Some(first) = sentence.get(0..1).map(str::to_uppercase) {
+                    sentence.replace_range(0..1, &first);
+                }
+                said.push_str(&format!(" {sentence}."));
             }
             doc.draw.faced = Some(run);
             ByFace::Laid(Ok(said))
@@ -1046,21 +1212,23 @@ fn wall_by_face(doc: &mut Doc, storey: &str, at: [f64; 2], s: &[&str], traced: &
 }
 
 /// "Other side": the run of walls last laid by a scan's face, laid again with their bodies on the other
-/// side of the line clicked (call 190).
+/// side of the line clicked (call 190). It is for the run last laid, with the tool in hand or put down
+/// (call 193, D); after an Undo of a turn it turns again.
 pub fn other_side(doc: &mut Doc) {
+    resync(doc);
     let Some(mut run) = doc.draw.faced.clone() else {
         cant(doc, "lay the walls on the other side", "no wall has been laid by a scan's face");
         doc.touch();
         return;
     };
-    let faces: Vec<crate::plans::SheetFace> = doc.draw.sheets.iter().find(|f| f.path == run.drawing).map(|f| f.faces.clone()).unwrap_or_default();
+    let faces = faces_of(doc, &run);
     if !run_stands(&mut doc.job, &run) {
-        cant(doc, "lay the walls on the other side", "those walls have been changed since they were laid");
+        cant(doc, "lay the walls on the other side", "those walls have been changed since they were laid. Undo back to where they were laid and press Other side again, or trace them again");
         doc.touch();
         return;
     }
     if run.centre {
-        cant(doc, "lay the walls on the other side", "they were laid on the center line, which has no other side");
+        cant(doc, "lay the walls on the other side", "they are laid on the center line, which has no other side. Press Face to lay them by the face first");
         doc.touch();
         return;
     }
@@ -1070,17 +1238,61 @@ pub fn other_side(doc: &mut Doc) {
     let result = ed::all_or_nothing(&mut doc.job, |job| relay(job, &run, &laying));
     match result {
         Ok(()) => {
-            run.lines = laying.lines.iter().map(|l| [[(l[0][0] * 1.0e4).round() / 1.0e4 + 0.0, (l[0][1] * 1.0e4).round() / 1.0e4 + 0.0], [(l[1][0] * 1.0e4).round() / 1.0e4 + 0.0, (l[1][1] * 1.0e4).round() / 1.0e4 + 0.0]]).collect();
+            run.lines = laid_lines(&laying);
             run.seen = laying.seen.clone();
             run.body_left = laying.body_left.clone();
             let single = run.seen.iter().filter(|s| matches!(s, crate::plans::Seen::Face { .. })).count();
             let said = format!("Laid on the other side: {single} wall{} of this run now {} {}, so {} center{} {} {} off the line clicked (half the type's {}).", if single == 1 { "" } else { "s" }, if single == 1 { "has its body" } else { "have their bodies" }, side_said(&run), if single == 1 { "its" } else { "their" }, if single == 1 { "" } else { "s" }, if single == 1 { "is" } else { "are" }, inches(run.thickness / 2.0), inches(run.thickness));
-            doc.draw.faced = Some(run);
             doc.job.derive();
+            run.said = run_lengths(&mut doc.job, &run);
+            doc.draw.faced = Some(run);
             doc.edit("laid the walls on the other side");
             doc.say(Tone::Done, said);
         }
         Err(why) => cant(doc, "lay the walls on the other side", why),
+    }
+    doc.redraw();
+}
+
+/// "Centerline" or "Face", pressed (call 190). With a run of walls laid and standing, the whole run is laid
+/// again the one way, as "Other side" lays it again, so that its corners still meet; and what moved is said
+/// (call 193, B).
+pub fn set_by(doc: &mut Doc, face: bool) {
+    doc.draw.face_choice = Some(face);
+    resync(doc);
+    let Some(mut run) = doc.draw.faced.clone() else {
+        doc.touch();
+        return;
+    };
+    // Already laid that way, or changed since it was laid: the next wall begins a run of its own.
+    if run.centre == !face || !run_stands(&mut doc.job, &run) {
+        doc.touch();
+        return;
+    }
+    let faces = faces_of(doc, &run);
+    run.centre = !face;
+    let laying = crate::plans::by_face(&run.clicks, run.closed, &faces, if run.centre { 0.0 } else { run.thickness }, run.flipped);
+    let result = ed::all_or_nothing(&mut doc.job, |job| relay(job, &run, &laying));
+    match result {
+        Ok(()) => {
+            let after = laid_lines(&laying);
+            let (count, most) = moved_by(&run.lines, &after);
+            run.lines = after;
+            run.seen = laying.seen.clone();
+            run.body_left = laying.body_left.clone();
+            doc.job.derive();
+            run.said = run_lengths(&mut doc.job, &run);
+            doc.draw.faced = Some(run);
+            let way = if face { "by the scan's face" } else { "on the center line" };
+            let said = if count == 0 {
+                format!("Laid again {way}: no wall of this run moved.")
+            } else {
+                format!("Laid again {way}: {count} wall{} of this run moved{} {}, and the corners still meet.", if count == 1 { "" } else { "s" }, if count == 1 { "" } else { " up to" }, inches(most))
+            };
+            doc.edit(if face { "laid the walls by the face" } else { "laid the walls on the center line" });
+            doc.say(Tone::Done, said);
+        }
+        Err(why) => cant(doc, "lay the walls again", why),
     }
     doc.redraw();
 }
@@ -1369,7 +1581,11 @@ pub fn typed_length(doc: &mut Doc, text: &str) {
     let Some(last) = doc.draw.picked.last().copied() else { return };
     let toward = doc.draw.found.as_ref().map(|f| f.at).unwrap_or([last[0] + 1.0, last[1]]);
     match units::parse_length(text).and_then(|(len, unit)| len.feet(unit)) {
-        Ok(feet) if feet > 0.0 => pick(doc, ed::toward(last, toward, feet), None),
+        Ok(feet) if feet > 0.0 => {
+            doc.draw.typed = Some(feet);
+            pick(doc, ed::toward(last, toward, feet), None);
+            doc.draw.typed = None;
+        }
         Ok(_) => cant(doc, "use that length", "a length is more than nothing"),
         Err(why) => cant(doc, "use that length", why),
     }
@@ -1766,6 +1982,24 @@ pub fn pointer(mut doc: ResMut<Doc>, snap_shot: Res<Snapshot>, plans: Res<crate:
 
 /// A click on the model with a tool in hand is a pick.
 pub fn clicks(mut doc: ResMut<Doc>, mouse: Res<ButtonInput<MouseButton>>, windows: Query<&Window, With<PrimaryWindow>>) {
+    // A press on what is to be moved, a drag and a release is a move (call 193, E): the press was the point
+    // taken, and the release, further along, is where it goes. A release close to the press is a click, and
+    // the next click says where it goes, as it always did.
+    if mouse.just_released(MouseButton::Left) {
+        if let Some(from) = doc.draw.pressed_at.take() {
+            let to = windows.single().ok().and_then(|w| w.cursor_position());
+            if doc.draw.tool == Some(Tool::Move) && doc.draw.picked.len() == 1 && doc.entry.is_none() && to.is_some_and(|c| c.distance(from) > 8.0) {
+                match doc.draw.found.clone() {
+                    Some(found) => pick(&mut doc, found.at, found.source),
+                    // Let go over a panel: no place on the plan to take.
+                    None => {
+                        doc.say(Tone::Ask, "Move: let go over a panel, where there is no place on the plan. Click where it goes, or press on it and drag again.");
+                        doc.touch();
+                    }
+                }
+            }
+        }
+    }
     if mouse.just_pressed(MouseButton::Left) && doc.draw.swallow {
         doc.bypass_change_detection().draw.swallow = false;
     }
@@ -1802,7 +2036,9 @@ pub fn clicks(mut doc: ResMut<Doc>, mouse: Res<ButtonInput<MouseButton>>, window
         return;
     }
     let Some(found) = doc.draw.found.clone() else { return };
+    let from_here = doc.draw.tool == Some(Tool::Move) && doc.draw.picked.is_empty();
     pick(&mut doc, found.at, found.source);
+    doc.draw.pressed_at = if from_here && doc.draw.picked.len() == 1 { window.cursor_position() } else { None };
 }
 
 /// The frame begins: nothing has been said in it yet. (What a later part of the last
@@ -1834,7 +2070,7 @@ pub fn record(mut doc: ResMut<Doc>) {
 
 /// What is being drawn, drawn: the points picked, the line to where the next would land,
 /// and a mark there.
-pub fn preview(doc: Res<Doc>, snap_shot: Res<Snapshot>, mut lines: Gizmos<Highlight>) {
+pub fn preview(doc: Res<Doc>, snap_shot: Res<Snapshot>, mut lines: Gizmos<Highlight>, mut fine: Gizmos<crate::scene::GridLines>) {
     let (Some(_), Some(storey)) = (doc.draw.tool, doc.show.storey.as_ref()) else { return };
     // Points picked on another storey are not this storey's to show.
     let picked: &[[f64; 2]] = if doc.draw.picked_on.as_ref() == Some(storey) { &doc.draw.picked } else { &[] };
@@ -1842,6 +2078,14 @@ pub fn preview(doc: Res<Doc>, snap_shot: Res<Snapshot>, mut lines: Gizmos<Highli
     let o = doc.origin;
     let place = |p: [f64; 2]| Vec3::new((p[0] - o[0]) as f32, (elevation - o[2]) as f32 + 0.3, -(p[1] - o[1]) as f32);
     let ink = theme::accent();
+    // With the Wall tool up over a scan, the faces a click will land on are drawn as fine lines (call 193, G).
+    if doc.draw.tool == Some(Tool::Wall) {
+        for sheet in &doc.draw.sheets {
+            for f in &sheet.faces {
+                fine.line(place(f.line[0]), place(f.line[1]), ink.with_alpha(0.8));
+            }
+        }
+    }
     for pair in picked.windows(2) {
         lines.line(place(pair[0]), place(pair[1]), ink);
     }
@@ -1860,5 +2104,30 @@ pub fn preview(doc: Res<Doc>, snap_shot: Res<Snapshot>, mut lines: Gizmos<Highli
         for i in 0..4 {
             lines.line(at + corners[i], at + corners[(i + 1) % 4], ink);
         }
+    }
+}
+
+#[cfg(test)]
+mod run_tests {
+    use super::moved_by;
+
+    #[test]
+    fn a_run_laid_by_the_face_and_then_on_the_center_line_moved_3_in() {
+        // The made-up house's south and east walls by the face (3 in outside), then on the faces' own lines.
+        let before = [[[-0.25, -0.25], [30.25, -0.25]], [[30.25, -0.25], [30.25, 15.75]]];
+        let after = [[[0.0, 0.0], [30.0, 0.0]], [[30.0, 0.0], [30.0, 15.75]]];
+        let (count, far) = moved_by(&before, &after);
+        assert_eq!(count, 2);
+        assert!((far - 0.25).abs() < 1e-9, "{far}");
+    }
+
+    #[test]
+    fn walls_that_stay_are_not_counted() {
+        let same = [[[0.0, 0.0], [10.0, 0.0]]];
+        assert_eq!(moved_by(&same, &same), (0, 0.0));
+        // A wall that only ran on along itself: moved by how far its end went.
+        let (count, far) = moved_by(&same, &[[[0.0, 0.0], [10.5, 0.0]]]);
+        assert_eq!(count, 1);
+        assert!((far - 0.5).abs() < 1e-9);
     }
 }

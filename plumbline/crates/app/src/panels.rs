@@ -219,6 +219,21 @@ pub fn places(words: &str) -> String {
 }
 
 #[cfg(test)]
+mod sun_hour_words {
+    use super::step_hour;
+
+    #[test]
+    fn the_hour_steps_between_six_and_six_and_says_so_past_either() {
+        assert_eq!(step_hour(10, true), Ok(11));
+        assert_eq!(step_hour(10, false), Ok(9));
+        assert_eq!(step_hour(17, true), Ok(18));
+        assert_eq!(step_hour(7, false), Ok(6));
+        assert_eq!(step_hour(18, true), Err("The sun card goes no later than 6:00 pm."));
+        assert_eq!(step_hour(6, false), Err("The sun card goes no earlier than 6:00 am."));
+    }
+}
+
+#[cfg(test)]
 mod place_words {
     use super::places;
 
@@ -411,6 +426,24 @@ fn views(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc) {
     });
 }
 
+/// What the Job panel says under a level's Floor where its figure is not the rooms': the floor was laid out to the
+/// walls' center lines and the rooms are measured inside them (call 193, F).
+pub fn floor_note(snap: &Snapshot, storey: &plumbline_world::building::StoreyTotals) -> Option<&'static str> {
+    let differs = matches!((storey.floors.value, storey.rooms.value), (Some(f), Some(r)) if (f - r).abs() > 0.05);
+    (storey.floors.members > 0 && storey.rooms.members > 0 && differs && snap.floors_to_centres.contains(&storey.path)).then_some("out to the walls' center lines")
+}
+
+/// The sun's hour stepped a whole hour earlier or later, between six in the morning and six at night; or why it
+/// stays (call 193, H).
+pub fn step_hour(hour: u32, later: bool) -> Result<u32, &'static str> {
+    match (later, hour) {
+        (true, h) if h >= 18 => Err("The sun card goes no later than 6:00 pm."),
+        (false, h) if h <= 6 => Err("The sun card goes no earlier than 6:00 am."),
+        (true, h) => Ok(h + 1),
+        (false, h) => Ok(h - 1),
+    }
+}
+
 /// The sun's two settings, under the view buttons: a time of day and a month, each stepped
 /// earlier and later, and where the sun then is. It changes the light and nothing else:
 /// no figure moves and nothing of it is kept in the job.
@@ -440,7 +473,11 @@ fn sun_card(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc) {
             });
         };
         row(c, "Time of day", "Earlier", hour, "Later", |doc, later| {
-            doc.sun.hour = if later { (doc.sun.hour + 1).min(18) } else { doc.sun.hour.saturating_sub(1).max(6) };
+            match step_hour(doc.sun.hour, later) {
+                Ok(hour) => doc.sun.hour = hour,
+                // The card runs from six in the morning to six at night (call 193 H): pressed past either, it says so.
+                Err(said) => doc.say(Tone::Done, said),
+            }
             doc.touch();
         });
         row(c, "Month", "Month before", MONTHS[(doc.sun.month.clamp(1, 12) - 1) as usize].to_string(), "Month after", |doc, later| {
@@ -1657,6 +1694,12 @@ fn build_bar(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snap
         };
         bar.spawn((Node { height: px(46.0), padding: UiRect::horizontal(px(12.0)), align_items: AlignItems::Center, column_gap: px(10.0), border: UiRect::bottom(px(1.0)), overflow: Overflow::clip(), flex_shrink: 0.0, ..default() }, BorderColor::all(theme::rule()))).with_children(|strip| {
             let Some(tool) = typing.or(doc.draw.tool) else {
+                // The walls last laid by a scan's face can still be turned to the other side with the tool put
+                // down, while they stand as they were laid (call 193, D).
+                if doc.draw.faced.as_ref().is_some_and(|run| !run.centre && run.seen.iter().any(|s| matches!(s, crate::plans::Seen::Face { .. })) && crate::tools::run_stands_any(snap, run)) {
+                    strip.spawn((text(fonts, "The walls just laid by the scan's face", 12.0, Weight::Medium, theme::ink_soft()), TextLayout::no_wrap()));
+                    on_click(&mut button(strip, fonts, "Other side", "", false), |doc| crate::tools::other_side(doc));
+                }
                 strip.spawn(text(fonts, "Pick a tool below to draw, or click anything on the model to select it.", 11.5, Weight::Regular, theme::ink_faint()));
                 return;
             };
@@ -1688,14 +1731,8 @@ fn build_bar(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snap
                 strip.spawn(Node { flex_direction: FlexDirection::Column, row_gap: px(2.0), flex_shrink: 0.0, ..default() }).with_children(|c| {
                     c.spawn((text(fonts, "SET BY", 11.0, Weight::Semibold, theme::ink_faint()), TextLayout::no_wrap(), Pickable::IGNORE));
                     c.spawn(Node { column_gap: px(4.0), ..default() }).with_children(|b| {
-                        on_click(&mut button(b, fonts, "Centerline", "", !by_face), |doc| {
-                            doc.draw.face_choice = Some(false);
-                            doc.touch();
-                        });
-                        on_click(&mut button(b, fonts, "Face", "", by_face), |doc| {
-                            doc.draw.face_choice = Some(true);
-                            doc.touch();
-                        });
+                        on_click(&mut button(b, fonts, "Centerline", "", !by_face), |doc| crate::tools::set_by(doc, false));
+                        on_click(&mut button(b, fonts, "Face", "", by_face), |doc| crate::tools::set_by(doc, true));
                         if doc.draw.faced.as_ref().is_some_and(|run| !run.centre && run.seen.iter().any(|s| matches!(s, crate::plans::Seen::Face { .. }))) {
                             on_click(&mut button(b, fonts, "Other side", "", false), |doc| crate::tools::other_side(doc));
                         }
@@ -2845,6 +2882,11 @@ fn summary(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
             listed(p, fonts, None, "Footing concrete", String::new(), total_plain(&storey.footing_volume), storey.footing_volume.status);
         }
         listed(p, fonts, None, "Floor", storey.floors.members.to_string(), total_plain(&storey.floors), if storey.floors.members == 0 { Status::Known } else { storey.floors.status });
+        // A floor laid out to the walls' center lines is more than the rooms inside the walls: said, beside
+        // the figures that differ (call 193, F).
+        if let Some(said) = floor_note(snap, storey) {
+            p.spawn(Node { padding: UiRect::bottom(px(3.0)), ..default() }).with_child(text(fonts, said, 11.0, Weight::Regular, theme::ink_faint()));
+        }
         if storey.rooms.members > 0 {
             listed(p, fonts, None, "Rooms", storey.rooms.members.to_string(), total_plain(&storey.rooms), storey.rooms.status);
             p.spawn(Node { padding: UiRect::bottom(px(3.0)), ..default() }).with_child(text(fonts, "measured inside their walls", 11.0, Weight::Regular, theme::ink_faint()));

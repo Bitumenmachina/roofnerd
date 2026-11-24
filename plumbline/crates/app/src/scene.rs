@@ -39,8 +39,11 @@ pub const STATUS_H: f32 = 26.0;
 pub const LEFT_W: f32 = 252.0;
 pub const RIGHT_W: f32 = 344.0;
 pub const BUILD_H: f32 = 104.0;
-/// How far the fascia hangs below the roof's edge, in feet. For the eye only.
-const FASCIA_FT: f32 = 0.7;
+/// How much of a scan's cut shows over the plan paper: light, so a traced wall reads over it (call 193, G).
+pub const SCAN_CUT_ALPHA: f32 = 0.35;
+/// How deep the roof's own edge is, in feet: the roof is not a sheet of paper (call 193, A). It is the roof, drawn as the
+/// roof, and is not fascia: a fascia board is drawn only where a line prices one (`trim::lay`). For the eye only.
+const ROOF_EDGE_FT: f32 = 0.7;
 /// The 3D view's angle of view, top to bottom, in radians: 40 degrees.
 const LENS: f32 = 0.698_131_7;
 /// The angle of view on foot: 68 degrees.
@@ -686,7 +689,10 @@ pub fn rebuild(
             .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, vec![[0.0f32, 1.0, 0.0]; 4])
             .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, vec![[0.0f32, 1.0], [1.0, 1.0], [1.0, 0.0], [0.0, 0.0]])
             .with_inserted_indices(Indices::U32(vec![0, 1, 2, 0, 2, 3]));
-        let paper = StandardMaterial { base_color: Color::WHITE, base_color_texture: Some(read.image.clone()), unlit: true, double_sided: true, cull_mode: None, ..default() };
+        // A scan's cut is drawn light, so that the walls traced over it and the faces a click lands on can be
+        // told from it (call 193, G): it is seen through, as a scan is, not a drawing to be matched in black.
+        let scan = crate::plans::is_scan(l);
+        let paper = StandardMaterial { base_color: if scan { Color::srgba(1.0, 1.0, 1.0, SCAN_CUT_ALPHA) } else { Color::WHITE }, base_color_texture: Some(read.image.clone()), alpha_mode: if scan { AlphaMode::Blend } else { AlphaMode::Opaque }, unlit: true, double_sided: true, cull_mode: None, ..default() };
         commands.spawn((Mesh3d(meshes.add(sheet)), MeshMaterial3d(materials.add(paper)), Transform::IDENTITY, SceneMesh, NotShadowCaster, Pickable::IGNORE));
     }
 
@@ -704,20 +710,17 @@ pub fn rebuild(
     let drawing = &mut *drawing;
     let mut build = Builder { commands: &mut commands, materials: &mut materials, drawing, ghost: show.ghost, wash: None, on_plan: None, pattern: None, flat: on_plan_view, work: None, pale: show.existing, plan_fill: None, last: None };
     let has_walls = snap.drawn.iter().any(|p| p.kind == Kind::Wall);
-    // Each outside wall as the roof's edge sees it: its line, the way its outside face
-    // looks, half its thickness and its top. An eave that hangs past one gets a soffit.
-    let mut outside_walls: Vec<(Vec3, Vec3, Vec3, f32, f32)> = Vec::new();
 
-    // Outside trim (call 184). Where the estimate prices a fascia, a soffit, corner boards or casing on a thing, the boards of
-    // the model's own are drawn in place of what was drawn for that thing before: the plain strip under a roof edge, the
-    // plain soffit under an eave, the corner boards a wall's siding stops against, the casing and sill round an opening
-    // (its inside casing stays). With the Trim switch off, or where nothing is priced, the house is drawn as it was.
+    // Outside trim (call 184, call 193 A). The house is dressed in what the estimate prices: a fascia, a soffit, corner boards
+    // and casing are the boards of the model's own where a line prices them, and nowhere else (an opening's inside casing
+    // stays). With the Trim switch off, or where nothing is priced, there are none: the roof has its own edge, a wall its
+    // siding to the corner, an opening its unit.
     let trim_on = show.trim && !on_plan_view;
     let edges_of = |a: PieceKind, b: PieceKind| -> std::collections::HashSet<String> {
         if trim_on { snap.trim.pieces.iter().filter(|p| p.kind == a || p.kind == b).map(|p| p.of.clone()).collect() } else { Default::default() }
     };
-    let (trimmed_fascia, trimmed_soffit) = (edges_of(PieceKind::Fascia, PieceKind::RakeFascia), edges_of(PieceKind::Soffit, PieceKind::RakeSoffit));
-    let (trimmed_corners, trimmed_casing) = (edges_of(PieceKind::CornerBoard, PieceKind::CornerBoard), edges_of(PieceKind::Casing, PieceKind::Casing));
+    let trimmed_fascia = edges_of(PieceKind::Fascia, PieceKind::RakeFascia);
+    let trimmed_casing = edges_of(PieceKind::Casing, PieceKind::Casing);
 
     // ---- Interior woodwork: the base in each room that has base priced on it ----
     // A board 5 1/4 in high and 5/8 in thick at the foot of the room's walls, along
@@ -801,7 +804,9 @@ pub fn rebuild(
         // work solid, existing in light gray, what comes down not at all (its outline is
         // red and dashed).
         build.plan_fill = None;
-        if on_plan_view && marked && p.kind == Kind::Wall {
+        // Over a scan's cut a wall is filled as new work is (call 193, G): the traced wall is heavier than the cut.
+        let over_a_scan = on_plan_view && p.kind == Kind::Wall && snap.drawings.iter().any(|l| p.storey.as_ref() == Some(&l.storey) && crate::plans::is_scan(l));
+        if on_plan_view && (marked || over_a_scan) && p.kind == Kind::Wall {
             use plumbline_world::WorkStatus as W;
             let fill = match build.work {
                 Some(W::Demolish) => Color::srgba(0.0, 0.0, 0.0, 0.0),
@@ -877,9 +882,6 @@ pub fn rebuild(
                 let lower = low.map(|(c, to, _)| (patterns.of(&mut images, dress::Look::of_cladding(c.what), c.tone.map(|t| t.rgb), halftone), *to as f32));
                 let masonry = clad.is_some_and(|c| c.what.masonry());
                 let part = dress::Part { o: va, x: along, y: Vec3::Y, z: out };
-                if has_out {
-                    outside_walls.push((va, vb, out, half_t, va.y + h));
-                }
                 // The wall round its doors and windows: the same pieces the clash test
                 // uses, so what is drawn solid is what is tested as solid. On plan a piece
                 // over or under an opening is the opening, and a click on it selects it.
@@ -943,21 +945,6 @@ pub fn rebuild(
                     }
                 }
                 build.on_plan = None;
-                // Siding stops against a corner board at each corner; masonry turns the corner itself.
-                if has_out && clad.is_some() && !masonry && !trimmed_corners.contains(&p.path) {
-                    let mut boards = dress::Skin::default();
-                    let from = lower.as_ref().map(|l| l.1.min(h)).unwrap_or(0.0);
-                    let (wide, proud) = (4.5 / 12.0, 1.0 / 12.0);
-                    if past[0] > 1e-4 {
-                        boards.block(&part, [-past[0] - proud, -past[0] + wide], [from, h], [half_t, half_t + proud]);
-                    }
-                    if past[1] > 1e-4 {
-                        boards.block(&part, [length + past[1] - wide, length + past[1] + proud], [from, h], [half_t, half_t + proud]);
-                    }
-                    if !boards.is_empty() {
-                        build.piece(&p.path, None, meshes.add(boards.mesh()), Transform::IDENTITY, theme::trim(), 0.8, 0.0, true);
-                    }
-                }
                 for (hole_path, kind, [from, to, sill, head]) in holes {
                     let (from, to, sill, head) = (*from as f32, *to as f32, *sill as f32, *head as f32);
                     // What fills the opening: a window or a door, built of its parts.
@@ -991,8 +978,10 @@ pub fn rebuild(
                     if !unit.trim.is_empty() && show.finishes {
                         build.piece(hole_path, None, meshes.add(unit.trim.mesh()), Transform::IDENTITY, theme::trim(), 0.8, 0.0, true);
                     }
-                    // The casing and sill on the outside face, where the model lays casing it prices in their place.
-                    if !unit.outer.is_empty() && show.finishes && !trimmed_casing.contains(hole_path) {
+                    // The casing and sill on the outside face: the window's own standard casing, a drawing and in no quantity, where
+                    // a line prices casing by the each; where the model lays the casing a length prices (below) it is that, and where
+                    // no line prices casing the opening is its unit alone (call 193, A).
+                    if !unit.outer.is_empty() && show.finishes && snap.cased.contains(hole_path) && !trimmed_casing.contains(hole_path) {
                         build.piece(hole_path, None, meshes.add(unit.outer.mesh()), Transform::IDENTITY, theme::trim(), 0.8, 0.0, true);
                     }
                     if !unit.glass.is_empty() {
@@ -1318,9 +1307,9 @@ pub fn rebuild(
                 build.drawing.roof_lines.push((a + lift, b + lift, colour));
             }
             build.drawing.frames.push((line.path.clone(), vec![(a + lift, b + lift)]));
-            // Under each outer edge of the roof, a fascia; and where the job has no walls
+            // Under each outer edge of the roof, the roof's own edge; and where the job has no walls
             // of its own, a wall down to the datum. Both are for the eye only.
-            if matches!(line.kind, Kind::Eave | Kind::Rake) && a.y > FASCIA_FT + 0.5 && b.y > FASCIA_FT + 0.5 {
+            if matches!(line.kind, Kind::Eave | Kind::Rake) && a.y > ROOF_EDGE_FT + 0.5 && b.y > ROOF_EDGE_FT + 0.5 {
                 let mut normal = (b - a).with_y(0.0).cross(Vec3::Y).normalize_or_zero();
                 let inside = line.planes.iter().find_map(|p| snap.planes.iter().find(|x| x.path == *p)).and_then(|p| p.solid.as_ref()).map(|solid| {
                     let n = solid.points.len().max(1) as f64;
@@ -1329,36 +1318,14 @@ pub fn rebuild(
                 if inside.is_some_and(|c| normal.dot(((a + b) / 2.0 - c).with_y(0.0)) < 0.0) {
                     normal = -normal;
                 }
-                let (fa, fb) = (a - Vec3::Y * FASCIA_FT, b - Vec3::Y * FASCIA_FT);
-                let mut trim = Faces::new();
-                trim.quad([a, b, fb, fa], normal);
+                let (fa, fb) = (a - Vec3::Y * ROOF_EDGE_FT, b - Vec3::Y * ROOF_EDGE_FT);
+                let mut edge = Faces::new();
+                edge.quad([a, b, fb, fa], normal);
                 let alpha = if show.ghost { 0.06 } else { 1.0 };
                 let blend = if show.ghost { AlphaMode::Blend } else { AlphaMode::Opaque };
-                let fascia = build.materials.add(StandardMaterial { base_color: theme::fascia().with_alpha(alpha), perceptual_roughness: 0.8, double_sided: true, cull_mode: None, alpha_mode: blend, ..default() });
+                let roof_edge = build.materials.add(StandardMaterial { base_color: theme::roof_edge().with_alpha(alpha), perceptual_roughness: 0.8, double_sided: true, cull_mode: None, alpha_mode: blend, ..default() });
                 if !trimmed_fascia.contains(&line.path) {
-                    build.commands.spawn((Mesh3d(meshes.add(trim.mesh())), MeshMaterial3d(fascia), SceneMesh, NotShadowCaster));
-                }
-                // Where the eave hangs past an outside wall, a soffit closes it underneath:
-                // level, from the foot of the fascia back to the wall's face. (Without
-                // it the gap between the wall's top and the roof stood open and dark.)
-                if line.kind == Kind::Eave && !show.ghost {
-                    let mid = (a + b) / 2.0;
-                    let hang = outside_walls
-                        .iter()
-                        .filter(|(_, _, out, _, top)| out.dot(normal) > 0.9 && (top - mid.y).abs() < 3.0)
-                        .filter_map(|(wa, wb, out, half, _)| {
-                            let run = (*wb - *wa).with_y(0.0);
-                            let along = (mid - *wa).with_y(0.0).dot(run.normalize_or_zero());
-                            let past = (mid - *wa).with_y(0.0).dot(*out) - half;
-                            (along > -4.0 && along < run.length() + 4.0 && past > 0.05 && past < 4.0).then_some(past)
-                        })
-                        .min_by(|x, y| x.total_cmp(y));
-                    if let (Some(past), false) = (hang, trimmed_soffit.contains(&line.path)) {
-                        let mut under = Faces::new();
-                        under.quad([fa, fb, fb - normal * past, fa - normal * past], Vec3::NEG_Y);
-                        let soffit = build.materials.add(StandardMaterial { base_color: theme::trim(), perceptual_roughness: 0.85, double_sided: true, cull_mode: None, ..default() });
-                        build.commands.spawn((Mesh3d(meshes.add(under.mesh())), MeshMaterial3d(soffit), SceneMesh, NotShadowCaster, Pickable::IGNORE));
-                    }
+                    build.commands.spawn((Mesh3d(meshes.add(edge.mesh())), MeshMaterial3d(roof_edge), SceneMesh, NotShadowCaster));
                 }
                 // A gutter where one is priced on the eave: hung on the fascia, 5 in out.
                 if let Some(g) = snap.dress.gutters.get(&line.path).filter(|_| line.kind == Kind::Eave) {

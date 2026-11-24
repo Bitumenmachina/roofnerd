@@ -756,6 +756,12 @@ pub struct Snapshot {
     pub trim: plumbline_world::trim::Laid,
     /// The level each thing a piece of trim is on stands on, by the thing's path (an eave is on none).
     pub trim_on: std::collections::HashMap<String, String>,
+    /// The levels whose floors were laid out to the walls' center lines (the Floor tool's way): their
+    /// floor area is not the rooms' (call 193, F).
+    pub floors_to_centres: std::collections::HashSet<String>,
+    /// The windows and doors a line prices casing on by the each (the starter's "Casing and trim at the window"): the
+    /// window draws its own standard casing on these, a drawing and in no quantity (call 193, A).
+    pub cased: std::collections::HashSet<String>,
     /// What has no shape to draw, and why.
     pub not_drawn: Vec<(String, String)>,
     pub storeys: Vec<StoreyTotals>,
@@ -933,6 +939,14 @@ pub fn refresh(mut doc: ResMut<Doc>, mut snap: ResMut<Snapshot>) {
             }
         }
     }
+    for el in elements.iter().filter(|e| e.kind == Kind::Floor) {
+        let by_walls = doc.job.find(&el.path).and_then(|e| doc.job.world.get::<plumbline_world::Floor>(e)).is_some_and(|f| f.boundary.source.starts_with("the outline of the walls on"));
+        if by_walls {
+            if let Some(storey) = on.get(&el.path) {
+                s.floors_to_centres.insert(storey.clone());
+            }
+        }
+    }
     for el in elements.iter().filter(|e| e.kind == Kind::RoomLine) {
         if let Some(ends) = doc.job.find(&el.path).and_then(|e| doc.job.world.get::<plumbline_world::RoomLine>(e)).and_then(|r| r.line_ft()) {
             s.room_lines.push((el.path.clone(), on.get(&el.path).cloned().unwrap_or_default(), ends));
@@ -942,6 +956,7 @@ pub fn refresh(mut doc: ResMut<Doc>, mut snap: ResMut<Snapshot>) {
     s.not_drawn = not_drawn;
     s.frames = plumbline_world::building::frames::frames(&mut doc.job);
     s.trim = plumbline_world::trim::lay(&mut doc.job);
+    s.cased = casing_by_the_each(&mut doc.job);
     s.trim_on = s.trim.pieces.iter().filter_map(|p| on.get(&p.of).map(|st| (p.of.clone(), st.clone()))).collect();
     s.work = {
         let mut q = doc.job.world.query::<(&plumbline_world::Node, &plumbline_world::Work)>();
@@ -1086,4 +1101,27 @@ fn status_word(s: Status) -> &'static str {
         Status::Assumed => "Assumed",
         Status::Unknown => "Unknown",
     }
+}
+
+/// The windows and doors with a line that is about casing and is not priced by its length: casing "by the each". A line
+/// that is taken out of the work, or is about the inside ("Interior casing"), does not count.
+fn casing_by_the_each(job: &mut plumbline_world::Job) -> std::collections::HashSet<String> {
+    let mut out = std::collections::HashSet::new();
+    for &e in &job.order.clone() {
+        let (Some(node), Some(kind)) = (job.world.get::<plumbline_world::Node>(e), job.world.get::<Kind>(e).copied()) else { continue };
+        if !matches!(kind, Kind::Window | Kind::Door) {
+            continue;
+        }
+        let Some(cost) = job.world.get::<plumbline_world::Cost>(e) else { continue };
+        let by_each = cost.lines.iter().any(|l| {
+            let words: Vec<String> = l.description.to_lowercase().split(|c: char| !c.is_alphanumeric()).filter(|w| !w.is_empty()).map(str::to_string).collect();
+            let about = words.iter().any(|w| w == "casing") && !words.iter().any(|w| matches!(w.as_str(), "interior" | "inside" | "inner"));
+            let by_length = plumbline_world::formula::parse(&l.quantity).is_ok_and(|x| plumbline_world::formula::names(&x).iter().any(|n| n == plumbline_world::trim::CASING_LENGTH));
+            !l.off && about && !by_length && !plumbline_world::finish::not_in_the_work(&l.description)
+        });
+        if by_each {
+            out.insert(node.path.clone());
+        }
+    }
+    out
 }

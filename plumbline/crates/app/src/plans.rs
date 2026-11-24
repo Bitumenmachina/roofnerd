@@ -575,6 +575,45 @@ fn face_of_stretch(faces: &[SheetFace], p: P2, q: P2) -> Option<usize> {
     best.map(|b| b.0)
 }
 
+/// How much of the stretch from `p` to `q` has no face of the sheet beside it, in feet: its length less what the
+/// faces it runs along cover of it. A face is one the stretch runs along as `face_of_stretch` takes it (both ends within
+/// `ON_FACE_FT` of its line, or of its pair's); what it covers is where it lies along the stretch. A doorway in a
+/// partition is such a gap, and so is a stretch the scanner did not see (call 193, F).
+pub fn bare_length(faces: &[SheetFace], p: P2, q: P2) -> f64 {
+    let total = len(sub(q, p));
+    if total < 1e-9 {
+        return 0.0;
+    }
+    let mut spans: Vec<[f64; 2]> = Vec::new();
+    for f in faces {
+        let other = f.pair.and_then(|(j, _)| faces.get(j));
+        let off = |x: P2| other.map_or(f.left_of(x).abs(), |o| f.left_of(x).abs().min(o.left_of(x).abs()));
+        if off(p) > ON_FACE_FT || off(q) > ON_FACE_FT {
+            continue;
+        }
+        // The face's two ends along the stretch, as fractions of it.
+        let (ap, aq) = (f.along(p), f.along(q));
+        if (aq - ap).abs() < 1e-9 {
+            continue;
+        }
+        let (u0, u1) = ((0.0 - ap) / (aq - ap), (f.length() - ap) / (aq - ap));
+        let (lo, hi) = (u0.min(u1).max(0.0), u0.max(u1).min(1.0));
+        if hi > lo {
+            spans.push([lo, hi]);
+        }
+    }
+    spans.sort_by(|x, y| x[0].total_cmp(&y[0]));
+    let (mut covered, mut reach) = (0.0, 0.0_f64);
+    for [lo, hi] in spans {
+        let lo = lo.max(reach);
+        if hi > lo {
+            covered += hi - lo;
+            reach = hi;
+        }
+    }
+    (total * (1.0 - covered)).max(0.0)
+}
+
 /// Where two faces' lines cross, if they are not parallel.
 fn crossing(a: &SheetFace, b: &SheetFace) -> Option<P2> {
     let (da, db) = (a.dir(), b.dir());
@@ -937,5 +976,37 @@ mod by_face_tests {
         assert!((a[0] - 2.0 * 100.0).abs() < 12.0 && (b[0] - 2.0 * 2100.0).abs() < 12.0, "{faces:?}");
         // Read as if its dots were the page's, it would be half as far across.
         assert!(b[0] - a[0] > 3900.0, "{faces:?}");
+    }
+
+    #[test]
+    fn a_doorway_in_a_face_is_a_stretch_with_no_face() {
+        // The west face of a partition 16 ft long with a 3 ft doorway 6 ft along it.
+        let faces = vec![face([10.0, 0.0], [10.0, 6.0], Some(true)), face([10.0, 9.0], [10.0, 16.0], Some(true))];
+        assert!((bare_length(&faces, [10.0, 0.0], [10.0, 16.0]) - 3.0).abs() < 1e-9);
+        // Walked the other way, the same.
+        assert!((bare_length(&faces, [10.1, 16.0], [9.9, 0.0]) - 3.0).abs() < 1e-2);
+        // Nothing missing along a whole face, and a stretch with no face near it at all is all bare.
+        assert!(bare_length(&house(), [0.0, 0.0], [30.0, 0.0]) < 1e-9);
+        assert!((bare_length(&house(), [5.0, 5.0], [9.0, 5.0]) - 4.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn a_stretch_clicked_across_a_partition_from_one_face_to_the_other_is_covered_by_both() {
+        // The partition of the made-up house, clicked from near its west face at the south to near its east face at the
+        // north, the stretch lying slantwise across it: no gap, and with a 3 ft doorway cut in both faces, 3 ft of gap.
+        assert!(bare_length(&house(), [17.8125, 0.2], [18.1875, 15.8]) < 1e-9);
+        let mut f = house();
+        f[4] = face([17.8125, 0.2], [17.8125, 9.0], Some(false));
+        let mut g = face([17.8125, 12.0], [17.8125, 15.8], Some(false));
+        g.pair = Some((5, 0.375));
+        f.push(g);
+        f[4].pair = Some((5, 0.375));
+        f[5] = face([18.1875, 0.2], [18.1875, 9.0], Some(true));
+        f[5].pair = Some((4, 0.375));
+        let mut h = face([18.1875, 12.0], [18.1875, 15.8], Some(true));
+        h.pair = Some((4, 0.375));
+        f.push(h);
+        let bare = bare_length(&f, [17.8125, 0.2], [18.1875, 15.8]);
+        assert!((bare - 3.0).abs() < 0.05, "{bare}");
     }
 }

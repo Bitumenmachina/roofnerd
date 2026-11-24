@@ -7502,3 +7502,41 @@ H. The Sun's hour stops at six in the morning and six at night and says so when
 Left as they are, and said in STATUS.md: the sky the same at every hour; the plan
 running under the right panel after a move; the roof's edges in their line colours
 in the 3D view; the open gable (call 192).
+
+**Call 193, as built (2026-11-24).** Each point was shown on the build before it,
+fixed, and shown again in a demonstration step.
+
+- **A.** Corner boards are drawn only as the model's pieces. An opening's outside
+  casing is the model's pieces where it is priced by its length, the window's own
+  standard casing where a line about casing is priced by the each, and otherwise
+  nothing: the opening is its unit alone. The old plain soffit is gone. A roof keeps
+  an edge of its own (it is the roof, and is not fascia). **No existing check failed
+  because trim is no longer drawn where it sampled**; the sample whole house now
+  shows its windows as units alone and no corner boards, because nothing in it
+  prices them by a length (its doors' casing is priced by the each and is drawn).
+- **B.** "Centerline | Face" pressed in the middle of a run lays the whole run again
+  and says how many walls moved and how far.
+- **C.** A length typed along the face says both lengths where they differ ("10' 0"
+  was typed along the scan's face; the wall is 10' 3" to its corner"). A first wall
+  of a run is exactly the length typed; the difference comes when it joins a corner.
+- **D.** "Other side" stays on the card of the walls last laid while they stand as
+  laid; an Undo of a turn leaves it able to turn again; the refusal says what to do.
+- **E.** A wall moves by a press and a drag as by a click, a glide and a click.
+- **F.** The sentences: a first click on a face a laid wall stands on says so; a wall
+  that grew when the next joined its corner is said at its new length; the floor's
+  line says "out to the walls' centerlines"; a wall across a stretch with no face
+  says how long that stretch is. The model's own sentence "...: lies along ..." is
+  left as it is (a command-line demonstration reads it); the window drops the colon
+  where it quotes it.
+- **G.** The scan's cut is drawn light, a wall over a scan is filled, and the faces
+  are fine lines while the Wall tool is up.
+- **H.** The Sun card says when it goes no earlier or no later.
+
+**One expectation moved, by the lead's ruling, and why it was late.** `demos/gablew.sh`
+expected "$864.00 is out of the job cost (1 of them had no price yet)"; it is 2. Call
+185 added an unpriced "Corner boards" line to the starter lap siding, so two unpriced
+lines come off with that assembly; the dollars are as they were. The demonstration
+failed the same way on the build before this work: it had not been run on any merge
+since call 185. That was the lead's omission in choosing which window demonstrations
+to run after a merge. From here every merge runs every window demonstration whose
+house uses a starter assembly the merge touched.

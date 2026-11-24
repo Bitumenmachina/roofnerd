@@ -11,7 +11,10 @@
 #      same job with the same words (the program's own source on it);
 #   3. one Undo takes all of it back: the job is as it was opened;
 #   4. a move across another wall (30 ft west) is refused in the model's words and nothing
-#      changes.
+#      changes;
+#   5. (call 193, E) the east wall pressed on and dragged 4 ft east with the real button held:
+#      the saved job is, byte for byte, what the command line's `move` makes (step 2), and the
+#      price $8,616.00.
 # Run from the repository root:  demos/movew.sh [folder for the pictures]
 # It drives the real program on a virtual display with a real pointer and keyboard.
 set -euo pipefail
@@ -95,13 +98,28 @@ len \$(plan_px 10 8) "30 ft" yes        # 06 thirty feet west, across the west w
 park
 shot                                    # 07 refused, in the model's words
 xdotool key F2; sleep 4; cp "$J" "$T/refused.json"
+# 8: the east wall pressed on and dragged: the button down on it, the pointer glided four feet east, the button up. The
+# right-hand panel is put away first: four feet east of this wall the pointer would be over it, and a place under a panel is
+# not a place on the plan.
+esc
+on "Show panel Details"
+at 24 8                                 # the east wall, selected again
+on "Move"
+read -r px0 py0 <<<"\$(plan_px 24 8)"
+read -r px1 py1 <<<"\$(plan_px 28 8)"
+xdotool mousemove \$px0 \$py0; sleep 1.5; xdotool mousedown 1; sleep 1
+for i in 1 2 3 4 5 6 7 8; do xdotool mousemove \$((px0 + (px1 - px0) * i / 8)) \$py0; sleep 1; done
+sleep 1; xdotool mouseup 1; sleep 5
+park
+xdotool key F2; sleep 4; cp "$J" "$T/dragged.json"
+shot                                    # 08 the wall dragged
 close_window
 SESSION
 chmod +x "$T/session.sh"
 timeout 1500 xvfb-run -a -s "-screen 0 2500x980x24" "$T/session.sh" || true
 if [ -s "$T/missing.txt" ]; then echo "FAIL: the session stopped: a button it was to click was not on screen"; cat "$T/missing.txt"; exit 1; fi
 if grep -q "panicked" "$T/app.log"; then echo "FAIL: the program panicked"; grep -A3 panicked "$T/app.log" | head; exit 1; fi
-for n in 01 02 03 04 05 07; do
+for n in 01 02 03 04 05 07 08; do
   [ "$OUT/$n-model.png" -nt "$T/start.json" ] && [ "$OUT/$n-sheet.png" -nt "$T/start.json" ] || { echo "FAIL: no picture $n of both windows from this run"; exit 1; }
 done
 
@@ -122,11 +140,17 @@ says "the roof" "Main roof followed: its edge over wall 2 went with it, plan are
 says "the refusal" "Can't" "$LOG"
 says "the refusal, in the model's words" "wall 2 would run into wall 4, a wall it does not meet" "$LOG"
 
+[ "$(grep -c "^Moved wall 2 4 ft east\." <<<"$LOG")" -ge 2 ] || { echo "FAIL: the dragged move was not said (Moved wall 2 4 ft east. twice)"; echo "$LOG" | tail -12; exit 1; }
+echo "    (the wall pressed on and dragged is said moved as the typed one was)"
+
 echo
 echo "== What it left in the saved jobs =="
 cmp -s "$T/window.json" "$T/cli.json" && echo "    the window's saved job is, byte for byte, what the command line's move makes of the same job" || { echo "FAIL: the window's job is not the command line's:"; diff <("$P" show "$T/window.json") <("$P" show "$T/cli.json") | head -30; diff "$T/window.json" "$T/cli.json" | head -20; exit 1; }
 [ "$(total "$T/window.json")" = "8616.00" ] || { echo "FAIL: the window's price is not 8616.00"; exit 1; }
 echo "    price \$7,600.00 to \$8,616.00 (floor +640, footings +160, walls +216)"
+cmp -s "$T/dragged.json" "$T/cli.json" && echo "    the wall pressed on and dragged 4 ft east: the saved job is, byte for byte, the command line's move" || { echo "FAIL: the dragged wall's job is not the command line's:"; diff <("$P" show "$T/dragged.json") <("$P" show "$T/cli.json") | head -30; exit 1; }
+[ "$(total "$T/dragged.json")" = "8616.00" ] || { echo "FAIL: the dragged wall's price is not 8616.00"; exit 1; }
+echo "    price \$7,600.00 to \$8,616.00 by the drag"
 cmp -s "$T/undone.json" "$T/start.json" && echo "    one Undo: the job is as it was opened, byte for byte" || { echo "FAIL: one Undo did not take all of it back"; diff <("$P" show "$T/undone.json") <("$P" show "$T/start.json") | head -30; exit 1; }
 cmp -s "$T/refused.json" "$T/start.json" && echo "    the refused move changed nothing" || { echo "FAIL: the refused move changed the job"; diff <("$P" show "$T/refused.json") <("$P" show "$T/start.json") | head -30; exit 1; }
 "$P" check "$T/window.json" > "$T/check.txt"; if grep -q '^!' "$T/check.txt"; then echo "FAIL: check cautions"; cat "$T/check.txt"; exit 1; fi

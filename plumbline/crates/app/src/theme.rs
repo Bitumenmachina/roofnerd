@@ -114,7 +114,8 @@ pub fn green() -> Color { hex(0x1F7A4D) }
 /// The building under the roof and the roof's own trim. They are there to give the roof
 /// something to sit on; they are not elements of the job.
 pub fn wall() -> Color { hex(0xF3F0EA) }
-pub fn fascia() -> Color { hex(0x59636F) }
+/// The roof's own edge, drawn as the roof (call 193, A); not a fascia board.
+pub fn roof_edge() -> Color { hex(0x59636F) }
 /// A roof plane nobody has given a condition yet, and one that has one.
 pub fn roof_bare() -> Color { hex(0x97A3B1) }
 pub fn roof_copper() -> Color { hex(0xB7733B) }

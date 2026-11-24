@@ -154,6 +154,13 @@ pub fn write(
             out.push_str(&format!("plan\t{:.2}\t{:.2}\t{:.4}\n", zero.x + model.0.x as f32, zero.y + model.0.y as f32, one.x - zero.x));
         }
     }
+    // What the Job panel says under a level's Floor where its figure is not the rooms' (call 193, F):
+    // `note<TAB>Floor<TAB>out to the walls' center lines`.
+    for storey in &snap.storeys {
+        if let Some(said) = crate::panels::floor_note(&snap, storey) {
+            out.push_str(&format!("note\tFloor\t{said}\n"));
+        }
+    }
     // The count the Trim switch reads (the model's): `count<TAB>Trim<TAB>27`.
     if !snap.trim.pieces.is_empty() {
         out.push_str(&format!("count\tTrim\t{}\n", snap.trim.pieces.len()));

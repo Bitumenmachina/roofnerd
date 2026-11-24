@@ -97,7 +97,9 @@ LOG="$(cat "$T/map.txt.said")"
 # the labor of hanging it come off: the siding was $864.00 and its labor had no price.
 # (A name in quotes is said as it is kept, "2x6": only words outside quotes are respelled.)
 says "the assembly changed" "is now \"Exterior wall, 2x6, brick veneer\"" "$LOG"
-says "what came off, in dollars" "\$864.00 is out of the job cost (1 of them had no price yet)." "$LOG"
+# Call 185 added an unpriced "Corner boards" line to the starter lap siding, so two unpriced lines come off where one did;
+# the dollars out are unchanged (ruled by the lead 2026-11-24).
+says "what came off, in dollars" "\$864.00 is out of the job cost (2 of them had no price yet)." "$LOG"
 # The east plane goes with its five lines, of which the shingles were priced: $71.55.
 # The planes on the long eaves now run to the east wall: on plan (24 + 16) / 2 x 8 =
 # 160 SF each, 178.8854 SF on the slope, 1.7889 SQ, $178.89. The west hip is as it was.
