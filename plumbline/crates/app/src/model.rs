@@ -371,6 +371,11 @@ pub struct Doc {
     pub steps_open: bool,
     /// A thing the view is to go to: asked for by a row of the verify-in-field list.
     pub look_at: Option<String>,
+    /// The window is on the bench, one item looked at alone (call 195, step A): a way of
+    /// looking, never saved.
+    pub bench: Option<crate::bench::Bench>,
+    /// What a button or a key asked of the bench, answered where the camera is held.
+    pub bench_ask: Option<crate::bench::Ask>,
     /// A file dropped on the window that could be more than one thing (a CSV or a
     /// workbook): kept until what it is has been said.
     pub dropped: Option<String>,
@@ -562,7 +567,19 @@ impl Doc {
             .to_string(),
         );
     }
+    /// With the item on the bench nothing else is there to pick: said, and nothing is picked.
+    fn bench_refuses(&mut self, path: &str) -> bool {
+        if self.bench.as_ref().is_none_or(|b| b.item == path) {
+            return false;
+        }
+        self.say(Tone::Refused, "Only the item is on the bench. Back to the house (Esc) to pick anything else.");
+        self.touch();
+        true
+    }
     pub fn select(&mut self, path: &str) {
+        if self.bench_refuses(path) {
+            return;
+        }
         // The list of assemblies was for what was selected before.
         self.choosing = false;
         self.marking = None;
@@ -574,6 +591,9 @@ impl Doc {
     /// Shift and a click (call 169): the thing is added to what is selected, or taken
     /// out of it if it is already in. The one picked last has the panel.
     pub fn select_also(&mut self, path: &str) {
+        if self.bench_refuses(path) {
+            return;
+        }
         self.choosing = false;
         self.marking = None;
         let Some(current) = self.selected.clone() else { return self.select(path) };
@@ -696,6 +716,8 @@ pub struct SystemInfoRow {
 #[derive(Resource, Default)]
 pub struct Snapshot {
     pub revision: u64,
+    /// The item on the bench, laid out: its floor, its dimensions, its framing (call 195).
+    pub bench: Option<crate::bench::Layout>,
     pub title: String,
     pub file: String,
     pub roof_path: String,
@@ -840,6 +862,8 @@ pub fn refresh(mut doc: ResMut<Doc>, mut snap: ResMut<Snapshot>) {
         all.sort_by(|a, b| (a.4 == 0).cmp(&(b.4 == 0)).then(a.4.cmp(&b.4)).then(a.1.cmp(&b.1)).then(a.0.cmp(&b.0)));
         all
     };
+    // The bench (call 195): where the item's floor and dimensions stand, the model's own sizes in its own words.
+    s.bench = doc.bench.as_ref().and_then(|b| crate::bench::layout(&mut doc.job, &b.item).ok());
     s.boxes = plumbline_world::editing::box_codes(&mut doc.job).into_iter().map(|(_, name)| name).collect();
     s.layouts = if doc.beside.is_empty() {
         None

@@ -391,7 +391,8 @@ fn panels_on(doc: &Doc) -> [bool; 3] {
     let in_left = matches!(typing, Some(Entry::Storey | Entry::NewItem | Entry::BringIn(_) | Entry::Drawing));
     let in_tools = matches!(typing, Some(Entry::Settings(_) | Entry::Length | Entry::Distance | Entry::Room | Entry::Cabinets));
     let in_right = typing.is_some() && !in_left && !in_tools && typing != Some(Entry::LayoutName);
-    [!doc.show.away[0] || in_left, !doc.show.away[1] || in_right, !doc.show.away[2] || in_tools || doc.draw.tool.is_some()]
+    // On the bench (call 195) no tool is offered: the tools are put away and come back with the house.
+    [!doc.show.away[0] || in_left, !doc.show.away[1] || in_right, (!doc.show.away[2] || in_tools || doc.draw.tool.is_some()) && doc.bench.is_none()]
 }
 
 /// How the model is looked at, in a small cluster of its own over the model's top right:
@@ -402,6 +403,10 @@ fn views(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc) {
     node.border_radius = BorderRadius::all(px(theme::BUTTON_RADIUS + 6.0));
     p.spawn(docked(node)).with_children(|bar| {
         for (label, key, plan, walk) in [("3D", "", false, false), ("Plan", "T", true, false), ("Walk", "V", false, true)] {
+            // The bench is looked at in 3D only: a plan or a walk is for the house (call 195).
+            if doc.bench.is_some() && (plan || walk) {
+                continue;
+            }
             let on = doc.plan == plan && doc.walk == walk;
             button(bar, fonts, label, key, on).observe(move |press: On<PointerClick>, mut doc: ResMut<Doc>, mut orbit: ResMut<crate::scene::Orbit>, snap: Res<Snapshot>| {
                 if press.button == PointerButton::Primary {
@@ -629,7 +634,7 @@ fn status_line(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc) {
             // The view first, then where the pointer is while it is on the model: with
             // the pointer off the model the card is the one word, and not a rule with
             // nothing to its left (J24B-3).
-            bar.spawn(Node { flex_shrink: 0.0, ..default() }).with_child(text(fonts, if doc.walk { "On foot" } else if doc.plan { "Plan" } else { "3D" }, 12.0, Weight::Medium, theme::ink_soft()));
+            bar.spawn(Node { flex_shrink: 0.0, ..default() }).with_child(text(fonts, if doc.bench.is_some() { "Bench" } else if doc.walk { "On foot" } else if doc.plan { "Plan" } else { "3D" }, 12.0, Weight::Medium, theme::ink_soft()));
             bar.spawn(Node { flex_shrink: 0.0, ..default() }).with_child((text(fonts, "", 12.0, Weight::Regular, theme::ink_soft()), TextLayout::no_wrap(), PointerText));
         });
         });
@@ -1485,6 +1490,11 @@ fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot,
                 let (item, called) = (path.clone(), name.clone());
                 let in_hand = doc.placing.as_deref() == Some(path.as_str());
                 row(c, in_hand, format!("Item {name}"), move |doc| {
+                    if doc.bench.is_some() {
+                        crate::tools::cant(doc, "take it in hand", "this is the bench, where nothing is set down. Back to the house (Esc) first. Change, on the right of its row, puts another item on the bench");
+                        doc.touch();
+                        return;
+                    }
                     if doc.placing.as_deref() == Some(item.as_str()) {
                         doc.placing = None;
                         doc.say(Tone::Done, format!("{called} put down."));
@@ -1515,8 +1525,14 @@ fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot,
                             press.propagate(false);
                             if press.button == PointerButton::Primary {
                                 doc.placing = None;
-                                doc.select(&open);
-                                doc.redraw();
+                                if doc.bench.is_some() {
+                                    // On the bench, another item's Change puts that item on the bench.
+                                    doc.bench_ask = Some(crate::bench::Ask::Enter(open.clone()));
+                                    doc.touch();
+                                } else {
+                                    doc.select(&open);
+                                    doc.redraw();
+                                }
                             }
                         });
                 });
@@ -2060,7 +2076,30 @@ fn size_tags(o: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snap
 
 fn overlay(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot) {
     p.spawn((Node { position_type: PositionType::Absolute, top: px(0.0), left: px(0.0), right: px(0.0), bottom: px(0.0), overflow: Overflow::clip(), ..default() }, Pickable::IGNORE)).with_children(|o| {
-        let roof_on_show = doc.show.roof && !doc.show.ghost && doc.show.storey.is_none() && !doc.walk;
+        // On the bench (call 195) the house is not drawn, and nothing written over it is: only the item's dimensions.
+        let house = doc.bench.is_none();
+        if let (Some(_), Some(l)) = (&doc.bench, &snap.bench) {
+            for dim in &l.dims {
+                let off = match dim.what {
+                    "width" => Vec3::new(0.0, 0.12, 0.55),
+                    "depth" => Vec3::new(-0.6, 0.12, 0.0),
+                    _ => Vec3::new(0.6, 0.0, 0.0),
+                };
+                o.spawn((
+                    Node { position_type: PositionType::Absolute, left: px(-2000.0), top: px(-2000.0), padding: UiRect::axes(px(7.0), px(2.0)), column_gap: px(5.0), align_items: AlignItems::Center, border_radius: BorderRadius::all(px(9.0)), ..default() },
+                    UiTransform { translation: Val2::percent(-50.0, -50.0), ..default() },
+                    BackgroundColor(theme::panel().with_alpha(0.9)),
+                    Pickable::IGNORE,
+                    Label { at: (dim.a + dim.b) / 2.0 + off, facing: None, rank: 0 },
+                    Named { name: format!("Dimension {} {}", dim.what, dim.words), scrolls: false },
+                ))
+                .with_children(|t| {
+                    t.spawn((Node { width: px(6.0), height: px(6.0), border_radius: BorderRadius::all(px(3.0)), flex_shrink: 0.0, ..default() }, BackgroundColor(theme::status_ink(dim.status)), Pickable::IGNORE));
+                    quiet(t, fonts, theme::spoken(&dim.words), 12.0, Weight::Semibold, theme::ink());
+                });
+            }
+        }
+        let roof_on_show = house && doc.show.roof && !doc.show.ghost && doc.show.storey.is_none() && !doc.walk;
         // Each roof line's length, for the selected plane's own lines, or for all on plan.
         for line in snap.lines.iter().filter(|_| roof_on_show) {
             let (Some([a, b]), Some(length)) = (line.ends, line.length) else { continue };
@@ -2194,10 +2233,12 @@ fn overlay(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
                 }
             });
         }
-        size_tags(o, fonts, doc, snap);
+        if house {
+            size_tags(o, fonts, doc, snap);
+        }
         // Each clash's mark says the room it is in (call 177), the model's: the place is
         // east, north and up in the sheet, and here it is in which room.
-        if matches!(doc.tab, crate::model::Tab::Clashes | crate::model::Tab::Verify) || doc.show.clashes {
+        if house && (matches!(doc.tab, crate::model::Tab::Clashes | crate::model::Tab::Verify) || doc.show.clashes) {
             if let Some(Ok(found)) = &snap.clashes {
                 for c in found.in_the_same_space() {
                     let room = found.found.iter().position(|x| std::ptr::eq(x, c)).and_then(|i| snap.clash_rooms.0.get(i)).cloned().unwrap_or_default();
@@ -2220,7 +2261,7 @@ fn overlay(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
         }
         // A floor whose joists are named and whose joists' direction is not said has none
         // drawn, and says why (call 177).
-        if doc.show.framing && doc.show.architecture && !doc.plan && !doc.walk {
+        if house && doc.show.framing && doc.show.architecture && !doc.plan && !doc.walk {
             for frame in snap.frames.iter().filter(|f| f.kind == Kind::Floor && !f.said) {
                 let Some(floor) = snap.drawn.iter().find(|p| p.path == frame.path) else { continue };
                 let Shape::Floor { boundary, top, .. } = &floor.shape else { continue };
@@ -2644,6 +2685,22 @@ fn item_bench(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Sna
     let hint = |p: &mut ChildSpawnerCommands, words: &str| {
         p.spawn(Node { padding: UiRect::bottom(px(4.0)), ..default() }).with_child(text(fonts, words, 11.0, Weight::Regular, theme::ink_faint()));
     };
+    // The bench (call 195): the item looked at alone, on a floor of its own; and the way back to the house.
+    let on_the_bench = doc.bench.as_ref().is_some_and(|b| b.item == el.path);
+    p.spawn(Node { margin: UiRect::top(px(8.0)), column_gap: px(4.0), row_gap: px(4.0), flex_wrap: FlexWrap::Wrap, flex_shrink: 0.0, ..default() }).with_children(|r| {
+        let at = el.path.clone();
+        if on_the_bench {
+            on_click(&mut button(r, fonts, "Back to the house", "Esc", false), |doc| {
+                doc.bench_ask = Some(crate::bench::Ask::Leave);
+                doc.touch();
+            });
+        } else {
+            on_click(&mut button(r, fonts, "Bench", "", false), move |doc| {
+                doc.bench_ask = Some(crate::bench::Ask::Enter(at.clone()));
+                doc.touch();
+            });
+        }
+    });
     // The item itself: called something else, or taken out of the job's library.
     p.spawn(Node { margin: UiRect::top(px(8.0)), column_gap: px(4.0), row_gap: px(4.0), flex_wrap: FlexWrap::Wrap, flex_shrink: 0.0, ..default() }).with_children(|r| {
         let called = el.name.clone();

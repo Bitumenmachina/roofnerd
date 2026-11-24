@@ -390,6 +390,12 @@ pub fn start(doc: &mut Doc, tool: Tool) {
 /// `ask`: show the tool's sizes to be typed over before it is taken in hand (call 64).
 /// Not asked again when they have just been typed.
 fn begin(doc: &mut Doc, tool: Tool, ask: bool) {
+    // On the bench (call 195) nothing is drawn: no tool is taken in hand, by a button or by a key.
+    if doc.bench.is_some() {
+        cant(doc, &format!("take the {} in hand", tool.name().to_lowercase()), "this is the bench, where nothing is drawn. Back to the house (Esc) first");
+        doc.touch();
+        return;
+    }
     // A tool taken in hand again starts afresh: "Other side" is for the walls just laid, not for an older run.
     doc.draw.faced = None;
     doc.draw.picked.clear();
@@ -1629,6 +1635,13 @@ pub fn measured(doc: &mut Doc, text: &str) {
         doc.touch();
         return;
     }
+    // An item's size (call 197, points 8 and 9): typed, it is the item changed and is Assumed; typed the same again it
+    // is checked. The model's own measurement does both of its steps; what the window adds is the words and the
+    // certainty, and nothing is worked out here.
+    if to.is_none() && item_size(doc, &path, &what, &reading, who) {
+        doc.redraw();
+        return;
+    }
     let same = reading.eq_ignore_ascii_case("same");
     let by = if same { "checked on site" } else { "measured on site" };
     let source = if who.is_empty() { by.to_string() } else { format!("{by}: {who}") };
@@ -1647,6 +1660,99 @@ pub fn measured(doc: &mut Doc, text: &str) {
         Err(why) => cant(doc, "use that reading", why),
     }
     doc.redraw();
+}
+
+/// The words a size typed on an item's panel is entered under: it is the item changed, not a measurement.
+const ITEM_TYPED: &str = "typed in the window; not yet checked against its maker's sheet";
+
+/// A size typed on an item's panel. True when it was an item's size and has been dealt with (said, done or
+/// refused); false when it is anything else, or not a length, and goes the way a measurement goes.
+/// Differing from the size it has: Assumed, in the words New item uses; the same size again (or "same"): the
+/// check, Known, "checked on site". Both are the model's own measurement (`ed::measure`), which also moves what is
+/// set down from the item and says what moved; the second of the two steps below sets the item's size back to
+/// Assumed on the window's say (the model's measurement makes a value Known).
+fn item_size(doc: &mut Doc, path: &str, what: &str, reading: &str, who: &str) -> bool {
+    use plumbline_world::Item;
+    let Some(e) = doc.job.find(path) else { return false };
+    let Some(item) = doc.job.world.get::<Item>(e).cloned() else { return false };
+    let was = match what {
+        "width" => &item.width,
+        "depth" => &item.depth,
+        "height" => &item.height,
+        _ => return false,
+    };
+    let name = doc.job.world.get::<plumbline_world::Node>(e).map(|n| n.name.clone()).unwrap_or_else(|| path.to_string());
+    let word_same = reading.eq_ignore_ascii_case("same");
+    let typed = if word_same { None } else { units::parse_length(reading).ok() };
+    if !word_same && typed.is_none() {
+        return false;
+    }
+    let was_text = was.value.as_ref().map(|len| units::show_length(len, &was.unit));
+    // The same size again: the feet are the same to a ten-thousandth of an inch.
+    let again = word_same || typed.zip(was.feet()).is_some_and(|((len, unit), old)| was.status != Status::Unknown && len.feet(unit).is_ok_and(|now| (now - old).abs() < 1.0e-5));
+    if again {
+        let source = if who.is_empty() { "checked on site".to_string() } else { format!("checked on site: {who}") };
+        match ed::measure(&mut doc.job, path, what, ed::Reading::Same, None, &source) {
+            Ok(done) => {
+                doc.edit("checked an item's size");
+                let said = format!("{name}: {what} {} is checked: Known, checked on site.", was_text.unwrap_or_default());
+                doc.say(Tone::Done, if done.also.is_empty() { said } else { format!("{said}\n{}", done.also.join("\n")) });
+            }
+            Err(why) => cant(doc, "use that reading", why),
+        }
+        return true;
+    }
+    let source = ITEM_TYPED;
+    let done = match ed::measure(&mut doc.job, path, what, ed::Reading::Length(reading), None, source) {
+        Ok(done) => done,
+        Err(why) => {
+            cant(doc, "use that size", why);
+            return true;
+        }
+    };
+    // The size is the item changed, and what is not yet checked is Assumed.
+    let mut it = doc.job.world.get::<Item>(e).cloned().unwrap_or(item);
+    match what {
+        "width" => it.width.status = Status::Assumed,
+        "depth" => it.depth.status = Status::Assumed,
+        _ => it.height.status = Status::Assumed,
+    }
+    let _ = doc.job.put(path, it.clone());
+    // What follows it is as sure as the item's sizes together are: where the three were all Known, the ones set
+    // down said Known a moment ago, and are put right to what the model says of the item's size.
+    let followers: Vec<String> = done.also.iter().filter_map(|a| a.strip_suffix(" is one of it and is now that size")).map(str::to_string).collect();
+    if let Ok((feet, status, from)) = it.size_ft() {
+        for at in &followers {
+            let Some(mut placed) = doc.job.find(at).and_then(|f| doc.job.world.get::<plumbline_world::Placed>(f)).cloned() else { continue };
+            if placed.size.status != status {
+                placed.size = plumbline_world::Val { value: Some(feet), unit: "ft".into(), status, source: format!("{name}: {from}") };
+                let _ = doc.job.put(at, placed);
+            }
+        }
+    }
+    doc.job.derive();
+    doc.edit("typed an item's size");
+    let now = it_text(&it, what);
+    let follow = match followers.len() {
+        0 => "Nothing is set down from it yet.".to_string(),
+        1 => "1 thing set down from it follows.".to_string(),
+        n => format!("{n} things set down from it follow."),
+    };
+    let old = was_text.clone().unwrap_or_default();
+    let renamed = if !old.is_empty() && name.contains(&old) { format!(" Its name still reads {old}: Rename item changes it.") } else { String::new() };
+    let note = if was_text.is_some() { format!(" (it was {old})") } else { String::new() };
+    doc.say(if renamed.is_empty() { Tone::Done } else { Tone::Warned }, format!("{name}: {what} is now {now}{note}. Assumed: {ITEM_TYPED}. {follow} To check it, type {now} again on its {what}: that makes it Known, checked on site.{renamed}"));
+    true
+}
+
+/// An item's size as its panel says it.
+fn it_text(item: &plumbline_world::Item, what: &str) -> String {
+    let v = match what {
+        "width" => &item.width,
+        "depth" => &item.depth,
+        _ => &item.height,
+    };
+    v.value.as_ref().map(|len| units::show_length(len, &v.unit)).unwrap_or_default()
 }
 
 /// A roof worked out from the footprint picked: its corners (turned counter-clockwise

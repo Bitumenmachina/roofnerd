@@ -187,6 +187,29 @@ pub fn write(
             }
         }
     }
+    // The bench (call 195): where the item's own width, depth and height run on screen, along its middle (so that they are
+    // the same wherever its sides go when a size is typed), and where the house's south-west corner stood on the ground
+    // when the house is in view. `bench<TAB>width<TAB>x1<TAB>y1<TAB>x2<TAB>y2` and `house<TAB>x<TAB>y`. A demonstration measures a
+    // picture against these.
+    if let Ok((camera, eye, _)) = camera.single() {
+        let at = |q: Vec3| camera.world_to_viewport(eye, q).ok().map(|p| (p.x + model.0.x as f32, p.y + model.0.y as f32));
+        match (&doc.bench, &snap.bench) {
+            (Some(_), Some(l)) => {
+                let (w, d, h) = (l.size[0] as f32, l.size[1] as f32, l.size[2] as f32);
+                for (what, a, b) in [("width", Vec3::new(-w / 2.0, 0.0, 0.0), Vec3::new(w / 2.0, 0.0, 0.0)), ("depth", Vec3::new(0.0, 0.0, -d / 2.0), Vec3::new(0.0, 0.0, d / 2.0)), ("height", Vec3::ZERO, Vec3::new(0.0, h, 0.0))] {
+                    if let (Some(a), Some(b)) = (at(a), at(b)) {
+                        out.push_str(&format!("bench\t{what}\t{:.1}\t{:.1}\t{:.1}\t{:.1}\n", a.0, a.1, b.0, b.1));
+                    }
+                }
+            }
+            (None, _) if !doc.plan => {
+                if let Some(p) = snap.extent.and_then(|(lo, _, _)| at(to_view(doc.origin, [lo[0], lo[1], 0.0]))) {
+                    out.push_str(&format!("house\t{:.1}\t{:.1}\n", p.0, p.1));
+                }
+            }
+            _ => {}
+        }
+    }
     // Where a place in the middle of each wall's gable is on screen, in 3D (call 192): halfway up between the wall's top and the roof's
     // surface over the middle of the wall (the model's top line), and the apex of that line:
     // `gable<TAB>the wall<TAB>x<TAB>y<TAB>apex x<TAB>apex y<TAB>feet along<TAB>feet up<TAB>wall x<TAB>wall y` (the last two: the wall's own face, halfway up). A demonstration reads the picture there.

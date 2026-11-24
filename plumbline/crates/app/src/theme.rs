@@ -27,6 +27,8 @@ pub fn panel_alt() -> Color { hex(0xF3F4F2) }
 /// The ground a building stands on in 3D: a warm grey, darker than paper, so the
 /// building and the glass both read against it. (On plan the ground is paper.)
 pub fn yard() -> Color { hex(0xCFCBC2) }
+/// The bench's floor (call 195): a floor of its own, light and quiet, so that what stands on it reads.
+pub fn bench_floor() -> Color { hex(0xD9D6CF) }
 /// The sky (QUESTIONS.md Q22): pale at the horizon, a soft blue overhead. One place to
 /// change it, or to take it away: make both `canvas()`.
 pub fn sky_horizon() -> Color { hex(0xE6ECF1) }

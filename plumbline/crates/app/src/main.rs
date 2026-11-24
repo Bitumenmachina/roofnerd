@@ -43,6 +43,7 @@
 //! * `sheet`: the sheet window.
 //! * `map`: where each button is, written out for a script.
 
+mod bench;
 mod bring;
 mod dress;
 mod map;
@@ -183,6 +184,8 @@ pub fn build_doc(path: String, roof_arg: Option<String>) -> Result<Doc, String> 
         // next step: nine ticks out of ten took the head of the panel (call 117).
         steps_open: !has_lines,
         look_at: None,
+        bench: None,
+        bench_ask: None,
         dropped: None,
         choosing: false,
         give: None,
@@ -238,6 +241,12 @@ fn setup(mut commands: Commands, mut fonts: ResMut<Assets<Font>>, camera: Query<
 /// on the storey on show, in the middle of the building; coming out puts the view back.
 pub fn set_view(doc: &mut Doc, orbit: &mut Orbit, snap: &Snapshot, plan: bool, walk: bool) {
     if doc.plan == plan && doc.walk == walk {
+        return;
+    }
+    // The bench (call 195) is looked at in 3D from outside: a plan or a walk is for the house.
+    if doc.bench.is_some() && (plan || walk) {
+        doc.say(Tone::Refused, format!("There is no {} on the bench. Back to the house (Esc) first.", if walk { "walk" } else { "plan" }));
+        doc.touch();
         return;
     }
     if walk && !doc.walk {
@@ -548,6 +557,9 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
     if let Some((plan, walk)) = doc.go.take() {
         set_view(doc, &mut orbit, &snap, plan, walk);
     }
+    // The bench (call 195): an item put on it, or left for the house, answered here where the camera is held, so
+    // that the view flies there and back.
+    bench::answer(doc, &mut orbit, &snap);
     // A thing the view is to go to: its level is put on show if another is, and the
     // view is brought round it and closer.
     if let Some(path) = doc.look_at.take() {
@@ -966,12 +978,19 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
     // A character key that came in alone acts once it is plain that nothing follows it.
     burst.waiting.extend(alone.iter().filter(|_| !in_burst).map(|k| (*k, now)));
     let mut acting = ButtonInput::<KeyCode>::default();
+    // On the bench (call 195) no tool is started from the keyboard and nothing is drawn: only Esc, saving, framing
+    // and taking a step back or forward act. (The keys the number row, the letters of the tools and Delete stand for
+    // are not offered there.)
+    let on_the_bench = doc.bench.is_some();
+    let at_once: Vec<KeyCode> = at_once.into_iter().filter(|k| !on_the_bench || matches!(k, KeyCode::Escape | KeyCode::F2)).collect();
     for key in at_once {
         acting.press(key);
     }
     // A button on screen is the key it stands for.
     for key in doc.pressed.drain(..) {
-        acting.press(key);
+        if !on_the_bench || matches!(key, KeyCode::Escape | KeyCode::F2 | KeyCode::KeyZ | KeyCode::KeyY | KeyCode::KeyF) {
+            acting.press(key);
+        }
     }
     // With Ctrl held: save, undo, redo, as in any program.
     if chord.contains(&KeyCode::KeyS) {
@@ -985,7 +1004,10 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
     }
     burst.waiting.retain(|(key, since)| {
         if now - since >= BURST_GAP {
-            acting.press(*key);
+            // (A number is let through: it names a tool, and the bench says plainly that none is taken in hand.)
+            if !on_the_bench || matches!(key, KeyCode::KeyZ | KeyCode::KeyY | KeyCode::KeyF | KeyCode::Digit0 | KeyCode::Digit1 | KeyCode::Digit2 | KeyCode::Digit3 | KeyCode::Digit4 | KeyCode::Digit5 | KeyCode::Digit6 | KeyCode::Digit7 | KeyCode::Digit8 | KeyCode::Digit9) {
+                acting.press(*key);
+            }
             false
         } else {
             true
@@ -1173,7 +1195,11 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
         }
         doc.touch();
     }
-    if keys.just_pressed(KeyCode::Escape) && doc.selected.is_some() {
+    if keys.just_pressed(KeyCode::Escape) && doc.bench.is_some() {
+        // On the bench Esc goes back to the house and takes nothing else with it: the item stays selected, and a
+        // second Esc is the one that lets go of it. (A value being typed has had its Esc already; a tool cannot be in hand.)
+        bench::leave(doc, &mut orbit, &snap);
+    } else if keys.just_pressed(KeyCode::Escape) && doc.selected.is_some() {
         doc.selected = None;
         doc.together.clear();
         doc.say(Tone::Done, "Nothing selected.");

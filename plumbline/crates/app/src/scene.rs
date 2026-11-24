@@ -45,7 +45,7 @@ pub const SCAN_CUT_ALPHA: f32 = 0.35;
 /// roof, and is not fascia: a fascia board is drawn only where a line prices one (`trim::lay`). For the eye only.
 const ROOF_EDGE_FT: f32 = 0.7;
 /// The 3D view's angle of view, top to bottom, in radians: 40 degrees.
-const LENS: f32 = 0.698_131_7;
+pub(crate) const LENS: f32 = 0.698_131_7;
 /// The angle of view on foot: 68 degrees.
 const WALK_LENS: f32 = 1.186_823_9;
 /// Eye height on foot, in feet.
@@ -602,8 +602,14 @@ pub fn rebuild(
     }
     let origin = doc.origin;
     let show = doc.show.clone();
+    // On the bench (call 195): one item alone. The house, its sheets, its runs and its clashes are not
+    // drawn; the item is drawn by the same code a thing set down is, from the same kind of record.
+    let bench_item = doc.bench.as_ref().map(|b| b.item.clone());
+    let on_bench = bench_item.is_some();
+    let bench_drawn: Vec<plumbline_world::building::Placement> = bench_item.as_ref().and_then(|item| crate::bench::placement(&mut doc.job, item, origin).ok()).into_iter().collect();
+    let bench_floor: Option<[f32; 2]> = bench_item.as_ref().map(|_| snap.bench.as_ref().map(|l| l.half).unwrap_or([3.0, 3.0]));
     // On the plan a floor is paper, as a drawing leaves it: what is drawn on it reads.
-    let on_plan_view = doc.plan;
+    let on_plan_view = doc.plan && !on_bench;
 
     // Frame the building once, and lay the ground under it.
     if !doc.framed {
@@ -648,7 +654,7 @@ pub fn rebuild(
             commands
                 .spawn((Mesh3d(meshes.add(Plane3d::default().mesh().size(24000.0, 24000.0))), MeshMaterial3d(materials.add(material)), Transform::from_xyz(0.0, -0.04, 0.0), Ground))
                 .observe(|press: On<PointerClick>, mut doc: ResMut<Doc>, snap: Res<Snapshot>| {
-                    if press.button != PointerButton::Primary || doc.entry.is_some() || doc.draw.tool.is_some() || doc.draw.swallow || dragged() {
+                    if press.button != PointerButton::Primary || doc.entry.is_some() || doc.draw.tool.is_some() || doc.draw.swallow || dragged() || doc.bench.is_some() {
                         return;
                     }
                     // On the plan of the level a roof sits on, the roof is its lines,
@@ -675,7 +681,7 @@ pub fn rebuild(
     // ---- The drawings laid under the storeys: each sheet flat at its storey's floor ----
     // On the plan the sheet is over the floor, to be traced; in 3D it is under it. It is
     // shown as it is, unlit, and takes no click: what is picked is the place on the floor.
-    for l in &snap.drawings {
+    for l in snap.drawings.iter().filter(|_| !on_bench) {
         if show.storey.as_ref().is_some_and(|s| *s != l.storey) || show.off_levels.contains(&l.storey) {
             continue;
         }
@@ -699,6 +705,11 @@ pub fn rebuild(
         commands.spawn((Mesh3d(meshes.add(sheet)), MeshMaterial3d(materials.add(paper)), Transform::IDENTITY, SceneMesh, NotShadowCaster, Pickable::IGNORE));
     }
 
+    // The bench's floor: its own, a little larger than the item, lined every foot (the lines are `draw_lines`'). It takes no click.
+    if let Some([hx, hz]) = bench_floor {
+        let floor = materials.add(StandardMaterial { base_color: theme::bench_floor(), perceptual_roughness: 0.92, reflectance: 0.12, ..default() });
+        commands.spawn((Mesh3d(meshes.add(Plane3d::default().mesh().size(hx * 2.0, hz * 2.0))), MeshMaterial3d(floor), Transform::from_xyz(0.0, -0.03, 0.0), SceneMesh, Pickable::IGNORE));
+    }
     drawing.lines.clear();
     drawing.roof_lines.clear();
     drawing.roof_dressed = false;
@@ -718,7 +729,7 @@ pub fn rebuild(
     // and casing are the boards of the model's own where a line prices them, and nowhere else (an opening's inside casing
     // stays). With the Trim switch off, or where nothing is priced, there are none: the roof has its own edge, a wall its
     // siding to the corner, an opening its unit.
-    let trim_on = show.trim && !on_plan_view;
+    let trim_on = show.trim && !on_plan_view && !on_bench;
     let edges_of = |a: PieceKind, b: PieceKind| -> std::collections::HashSet<String> {
         if trim_on { snap.trim.pieces.iter().filter(|p| p.kind == a || p.kind == b).map(|p| p.of.clone()).collect() } else { Default::default() }
     };
@@ -730,7 +741,7 @@ pub fn rebuild(
     // the room's own outline (the faces of its walls), left out across each door.
     // It is finish: off with Finishes, and with its level. With the house seen through
     // it is glass like the walls it is on (drawn solid, it swamped the runs inside).
-    if show.finishes && show.architecture && !on_plan_view {
+    if show.finishes && show.architecture && !on_plan_view && !on_bench {
         let (tall, thick) = (5.25_f32 / 12.0, 0.625_f32 / 12.0);
         for (room, base) in &snap.dress.base {
             let storey = &base.storey;
@@ -787,9 +798,11 @@ pub fn rebuild(
     // what is under it solid.
     let under_solid = show.ghost && !show.ground;
     let marked = snap.work.values().any(|w| matches!(w, plumbline_world::WorkStatus::Existing | plumbline_world::WorkStatus::Demolish));
-    for p in &snap.drawn {
-        // Its trade's switch, the level on show, its level's own switch, its system's.
-        if !show.discipline(p.discipline) || show.storey.as_ref().is_some_and(|s| p.storey.as_ref() != Some(s)) || p.storey.as_ref().is_some_and(|s| show.off_levels.contains(s)) || p.system.as_ref().is_some_and(|s| show.off_systems.contains(s)) {
+    let on_show_list: &[plumbline_world::building::Placement] = if on_bench { &bench_drawn } else { &snap.drawn };
+    for p in on_show_list {
+        // Its trade's switch, the level on show, its level's own switch, its system's. (On the bench the item
+        // stands alone and none of them is its own.)
+        if !on_bench && (!show.discipline(p.discipline) || show.storey.as_ref().is_some_and(|s| p.storey.as_ref() != Some(s)) || p.storey.as_ref().is_some_and(|s| show.off_levels.contains(s)) || p.system.as_ref().is_some_and(|s| show.off_systems.contains(s))) {
             continue;
         }
         // A beam and a post are the frame's: drawn with Framing (call 177). A pad footing
@@ -1263,7 +1276,7 @@ pub fn rebuild(
     // the floor as it is (glass, when the house is seen through).
     build.wash = None;
     build.work = None;
-    if show.framing && show.architecture && !on_plan_view {
+    if show.framing && show.architecture && !on_plan_view && !on_bench {
         for frame in snap.frames.iter().filter(|f| f.kind == Kind::Floor && f.said) {
             let Some(floor) = snap.drawn.iter().find(|p| p.path == frame.path) else { continue };
             let Shape::Floor { top, .. } = &floor.shape else { continue };
@@ -1297,7 +1310,7 @@ pub fn rebuild(
     // level it is its lines, broken, further down.
     let top_level = snap.storeys.iter().filter(|s| s.elevation.is_some()).max_by(|a, b| a.elevation.unwrap_or(0.0).total_cmp(&b.elevation.unwrap_or(0.0))).map(|s| s.path.clone());
     let roof_in_3d = show.storey.is_none() || (!on_plan_view && show.storey == top_level);
-    if show.roof && roof_in_3d {
+    if show.roof && roof_in_3d && !on_bench {
         build.drawing.roof_dressed = !show.certainty && !snap.planes.is_empty() && snap.planes.iter().all(|p| p.area.is_some() && snap.dress.roofs.contains_key(&p.path));
         for info in &snap.planes {
             build.wash = show.certainty.then(|| theme::certainty(info.worst()));
@@ -1519,7 +1532,8 @@ pub fn tint(doc: Res<Doc>, snap: Res<Snapshot>, drawing: Res<Drawing>, mut mater
     let clashing = doc.selected.as_ref().filter(|p| snap.selected.as_ref().is_some_and(|s| stands(s.kind) && s.path == **p) && in_what(&snap, p).is_some());
     let a_system = doc.selected.as_ref().is_some_and(|s| drawing.surfaces.iter().any(|x| x.system.as_ref() == Some(s)));
     for surface in &drawing.surfaces {
-        let chosen = doc.is_selected(surface.path.as_str());
+        // On the bench the item is drawn as it is set down: it is not lit as a thing picked is.
+        let chosen = doc.bench.is_none() && doc.is_selected(surface.path.as_str());
         let on_system = a_system && surface.system.as_ref() == doc.selected.as_ref();
         let pointed = doc.hover.as_deref() == Some(surface.path.as_str());
         // What is selected keeps the colour of what it is made of, a little lighter: the
@@ -1557,7 +1571,7 @@ pub fn ground_tone(doc: Res<Doc>, ground: Query<&MeshMaterial3d<StandardMaterial
     // the drawing is on, and lies under the lowest thing drawn, so the plan of a
     // foundation is not hidden by the ground over it.
     let lowest = snap.drawn.iter().filter_map(|p| match &p.shape { Shape::Wall { base, .. } => Some(*base as f32), _ => None }).fold(0.0_f32, f32::min);
-    let (want_seen, want_y) = (if doc.show.ground { Visibility::Inherited } else { Visibility::Hidden }, if doc.plan { lowest - 0.5 } else { 0.0 } - 0.04);
+    let (want_seen, want_y) = (if doc.show.ground && doc.bench.is_none() { Visibility::Inherited } else { Visibility::Hidden }, if doc.plan { lowest - 0.5 } else { 0.0 } - 0.04);
     for (mut v, mut t) in &mut seen {
         if *v != want_seen {
             *v = want_seen;
@@ -1906,7 +1920,7 @@ pub fn carry(mut carry: ResMut<Carry>, mut doc: ResMut<Doc>, snap: Res<Snapshot>
     let cursor = window.cursor_position();
     let hits = hover.get(&bevy::picking::pointer::PointerId::Mouse);
     let on_panel = hits.is_some_and(|h| h.keys().any(|e| panels.contains(*e)));
-    let free = doc.entry.is_none() && doc.draw.tool.is_none() && !doc.choosing && !doc.walk;
+    let free = doc.entry.is_none() && doc.draw.tool.is_none() && !doc.choosing && !doc.walk && doc.bench.is_none();
     // An item in hand: a click on the model sets one down there, on the level on show.
     if let (true, Some(item), false) = (buttons.just_pressed(MouseButton::Left) && free && !on_panel, doc.placing.clone(), carry.path.is_some()) {
         let at = hits.and_then(|h| h.values().filter_map(|hit| hit.position.map(|p| (hit.depth, p))).min_by(|a, b| a.0.total_cmp(&b.0))).map(|(_, p)| p);
@@ -2303,7 +2317,7 @@ pub fn draw_lines(doc: Res<Doc>, snap: Res<Snapshot>, drawing: Res<Drawing>, mut
     let reach = drawing.reach;
     // With the ground switched off there is no ground to rule: the grid lay across the
     // face of the foundation, between it and the eye (J24B-25).
-    if reach > 0.0 && !doc.walk && doc.show.ground {
+    if reach > 0.0 && !doc.walk && doc.show.ground && doc.bench.is_none() {
         let (minor, major) = (theme::grid_minor(), theme::grid_major());
         let fade = |x: f32, z: f32| (1.0 - (x * x + z * z).sqrt() / reach).clamp(0.0, 1.0).powf(1.4);
         // Over a very large ground (an unscaled scan laid at a tenth of a foot to the
@@ -2324,6 +2338,27 @@ pub fn draw_lines(doc: Res<Doc>, snap: Res<Snapshot>, drawing: Res<Drawing>, mut
                 let (c0, c1) = (base.with_alpha(base.alpha() * a0), base.with_alpha(base.alpha() * a1));
                 grid.line_gradient(Vec3::new(at, 0.0, from), Vec3::new(at, 0.0, to), c0, c1);
                 grid.line_gradient(Vec3::new(from, 0.0, at), Vec3::new(to, 0.0, at), c0, c1);
+            }
+        }
+    }
+    // The bench (call 195): the item's own floor, lined every foot, and its three dimensions, each a line with
+    // ends in the colour of how sure the size is. (Where they stand and what they say is the bench's own: `bench::layout`.)
+    if let (Some(_), Some(l)) = (&doc.bench, &snap.bench) {
+        let (hx, hz) = (l.half[0], l.half[1]);
+        let (steps_x, steps_z) = (hx as i32, hz as i32);
+        for i in -steps_x..=steps_x {
+            let x = i as f32;
+            grid.line(Vec3::new(x, 0.0, -hz), Vec3::new(x, 0.0, hz), if i == 0 || i.abs() == steps_x { theme::grid_major() } else { theme::grid_minor() });
+        }
+        for j in -steps_z..=steps_z {
+            let z = j as f32;
+            grid.line(Vec3::new(-hx, 0.0, z), Vec3::new(hx, 0.0, z), if j == 0 || j.abs() == steps_z { theme::grid_major() } else { theme::grid_minor() });
+        }
+        for dim in &l.dims {
+            let colour = theme::status_ink(dim.status);
+            lines.line(dim.a, dim.b, colour);
+            for end in [dim.a, dim.b] {
+                lines.line(end - dim.tick * 0.12, end + dim.tick * 0.12, colour);
             }
         }
     }
@@ -2408,7 +2443,8 @@ pub fn draw_lines(doc: Res<Doc>, snap: Res<Snapshot>, drawing: Res<Drawing>, mut
             }
         }
     }
-    if let Some(selected) = &doc.selected {
+    // (On the bench the item is drawn as it is set down, and not outlined as a thing picked.)
+    if let Some(selected) = doc.selected.as_ref().filter(|_| doc.bench.is_none()) {
         for (_, frame) in drawing.frames.iter().filter(|(p, _)| p == selected) {
             for (a, b) in frame {
                 highlight.line(*a, *b, theme::accent());
