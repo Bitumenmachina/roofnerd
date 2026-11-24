@@ -10622,6 +10622,40 @@ product is not chosen"). By hand:
 
 Not built yet.
 
+## The bench, step B: an item carries its cost. A demonstration, written before it is built (call 196; 2026-11-24)
+
+`demos/itemcost.sh`, at the command line first (its window half after). An empty job,
+the starter assemblies and the starter tool chest brought in. Every price is made up.
+
+1. "Water heater, 50 gal" set down twice with nothing more done: the estimate has no
+   line for either, and says two things are set down and not priced. It does not
+   show $0.00.
+2. The item's "Priced as" set to "Bought and set": the message says 2 set down from
+   it follow. Each now has "Water heater, 50 gal" (Material, 1 EA, no price entered)
+   and "Set in place" (Labor, no production rate entered). The job cost is refused,
+   naming the four lines without a figure.
+3. The price list given "Water heater, 50 gal" at $1,850.00, and from a second
+   supplier at $1,790.00: each heater's line is $1,850.00; side by side the second
+   supplier's reads $1,790.00, and the two heaters come to **$3,700.00** and
+   **$3,580.00**.
+4. "Set in place" on each given 4 hours each at $85.00/hr: $340.00 each. Job cost:
+   2 x (1,850.00 + 340.00) = **$4,380.00**.
+5. The item's "Priced as" changed to "Mechanical equipment" (one subcontract line, no
+   price entered): 2 follow; the two lines of each are gone and one is there; the
+   job cost is refused, naming two lines. Changed back: the price list still has the
+   heater at $1,850.00, so each material line is priced again; the hours entered on
+   the things were on lines that were taken away, and the message said so when they
+   went.
+6. The chest written out: the heater's row reads "Bought and set" and $1,850.00,
+   with where the price is from. Brought into a second empty job that has the
+   starter assemblies: the item is priced as "Bought and set", the price list has
+   the heater at $1,850.00, and the message says one price was set. The table
+   written out again from the second job is the first, to the byte.
+7. A job saved before this change opens, and its estimate's price is the figure it
+   was.
+
+Not built, and not contracted until the bench as a place (step A) and call 194 are in.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **As of 2026-11-24, 16:30 UTC (the lead). Read this block first; what is below it is
@@ -10680,9 +10714,12 @@ above):
    the head.** Step A (an item looked at alone, sized on its panel, the saved job
    unchanged) has its demonstration written above ("The bench: an item looked at
    alone") and is a window job with no change to any number: contract it to a
-   window builder as soon as the window is free. Steps B (an item carries its price,
-   unit and labor) and C (its shape as data, PROPOSALS.md 28) are **the lead's to
-   design first**: they change what a number means and the saved job. D to F follow.
+   window builder as soon as the window is free. Step B (an item carries its cost) **is designed**: call
+   196, with its demonstration above ("The bench, step B"); it wants a contract in
+   the shape of `handoff/contracts/contract-194.md` (command line first, the
+   worker to set the design beside the code before any of it is built). Step C (its
+   shape as data, PROPOSALS.md 28) is **the lead's to design**: it changes the
+   saved job. D to F follow.
 1. **The sample whole house prices its outside trim** (call 194: the decision, the
    figures by hand above, and `handoff/contracts/contract-194.md`). A command-line
    worker was started on it at 16:40 UTC in a second working copy; if no patch of it

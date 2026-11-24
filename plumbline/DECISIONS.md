@@ -7725,3 +7725,49 @@ model" under Write out. What it lacks is on the page and in `handoff/README.md`:
 layers as material layer sets, types, a MasterFormat classification on each
 element, a designer's runs and equipment as things in the model. The second window
 judge (2026-11-24) is the first to try the two through the window.
+
+### Call 196. The bench, step B, designed: how an item carries its cost (2026-11-24; the lead's design, not built)
+
+Call 195 left step B to the lead because it is what a number means. This is the
+design. It is written from the code as read (`editing.rs` `place_item`, `job.rs`
+`apply_as`, `lines.rs` `of_material`, the starter assemblies that go on equipment
+and fixtures); the worker's first job is to set it beside the code and stop where
+the two disagree.
+
+1. **A price has one home.** The job's price list holds a price by a line's name,
+   for the estimator and for each of three suppliers. An item does not get a second
+   place to keep a price. It gets **"Priced as"**: the name of an assembly that goes
+   on its kind (equipment, fixture, furnishing), or nothing.
+2. **Setting a thing down from an item applies that assembly to it**, the lines
+   saying they came by the item. A thing set down from an item with no "Priced as"
+   gets no line, and the estimate says, where it says what a total leaves out, that
+   the thing is set down and not priced. Nothing is priced at zero.
+3. **A line "made of the element's material", on a thing set down, is made of its
+   item**: its name on the estimate, and the name it is priced by in the price
+   list, is the item's. (Today such a line on a thing set down is refused: the
+   thing does not say what it is made of.) So a water heater is priced from three
+   suppliers side by side the way a stud is.
+4. **Three starter assemblies**, one each for equipment, fixtures and furnishings:
+   "Bought and set" with two lines: the item itself (Material, 1 EA, made of the
+   item, no price entered) and "Set in place" (Labor, by the each, no production
+   rate entered). The subcontract assemblies there now ("Plumbing fixture",
+   "Mechanical equipment" and the rest) stay for work that is subbed. The starter
+   chest's items do **not** name one: bringing in a chest must not move the price
+   of a job that has things set down. A person picks "Priced as" on the item's
+   panel, or in the table.
+5. **Things already set down follow their item**, as they follow its sizes: when
+   "Priced as" is set or changed, each thing set down from the item changes
+   assembly the way one assembly is changed for another today (lines the two share
+   keep what was entered on them). A line a person entered on the thing itself is
+   the thing's and stays, and is named. The message says how many followed.
+6. **The chest's table gains "Priced as"**, and "Unit cost" with how sure it is and
+   where it is from. The unit cost written out is the price list's own price for the
+   item's line; brought in, it is set in the price list and the message says how
+   many prices were set. One home, two doors. A table without the columns reads as
+   it did. Supplier prices go in and out with the price list, as now.
+7. **The saved job** gains one entry on an item ("Priced as"). A job saved before
+   opens as it did, every item priced as nothing; a job saved after and opened by an
+   older program is not promised.
+8. **Not in B**: labor that differs item by item within one assembly (a production
+   rate on the item); an item's price by its size. They are said here so they are
+   not built round.
