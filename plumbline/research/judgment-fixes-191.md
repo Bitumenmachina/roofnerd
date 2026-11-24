@@ -1,0 +1,27 @@
+# fixes-191 notes (started)
+Frozen program bin33. Work folder fixes-191/ (sheets gen3.py, env.sh).
+## Pass 1/2 so far (Part A, points 1-5)
+P1 FIXED (nested.pdf: --plan 1 --lay -> 3 walls 240.00 LF; --plan 2 -> 4 walls 120.00 LF; message names "4 walls of the sheet's other drawings (120 ft) are left out"). Three drawings, middle (--plan 2): 4 walls, 92.00 LF, right.
+P2 FIXED (gap_97_0: gap 8'1" bare -> two drawings, said with where; gap 8'0"/7'11" bare -> one wall with door as before; 8'1" with a line across -> door 8'1" wide, other (bare) wall split and said).
+P3 FIXED as decided (7'11"/8'0" gaps join drawings, 8'1" do not).
+P4 FIXED at 48/49.6 of 100 LF (section set apart, plan laid, 4 walls 100 LF, rest "not laid: in doubt"), at exactly 50 and 50.4 (nothing laid, asks --plan, lists drawings).
+P5 FIXED (--within cut lists the cut walls; laying a 2nd drawing on same level names a way out).
+Note A (wording/low): jamb_9 (a 9 ft opening with only its two jamb lines drawn): not an opening, two walls, said "wider than 8 ft with nothing drawn in it (no leaf, no swing, no line across)" though the jamb lines ARE lines across the ends. Honest outcome, wording slightly wrong: jambs are lines across. Not money.
+P6 FIXED: Known scale (tape) + --scale-by 1 -> refused, says what it was, what the string would make, "--anyway".
+P14 FIXED for walls: 30x20 house laid from sheet, $3.00/SF lap siding on 900 SF -> VIF "A-1 [drawing]: ~$2,700.00, 4 lines" (hand 2,700). Hand-moved wall (move --by 0,1) still counted ($2,700.90, walls grew 3/16 in: right to the cent roughly).
+NEW-1 (WRONG MONEY, medium): a DOOR laid from a sheet does not ride on the sheet's scale. jamb_8.pdf (40x20 house, 8 ft opening), find-walls --lay --doors "7 ft", walls priced $3/SF lap siding, door "Entry door, prehung" $500 EA. VIF: "A-1 [drawing-0003]: ~$3,072.00, 4 lines" = 1,024 net SF x 3; door 1 row says $1,412 (wall 1 912 + door 500). Right (call 191 pt 14 "Laid walls, doors and windows are counted"): $3,572.00, 5 lines. Door alone priced (walls unpriced): drawing "no dollars riding on it" while the door row says ~$500. Jobs d1.json d2.json.
+NEW-1b: same for a WINDOW laid from a sheet (win.pdf, --windows "3 ft" "7 ft", Window unit $400): VIF total ~$400 but drawing A-1 'no dollars riding on it'.
+P6 (--anyway) FIXED: message "it replaces the scale the sheet had, 1/4" (Known, from tape): ... now 1/8", Assumed"; show/vif/drawings name the 4 walls "TRACED AT AN EARLIER SCALE", vif counts $2,700 riding (was not, while scale was Known).
+P7 FIXED ("1 dimension string: nothing else on the sheet to check it against" in the --scale-by output and in the listing). P8 FIXED (walls laid then rescaled: NOT MOVED line, show, drawings; hand-moved wall still named). P9 FIXED (0'-0" counted "no length: a dimension of nothing is no dimension"; --scale-by 1 refused with plain words; inches/metric counted beside the ones read: "1 string is written as a dimension and not read: 240 in ... (inches alone: ...)").
+P15 FIXED (calibrate says "traced over it or laid from its sheet").
+Note B: 2nd rescale (scale changed twice) works, names the same 4 things; fine.
+Note C (low): lone string drawn half-length (wrong1) still gives a plausible 1/8" with caution only "nothing else to check" -> house found as 60x40 with 1 ft thick walls, nothing says a 12-in wall is unlikely. Same as old F2, not in the fifteen.
+## Part C (trim)
+P10 FIXED: hip1 (24x16, 6:12): eave 1 Fascia -> "plan_length": "fascia: 3 pieces come to 62.00 LF; the lines price 88.00 LF (they differ...): 26.00 LF ... not drawn" + Left out line. Typed "30": Left out says "prices 30.00 EA ... set against no total". Typed 10 on Corner boards, "plan_length*2" on Soffit: both said. Second line "Fascia board" 26 LF on same eave: said (114 priced vs 88 drawn). Held. (Could not switch a fascia line off: labor off refuses a non-labor line; untried.)
+P11 FIXED: roof alone: "soffit: 0 pieces come to 0.00 SF; the lines price no figure: 4 of its lines have no figure". One eave with a wall under it: 19.50 SF (26 x 0.75, hand ok), "3 of its lines have no figure".
+P12 FIXED: 30x20 hip, 2.75 ft overhang: 341.00 SF priced, "30.25 SF corner counted in two runs (4 corners)" (hand 4 x 2.75^2 = 30.25). 24x16 at 9 in: 2.25 (hand 4 x .5625). Gable 32x22: fascia 68, rake fascia 53.67 (4 x 13.4164), soffit 51, rake soffit 40.25, all hand-true.
+P13 FIXED in the main (88.00/88.00 etc.).
+NEW-2 (wording, low): L-shaped roof (6 convex, 1 inside corner), soffit 81.00 SF: "2.81 SF is corner counted in two runs (5 corners)". Hand: 6 corners are counted twice (6 x .5625 = 3.375) and the inside corner's square is counted in neither (the ring there is left uncovered) -> net 5 x .5625 = 2.8125 of excess. The figure is right; "(5 corners)" is the net, not a count of corners counted twice. Job lroof.json.
+NEW-3 (untidy, trivial): 2 corners x .5625 = 1.125 prints "1.12 SF" (t5.json); half-up reading gives 1.13. Also lines print 13.42 LF x 4 rakes (estimate) = 53.68 while the pieces total says 53.67 (4 x 13.4164 = 53.6656): one cent apart when a person adds the lines.
+## Held (tried, no fault)
+Gaps 7'11"/8'0" bare join (door found); 8'1" bare splits and says where; 8'1" with a line across is a door; touching houses sharing a wall = one drawing; three drawings middle chosen; 48/49.6 of 100 LF laid with doubt said, 50/50.4 asks; Known scale re-set to same value is not flagged; scale changed twice; same-value rescale clean.

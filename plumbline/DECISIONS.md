@@ -7343,3 +7343,29 @@ side the scan cannot tell is laid to the right of the way it was clicked, and sa
 so. One expectation moved by this call, the reason beside it: the wall of
 `demos/scanw.sh` is 3 in outside the room's face (north 3.75 ft) where it was on it
 (north 4 ft), and its check is tighter than it was.
+
+**Call 191, the fixes judged (2026-11-24).** A second judge (Sonnet, cold, on the
+program at b207e7b; `research/judgment-fixes-191.md`) ran the first judge's cases
+again and went round each fix: fourteen of the fifteen hold, none is unfixed, one is
+flawed. What is decided:
+
+16. **Doors and windows laid from a sheet ride on its scale too.** Point 14 said
+    "walls, doors and windows" and the build counted the walls only. By hand, on the
+    judge's house (40 by 20 ft, an 8 ft opening laid as a door): walls 1,024 SF of
+    net face at a made-up $3.00, $3,072.00; the door $500.00: **$3,572.00 riding on
+    the sheet's scale, 5 lines**, where it read $3,072.00 and 4. A door priced alone
+    on a sheet: $500.00 riding, where it read "no dollars riding on it".
+17. **The soffit's corner sentence says what it counts.** On an L-shaped roof six
+    outside corners are in two runs each and the one inside corner is in neither;
+    the sentence said "5 corners" for the net. It says both: by hand at a 9 in
+    overhang, 6 x 0.5625 = 3.38 SF counted twice, 0.56 SF at the inside corner
+    counted in neither, 2.81 SF more than the roof has. (STATUS.md had this as a
+    thing not right; it is now said.)
+18. **A figure printed to two places is rounded the way the estimate rounds it**:
+    1.125 reads 1.13, not 1.12.
+19. A gap with only its jambs drawn is said to have nothing drawn in it "from jamb to
+    jamb", not "no line across" (the jambs are lines across its ends).
+
+Not changed, and said: the trim list totals a kind from its lines' unrounded
+lengths (four rakes, 53.67 LF) where a person adding the estimate's four printed
+lines gets 53.68. How a quantity is kept and rounded on a line is as it was.
