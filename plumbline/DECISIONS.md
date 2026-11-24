@@ -7309,3 +7309,22 @@ here first.
 
 Not fixed here, and said in STATUS.md: a door's casing at a wall's end overlaps the
 corner board (a drawing matter, for the window's half).
+
+**Call 191, two points added on reading the builder's report (2026-11-23).**
+
+14. **A wall laid from a sheet rides on that sheet's scale**, as a wall traced over it
+    does. The verify-in-field list asks for the sheet's scale to be checked and puts
+    dollars on the question; it counted only what was traced by hand, so a house
+    laid whole from a sheet by `find-walls --lay` had nothing riding on a scale that
+    every one of its lengths rests on. Laid walls, doors and windows are counted.
+    This moves a figure on jobs that have walls laid from a sheet (the dollars riding
+    on the sheet's scale go up; no price changes). By hand: the 30 by 20 ft house
+    laid from its sheet, 100 LF of wall 9 ft high priced at a made-up $3.00 a square
+    foot of face: 900 SF, **$2,700.00 riding** on the scale of its sheet, where the
+    list had none of it.
+15. `plumbline calibrate` names walls laid from the sheet in the same words the
+    other verb now uses ("traced over it or laid from its sheet").
+
+And one ruling: the eight lines of `demos/trim.sh` step 6 that read a total as "52
+LF" now read "52.00 LF" (point 13: a quantity is printed as the estimate prints it).
+The expectation moves by this call; the reason is written beside the lines.
