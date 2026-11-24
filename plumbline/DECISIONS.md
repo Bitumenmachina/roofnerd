@@ -8019,3 +8019,61 @@ to them. Ruled:
 6. Not right, and said: a model comes in slowly (17 seconds for the sample house in
    a build made for testing); how sure each value was is written as words and not
    read back, so everything brought in is Assumed, which is the safe side.
+
+### Call 201. An item carries its cost, as built; the rulings on what its worker held; and a check that had never stopped anything (2026-11-24)
+
+Call 196 was built by a Sonnet worker under `handoff/contracts/contract-196.md`
+(`research/worker-report-call196.md`), in two rounds. The design did not hold at one
+point and the worker stopped on it rather than bend it. Ruled:
+
+1. **An item is its own entry in the price list** (call 196 point 3, corrected).
+   The design said a line made of its item is priced under the item's name; the
+   code keeps one name to a job, so a Material could not share it, and the first
+   round priced a heater under "Water heater, 50 gal, bought". A supplier's list is
+   matched by name and no supplier writes that: the price would never be found.
+   No Material is made. The item holds what a Material holds for a price (the
+   estimator's and each supplier's), the price list writes it out and takes it in
+   as a row under the item's own name, and a row that names an item priced as
+   nothing sets the price and says it prices nothing on the job yet.
+2. **One "Bought and set"**, going on equipment, fixtures and furnishings, where the
+   design had three of one name (which a job cannot hold). Its two lines: the item
+   itself (made of its item, no price of its own) and "Set in place" (labor).
+3. **Every line an assembly brings onto a thing set down from an item takes the
+   item's trade as its division**, whatever assembly the item is priced as: a
+   heater's labor is Division 15 with the heater. Where the item's trade is not
+   said the line keeps the division its assembly gives it. (The worker's, and
+   right: a thing's cost goes where its item's trade is.)
+4. **The starter library is 42 assemblies and 202 lines** (was 41 and 200; labor
+   lines 29, was 28). Every check of those counts moved by this point and says so
+   beside the figure. The checks that every starter line has a price cell to fill
+   and a division excuse one kind of line, in words: a line made of the element's
+   material, which has no price of its own and takes its item's trade.
+5. **`estimate` says what is priced on nothing when nothing at all is priced.** It
+   said so already when some things were priced and some not; it was silent on a
+   job with no cost line. Same words. The unpriced sample house's estimate gains
+   one sentence (its 239 things).
+6. **The chest's table gains four columns** (Priced as; Unit cost with how sure and
+   where from), after the last it had; the saved job gains one entry on an item,
+   left out when there is none. A table and a job written before read as they did.
+7. **Owed with it**: the window does not compile against it until one line of
+   `crates/app/src/tools.rs` names the new entry (done at the merge, by the lead: a
+   new item is priced as nothing); "Priced as" on the item's panel is not built
+   (the window's half); a later change of an item's trade does not move the lines
+   already on what is set down from it (said, not built).
+
+**The check.** `demos/trim.sh` step 7 holds the four sample houses' files and
+estimates to a baseline, so that work on trim could be shown to move nothing else.
+It was written `( ... ) && echo`, which prints FAILED and goes on: it has never
+stopped the script. Call 194 moved the sample house; the lead's acceptance run of
+call 194 counted `trim.sh` as passing, and it was not. No figure was wrong (the
+lead read the two files against the files as they were: 33 lines of trim and the
+16 lines of totals they move, nothing else), but the check was not a check.
+- It stops the script now, and was seen to (red on the old baseline, the three
+  entries named).
+- Its baseline is retaken for three of eight, each by a written decision and each
+  read against the file as it was: `sixteen.json` and `sixteen.estimate.txt` (call
+  194), `house.estimate.txt` (point 5 above: one sentence). The other five are as
+  they were.
+- **The rule this cost**: a demonstration's own words are searched for FAILED and
+  FAIL after a run, as well as its exit read. The lead's runs do that from now
+  (the 51 logs of this job's run were searched), and `handoff/README.md` says so.

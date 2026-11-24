@@ -56,6 +56,11 @@ session's scratch area and were lost with it.
   lead's were caught this week by a worker or a judge who was told not to bend the
   program to them. Keep telling them that.
 
+- **Read a run's words, not only how it ended.** One demonstration printed FAILED
+  and ended as a pass for weeks (`../DECISIONS.md` call 201). After running the
+  demonstrations, search their output for FAILED and FAIL as well as counting
+  the ones that ended badly.
+
 ## What is in the program that the last days' notes do not dwell on
 `../README.md` lists every verb and demonstration. In short:
 - **Design in the window**: walls, doors, windows, floors, rooms and room lines,
