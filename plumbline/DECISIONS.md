@@ -7395,3 +7395,53 @@ written in STATUS.md as not right.
 For the look only, and in no quantity: where two corner boards meet, one is carried
 3/4 in across the corner so no notch shows; an eave's fascia is carried a board's
 thickness past the rake.
+
+### Call 192. A wall under a rake rises to the roof: the gable (2026-11-24)
+
+The pictures of the trim drawn (call 184 step 1) show what now most keeps the house
+from reading as one: a wall is a rectangle to its top, and at a gable end the
+triangle between the wall's top and the rake is empty. It is also a quantity nobody
+has taken off: the siding, sheathing and weather barrier of a gable end are bought
+and the estimate has none of them. Decided:
+
+1. **Where a roof's edge along a wall is not an eave, the wall rises to the roof.**
+   Under an eave a wall stops at its top and the soffit closes it (as drawn today).
+   Under a rake (a gable end; the sloping sides of a shed roof) and under the high
+   edge of a shed roof, the wall is carried up to the roof's surface over the wall's
+   line. A hip roof has eaves all round and no wall of it changes.
+2. **Two figures on such a wall, worked out and never typed**: `gable_area`, the
+   area between the wall's top and the roof over its line, from end to end of the
+   wall's line; and its top as a line of points (how far along the wall, how high),
+   which is what the window draws. Each is Assumed where anything it rests on is,
+   and says what it rests on; a wall with no roof over it has no gable and says so;
+   a wall under an eave says "none: an eave is over it".
+3. **A wall's `net_area` is as it was.** The gable is a figure of its own, and a line
+   that buys it says so in its formula (`net_area + gable_area`). The starter
+   outside-wall assemblies' lines for what covers the outside of the gable (the
+   weather barrier, the sheathing where the assembly has it, the siding and hanging
+   it, the outside paint) are priced on `net_area + gable_area`; what is inside the
+   house (batts, gypsum board, inside paint) stays on `net_area`: the ceiling is
+   level and the gable is above it. **This moves the estimate of every job that has
+   a gable end and those starter lines.** The builder lists each existing
+   expectation that moves, with the figure before and after, and the lead rules on
+   each before it is touched.
+4. **The frame of a gable** (its studs cut to the rake) is not counted by this call:
+   said in the wall's framing figures as not counted.
+5. The window's half (the wall drawn to its top line, dressed as the wall is) is the
+   window builder's, after this.
+
+By hand, on the house of "The outside trim priced" (24 by 16 ft on the walls' lines,
+walls 9 ft, a gable roof 1 ft outside the lines all round, ridge east-west, 6 in
+12; the roof's surface is 9 ft at its edge, so 9 ft 6 in over the north and south
+walls' lines and 13 ft 6 in at the ridge, 8 ft in from either):
+- The west and the east wall, each 16 ft: the roof over the wall's line runs 9.5 ft
+  at each end to 13.5 ft at the middle. `gable_area` = 16 x 0.5 (the strip from the
+  wall's top to the roof at its ends) + 16 x 4 / 2 (the triangle) = 8 + 32 =
+  **40.00 SF**. Its top: (0, 9.5), (8, 13.5), (16, 9.5). Both ends: **80.00 SF**.
+- The north and the south wall: an eave is over each: none.
+- The same house under a shed roof (one plane, its eave on the south, rising north
+  at 6 in 12, 1 ft out all round): the east and west walls' tops run from 9.5 ft at
+  the south end to 17.5 ft at the north: `gable_area` = 16 x (0.5 + 8.5) / 2 =
+  **72.00 SF** each; the north wall, under the high edge, rises 8.5 ft along its
+  whole 24 ft: **204.00 SF**; the south, under the eave: none.
+- Under a hip roof: none on any wall, and the estimate is byte for byte what it was.
