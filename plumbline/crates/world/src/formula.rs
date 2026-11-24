@@ -3,7 +3,9 @@
 //! A line's quantity is a formula the estimator can read and edit on the line:
 //! `plan_length * stretch_out`, `plan_length * sides / spacing`. Its names are the
 //! element's measures, the element's own entered dimensions, and the values entered on
-//! the line. The four operations and brackets; nothing else.
+//! the line. The four operations and brackets, the lesser or the greater of two or more
+//! (`min(net_area, 100 SF)`, `max(a, b)`: call 198), and a fixed size written with its
+//! unit (`4 in`, `100 mm`, `3 ft`, `20 LF`, `100 SF`).
 //!
 //! Three things a spreadsheet cell does not do, which is why this is ours:
 //!
@@ -22,6 +24,35 @@ pub enum Expr {
     Name(String),
     Neg(Box<Expr>),
     Bin(Box<Expr>, char, Box<Expr>),
+    /// A fixed size written with its unit: `4 in` is the number and the unit as written,
+    /// worked in feet (or, for an area, square feet).
+    Sized(f64, &'static str),
+    /// The lesser or the greater of two or more: `min(a, b)`, `max(a, b)`.
+    Pick(Pick, Vec<Expr>),
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Pick {
+    Min,
+    Max,
+}
+
+impl Pick {
+    fn word(self) -> &'static str {
+        match self {
+            Pick::Min => "min",
+            Pick::Max => "max",
+        }
+    }
+}
+
+/// The units a fixed size is written in: the word, how many of it make a foot (or, for
+/// an area, a square foot), and the dimension of what it measures (1 a length, 2 an area).
+const UNITS: [(&str, f64, i32); 7] = [("in", 12.0, 1), ("ft", 1.0, 1), ("mm", 304.8, 1), ("cm", 30.48, 1), ("m", 0.3048, 1), ("lf", 1.0, 1), ("sf", 1.0, 2)];
+
+fn unit_named(word: &str) -> Option<(&'static str, f64, i32)> {
+    let lower = word.to_ascii_lowercase();
+    UNITS.iter().find(|(u, _, _)| *u == lower).copied()
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -31,6 +62,7 @@ enum Tok {
     Op(char),
     Open,
     Close,
+    Comma,
 }
 
 fn tokens(text: &str) -> Result<Vec<Tok>, String> {
@@ -66,6 +98,10 @@ fn tokens(text: &str) -> Result<Vec<Tok>, String> {
                 out.push(Tok::Close);
                 i += 1;
             }
+            ',' => {
+                out.push(Tok::Comma);
+                i += 1;
+            }
             c if c.is_ascii_digit() || c == '.' => {
                 let start = i;
                 while i < chars.len() && (chars[i].is_ascii_digit() || chars[i] == '.') {
@@ -96,7 +132,7 @@ fn tokens(text: &str) -> Result<Vec<Tok>, String> {
                     _ => out.push(Tok::Name(word)),
                 }
             }
-            other => return Err(format!("{other:?} is not something a formula can hold; it takes names, numbers, + - * / and brackets")),
+            other => return Err(format!("{other:?} is not something a formula can hold; it takes names, numbers, + - * / brackets, min and max")),
         }
     }
     Ok(out)
@@ -139,11 +175,47 @@ impl Parser {
         let out = match self.peek().cloned() {
             Some(Tok::Num(x)) => {
                 self.at += 1;
-                Ok(Expr::Num(x))
+                // A fixed size with its unit. A name after a number was always an error,
+                // so no formula written before reads differently.
+                match self.peek().cloned() {
+                    Some(Tok::Name(word)) => match unit_named(&word) {
+                        Some((unit, _, _)) => {
+                            self.at += 1;
+                            Ok(Expr::Sized(x, unit))
+                        }
+                        None => Ok(Expr::Num(x)),
+                    },
+                    _ => Ok(Expr::Num(x)),
+                }
             }
             Some(Tok::Name(n)) => {
                 self.at += 1;
-                Ok(Expr::Name(n))
+                let pick = match n.to_ascii_lowercase().as_str() {
+                    "min" => Some(Pick::Min),
+                    "max" => Some(Pick::Max),
+                    _ => None,
+                };
+                match (pick, self.peek()) {
+                    // `min` and `max` are the lesser and the greater only with a bracket after
+                    // them; alone they are names, as they always were.
+                    (Some(pick), Some(Tok::Open)) => {
+                        self.at += 1;
+                        let mut args = vec![self.sum()?];
+                        while matches!(self.peek(), Some(Tok::Comma)) {
+                            self.at += 1;
+                            args.push(self.sum()?);
+                        }
+                        match self.peek() {
+                            Some(Tok::Close) if args.len() >= 2 => {
+                                self.at += 1;
+                                Ok(Expr::Pick(pick, args))
+                            }
+                            Some(Tok::Close) => Err(format!("{}( takes two figures or more, with a comma between them", pick.word())),
+                            _ => Err(format!("has {}( with its bracket never closed", pick.word())),
+                        }
+                    }
+                    _ => Ok(Expr::Name(n)),
+                }
             }
             Some(Tok::Op('-')) => {
                 self.at += 1;
@@ -161,6 +233,7 @@ impl Parser {
                 }
             }
             Some(Tok::Close) => Err("has a closing bracket with nothing open".into()),
+            Some(Tok::Comma) => Err("has a comma outside min( ) or max( )".into()),
             Some(Tok::Op(op)) => Err(format!("has {op:?} with nothing before it")),
             None => Err("stops where a name or a number should be".into()),
         };
@@ -214,6 +287,7 @@ pub fn parse(text: &str) -> Result<Expr, String> {
     match p.peek() {
         None => Ok(expr),
         Some(Tok::Close) => Err("has a closing bracket with nothing open".into()),
+        Some(Tok::Comma) => Err("has a comma outside min( ) or max( )".into()),
         Some(_) => Err("has two things side by side with nothing between them: put +, -, x or / between them".into()),
     }
 }
@@ -253,6 +327,8 @@ pub fn names(expr: &Expr) -> Vec<String> {
                 walk(a, out);
                 walk(b, out);
             }
+            Expr::Sized(..) => {}
+            Expr::Pick(_, args) => args.iter().for_each(|a| walk(a, out)),
         }
     }
     let mut out = Vec::new();
@@ -309,6 +385,28 @@ pub fn work(expr: &Expr, lookup: &dyn Fn(&str) -> Result<Operand, String>) -> Re
                 let o = lookup(n)?;
                 let atom = o.shown == *n || o.shown.ends_with(')');
                 Ok(Part { value: o.value, dim: o.dim, status: if o.value.is_none() { Status::Unknown } else { o.status }, text: o.shown, tight: true, atom })
+            }
+            Expr::Sized(x, unit) => {
+                let (_, per, dim) = unit_named(unit).unwrap_or((unit, 1.0, 1));
+                // Lengths come in as feet and the worked formula says where (`4 ÷ 12`).
+                if per == 1.0 {
+                    let shown = if dim == 2 { unit.to_ascii_uppercase() } else if *unit == "lf" { "LF".to_string() } else { unit.to_string() };
+                    Ok(Part { value: Some(*x), dim, status: Status::Known, text: format!("{} {shown}", num_text(*x)), tight: true, atom: true })
+                } else {
+                    Ok(Part { value: Some(x / per), dim, status: Status::Known, text: format!("{} \u{00F7} {}", num_text(*x), num_text(per)), tight: true, atom: false })
+                }
+            }
+            Expr::Pick(pick, args) => {
+                let parts = args.iter().map(|a| go(a, lookup)).collect::<Result<Vec<_>, _>>()?;
+                let first = &parts[0];
+                if let Some(odd) = parts.iter().find(|p| p.dim != first.dim) {
+                    return Err(format!("takes the {} of what cannot be compared: {} is {} and {} is {}", if *pick == Pick::Min { "lesser" } else { "greater" }, first.text, dim_word(first.dim), odd.text, dim_word(odd.dim)));
+                }
+                // As good as its worst operand, and no value where any operand has none.
+                let status = parts.iter().map(|p| p.status).max().unwrap_or(Status::Known);
+                let value = parts.iter().map(|p| p.value).collect::<Option<Vec<f64>>>().map(|xs| xs.into_iter().reduce(|a, b| if *pick == Pick::Min { a.min(b) } else { a.max(b) }).unwrap_or(0.0));
+                let text = format!("{}({})", pick.word(), parts.iter().map(|p| p.text.clone()).collect::<Vec<_>>().join(", "));
+                Ok(Part { value, dim: first.dim, status, text, tight: true, atom: true })
             }
             Expr::Neg(a) => {
                 let a = go(a, lookup)?;
@@ -381,6 +479,7 @@ pub fn divides_by(expr: &Expr, n: f64) -> bool {
     match expr {
         Expr::Bin(a, op, b) => (*op == '/' && matches!(**b, Expr::Num(x) if x == n)) || divides_by(a, n) || divides_by(b, n),
         Expr::Neg(a) => divides_by(a, n),
+        Expr::Pick(_, args) => args.iter().any(|a| divides_by(a, n)),
         _ => false,
     }
 }

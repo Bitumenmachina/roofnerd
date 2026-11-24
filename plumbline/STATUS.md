@@ -10825,7 +10825,21 @@ depth, a 20 mm lip but no more than 5 %):
 6. A cost line's quantity written `min(net_area, 100 SF)` on a wall of 120 SF net
    reads 100.00 SF and shows what it is made of; on a wall of 80 SF, 80.00 SF.
 
-Not built, and not contracted until steps A and B are in.
+**Built (2026-11-24), the model's and the command line's half; call 203.**
+`research/worker-report-call198.md`. Run by the lead in the worker's copy: the six
+command-line crates' tests pass (world 560); all 52 command-line demonstrations
+pass with no FAIL in their words, `demos/shapes.sh` holding the six points; the
+three gates, `portmap.sh` and `licenses.sh` pass. The thirteen shapes are rows of
+`library/shapes.csv` and the code that drew them is gone, held to it first: 13
+shapes at three sizes, 141 blocks. A block may say when it is there (the bed's
+second pillow, the sink's divider), and a shape whose block reaches outside its
+item's box is refused. `min`, `max` and a size with its unit are in the formula
+language, for cost lines too (a wall of 120 SF priced by `min(net_area, 100 SF)`
+reads 100.00 SF). **Not built: the window's half.** An item drawn as a shape the
+job brought in is a plain box in the window; nothing of a shape is seen or typed
+on the bench. **Not run when this was written**: the window against this change
+(the functions it calls keep their names and forms; it is built at the merge with
+the window fix job).
 
 ## An assembly changed for another: a demonstration, written before it is built (call 199; 2026-11-24)
 
@@ -10908,11 +10922,10 @@ demonstrations passed**, each on its first proper run: `benchw`, `dressw`,
 `itemlibw`, `glassw`. **On 8820f44 itself eight window demonstrations passed**, each on its first
 run, on the frozen build of that tree: `pricew` (42 starter assemblies), `itemlibw`,
 `itemneww`, `itemsw`, `benchw`, `bringw`, `moneyw`, `cabinetsw`; their pictures are
-committed with this note. **`tools/committed.sh` had not been run since a0d8477
-when this was written**: each piece was pushed on its own checks so that it could
-not be lost with the session, and the commit check is run on the commit that
-carries this note. The
-commit that reports it says so; if none does, run it first. It is not a release
+committed with this note. **`tools/committed.sh` passed on eeca2b7** (2026-11-24, 22:54
+UTC; 63 test runs), the commit that holds all of the above; it had not been run
+since a0d8477. The shape work (call 203) went in after it on the command line's
+checks alone. It is not a release
 candidate and is not tagged.
 
 **The machine.** Each commit runs the earlier program's build and tests through the
@@ -10958,11 +10971,11 @@ above):
      command line's half is **built** and in the pushed head. **Owed: its window
      half**, "Priced as" on the item's panel and on the bench: contract 197W,
      point 18.
-   - Step C (an item's shape as data, call 198): a command-line worker was started
-     on `handoff/contracts/contract-198.md` at 21:50 UTC in a second working copy.
-     If `research/` has no `worker-report-call198.md`, it did not land: start it
-     again from the contract. Its window half (blocks listed and typed on the
-     bench) is not contracted.
+   - Step C (an item's shape as data, calls 198 and 203): the model's and the
+     command line's half is **built**. **Owed: its window half** (an item drawn as
+     a shape the job brought in; the blocks of a shape listed, typed and added on
+     the bench; "Keep as a new shape"): not contracted. It is the next window job
+     after 197W and wants a contract and a demonstration.
    - D (where an item connects: the model now holds connections and the BIM file
      writes them, call 202, so this is a window job and a column of the chest), E
      (a maker's BIM object brought in as an item), F (a cabinet by rule): not

@@ -32,6 +32,10 @@ struct FileRoot {
     #[serde(default)]
     schemas: BTreeMap<String, Value>,
     data: Vec<Entry>,
+    /// The shapes of its own the job carries (call 198). Left out when there are none, so a
+    /// job that names none saves as it always did.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    shapes: Vec<building::shape::Shape>,
     #[serde(flatten)]
     extra: BTreeMap<String, Value>,
 }
@@ -157,7 +161,7 @@ pub fn save(job: &mut Job) -> String {
         }
         schemas.entry(k.to_string()).or_insert_with(|| json!({ "value": { "dataType": if k == K_CLASS { "String" } else { "Object" } } }));
     }
-    let root = FileRoot { header: job.header.clone(), imports: job.imports.clone(), schemas, data, extra: job.extra.clone() };
+    let root = FileRoot { header: job.header.clone(), imports: job.imports.clone(), schemas, data, shapes: job.shapes.clone(), extra: job.extra.clone() };
     let mut out = String::new();
     write_pretty(&serde_json::to_value(&root).expect("the job serialises"), 0, &mut out);
     out.push('\n');
@@ -307,7 +311,17 @@ pub fn load(text: &str) -> Result<(Job, LoadReport), String> {
         }
     }
 
-    let mut job = Job { header: root.header, world: bevy_ecs::world::World::new(), order: Vec::new(), imports: root.imports, schemas: root.schemas, extra: root.extra, found: std::collections::HashMap::new() };
+    if root.shapes.len() > building::shape::MOST_SHAPES {
+        return Err(format!("the file carries {} shapes; a job carries at most {}", root.shapes.len(), building::shape::MOST_SHAPES));
+    }
+    let mut named: BTreeSet<String> = BTreeSet::new();
+    for shape in &root.shapes {
+        shape.check()?;
+        if !named.insert(shape.name.to_lowercase()) {
+            return Err(format!("shape {:?} appears twice; a job has one shape of a name", shape.name));
+        }
+    }
+    let mut job = Job { header: root.header, world: bevy_ecs::world::World::new(), order: Vec::new(), imports: root.imports, schemas: root.schemas, extra: root.extra, shapes: root.shapes, found: std::collections::HashMap::new() };
     for k in KNOWN_KEYS {
         // Ours are rewritten on save; do not keep a stale copy.
         if job.schemas.get(k) == Some(&json!({ "value": { "dataType": if k == K_CLASS { "String" } else { "Object" } } })) {
@@ -573,6 +587,17 @@ pub fn load(text: &str) -> Result<(Job, LoadReport), String> {
     }
 
     building::check_whole(&mut job)?;
+
+    // An item is drawn as a shape the job has, or one the program has, or as its box: one
+    // that names a shape that is nowhere is refused, naming it (call 198, point 4).
+    {
+        let mut q = job.world.query::<(&Node, &Item)>();
+        for (node, item) in q.iter(&job.world) {
+            if let Some(said) = &item.form {
+                building::shape::check_drawn_as(&job.shapes, said).map_err(|why| format!("{} item: drawn as: {why}", node.path))?;
+            }
+        }
+    }
 
     // The path counter has to be past every number already in use.
     let root_id = job.root();

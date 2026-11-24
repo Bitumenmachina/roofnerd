@@ -8126,3 +8126,43 @@ worker's copy.
    (the fitting is made from the runs that meet there, as before); where a tie
    names the wrong end of a run and another run happens to end at the connection,
    the two are still joined by where they stand.
+
+### Call 203. An item's shape as data, as built; what a block may say; what stays the window's (2026-11-24)
+
+Call 198 was built by a Sonnet worker under `handoff/contracts/contract-198.md`
+(`research/worker-report-call198.md`), in two rounds, and accepted by the lead's own
+run in the worker's copy.
+
+1. **The thirteen shapes are rows** (`library/shapes.csv`), and the code that drew
+   them is gone. Before it went, each shape's rows were held to it block for block:
+   13 shapes at three sizes, 141 blocks, to a hundred-millionth of a foot, and the
+   test was seen to fail when one figure in one row was changed. For the starter
+   vanity the rows give the lead's hand figures to the thousandth of an inch
+   (plinth to 3.937 in, case to 32.925 in, top to 34.5 in).
+2. **The formula language gained `min` and `max`, and a size written with its
+   unit** (`4 in`, `100 mm`), for cost lines as well; no formula written before
+   reads otherwise (the whole suite ran). `0` is the one number that may stand
+   without a unit where a length is wanted; a bare `4` is refused, with its row.
+3. **A block may say when it is there** (ruled in the second round; the design did
+   not have it and the worker stopped on the two shapes that need it). The bed has
+   two pillows when it is wide and one when it is not; the sink's divider is there
+   from 30 in. A column "There when" holds one comparison between two formulas
+   (`width >= 30 in`). **It is read in the shape and nowhere else**: a cost line's
+   quantity is a quantity and cannot be a comparison, and one typed
+   `net_area > 100 SF` is refused as it was. This is BIMCraft's `visible`, narrowed.
+4. **A shape stays inside the box of its item's sizes** (ruled): a clash tests that
+   box, so a block outside it would be drawn where nothing is tested. A shape
+   brought in is worked at three sizes and refused, with the row and the size, if a
+   block reaches outside. All thirteen starter shapes pass.
+5. **The chest is two tables now**, items and shapes, each written out and brought
+   back to the byte; the saved job carries the shapes its items name, and a job
+   saved before opens and saves as it did.
+6. **The window's half is not built** (call 198 point 6, and what the worker
+   found): the window draws the thirteen from the rows, unchanged to look at, but
+   **an item drawn as a shape the job brought in itself is drawn as a plain box**,
+   and a job's own shape named like a starter one does not take its place there.
+   Nothing of a shape can be seen or typed on the bench yet. Until that is built
+   Patrick cannot see this step, and it is not shown to him as done.
+7. Said by the worker and true: but for the formula tests, which were red first,
+   the shape tests were written after the code. The test that matters, the rows
+   against the code, was run before the code went and proved red.

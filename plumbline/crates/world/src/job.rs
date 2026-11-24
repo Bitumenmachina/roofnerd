@@ -83,6 +83,9 @@ pub struct Job {
     pub imports: Vec<serde_json::Value>,
     pub schemas: BTreeMap<String, serde_json::Value>,
     pub extra: BTreeMap<String, serde_json::Value>,
+    /// The shapes of its own the job carries (call 198): what an item can be drawn as, written
+    /// as blocks between formulas. The thirteen the program draws are in the program, not here.
+    pub shapes: Vec<crate::building::shape::Shape>,
     /// Where each path was last found, so that finding a thing is not a reading of the
     /// whole job (M21-9). Never trusted: `find` checks what it holds against the job
     /// and looks again where it is wrong, so nothing has to keep it up to date.
@@ -122,6 +125,7 @@ impl Job {
             imports: Vec::new(),
             schemas: BTreeMap::new(),
             extra: BTreeMap::new(),
+            shapes: Vec::new(),
             found: HashMap::new(),
         };
         let id = job.world.spawn((Node::new("job-0001", "job-0001", None), Kind::Job, JobInfo { title: title.into(), length_unit: U_LENGTH.into(), next_id: 2 })).id();

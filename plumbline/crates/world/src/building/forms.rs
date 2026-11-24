@@ -12,12 +12,15 @@
 //! the box the thing is, and never leaves it: the box is what is tested for clashes,
 //! and what is drawn must be inside what is tested.
 //!
-//! What is not ported: a family's parameters, types, formulas, connectors and symbols
-//! (`family.rs` is 2,841 lines; this is the forms of ten of its families). A thing
+//! Since call 198 the thirteen are rows of `library/shapes.csv` (`shape.rs`), one row a block, each
+//! figure a formula in the thing's width, depth and height; `blocks` below works them and nothing else
+//! does. The figures in the rows are the ones the code had (held to it, block for block, at three
+//! sizes, before it was taken out). What is not ported: a family's parameters, types, formulas, connectors
+//! and symbols (`family.rs` is 2,841 lines; this is the forms of ten of its families). A thing
 //! here has no parameters: it has its sizes, each with where it came from.
 //!
-//! Three forms are ours and not BIMCraft's, whose library has no family for them
-//! (searched `crates/core/src/family.rs` for sink, tank, heater, boiler, heat pump,
+//! Three forms are ours and not BIMCraft's, whose library has no family for them (searched
+//! `crates/core/src/family.rs` for sink, tank, heater, boiler, heat pump,
 //! condenser and air handler: only a category for "sink", no blocks): a sink as a
 //! bowl, two where it is wide enough; a water heater as an upright round tank; an
 //! outdoor unit as a cabinet under its fan guard. They follow the same rule: inside
@@ -28,10 +31,13 @@
 //! underside. BIMCraft's y runs from 0 at the wall to minus the depth at the front, so
 //! a thing's back is its +y side: the side that goes against a wall.
 
+use serde::{Deserialize, Serialize};
+
 use super::P3;
 
 /// What a block is made of, for whoever draws it.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum Made {
     Timber,
     Worktop,
@@ -41,6 +47,27 @@ pub enum Made {
     Steel,
     /// Painted sheet metal: a water heater's jacket, an outdoor unit's cabinet.
     Enamel,
+}
+
+impl Made {
+    pub const ALL: [Made; 6] = [Made::Timber, Made::Worktop, Made::Porcelain, Made::Fabric, Made::Steel, Made::Enamel];
+
+    /// The word a shape's table says it by.
+    pub fn word(self) -> &'static str {
+        match self {
+            Made::Timber => "timber",
+            Made::Worktop => "worktop",
+            Made::Porcelain => "porcelain",
+            Made::Fabric => "fabric",
+            Made::Steel => "steel",
+            Made::Enamel => "enamel",
+        }
+    }
+
+    /// The material of that word, however it is capitalised.
+    pub fn named(word: &str) -> Option<Made> {
+        Made::ALL.into_iter().find(|m| m.word().eq_ignore_ascii_case(word.trim()))
+    }
 }
 
 /// One block of a form: a box from `lo` to `hi`, or, `round`, an upright round that
@@ -173,142 +200,11 @@ pub fn form_of(name: &str) -> Option<Form> {
 }
 
 /// The blocks of a form for a thing `size` feet wide, deep and high. Each is inside the
-/// thing's box, and together they reach every side of it.
+/// thing's box, and together they reach every side of it. Worked from the form's rows in
+/// `library/shapes.csv` (`shape.rs`); this is what the window calls with the form and the
+/// size it has.
 pub fn blocks(form: Form, size: P3) -> Vec<Block> {
-    const MM: f64 = 304.8;
-    // The thing's sizes in millimetres, as BIMCraft's formulas have them.
-    let (w, d, h) = (size[0] * MM, size[1] * MM, size[2] * MM);
-    let mut out: Vec<Block> = Vec::new();
-    // A block as BIMCraft writes it: x from the middle, y from 0 at the back to -depth
-    // at the front, z up, in millimetres. `c` is a fixed size from BIMCraft (a 100 mm
-    // plinth) kept no bigger than a share of the thing, so a small thing is not all
-    // plinth.
-    let c = |fixed: f64, of: f64, share: f64| fixed.min(of * share);
-    let mut put = |x: [f64; 2], y: [f64; 2], z: [f64; 2], round: bool, made: Made| {
-        let (y0, y1) = (y[0].min(y[1]) + d / 2.0, y[0].max(y[1]) + d / 2.0);
-        out.push(Block { lo: [x[0].min(x[1]) / MM, y0 / MM, z[0].min(z[1]) / MM], hi: [x[0].max(x[1]) / MM, y1 / MM, z[0].max(z[1]) / MM], round, made });
-    };
-    let half = w / 2.0;
-    match form {
-        // `family.rs:2113`: its plinth, set back for toes; its carcass; its worktop over the front.
-        Form::BaseCabinet => {
-            let (plinth, top, toe, lip) = (c(100.0, h, 0.14), c(40.0, h, 0.06), c(60.0, d, 0.14), c(20.0, d, 0.05));
-            put([-half, half], [-d + toe, 0.0], [0.0, plinth], false, Made::Timber);
-            put([-half, half], [-d + lip, 0.0], [plinth, h - top], false, Made::Timber);
-            put([-half, half], [-d, 0.0], [h - top, h], false, Made::Worktop);
-        }
-        // `family.rs:2099`: a wardrobe on its plinth.
-        Form::Wardrobe => {
-            let (plinth, inset) = (c(80.0, h, 0.06), c(50.0, w.min(d), 0.1));
-            put([-half, half], [-d, 0.0], [plinth, h], false, Made::Timber);
-            put([-half + inset, half - inset], [-d + inset, 0.0], [0.0, plinth], false, Made::Timber);
-        }
-        // `family.rs:2127`: its cistern against the wall, its bowl. 400 by 650 by 800
-        // there; scaled to the thing.
-        Form::Wc => {
-            let (kx, ky, kz) = (w / 400.0, d / 650.0, h / 800.0);
-            put([-200.0 * kx, 200.0 * kx], [-180.0 * ky, 0.0], [380.0 * kz, 800.0 * kz], false, Made::Porcelain);
-            put([-160.0 * kx, 160.0 * kx], [-380.0 * ky, -150.0 * ky], [0.0, 400.0 * kz], false, Made::Porcelain);
-            put([-180.0 * kx, 180.0 * kx], [-650.0 * ky, -290.0 * ky], [0.0, 400.0 * kz], true, Made::Porcelain);
-        }
-        // `family.rs:2147`: a washbasin on its pedestal.
-        Form::Washbasin => {
-            let (bowl, r) = (c(160.0, h, 0.25), c(90.0, w.min(d), 0.22));
-            put([-half, half], [-d, 0.0], [h - bowl, h], false, Made::Porcelain);
-            let back = c(150.0, d, 0.4);
-            put([-r, r], [-back - r, -back + r], [0.0, h - bowl], true, Made::Porcelain);
-        }
-        // `family.rs:2169`: its bottom, and its four sides round the tub. (Its length
-        // there is the thing's width here: the long way, along the wall.)
-        Form::Bathtub => {
-            let (bottom, side) = (c(120.0, h, 0.25), c(60.0, w.min(d), 0.12));
-            put([-half, half], [-d, 0.0], [0.0, bottom], false, Made::Porcelain);
-            put([-half, half], [-side, 0.0], [bottom, h], false, Made::Porcelain);
-            put([-half, half], [-d, -d + side], [bottom, h], false, Made::Porcelain);
-            put([-half, -half + side], [-d + side, -side], [bottom, h], false, Made::Porcelain);
-            put([half - side, half], [-d + side, -side], [bottom, h], false, Made::Porcelain);
-        }
-        // `family.rs:2012`: a top on four legs, each 50 in from the top's edges.
-        Form::Table => {
-            let (top, leg, inset) = (c(40.0, h, 0.08), c(60.0, w.min(d), 0.12), c(50.0, w.min(d), 0.08));
-            put([-half, half], [-d, 0.0], [h - top, h], false, Made::Timber);
-            for (east, north) in [(true, true), (true, false), (false, true), (false, false)] {
-                let x = if east { [half - inset - leg, half - inset] } else { [-half + inset, -half + inset + leg] };
-                let y = if north { [-inset - leg, -inset] } else { [-d + inset, -d + inset + leg] };
-                put(x, y, [0.0, h - top], false, Made::Timber);
-            }
-        }
-        // `family.rs:2028`: its seat, its back over the seat's rear edge, and its legs.
-        // The seat is 450 of 850 high there.
-        Form::Chair => {
-            let (seat, thick, leg) = (h * 450.0 / 850.0, c(40.0, h, 0.06), c(40.0, w.min(d), 0.12));
-            put([-half, half], [-d, 0.0], [seat - thick, seat], false, Made::Timber);
-            put([-half, half], [-thick, 0.0], [seat, h], false, Made::Timber);
-            for (east, north) in [(true, true), (true, false), (false, true), (false, false)] {
-                let x = if east { [half - leg, half] } else { [-half, -half + leg] };
-                let y = if north { [-leg, 0.0] } else { [-d, -d + leg] };
-                put(x, y, [0.0, seat - thick], false, Made::Timber);
-            }
-        }
-        // `family.rs:2046`: its base, its mattress, its headboard, and a pillow, two on
-        // a double. 450 to the top of the mattress and 900 to the top of the headboard
-        // there; the thing's height is its headboard's.
-        Form::Bed => {
-            let k = h / 900.0;
-            let (base, mattress, head, edge) = (300.0 * k, 450.0 * k, c(60.0, d, 0.05), c(20.0, w, 0.03));
-            put([-half, half], [-d, 0.0], [0.0, base], false, Made::Timber);
-            put([-half + edge, half - edge], [-d + edge, -head], [base, mattress], false, Made::Fabric);
-            put([-half, half], [-head, 0.0], [0.0, h], false, Made::Timber);
-            let (near, far, tall, gap) = (c(100.0, d, 0.06), c(500.0, d, 0.26), 120.0 * k, c(80.0, w, 0.08));
-            if w > 1200.0 {
-                put([-half + gap, -gap / 2.0], [-far, -near], [mattress, mattress + tall], false, Made::Fabric);
-                put([gap / 2.0, half - gap], [-far, -near], [mattress, mattress + tall], false, Made::Fabric);
-            } else {
-                put([-half + gap, half - gap], [-far, -near], [mattress, mattress + tall], false, Made::Fabric);
-            }
-        }
-        // `family.rs:2064`: its seat between its arms, its back. Seat 420, arms 600 and
-        // back 800 high there; arms 180 wide and the back 200 deep.
-        Form::Sofa => {
-            let k = h / 800.0;
-            let (arm, back) = (c(180.0, w, 0.12), c(200.0, d, 0.25));
-            put([-half + arm, half - arm], [-d, -back], [0.0, 420.0 * k], false, Made::Fabric);
-            put([-half, half], [-back, 0.0], [0.0, h], false, Made::Fabric);
-            put([-half, -half + arm], [-d, -back], [0.0, 600.0 * k], false, Made::Fabric);
-            put([half - arm, half], [-d, -back], [0.0, 600.0 * k], false, Made::Fabric);
-        }
-        // `family.rs:2078`: its top on two side panels, a modesty panel between them.
-        Form::Desk => {
-            let (top, panel, inset) = (c(30.0, h, 0.06), c(25.0, w, 0.04), c(20.0, d, 0.04));
-            put([-half, half], [-d, 0.0], [h - top, h], false, Made::Timber);
-            put([-half, -half + panel], [-d + inset, -inset], [0.0, h - top], false, Made::Timber);
-            put([half - panel, half], [-d + inset, -inset], [0.0, h - top], false, Made::Timber);
-            put([-half + panel, half - panel], [-c(60.0, d, 0.12), -c(40.0, d, 0.08)], [h * 0.4, h - top], false, Made::Timber);
-        }
-        // Ours. A sink: its bottom and its four sides, in sheet metal as thin as a
-        // share of the thing allows; 30 in wide or more it is a double bowl, with a
-        // wall between the two.
-        Form::Sink => {
-            let (bottom, side) = (c(20.0, h, 0.12), c(25.0, w.min(d), 0.08));
-            put([-half, half], [-d, 0.0], [0.0, bottom], false, Made::Steel);
-            put([-half, half], [-side, 0.0], [bottom, h], false, Made::Steel);
-            put([-half, half], [-d, -d + side], [bottom, h], false, Made::Steel);
-            put([-half, -half + side], [-d + side, -side], [bottom, h], false, Made::Steel);
-            put([half - side, half], [-d + side, -side], [bottom, h], false, Made::Steel);
-            if w >= 762.0 {
-                put([-side / 2.0, side / 2.0], [-d + side, -side], [bottom, h - c(40.0, h, 0.2)], false, Made::Steel);
-            }
-        }
-        // Ours. A water heater: an upright round tank, the whole of the thing.
-        Form::Tank => put([-half, half], [-d, 0.0], [0.0, h], true, Made::Enamel),
-        // Ours. An outdoor unit: its cabinet, and on it the round guard over its fan.
-        Form::OutdoorUnit => {
-            let (guard, inset) = (c(60.0, h, 0.08), w.min(d) * 0.1);
-            put([-half, half], [-d, 0.0], [0.0, h - guard], false, Made::Enamel);
-            put([-half + inset, half - inset], [-d + inset, -inset], [h - guard, h], true, Made::Steel);
-        }
-    }
-    out
+    super::shape::starter_blocks(form.name(), size).unwrap_or_else(|| panic!("the starter shapes have no rows for {}", form.name()))
 }
 
 #[cfg(test)]

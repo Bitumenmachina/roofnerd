@@ -114,6 +114,7 @@ valid IFCX.
   "header":  { "id", "ifcxVersion": "ifcx_alpha", "dataVersion", "author", "timestamp" },
   "imports": [],
   "schemas": { "pl::pitch": { "value": { "dataType": "Object" } }, ... },
+  "shapes": [ { "name": "wall-hung closet", "blocks": [ { "made": "porcelain", "round": false, "across": ["-width / 2", "width / 2"], "back": ["0", "0.25 * depth"], "up": ["0.4 * height", "height"] } ] } ],
   "data": [
     { "path": "plane-0017",
       "children":   { "<name>": "<path>" },
@@ -122,6 +123,23 @@ valid IFCX.
 }
 ```
 
+* **`shapes`** (call 198), where there are any: the shapes of its own the job carries, which an
+  item names in its `form` (`pl::item`). A shape is a name and its blocks in the order they are
+  drawn; a block is a box, or with `round` an upright round that fills its box, `made` of one of
+  `timber`, `worktop`, `porcelain`, `fabric`, `steel`, `enamel`, between six figures: `across`
+  from and to (from the middle of the thing), `back` from and to (from its back, the side that
+  goes to a wall, toward the front), `up` from and to (from its foot). Each figure is a formula
+  in `width`, `depth` and `height` of the item, in feet, read by the reader a cost line's quantity
+  is read by, and comes out as a length (`0` is the one number that stands without a unit; every other fixed
+  size is written with its unit: `4 in`, `100 mm`, and a bare `4` is refused). A block may carry `when`, "There when": two formulas
+  with `>`, `>=`, `<` or `<=` between them (`width >= 30 in`), both lengths or both plain numbers, the block there at the
+  sizes where it holds; the comparison is read in the shape and nowhere else (a cost line's quantity cannot be one). A shape is
+  worked at three sizes when it is brought in or read from a file (0.4 x 0.3 x 0.5, 3 x 1.75 x 2.875 and 6.5 x 3 x 2.6 ft) and
+  refused, naming the block and the size, if a block that is there reaches outside the box of the item's sizes by more than 1e-8 ft. A shape is a drawing: nothing is priced by it, a clash tests the
+  item's box, and a block carries no Known or Assumed (the item's sizes do). The thirteen shapes
+  the program draws are in the program (`library/shapes.csv`, all thirteen as rows) and are not saved; the file carries only shapes of the job's own. A job
+  saved before has no `shapes` and reads as it did. An item that names a shape that is neither the
+  job's nor the program's is refused on the way in, naming the shape.
 * **One entry per element.** A path appears once. A file with a repeated path is refused.
 * **Paths are permanent.** A new element's path is its kind and the job's next number
   (`plane-0017`). Renaming an element changes its name under its parent, never its path.
@@ -273,7 +291,12 @@ order units.
 | `off` | Optional, on a Labor line: switched off. It stays on the sheet and is out of every total. | |
 | `of_material` | Optional. The line is made of the element's material: it is ordered and priced as that material is, and carries no `order` or `unit_cost` of its own. Its class is Material. | |
 
-**The formula.** Names, numbers, `+ - * /` (or `×`, `÷`) and brackets. A name is one of:
+**The formula.** Names, numbers, `+ - * /` (or `×`, `÷`) and brackets; `min(a, b)` and `max(a, b)`,
+the lesser and the greater of two or more figures of one kind (call 198); and a fixed size written
+with its unit, `4 in`, `100 mm`, `3 ft`, `20 LF`, `100 SF` (`in`, `ft`, `mm`, `cm`, `m` are lengths, worked in
+feet, the conversion written in the worked formula; `LF` a length and `SF` an area as they stand).
+`min` and `max` are the lesser and the greater only with a bracket straight after; alone they are
+names. A figure with no value (Unknown) leaves `min` and `max` with none, never zero. A name is one of:
 the element's measures (`plan_length`, `true_length`, `face_area`, `plan_area`,
 `surface_area`, `slope_factor`); a parapet's `height`; `stretch_out`; a name in `inputs`.
 `squares` can stand alone as a quantity and cannot be mixed into a formula.
@@ -803,6 +826,16 @@ window, the left panel's Drawings to trace.
   one home, and the message says how many were set). A table without those columns is
   read as it was: an item keeps what it is priced as and the price list is not
   touched; a table with `Priced as` and an empty cell says priced as nothing.
+* **A shape table** (call 198) is the shapes of the job's items, one row for each block, in the
+  order it is drawn: `Shape`, `Made of`, `Form` (`box` or `round`), `Across from`, `Across to`,
+  `Back from`, `Back to`, `Up from`, `Up to`, `There when`. Written out (`export shapes`) it holds the shapes the
+  job's items are drawn as: the job's own, else the program's starter rows. Brought in (`import
+  shapes`, before the items that name them) a shape the job has by name is changed, one that is the
+  starter's own is the same and carries nothing, one that is new is carried by the job. A shape that
+  cannot be worked (a figure that is no length, a name that is not width, depth or height, a
+  material that is none of the six) is not used, and each of its rows says which block and which
+  figure. Written out, brought into a second job and written again it is the same to the byte.
+  `library/shapes.csv` is the one the program ships with.
 * **A prior estimate** is read by its headings (Description or Item; Quantity; Unit;
   Unit cost, Unit price or Rate; Amount, Total or Extension; Class; Cost code) into a
   Prior element under the job, as sure as whoever brought it says. A row with no figure

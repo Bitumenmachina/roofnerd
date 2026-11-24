@@ -620,6 +620,9 @@ pub fn item(job: &mut Job, name: &str, item: Item) -> Result<String, String> {
         }
         let path = job.add(&root, Kind::Type, name.trim())?;
         building::check_item(&path, Kind::Type, &item)?;
+        if let Some(said) = &item.form {
+            building::shape::check_drawn_as(&job.shapes, said).map_err(|why| format!("{path} item: drawn as: {why}"))?;
+        }
         job.put(&path, item)?;
         Ok(path)
     })
@@ -634,7 +637,7 @@ pub fn item_drawn_as(job: &mut Job, item: &str, said: Option<&str>) -> Result<()
         let mut it = job.world.get::<Item>(e).cloned().ok_or_else(|| format!("{item} is not an item"))?;
         it.form = match said.map(str::trim).filter(|s| !s.is_empty()) {
             Some(said) => {
-                building::forms::drawn_as(said)?;
+                building::shape::check_drawn_as(&job.shapes, said)?;
                 Some(said.to_lowercase())
             }
             None => None,

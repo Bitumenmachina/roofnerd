@@ -64,6 +64,7 @@ use crate::view::{self, Row, Sum, WorkSplit};
 pub mod clash;
 mod footings;
 pub mod forms;
+pub mod shape;
 pub mod framing;
 pub mod frames;
 pub mod members;
