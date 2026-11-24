@@ -10352,6 +10352,38 @@ What is not right:
   moves the three panel switches; a script that clicks one from a close view must
   go to the control first (`trimw` does). Other demonstrations may meet it.
 
+## A wall under a rake rises to the roof: a demonstration, written before it is built (call 192, the model's half; 2026-11-24)
+
+`demos/gable.sh`, at the command line, from an empty job; made-up figures. The house
+of "The outside trim priced": a box 24 by 16 ft on the walls' lines, walls 6 in
+thick and 9 ft high, a gable roof drawn 1 ft outside the lines all round, its ridge
+east-west, 6 in 12.
+
+Worked by hand (the roof's surface is 9 ft at its edge, so 9 ft 6 in over the north
+and south walls' lines, and 13 ft 6 in at the ridge, 8 ft in from either):
+
+- **The west and the east wall**, each 16 ft: `gable_area` = 16 x 0.5 + 16 x 4 / 2 =
+  **40.00 SF**; its top (0, 9.5), (8, 13.5), (16, 9.5). Both: **80.00 SF**, Assumed,
+  resting on the roof's eave height and pitch and the wall's line and top.
+- **The north and the south wall**: none, "an eave is over it".
+- **Priced**: the walls given the starter "Exterior wall, 2x6, lap siding" and a
+  made-up $4.00 a square foot for the lap siding. The west wall has no opening: its
+  `net_area` is 16 x 9 = 144.00 SF, and its siding is priced on 144 + 40 =
+  **184.00 SF, $736.00**, where it was 144.00 SF, $576.00. Its gypsum board stays on
+  144.00 SF.
+- **A shed roof** on the same walls (one plane, its eave on the south, rising north at
+  6 in 12, 1 ft out all round): east and west `gable_area` 16 x (0.5 + 8.5) / 2 =
+  **72.00 SF** each, tops (0, 9.5), (16, 17.5); the north wall, under the high edge,
+  24 x 8.5 = **204.00 SF**, its top level at 17.5 ft; the south: none.
+- **A hip roof** on the same walls: none on any wall; the estimate is byte for byte
+  what it was before this call.
+- **A wall with no roof over it**: none, and it says there is no roof over it.
+- The frame of a gable is said to be not counted.
+
+If the model's own rule gives another figure (the roof's height over a wall's line
+above all), the builder says which and why before anything is built, and these are
+set right here with the reason.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **As of 2026-11-24 (the lead). Read this block first; what is below it is older and is
