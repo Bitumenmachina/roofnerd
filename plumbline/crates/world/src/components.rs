@@ -271,8 +271,8 @@ impl Kind {
         } else if self.is_run() {
             &[("plan_length", "LF"), ("true_length", "LF")]
         } else if self == Kind::Wall {
-            // The four after the thickness only where what is priced on it names its framing (call 137); the last three only where a line names them (calls 175, 185).
-            &[("plan_length", "LF"), ("height", "ft"), ("face_area", "SF"), ("opening_area", "SF"), ("net_area", "SF"), ("thickness", "ft"), ("studs", "EA"), ("plate_length", "LF"), ("header_length", "LF"), ("sill_length", "LF"), ("net_length", "LF"), ("outside_corners", "EA"), ("corner_board_length", "LF")]
+            // The four after the thickness only where what is priced on it names its framing (call 137); the last four only where a line names them (calls 175, 185, 192).
+            &[("plan_length", "LF"), ("height", "ft"), ("face_area", "SF"), ("opening_area", "SF"), ("net_area", "SF"), ("thickness", "ft"), ("studs", "EA"), ("plate_length", "LF"), ("header_length", "LF"), ("sill_length", "LF"), ("net_length", "LF"), ("outside_corners", "EA"), ("corner_board_length", "LF"), ("gable_area", "SF")]
         } else if matches!(self, Kind::Door | Kind::Window) {
             // Its casing only where a line of it names it (call 185).
             &[("width", "ft"), ("height", "ft"), ("opening_area", "SF"), ("casing_length", "LF")]

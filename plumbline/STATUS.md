@@ -10415,6 +10415,61 @@ says (DECISIONS.md, call 193, A to H). The steps the fixes come to, new ones in
   cut is darker than the cut beside it).
 - **H.** The Sun at 6:00 pm, "Later" pressed: it says it goes no later.
 
+## A wall under a rake rises to the roof: the model's half built (call 192; 2026-11-24)
+
+Built by a Sonnet worker in a second working copy, tests first; accepted by the lead
+on its own runs (in the commit's message). `plumbline gable <job>` lists each wall's
+gable, the reason for each "none", and what each rests on; `gable_area` is a figure
+of the wall that a cost line may name; the wall's top is a line of points for the
+window to draw (`crates/world/src/gable.rs`). Nothing is saved: it is worked out.
+`demos/gable.sh` walks the section "A wall under a rake rises to the roof: a
+demonstration" above, and every hand figure there held: 40.00 SF an end with its top
+(0, 9.5), (8, 13.5), (16, 9.5); under a shed roof 72.00 SF a side and 204.00 SF on
+the high wall; a hip roof and a house with no roof, none.
+
+Changed, and named:
+- **The starter outside-wall assemblies price the gable**: weather barrier and
+  cladding on `net_area + gable_area`, sheathing on `face_area + gable_area`. On the
+  demonstration's house the lap siding goes from 720.00 SF, $2,880.00 to 800.00 SF,
+  $3,200.00, and the sheathing from 24 sheets to 26. What is inside stays as it was.
+  **A job with a gable end and those lines prices more than it did; a hip-roofed job
+  (the sample whole house) is byte for byte what it was.** No existing test or
+  demonstration had such a house, so none moved.
+- A wall with a gable says on its framing lines that the gable's frame is not counted.
+- "None: an eave is over it" is as sure as the roof it rests on (Assumed under an
+  Assumed roof), so a quantity that adds it does not read Known on a guess.
+
+What is not right:
+- The window does not draw the wall to its top yet: the gable is still an open
+  triangle on screen. That is the next window job after call 193's fixes.
+- The frame of a gable and the labor of sheathing it are not counted (said).
+- Not tested: a wall of two stretches in line under one rake; walls stacked on two
+  storeys; a roof entered as planes with no footprint, on odd shapes.
+- The window's demonstrations that give a gabled house the starter siding (`trimw`,
+  `pricew`, `gablew`) have not been run with this: if a figure of theirs moves it is
+  ruled on at the merge.
+
+## The gable drawn: a demonstration, written before it is built (call 192, the window's half; 2026-11-24)
+
+`demos/gableendw.sh`, in the window, on the house of "The outside trim priced" (24 by
+16 ft, 9 ft walls, a gable roof 1 ft out all round, ridge east-west, 6 in 12), its
+walls given the starter lap siding, made at the command line and opened.
+
+Worked by hand (every figure is the model's; the window draws the wall's top line):
+
+- **From the street at the west end**: the triangle between the wall's top and the
+  rake is the wall, sided like the wall under it, to 13 ft 6 in at the ridge. A place
+  in the middle of it (8 ft along the wall, 11 ft up) reads the siding's colour,
+  where on the build before it read the sky or the far side of the roof.
+- **The west wall selected**: its panel reads "Gable 40.00 SF", Assumed; the sheet's
+  lap siding line for that wall reads 184.00 SF. The south wall's panel has no
+  "Gable" line.
+- **Finishes off**: the weather barrier shows on the gable as on the wall under it.
+- **A shed roof** on the same walls: the north wall stands 17 ft 6 in to the roof
+  along its whole length, the east and west walls rise from 9 ft 6 in at the south
+  to 17 ft 6 in at the north.
+- **A hip roof** on the same walls: the street view is dot for dot the picture of
+  the build before.
 ## Call 193 built: the window judge's findings fixed (2026-11-24)
 
 Built by the window builder (Sonnet) on the tree at 0e52bd3; accepted by the lead by

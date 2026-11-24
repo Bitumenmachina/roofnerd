@@ -265,6 +265,15 @@ from BIMCraft at the same commit is listed here by hand, and is checked by its o
   `decode` are written with `and_then`, because this workspace is on the 2021 edition.
 - `crates/ifc/src/lib.rs`, the importer over it, is ours (DECISIONS.md call 47):
   BIMCraft's `import.rs` builds BIMCraft's model and was read, not ported.
+- `crates/world/src/gable.rs` (call 192: a wall under a rake rises to the roof) is ours, and `tools/portmap.sh` does not read
+  it. Searched all of BIMCraft: `grep -rli 'gable' crates apps` (21 files: the roof tool's gable ends, `rvt/src/roofs.rs`,
+  `core/src/{commands,model,skeleton,sketch,walls,import,ifc}.rs`) and `grep -rli 'attach_top\|top_profile' crates apps`. What is
+  there: a wall attached to a roof as a setting typed on the wall (`Wall.attach_top`, `core/src/model.rs:277`; `walls.rs`
+  `Bound::of` 526, `Bound::over` 558, `top_at` 667, `heights` 673, `prisms` 720; the gable test at `walls.rs:949`). Nothing finds
+  a gable by itself, and none works its area. Not ported as code: BIMCraft's roof is millimetres in convex pieces with a plane
+  `z = g.x * x + g.y * y + c`, this program's is `roof::SolidPlane::height_at` in feet, which is the same plane. The one rule
+  taken from it, and said in `gable.rs`: where two roof planes cover a point, the lower is the roof's surface there
+  (`Bound::over`).
 | `floor_type` | ported | `FloorType` | `crates/core/src/commands.rs:11195` | a floor type by its thickness; layers are not taken by this verb |
 | `floor_type_for` | ported | `type_for_size` | `crates/core/src/text.rs:282` | the same rule as `wall_type_for`: the floor type of this thickness and nothing else, or a new one named for it |
 | `floor` | ported | `floor` | `crates/core/src/commands.rs:7556` | a floor of a type on a level, by a boundary that is given or, with none, by the outline its walls enclose. Not taken: slope, the span arrow, "structural", the sketch; and a courtyard is refused, not cut out (DECISIONS.md call 53) |

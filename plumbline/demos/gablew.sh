@@ -50,7 +50,10 @@ BEFORE="$("$P" estimate "$J" | tr -s ' ')"
 # 16 x 8 / 2 = 64 SF; at 6:12 the slope factor is 1.118034: 143.1084 SF and 71.5542
 # SF, 1.4311 SQ and 0.7155 SQ, at $100.00 $143.11 and $71.55. Two of each: $429.32.
 # Job cost 864.00 + 429.32 = 1,293.32. The roof is Assumed, so the total is flagged.
-says "the siding" "Lap siding 216.00 SF \$4.00/SF \$864.00" "$BEFORE"
+# Call 192 (ruled by the lead, 2026-11-24): the starter siding is priced on the wall's face and its gable. This wall
+# is under an eave of a roof that is Assumed, so "no gable" is as sure as that roof and the siding's quantity and its
+# dollars read Assumed (~) where they read Known. The figures, 216.00 SF and $864.00, are as they were.
+says "the siding" "Lap siding ~216.00 SF \$4.00/SF ~\$864.00" "$BEFORE"
 [ "$(grep -cF "Asphalt shingles ~1.4311 SQ \$100.00/SQ ~\$143.11" <<<"$BEFORE")" = 2 ] && [ "$(grep -cF "Asphalt shingles ~0.7155 SQ \$100.00/SQ ~\$71.55" <<<"$BEFORE")" = 2 ] || { echo "FAIL: the shingles are not \$143.11 on two planes and \$71.55 on two"; echo "$BEFORE" | head -60; exit 1; }
 echo "    shingles: \$143.11 on two planes, \$71.55 on two"
 says "the job cost" "~\$1,293.32" "$BEFORE"
