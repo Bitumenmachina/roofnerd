@@ -7653,6 +7653,23 @@ every price in it is made up and says so.
    concrete foundation walls (8 LF each). It is geometry, nothing prices it, and no
    starter assembly for a foundation wall names it; it is not changed here.
 
+**Call 194, as built (2026-11-24, by a Sonnet worker under `handoff/contracts/contract-194.md`;
+accepted by the lead's own run in the worker's copy).** `corner_board_length_above_<entry>`
+is read by one shared reader with `net_area_below_<entry>` (`formula::height_entry`),
+worked in `building.rs` from the wall's outside corners, and is a corner-board line to
+`trim::lay` (which the window draws from) and `trim --pieces`: the pieces start at the
+entered height and add to the line. The sample house prices what points 1, 3 and 4
+say; the program gave every figure of the lead's hand table before the change, to
+the cent, and after it Material $203,387.93 on 238 lines, job cost $393,981.66 on
+432, division 6 $54,795.62 on 74, price $468,050.22. **Two expectations moved, both
+by the hand figures**: `crates/cli/tests/cli.rs` (52 items from 399 lines is 56 from
+432; the job cost by item $390,260.26 is $393,981.66) and `demos/sweep-money.sh`
+(the job cost's fall, $4,417.20, is $695.80: less the $3,721.40 the sample now
+prices). BIMCraft has no corner board and no trim that stops at a wainscot (searched
+whole; noted in PORTMAP.md). **Not run by the worker and owed at the merge with the
+window's work**: the window's own tests and the demonstrations that read colours on
+the sample house (`dressw`, `tradesw`, `lightw`), which now draws trim.
+
 ### Call 195. Patrick, 2026-11-24: the bench for items, asked a third time, is taken up (and how it was read)
 
 His words, on reading the review page: "why does it not list anything about design

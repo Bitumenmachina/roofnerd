@@ -6,7 +6,7 @@
 //!
 //! * **A piece exists only where the estimate prices it.** A thing has a piece of a kind only where a cost line on it prices it:
 //!   a fascia line (its quantity names `true_length`, and its description says fascia) on an eave; a soffit line (names `overhang`,
-//!   says soffit) on an eave; the same on a rake; a line naming `corner_board_length` on a wall; one naming `casing_length` on a
+//!   says soffit) on an eave; the same on a rake; a line naming `corner_board_length`, or `corner_board_length_above_<entry>` (call 194: its boards start at the entered height), on a wall; one naming `casing_length` on a
 //!   window or a door. A labor line draws nothing (it is work, not a board). One piece is drawn for each of a thing's pieces, even
 //!   where two lines price it (the second is said).
 //! * **One arithmetic.** A piece's length is worked from the same positions the figure is (`trim::figures`, the cost line): the
@@ -244,7 +244,7 @@ fn priced_lines(job: &mut Job, path: &str, figure: &str, word: Option<&str>) -> 
         .iter()
         .filter(|l| !l.off && l.class != Some(Class::Labor))
         .filter(|l| word.is_none_or(|w| l.description.to_lowercase().contains(w)))
-        .filter(|l| crate::formula::parse(&l.quantity).is_ok_and(|x| crate::formula::names(&x).iter().any(|n| n == figure)))
+        .filter(|l| crate::formula::parse(&l.quantity).is_ok_and(|x| super::names_figure(&crate::formula::names(&x), figure)))
         .map(|l| {
             let q = quantities
                 .and_then(|q| q.0.get(&l.description))
@@ -265,12 +265,22 @@ fn other_lines(job: &mut Job, path: &str, figure: &str, word: &str) -> Vec<(Stri
         .iter()
         .filter(|l| !l.off && l.class != Some(Class::Labor))
         .filter(|l| l.description.to_lowercase().contains(word))
-        .filter(|l| !crate::formula::parse(&l.quantity).is_ok_and(|x| crate::formula::names(&x).iter().any(|n| n == figure)))
+        .filter(|l| !crate::formula::parse(&l.quantity).is_ok_and(|x| super::names_figure(&crate::formula::names(&x), figure)))
         .map(|l| {
             let q = quantities.and_then(|q| q.0.get(&l.description)).map(|f| f.quantity.clone()).unwrap_or_else(|| Derived::refused("", "", &[], "its quantity is not worked out yet"));
             (l.description.clone(), l.quantity.clone(), q)
         })
         .collect()
+}
+
+/// The height, in feet, a corner-board line enters for its figure `corner_board_length_above_<entry>` (call 194): the corner boards
+/// start there. None where the line is not priced by that figure, or the entry has no length.
+fn height_entered(job: &mut Job, path: &str, description: &str) -> Option<f64> {
+    let e = job.find(path)?;
+    let line = job.world.get::<Cost>(e)?.lines.iter().find(|l| l.description == description)?.clone();
+    let used = crate::formula::names(&crate::formula::parse(&line.quantity).ok()?);
+    let entry = used.iter().find(|n| n.starts_with(crate::formula::ABOVE)).and_then(|n| crate::formula::height_entry(n))?;
+    line.inputs.get(entry).and_then(|v| v.feet())
 }
 
 fn unit_vec(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
@@ -452,6 +462,9 @@ pub fn lay(job: &mut Job) -> Laid {
                 let level = &levels[&w.storey];
                 let at = level.iter().position(|x| x.path == w.path).unwrap_or(0);
                 let size = size_for(Kind::CornerBoard, Some(desc), None);
+                // Where the boards start: the wall's foot, or (call 194) the height the line enters where it is priced by the
+                // corner boards above that height (a stone wainscot that turns the corner), never above the wall's top.
+                let start = height_entered(job, &path, desc).map_or(0.0, |e| e.clamp(0.0, height));
                 let mut mine = Vec::new();
                 for e in 0..2 {
                     match end_of(&ends[&w.storey], level, at, e) {
@@ -481,7 +494,7 @@ pub fn lay(job: &mut Job) -> Laid {
                                 kind: Kind::CornerBoard,
                                 of: path.clone(),
                                 line: desc.clone(),
-                                from: [back[0], back[1], w.base],
+                                from: [back[0], back[1], w.base + start],
                                 to: [back[0], back[1], w.base + height],
                                 face: [nw[0], nw[1], 0.0],
                                 width: size.width,
@@ -494,6 +507,8 @@ pub fn lay(job: &mut Job) -> Laid {
                         Err(why) => out.left_out.push(format!("{called}: \"{desc}\": a corner board is not drawn ({why})")),
                     }
                 }
+                // A board of no length (the entry is as tall as the wall) is not a board: none is drawn.
+                mine.retain(|p| dist3(p.from, p.to) > 1e-9);
                 let got: f64 = mine.iter().map(|p| dist3(p.from, p.to)).sum();
                 if (got - want).abs() > 1e-3 {
                     out.left_out.push(format!("{called}: \"{desc}\" prices {} LF and its corner boards lie {} LF: its quantity is not the length alone, so they are not drawn", crate::view::num(want), crate::view::num(got)));

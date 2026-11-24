@@ -55,6 +55,8 @@ pub const OVERHANG: &str = "overhang";
 /// The figures of a wall.
 pub const OUTSIDE_CORNERS: &str = "outside_corners";
 pub const CORNER_BOARD_LENGTH: &str = "corner_board_length";
+/// The start of the corner boards' figure above a height a line enters (call 194).
+pub const CORNER_BOARD_ABOVE: &str = crate::formula::ABOVE;
 /// The figure of a window or a door.
 pub const CASING_LENGTH: &str = "casing_length";
 
@@ -73,7 +75,14 @@ pub(crate) fn naming(world: &mut World, kinds: &[Kind], figures: &[&str]) -> Has
 
 /// Does a line of this thing name the figure?
 pub(crate) fn names(cost: Option<&Cost>, figure: &str) -> bool {
-    cost.is_some_and(|c| c.lines.iter().any(|l| !l.off && crate::formula::parse(&l.quantity).is_ok_and(|e| crate::formula::names(&e).iter().any(|n| n == figure))))
+    cost.is_some_and(|c| c.lines.iter().any(|l| !l.off && crate::formula::parse(&l.quantity).is_ok_and(|e| names_figure(&crate::formula::names(&e), figure))))
+}
+
+/// Do these names (a formula's) name the figure? A line priced by the corner boards above a height the line enters
+/// (`corner_board_length_above_wainscot`, call 194) names the corner boards' figure too: it is a corner-board line to
+/// everything that asks.
+pub(crate) fn names_figure(used: &[String], figure: &str) -> bool {
+    used.iter().any(|n| n == figure || (figure == CORNER_BOARD_LENGTH && n.starts_with(crate::formula::ABOVE) && n.len() > crate::formula::ABOVE.len()))
 }
 
 pub(crate) fn path_number(path: &str) -> u64 {

@@ -10583,8 +10583,20 @@ wainscot round the ground level. Every price is made up. Worked by hand:
 6. The front door has no casing line by length, and the foundation walls have no
    corner-board line.
 
-Not built yet. What the window then shows (boards from the top of the stone, casing
-at 17 windows, fascia and soffit where priced) is the window builder's half, after.
+**Built (2026-11-24), the command line's half.** `research/worker-report-call194.md`.
+Run by the lead in the worker's copy: the six command-line crates' tests pass (world
+514 with 9 new in `tests/call194.rs`, each seen red by the worker first);
+`demos/sixteen-trim.sh` holds its six points (16 corner-board pieces come to 128.00 LF
+and the lines price 128.00; 68 casing pieces 289.00 LF; fascia 144.00 LF; soffit
+108.00 SF; a ground wall's boards are two of 7 ft from 3 ft up); all 48 command-line
+demonstrations pass; the three gates, `portmap.sh` and `licenses.sh` pass. **Changed
+figures**: the sample house's job cost is $393,981.66 (was $390,260.26) and its
+price $468,050.22 (was $463,629.19); the starter wall over a stone wainscot prices
+its corner boards from the top of the stone (14 LF on a 10 ft wall with two
+corners, was 20). **Not run**: the window's tests and demonstrations on this
+change; they are run when the window builder's work is merged. **Not right**: the
+window has not been looked at with the sample's trim on; an assembly changed for
+another keeps the old quantity on a shared line (call 199, decided, not built).
 
 ## The bench: an item looked at alone. A demonstration, written before it is built (call 195, step A; 2026-11-24)
 
@@ -10832,12 +10844,9 @@ above):
    worker to set the design beside the code before any of it is built). Step C (its shape as data) **is designed** too: call 198,
    its demonstration above ("The bench, step C"); contract it the same way, after
    B. D to F follow and are not designed.
-1. **The sample whole house prices its outside trim** (call 194: the decision, the
-   figures by hand above, and `handoff/contracts/contract-194.md`). A command-line
-   worker was started on it at 16:35 UTC in a second working copy; if no patch of it
-   is in the tree when you read this, it did not land: start it again from the
-   contract. Its window half (boards from the top of the stone, pictures retaken)
-   follows.
+1. **The sample whole house prices its outside trim** (call 194): the command
+   line's half is in. Owed: the window looked at with it on (the sample's pictures
+   retaken, `dressw`, `tradesw`, `lightw` run), at the merge with the bench.
 2. **The second window judge's findings** (call 197, `research/judgment-window-1124b.md`):
    a model brought in whole (`handoff/contracts/contract-197I.md`, command line,
    after call 194's worker); the two tool-chest points ride with the bench

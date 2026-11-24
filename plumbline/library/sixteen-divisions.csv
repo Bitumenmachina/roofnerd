@@ -35,7 +35,7 @@ Framed floor,Floor,,,,Unknown,not coded,Frame the floor and lay the subfloor,Lab
 "Exterior wall, 2x6, lap siding over a stone wainscot",Wall,,,,Unknown,not coded,Weather barrier,Material,net_area + gable_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,7
 "Exterior wall, 2x6, lap siding over a stone wainscot",Wall,,,,Unknown,not coded,Batt insulation,Material,net_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,7
 "Exterior wall, 2x6, lap siding over a stone wainscot",Wall,,,,Unknown,not coded,Lap siding,Material,net_area - net_area_below_wainscot + gable_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,7,wainscot = 3 ft,Assumed,the 3 ft in the name of the stone line
-"Exterior wall, 2x6, lap siding over a stone wainscot",Wall,,,,Unknown,not coded,Corner boards,Material,corner_board_length,,,,,,,,,,,,$?/LF,Unknown,no price entered,,,6
+"Exterior wall, 2x6, lap siding over a stone wainscot",Wall,,,,Unknown,not coded,Corner boards,Material,corner_board_length_above_wainscot,,,,,,,,,,,,$?/LF,Unknown,no price entered,,,6,wainscot = 3 ft,Assumed,the 3 ft in the name of the stone line
 "Exterior wall, 2x6, lap siding over a stone wainscot",Wall,,,,Unknown,not coded,"Stone veneer wainscot, 3 ft",Subcontract,net_length,,,,,,,,,,,,$?/LF,Unknown,no price entered,,,4
 "Exterior wall, 2x6, lap siding over a stone wainscot",Wall,,,,Unknown,not coded,"Gypsum board, hung and finished",Material,net_area,,,,10,Assumed,"cuts at openings, corners and ends: the estimator's allowance; no standard sets it",sheet,32 SF/sheet,yes,Known,a 4 ft by 8 ft sheet,$?/sheet,Unknown,no price entered,,,9
 "Exterior wall, 2x6, lap siding over a stone wainscot",Wall,,,,Unknown,not coded,"Paint, two coats",Material,net_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,9

@@ -692,6 +692,12 @@ pub fn house_priced() -> Job {
                     // No siding is bought behind the stone, and no stone across a doorway (call 175).
                     job.set_formula(path, Some("Cedar lap siding, installed"), "net_area - net_area_below_wainscot", &[("wainscot".to_string(), "3 ft".to_string())], Status::Known, "the 3 ft in the name of the stone line (made-up)").expect(OK);
                 }
+                // Corner boards up each outside corner (call 194). On the ground level the stone turns the corner and
+                // the boards stand on it: they are bought from its 3 ft up, entered on the line as the siding's is.
+                put(&mut job, path, "Corner boards, 5/4 x 6 cedar", "corner_board_length", Material, 6, "$6.25/LF");
+                if on_ground {
+                    job.set_formula(path, Some("Corner boards, 5/4 x 6 cedar"), "corner_board_length_above_wainscot", &[("wainscot".to_string(), "3 ft".to_string())], Status::Known, "the 3 ft in the name of the stone line (made-up)").expect(OK);
+                }
                 put(&mut job, path, "Gypsum board, hung and finished", "net_area", Material, 9, "$2.40/SF");
                 put(&mut job, path, "Paint, two coats", "net_area", Material, 9, "$1.10/SF");
                 if on_ground {
@@ -716,6 +722,8 @@ pub fn house_priced() -> Job {
             Kind::Window => {
                 put(&mut job, path, "Window unit, clad wood, double-hung, divided lites, bronze", "1", Material, 8, "$1,150");
                 put(&mut job, path, "Flashing and sealant", "1", Material, 7, "$65");
+                // Casing outside, by its length round the window (call 194).
+                put(&mut job, path, "Exterior casing, 5/4 x 4 cedar", "casing_length", Material, 6, "$5.40/LF");
                 put(&mut job, path, "Window treatment", "1", Material, 12, "$380");
             }
             Kind::Floor if on_ground => {
@@ -746,7 +754,12 @@ pub fn house_priced() -> Job {
                 put(&mut job, path, "Roof sheathing", "surface_area", Material, 6, "$2.30/SF");
                 put(&mut job, path, "Standing seam roofing", "surface_area", Material, 7, "$14/SF");
             }
-            Kind::Eave => put(&mut job, path, "Gutter", "true_length", Material, 7, "$16.50/LF"),
+            Kind::Eave => {
+                put(&mut job, path, "Gutter", "true_length", Material, 7, "$16.50/LF");
+                // Fascia along the eave and soffit under its overhang (call 194).
+                put(&mut job, path, "Fascia, 1x8 cedar", "true_length", Material, 6, "$4.80/LF");
+                put(&mut job, path, "Soffit, cedar plywood, vented", "true_length * overhang", Material, 6, "$6.20/SF");
+            }
             Kind::Ridge => {
                 put(&mut job, path, "Steel ridge beam", "true_length", Material, 5, "$42/LF");
                 put(&mut job, path, "Ridge cap and vent", "true_length", Material, 7, "$22/LF");
