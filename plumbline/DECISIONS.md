@@ -8166,3 +8166,37 @@ run in the worker's copy.
 7. Said by the worker and true: but for the formula tests, which were red first,
    the shape tests were written after the code. The test that matters, the rows
    against the code, was run before the code went and proved red.
+
+### Call 204. A corner board is as tall as its wall is at that corner; and three things a model still leaves out (2026-11-24)
+
+**The corner board.** Since call 192 a wall under a rake, or under the high edge of
+a shed roof, rises to the roof, and its siding is priced to that line. Its corner
+boards still stop at the wall's old top (said as not right when the gable was
+drawn). On a gable end that is half a foot at each corner; on the tall wall of a
+shed roof it is the whole rise.
+
+1. **The corner board on a wall's face at an outside corner is as long as that
+   wall is tall at that corner**: the wall's own height where an eave is over it
+   or it has no roof; the height of its top line at that end where it has a gable
+   (call 192's line, the model's, worked nowhere else). `corner_board_length` is
+   the sum over the wall's outside corners, as before, and
+   `corner_board_length_above_<entry>` takes the entry off each (call 194).
+2. It takes the weakest status of what it rests on, as the gable's area does: a
+   board under an Assumed roof is Assumed.
+3. The pieces laid (`trim --pieces`, and so the boards the window draws) are the
+   same lengths: one arithmetic.
+4. **Every expectation that moves is listed first.** One moves only where a wall
+   with a gable has corner boards priced or printed, and only by the figures
+   worked in STATUS.md under this call or figures that follow from them.
+
+**A model brought in** (what calls 197, 200 and 202 left, each seen by a judge or
+in a picture):
+5. **A beam and a column come in as a beam and a post** where the body in the file
+   is a straight box, sized from it, Assumed, sourced to the file; any other is
+   left out with the reason that is true. Today each is left out with "nothing
+   here to bring it in as", and the program has both.
+6. **A fitting with no size is written** with its place and no body, and comes back
+   with its size Unknown (call 202 point 5).
+7. **A model that the program wrote comes in in seconds, not twenty**: find where
+   the time goes before changing anything, say it in the report, and change only
+   what the measurement names. No figure moves.

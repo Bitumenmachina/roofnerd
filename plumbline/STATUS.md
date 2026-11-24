@@ -10901,6 +10901,40 @@ points and 147 ties in the sample house's file; IfcOpenShell finds no fault.
 (ruled: written, with the next job); a model comes in slowly; the window has not
 been run on it.
 
+## A corner board as tall as its wall at that corner: a demonstration, written before it is built (call 204; 2026-11-24)
+
+`demos/trim.sh` and `demos/gable.sh` extended, at the command line. The house of
+`demos/gable.sh`: 24 ft by 16 ft, walls 9 ft, the roof 9.5 ft over the walls' lines
+at an eave and rising half a foot a foot. By hand:
+
+1. **A gable roof** (gables on the east and west walls; their top lines
+   (0, 9.5) (8, 13.5) (16, 9.5)). Each of the four walls has two outside corners.
+   South and north, under the eaves: 2 x 9 = **18.00 LF** each, as now. East and
+   west: 2 x 9.5 = **19.00 LF** each (18.00 now). The house: 18 + 19 + 18 + 19 =
+   **74.00 LF** (72.00 now).
+2. **A shed roof** (eave on the south, rising north; east wall's top (0, 9.5)
+   (16, 17.5), north wall level at 17.5, west wall (0, 17.5) (16, 9.5)). South:
+   2 x 9 = **18.00 LF**. East: 9.5 + 17.5 = **27.00 LF**. North: 2 x 17.5 =
+   **35.00 LF**. West: 17.5 + 9.5 = **27.00 LF**. The house: **107.00 LF** (72.00
+   now).
+3. **A hip roof**: every wall 18.00 LF, the house 72.00 LF: nothing moves.
+4. `trim --pieces` on each: the pieces of every corner-board line add to those
+   figures, and a piece on the shed's east wall at its north corner is 17.5 ft.
+5. The boards read `~` where the roof is traced (Assumed), as the gable's area does.
+6. The sample whole house (a hip roof): its corner boards are the 128 LF they were
+   and its price the $468,050.22 it was.
+7. With the wainscot wall's line (`wainscot` 3 ft) on the shed's east wall:
+   (9.5 - 3) + (17.5 - 3) = **21.00 LF**.
+
+And, on a model (`demos/ifc-whole.sh` extended): a made-up file with a beam 12 ft
+long, 3.5 in by 9.25 in, and a column 8 ft high, 3.5 in square, brings in **1 beam
+and 1 post** with those sizes, Assumed; the sample house written out has its two
+elbows with no size in it and they come back, size Unknown, so the second job has
+the first job's fittings but for the two the tool refuses; and the time the sample
+house takes to come in is printed before and after.
+
+Not built yet.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **As of 2026-11-24, 22:10 UTC (the lead). Read this block first; what is below it is
