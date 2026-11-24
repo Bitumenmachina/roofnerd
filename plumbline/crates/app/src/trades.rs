@@ -42,6 +42,8 @@ pub fn press(doc: &mut Doc, snap: &Snapshot, trade: &'static str) {
     s.roof = true;
     s.ground = true;
     s.finishes = true;
+    // The outside trim belongs to the Outside button's set: the other views are of what is under or inside it.
+    s.trim = trade == "Outside";
     s.framing = false;
     s.ghost = false;
     s.sizes = false;
@@ -93,5 +95,5 @@ pub fn press(doc: &mut Doc, snap: &Snapshot, trade: &'static str) {
 
 /// The switches as a job opens.
 fn opening(now: &Show) -> Show {
-    Show { architecture: true, roof: true, mechanical: true, electrical: true, plumbing: true, ghost: false, storey: None, certainty: false, clashes: now.clashes, ground: true, framing: false, finishes: true, demolition: now.demolition, existing: now.existing, off_levels: now.off_levels.clone(), off_systems: now.off_systems.clone(), away: now.away, sizes: false }
+    Show { architecture: true, roof: true, mechanical: true, electrical: true, plumbing: true, ghost: false, storey: None, certainty: false, clashes: now.clashes, ground: true, framing: false, trim: true, finishes: true, demolition: now.demolition, existing: now.existing, off_levels: now.off_levels.clone(), off_systems: now.off_systems.clone(), away: now.away, sizes: false }
 }

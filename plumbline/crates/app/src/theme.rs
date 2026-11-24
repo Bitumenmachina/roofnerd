@@ -659,6 +659,10 @@ pub fn glass() -> Color { Color::srgba(0.40, 0.52, 0.62, 0.55) }
 pub fn door_leaf() -> Color { hex(0x7A5A3C) }
 /// Casing, sills, corner boards and a window nobody has named a color for: trim white.
 pub fn trim() -> Color { hex(0xF0EEE8) }
+/// Painted outside trim (fascia, soffit, corner boards, casing): a warm white, a little whiter than the wall it stands on (call 184).
+pub fn trim_paint() -> Color { hex(0xF8F5EE) }
+/// The spot beside the Trim switch: the paint a shade darker, to read on a light panel.
+pub fn trim_spot() -> Color { hex(0xB9AE96) }
 /// A knob.
 pub fn hardware() -> Color { hex(0x3A3632) }
 /// What a surface with a pattern on it is multiplied by: a little under white, so that

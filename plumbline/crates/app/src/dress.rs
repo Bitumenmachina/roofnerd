@@ -630,8 +630,10 @@ impl Part {
 pub struct Unit {
     /// Frame, sash and muntins of a window; the leaf of a door.
     pub unit: Skin,
-    /// Casing, sill and a door's frame.
+    /// A door's frame, and the casing and sill on an inside face.
     pub trim: Skin,
+    /// The casing and sill on an outside face (the model draws its own, from what is priced, in their place: call 184).
+    pub outer: Skin,
     pub glass: Skin,
     /// A door's knobs: where each is, in the wall's own directions.
     pub knobs: Vec<Vec3>,
@@ -670,21 +672,21 @@ fn casing(u: &mut Unit, f: &Part, w: f32, h: f32, face: f32, out: f32, outside: 
     if outside && masonry {
         // In masonry: a brickmould, and a sill that sheds water.
         let c = 2.0 * IN;
-        u.trim.block(f, [-c, 0.0], [0.0, h], z(-0.5 * IN, 1.1 * IN));
-        u.trim.block(f, [w, w + c], [0.0, h], z(-0.5 * IN, 1.1 * IN));
-        u.trim.block(f, [-c, w + c], [h, h + c], z(-0.5 * IN, 1.1 * IN));
+        u.outer.block(f, [-c, 0.0], [0.0, h], z(-0.5 * IN, 1.1 * IN));
+        u.outer.block(f, [w, w + c], [0.0, h], z(-0.5 * IN, 1.1 * IN));
+        u.outer.block(f, [-c, w + c], [h, h + c], z(-0.5 * IN, 1.1 * IN));
         if sill {
-            u.trim.block(f, [-c - 1.0 * IN, w + c + 1.0 * IN], [-2.5 * IN, 0.0], z(-0.5 * IN, 2.0 * IN));
+            u.outer.block(f, [-c - 1.0 * IN, w + c + 1.0 * IN], [-2.5 * IN, 0.0], z(-0.5 * IN, 2.0 * IN));
         }
     } else if outside {
         // In siding: flat casing, a head casing with a drip cap over it, and a sill.
         let c = 3.5 * IN;
-        u.trim.block(f, [-c, 0.0], [0.0, h], z(-0.5 * IN, 1.0 * IN));
-        u.trim.block(f, [w, w + c], [0.0, h], z(-0.5 * IN, 1.0 * IN));
-        u.trim.block(f, [-c - 0.5 * IN, w + c + 0.5 * IN], [h, h + 4.5 * IN], z(-0.5 * IN, 1.25 * IN));
-        u.trim.block(f, [-c - 1.0 * IN, w + c + 1.0 * IN], [h + 4.5 * IN, h + 5.25 * IN], z(-0.5 * IN, 2.0 * IN));
+        u.outer.block(f, [-c, 0.0], [0.0, h], z(-0.5 * IN, 1.0 * IN));
+        u.outer.block(f, [w, w + c], [0.0, h], z(-0.5 * IN, 1.0 * IN));
+        u.outer.block(f, [-c - 0.5 * IN, w + c + 0.5 * IN], [h, h + 4.5 * IN], z(-0.5 * IN, 1.25 * IN));
+        u.outer.block(f, [-c - 1.0 * IN, w + c + 1.0 * IN], [h + 4.5 * IN, h + 5.25 * IN], z(-0.5 * IN, 2.0 * IN));
         if sill {
-            u.trim.block(f, [-c - 1.0 * IN, w + c + 1.0 * IN], [-1.75 * IN, 0.0], z(-0.5 * IN, 2.0 * IN));
+            u.outer.block(f, [-c - 1.0 * IN, w + c + 1.0 * IN], [-1.75 * IN, 0.0], z(-0.5 * IN, 2.0 * IN));
         }
     } else {
         // Inside: casing all round, and under a window a stool and an apron.

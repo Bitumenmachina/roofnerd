@@ -1171,6 +1171,14 @@ fn left(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot,
                 doc.redraw();
             }));
         }
+        // The outside trim the estimate prices (call 184): fascia, soffit, corner boards and casing, each piece a
+        // board where the model lays it. The count is the model's.
+        if !snap.trim.pieces.is_empty() {
+            layer(c, "Trim", "", theme::trim_spot(), doc.show.trim, Some(snap.trim.pieces.len()), Box::new(|doc| {
+                doc.show.trim = !doc.show.trim;
+                doc.redraw();
+            }));
+        }
         // What the work does, with its key (call 161): with anything marked, two rows say
         // what the pale and the red are. Existing work is drawn pale, in its own pattern;
         // what comes down is a faint red ghost where it stood, and off, the house is as

@@ -29,6 +29,7 @@ use crate::model::{to_view, Doc, Snapshot, Tone};
 use crate::theme;
 use plumbline_world::finish::Outside;
 use plumbline_world::building::Shape;
+use plumbline_world::trim::{Piece, PieceKind};
 use plumbline_world::{Discipline, Kind};
 
 /// The main window's layout: a bar along the top, a panel down each side, the build bar
@@ -707,6 +708,17 @@ pub fn rebuild(
     // looks, half its thickness and its top. An eave that hangs past one gets a soffit.
     let mut outside_walls: Vec<(Vec3, Vec3, Vec3, f32, f32)> = Vec::new();
 
+    // Outside trim (call 184). Where the estimate prices a fascia, a soffit, corner boards or casing on a thing, the boards of
+    // the model's own are drawn in place of what was drawn for that thing before: the plain strip under a roof edge, the
+    // plain soffit under an eave, the corner boards a wall's siding stops against, the casing and sill round an opening
+    // (its inside casing stays). With the Trim switch off, or where nothing is priced, the house is drawn as it was.
+    let trim_on = show.trim && !on_plan_view;
+    let edges_of = |a: PieceKind, b: PieceKind| -> std::collections::HashSet<String> {
+        if trim_on { snap.trim.pieces.iter().filter(|p| p.kind == a || p.kind == b).map(|p| p.of.clone()).collect() } else { Default::default() }
+    };
+    let (trimmed_fascia, trimmed_soffit) = (edges_of(PieceKind::Fascia, PieceKind::RakeFascia), edges_of(PieceKind::Soffit, PieceKind::RakeSoffit));
+    let (trimmed_corners, trimmed_casing) = (edges_of(PieceKind::CornerBoard, PieceKind::CornerBoard), edges_of(PieceKind::Casing, PieceKind::Casing));
+
     // ---- Interior woodwork: the base in each room that has base priced on it ----
     // A board 5 1/4 in high and 5/8 in thick at the foot of the room's walls, along
     // the room's own outline (the faces of its walls), left out across each door.
@@ -932,7 +944,7 @@ pub fn rebuild(
                 }
                 build.on_plan = None;
                 // Siding stops against a corner board at each corner; masonry turns the corner itself.
-                if has_out && clad.is_some() && !masonry {
+                if has_out && clad.is_some() && !masonry && !trimmed_corners.contains(&p.path) {
                     let mut boards = dress::Skin::default();
                     let from = lower.as_ref().map(|l| l.1.min(h)).unwrap_or(0.0);
                     let (wide, proud) = (4.5 / 12.0, 1.0 / 12.0);
@@ -978,6 +990,10 @@ pub fn rebuild(
                     // and the flashing they cover is seen.
                     if !unit.trim.is_empty() && show.finishes {
                         build.piece(hole_path, None, meshes.add(unit.trim.mesh()), Transform::IDENTITY, theme::trim(), 0.8, 0.0, true);
+                    }
+                    // The casing and sill on the outside face, where the model lays casing it prices in their place.
+                    if !unit.outer.is_empty() && show.finishes && !trimmed_casing.contains(hole_path) {
+                        build.piece(hole_path, None, meshes.add(unit.outer.mesh()), Transform::IDENTITY, theme::trim(), 0.8, 0.0, true);
                     }
                     if !unit.glass.is_empty() {
                         build.piece(hole_path, None, meshes.add(unit.glass.mesh()), Transform::IDENTITY, theme::glass(), 0.08, 0.0, true);
@@ -1319,7 +1335,9 @@ pub fn rebuild(
                 let alpha = if show.ghost { 0.06 } else { 1.0 };
                 let blend = if show.ghost { AlphaMode::Blend } else { AlphaMode::Opaque };
                 let fascia = build.materials.add(StandardMaterial { base_color: theme::fascia().with_alpha(alpha), perceptual_roughness: 0.8, double_sided: true, cull_mode: None, alpha_mode: blend, ..default() });
-                build.commands.spawn((Mesh3d(meshes.add(trim.mesh())), MeshMaterial3d(fascia), SceneMesh, NotShadowCaster));
+                if !trimmed_fascia.contains(&line.path) {
+                    build.commands.spawn((Mesh3d(meshes.add(trim.mesh())), MeshMaterial3d(fascia), SceneMesh, NotShadowCaster));
+                }
                 // Where the eave hangs past an outside wall, a soffit closes it underneath:
                 // level, from the foot of the fascia back to the wall's face. (Without
                 // it the gap between the wall's top and the roof stood open and dark.)
@@ -1335,7 +1353,7 @@ pub fn rebuild(
                             (along > -4.0 && along < run.length() + 4.0 && past > 0.05 && past < 4.0).then_some(past)
                         })
                         .min_by(|x, y| x.total_cmp(y));
-                    if let Some(past) = hang {
+                    if let (Some(past), false) = (hang, trimmed_soffit.contains(&line.path)) {
                         let mut under = Faces::new();
                         under.quad([fa, fb, fb - normal * past, fa - normal * past], Vec3::NEG_Y);
                         let soffit = build.materials.add(StandardMaterial { base_color: theme::trim(), perceptual_roughness: 0.85, double_sided: true, cull_mode: None, ..default() });
@@ -1359,6 +1377,38 @@ pub fn rebuild(
                 }
             }
         }
+    }
+    // ---- The outside trim (call 184): each piece the model lays, drawn as a board ----
+    // Fascia, soffit, rake fascia and rake soffit hang from the roof's edges; corner boards and casing stand 3/4 in
+    // proud of a wall's outside face. Each piece is where `trim::lay` puts it, its size the model's; only its ends are
+    // dressed here, for the eye (`trim_boards`). A click on one is a click on what it trims. It casts and takes shadow as the
+    // rest of the house does. The roof's trim goes with the roof, the wall's with the wall's level and the finishes.
+    if trim_on {
+        let boards = trim_boards(&snap.trim.pieces);
+        let to_dir = |v: [f64; 3]| Vec3::new(v[0] as f32, v[2] as f32, -v[1] as f32);
+        for (piece, board) in snap.trim.pieces.iter().zip(&boards) {
+            let Some(b) = board else { continue };
+            if matches!(piece.kind, PieceKind::Fascia | PieceKind::RakeFascia | PieceKind::Soffit | PieceKind::RakeSoffit) {
+                if !(show.roof && roof_in_3d) {
+                    continue;
+                }
+            } else {
+                let on = snap.trim_on.get(&piece.of);
+                if !show.architecture || !show.finishes || show.storey.as_ref().is_some_and(|s| on != Some(s)) || on.is_some_and(|s| show.off_levels.contains(s)) {
+                    continue;
+                }
+            }
+            build.work = snap.work.get(&piece.of).copied();
+            if build.work == Some(plumbline_world::WorkStatus::Demolish) && !show.demolition {
+                continue;
+            }
+            build.wash = show.certainty.then(|| theme::certainty(piece.status));
+            let turn = Quat::from_mat3(&Mat3::from_cols(to_dir(b.along), to_dir(b.across), to_dir(b.out)));
+            let scale = Vec3::new(b.size[0] as f32, b.size[1] as f32, b.size[2] as f32);
+            build.piece(&piece.of, None, solids.cube.clone(), Transform { translation: to_view(origin, b.centre), rotation: turn, scale }, theme::trim_paint(), 0.55, 0.0, true);
+        }
+        build.wash = None;
+        build.work = None;
     }
     // On the plan of one level the roof over it is drawn as a plan draws what is
     // overhead: its lines, broken. (With every level on show the roof itself is drawn.)
@@ -2332,5 +2382,150 @@ pub fn draw_lines(doc: Res<Doc>, snap: Res<Snapshot>, drawing: Res<Drawing>, mut
                 }
             }
         }
+    }
+}
+
+/// One piece of outside trim as a board: the middle of it, the three directions of its edges (along its length, across its face,
+/// out of what it is fixed to) as unit vectors east, north, up, and its size along each. Right-handed, so that it turns a cube.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Board {
+    pub centre: [f64; 3],
+    pub along: [f64; 3],
+    pub across: [f64; 3],
+    pub out: [f64; 3],
+    pub size: [f64; 3],
+}
+
+type V3 = [f64; 3];
+fn v_sub(a: V3, b: V3) -> V3 { [a[0] - b[0], a[1] - b[1], a[2] - b[2]] }
+fn v_add(a: V3, b: V3) -> V3 { [a[0] + b[0], a[1] + b[1], a[2] + b[2]] }
+fn v_mul(a: V3, k: f64) -> V3 { [a[0] * k, a[1] * k, a[2] * k] }
+fn v_dot(a: V3, b: V3) -> f64 { a[0] * b[0] + a[1] * b[1] + a[2] * b[2] }
+fn v_cross(a: V3, b: V3) -> V3 { [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]] }
+fn v_len(a: V3) -> f64 { v_dot(a, a).sqrt() }
+fn v_unit(a: V3) -> V3 {
+    let n = v_len(a);
+    if n < 1e-12 { [0.0; 3] } else { v_mul(a, 1.0 / n) }
+}
+fn plan_gap(a: V3, b: V3) -> f64 { (a[0] - b[0]).hypot(a[1] - b[1]) }
+
+/// Each piece the model lays as a board, in the model's order (`None` for a piece with no length). The sizes and places are the
+/// model's; only the ends are dressed, for the look and with no quantity changed: where two corner boards meet at a corner one
+/// is carried across the other's thickness so that no notch shows, and where an eave's fascia meets a rake's, or another
+/// eave's, the eave's is carried past by that board's thickness so that no gap shows.
+pub fn trim_boards(pieces: &[Piece]) -> Vec<Option<Board>> {
+    let n = pieces.len();
+    let mut from: Vec<V3> = pieces.iter().map(|p| p.from).collect();
+    let mut to: Vec<V3> = pieces.iter().map(|p| p.to).collect();
+    let mut width: Vec<f64> = pieces.iter().map(|p| p.width).collect();
+    let flat = |v: V3| v_unit([v[0], v[1], 0.0]);
+    for i in 0..n {
+        for j in 0..n {
+            if i == j {
+                continue;
+            }
+            let (pi, pj) = (&pieces[i], &pieces[j]);
+            // A fascia carried past where another fascia meets it: the eave past a rake, the first eave past the second.
+            let meets = (pi.kind == PieceKind::Fascia && pj.kind == PieceKind::RakeFascia) || (pi.kind == PieceKind::Fascia && pj.kind == PieceKind::Fascia && i < j);
+            if meets {
+                let (ai, aj) = (flat(v_sub(to[i], from[i])), flat(v_sub(pj.to, pj.from)));
+                if v_dot(ai, aj).abs() < 0.5 {
+                    for (mine, other) in [(0, 0), (0, 1), (1, 0), (1, 1)] {
+                        let (here, there) = (if mine == 0 { from[i] } else { to[i] }, if other == 0 { pj.from } else { pj.to });
+                        if plan_gap(here, there) < 0.05 && (here[2] - there[2]).abs() < 0.5 {
+                            let away = v_unit(if mine == 0 { v_sub(from[i], to[i]) } else { v_sub(to[i], from[i]) });
+                            let moved = v_add(here, v_mul(away, pj.thickness));
+                            if mine == 0 { from[i] = moved } else { to[i] = moved }
+                        }
+                    }
+                }
+            }
+            // A corner board widened toward its corner by the thickness of the one on the wall it meets: the first of the two.
+            if pi.kind == PieceKind::CornerBoard && pj.kind == PieceKind::CornerBoard && i < j && v_dot(pi.face, pj.face).abs() < 0.1 && (pi.from[2] - pj.from[2]).abs() < 0.05 {
+                let (wi, wj) = (flat(v_cross(pi.face, [0.0, 0.0, 1.0])), flat(v_cross(pj.face, [0.0, 0.0, 1.0])));
+                for si in [-1.0, 1.0] {
+                    for sj in [-1.0, 1.0] {
+                        let (ci, cj) = (v_add(pi.from, v_mul(wi, si * pi.width / 2.0)), v_add(pj.from, v_mul(wj, sj * pj.width / 2.0)));
+                        if plan_gap(ci, cj) < 0.02 {
+                            let shift = v_mul(wi, si * pj.thickness / 2.0);
+                            width[i] += pj.thickness;
+                            from[i] = v_add(from[i], shift);
+                            to[i] = v_add(to[i], shift);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    (0..n)
+        .map(|i| {
+            let p = &pieces[i];
+            let run = v_sub(to[i], from[i]);
+            let length = v_len(run);
+            if length < 1e-9 {
+                return None;
+            }
+            let along = v_mul(run, 1.0 / length);
+            // The face square to the length (the model's is, to a rounding), then across it, so that the three turn a cube.
+            let out = v_unit(v_sub(p.face, v_mul(along, v_dot(p.face, along))));
+            let across = v_unit(v_cross(out, along));
+            let centre = v_add(v_mul(v_add(from[i], to[i]), 0.5), v_mul(out, p.thickness / 2.0));
+            Some(Board { centre, along, across, out, size: [length, width[i], p.thickness] })
+        })
+        .collect()
+}
+
+#[cfg(test)]
+mod trim_tests {
+    use super::*;
+    use plumbline_world::value::Status;
+
+    fn piece(kind: PieceKind, from: V3, to: V3, face: V3, width: f64, thickness: f64) -> Piece {
+        Piece { kind, of: "x".into(), line: "x".into(), from, to, face, width, thickness, sized_from: String::new(), status: Status::Assumed }
+    }
+    fn near(a: f64, b: f64) -> bool { (a - b).abs() < 1e-9 }
+
+    #[test]
+    fn a_board_is_the_pieces_size_and_stands_out_by_its_thickness() {
+        // A fascia on the south eave: along east, its face looking south, 5 1/2 in deep, 3/4 in thick.
+        let (w, t) = (5.5 / 12.0, 0.75 / 12.0);
+        let f = piece(PieceKind::Fascia, [-1.0, -1.0, 8.5], [25.0, -1.0, 8.5], [0.0, -1.0, 0.0], w, t);
+        let b = trim_boards(&[f])[0].clone().unwrap();
+        assert!(near(b.size[0], 26.0) && near(b.size[1], w) && near(b.size[2], t));
+        assert!(near(b.centre[0], 12.0) && near(b.centre[1], -1.0 - t / 2.0) && near(b.centre[2], 8.5));
+        // Right-handed: along x across = out.
+        let r = v_cross(b.along, b.across);
+        assert!(r.iter().zip(b.out).all(|(a, b)| near(*a, b)));
+    }
+
+    #[test]
+    fn two_corner_boards_at_a_corner_leave_no_notch_and_one_alone_is_left_as_it_is() {
+        // Outside corner at (0, 0): a board on the south wall (face south) and one on the west wall (face west), each
+        // 3 1/2 in wide, 3/4 in thick, from the foot to 9 ft.
+        let (w, t) = (3.5 / 12.0, 0.75 / 12.0);
+        let south = piece(PieceKind::CornerBoard, [w / 2.0, 0.0, 0.0], [w / 2.0, 0.0, 9.0], [0.0, -1.0, 0.0], w, t);
+        let west = piece(PieceKind::CornerBoard, [0.0, w / 2.0, 0.0], [0.0, w / 2.0, 9.0], [-1.0, 0.0, 0.0], w, t);
+        let alone = trim_boards(&[south.clone()])[0].clone().unwrap();
+        assert!(near(alone.size[1], w));
+        let both = trim_boards(&[south, west]);
+        let (a, b) = (both[0].clone().unwrap(), both[1].clone().unwrap());
+        // The first is carried across the corner by the second's thickness; the second is as the model has it.
+        assert!(near(a.size[1], w + t) && near(b.size[1], w));
+        assert!(near(a.centre[0], w / 2.0 - t / 2.0));
+        // Its west edge is now the outer face of the west board: no notch.
+        assert!(near(a.centre[0] - a.size[1] / 2.0, -t));
+    }
+
+    #[test]
+    fn an_eave_fascia_is_carried_past_a_rake_that_meets_it() {
+        let (w, t) = (5.5 / 12.0, 0.75 / 12.0);
+        let eave = piece(PieceKind::Fascia, [-1.0, -1.0, 8.5], [25.0, -1.0, 8.5], [0.0, -1.0, 0.0], w, t);
+        let rake = piece(PieceKind::RakeFascia, [-1.0, -1.0, 8.5], [-1.0, 8.0, 13.0], [-1.0, 0.0, 0.0], w, t);
+        let both = trim_boards(&[eave, rake]);
+        let (e, r) = (both[0].clone().unwrap(), both[1].clone().unwrap());
+        assert!(near(e.size[0], 26.0 + t), "the eave is a rake's thickness longer: {}", e.size[0]);
+        assert!(near(e.centre[0] - e.size[0] / 2.0, -1.0 - t));
+        // The rake is as the model has it.
+        assert!(near(r.size[0], (81.0f64 + 20.25).sqrt()));
     }
 }

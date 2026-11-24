@@ -10277,6 +10277,54 @@ What is not right:
 - Call 190 point 3 (the walls the by-ceiling finder is sure of, shown to take) is
   not built.
 
+## The outside trim drawn in the window (call 184 step 1; 2026-11-24)
+
+Built by the window builder (Sonnet) on the tree merged at b207e7b; accepted by the
+lead by its diff, its pictures (`demos/captured/trimw/`: 04 beside 05 read by the
+lead) and the runs named here and in the merge that follows.
+
+- **First, the merged tree in the window** (owed since the merge at b207e7b):
+  `tracew`, `scanw`, `planw`, `pricew`, `movew` and `moneyw` all passed on the frozen
+  merged build, first run each, on a quiet machine. `tracew` gave 94.00 LF, the hand
+  figure, and lost no click: the one lost under load on 2026-11-23 has not come back.
+- **`demos/trimw.sh`** (new), on the house of "The outside trim priced": the Trim
+  switch reads 27; the street view with trim differs from the view with Trim off
+  only near the pieces (98 in 100 of the dots that differ lie within 12 dots of one;
+  the wall's face away from every piece is the same to 6 parts in 255); with the
+  north eave's fascia line taken off the switch reads 26 and that eave has no
+  fascia where the south has; Trim off is the job with no trim line priced; a click
+  on a corner board selects its wall, on a casing its window, on a fascia its eave.
+- `tradesw`, `glassw`, `dressw`, `house`, `lightw`, `roofw` and `pricew` pass on the
+  builder's frozen build; the sample whole house has no trim line that names a
+  length, so it has no Trim switch and its pictures did not move. `cargo test
+  --workspace` on the builder's tree: 856 passed.
+
+**The lead's reading of the pictures.** Close on the eave and the corner (04 beside
+05) the change is plain: a white fascia and rake board meeting without a gap where
+there was a heavy dark strip, a corner board standing proud, a cased door. From the
+street corner (02 beside 03) it is a small change. The house is nearer a house and
+still reads as a model.
+
+What is not right:
+- **The gable is open**: a wall is a rectangle to its top, and the triangle between
+  it and the rake is an empty grey shape. Nothing changes the look more than this
+  now. It is a matter for the model (a gable wall's top follows the roof) and its
+  takeoff (the gable's siding), and needs a call and hand figures.
+- A house with no trim priced still shows the old casing, corner boards and fascia
+  strip (DECISIONS.md, "Call 184 step 1, the window's half, as built").
+- With Trim on, a window's casing is the plain priced boards: the head cap and sill
+  nose the window used to draw are not priced and are gone.
+- The roof's edges are drawn in their line colours (eave, rake, ridge) in the 3D
+  view, which a real house does not have; the roof is a plane with no thickness, no
+  ridge cap, no drip edge; there is no ground at the foot of the wall.
+- The measure of "a piece casts a shadow" is weak: the roof already shades the wall
+  and a 5 1/2 in fascia adds little; the check shows shade is there, not whose.
+- Square ends, corner boards to the wall's top and not the soffit, no hip or valley
+  piece: as the model's half says.
+- Close on the house, a pointer over it brings the readout at the lower right and
+  moves the three panel switches; a script that clicks one from a close view must
+  go to the control first (`trimw` does). Other demonstrations may meet it.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **As of 2026-11-23 (the lead, after the merge of that day). Read this block first; what

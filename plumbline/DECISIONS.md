@@ -7343,3 +7343,25 @@ side the scan cannot tell is laid to the right of the way it was clicked, and sa
 so. One expectation moved by this call, the reason beside it: the wall of
 `demos/scanw.sh` is 3 in outside the room's face (north 3.75 ft) where it was on it
 (north 4 ft), and its check is tighter than it was.
+
+**Call 184 step 1, the window's half, as built (2026-11-24).** The window draws every
+piece of outside trim the model hands it (`trim::lay`), as a board of the piece's own
+width and thickness, casting and taking shadow; a "Trim" switch in the Show list
+reads the model's count and belongs to the Outside trade's set; a click on a piece
+selects what it trims. The window works nothing out.
+
+The builder found, and the lead rules: **the window was already drawing a fascia
+strip, a soffit, corner boards on a sided wall and a casing round every opening,
+whatever the estimate priced.** Where the estimate prices a piece and Trim is on,
+the model's board is drawn and the old drawing of that thing is not (an eave's dark
+strip and plain soffit, a wall's corner boards, an opening's outside casing with its
+head cap and sill nose). With Trim off, or where nothing is priced, the old drawing
+is as it was, so no existing picture moved. **That last part is not the rule**
+(CLAUDE.md: what the house is dressed in is what the estimate prices): a house with
+no trim priced still shows trim. It is left for a call of its own, because taking it
+away changes every picture of every house and the checks that measure them; it is
+written in STATUS.md as not right.
+
+For the look only, and in no quantity: where two corner boards meet, one is carried
+3/4 in across the corner so no notch shows; an eave's fascia is carried a board's
+thickness past the rake.

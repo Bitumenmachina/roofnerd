@@ -206,7 +206,7 @@ pub fn build_doc(path: String, roof_arg: Option<String>) -> Result<Doc, String> 
         also: None,
         walk: false,
         sun: model::SunStudy::default(),
-        show: Show { architecture: true, roof: true, mechanical: true, electrical: true, plumbing: true, ghost: false, storey: None, certainty: false, clashes: false, ground: true, framing: false, finishes: true, demolition: true, existing: true, off_levels: Default::default(), off_systems: Default::default(), away: [false; 3], sizes: false },
+        show: Show { architecture: true, roof: true, mechanical: true, electrical: true, plumbing: true, ghost: false, storey: None, certainty: false, clashes: false, ground: true, framing: false, trim: true, finishes: true, demolition: true, existing: true, off_levels: Default::default(), off_systems: Default::default(), away: [false; 3], sizes: false },
         // The sheet opens on the estimate once anything is priced; before that, on what
         // has been taken off.
         tab: if has_lines { Tab::Estimate } else if has_roof { Tab::Roof } else { Tab::Building },

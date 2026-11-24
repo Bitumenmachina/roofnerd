@@ -127,6 +127,7 @@ pub fn write(
             ("Ground", show.ground),
             ("Finishes", show.finishes),
             ("Framing", show.framing),
+            ("Trim", show.trim),
             ("Architecture", show.architecture),
             ("Roof", show.roof),
             ("Mechanical", show.mechanical),
@@ -151,6 +152,31 @@ pub fn write(
         let floor = doc.show.storey.as_ref().and_then(|s| snap.storeys.iter().find(|x| x.path == *s)).and_then(|s| s.elevation).unwrap_or(0.0);
         if let (Ok(zero), Ok(one)) = (camera.world_to_viewport(eye, to_view(doc.origin, [0.0, 0.0, floor])), camera.world_to_viewport(eye, to_view(doc.origin, [1.0, 0.0, floor]))) {
             out.push_str(&format!("plan\t{:.2}\t{:.2}\t{:.4}\n", zero.x + model.0.x as f32, zero.y + model.0.y as f32, one.x - zero.x));
+        }
+    }
+    // The count the Trim switch reads (the model's): `count<TAB>Trim<TAB>27`.
+    if !snap.trim.pieces.is_empty() {
+        out.push_str(&format!("count\tTrim\t{}\n", snap.trim.pieces.len()));
+    }
+    // Where each piece of outside trim the model lays is on screen, at its two ends (call 184), in 3D with the Trim switch on:
+    // `trim<TAB>kind<TAB>the thing it trims<TAB>x1<TAB>y1<TAB>x2<TAB>y2<TAB>its width in pixels`. A demonstration measures a picture against these.
+    if let (true, Ok((camera, eye, _))) = (doc.show.trim && !doc.plan && !snap.trim.pieces.is_empty(), camera.single()) {
+        for p in &snap.trim.pieces {
+            let at = |q: [f64; 3]| camera.world_to_viewport(eye, to_view(doc.origin, q)).ok();
+            let (a, b) = (at(p.from), at(p.to));
+            // How wide it looks: the board's width carried across the way its face lies, at the middle.
+            let mid = [(p.from[0] + p.to[0]) / 2.0, (p.from[1] + p.to[1]) / 2.0, (p.from[2] + p.to[2]) / 2.0];
+            let run = [p.to[0] - p.from[0], p.to[1] - p.from[1], p.to[2] - p.from[2]];
+            let across = [p.face[1] * run[2] - p.face[2] * run[1], p.face[2] * run[0] - p.face[0] * run[2], p.face[0] * run[1] - p.face[1] * run[0]];
+            let long = (across[0] * across[0] + across[1] * across[1] + across[2] * across[2]).sqrt().max(1e-12);
+            let side = [mid[0] + across[0] / long * p.width, mid[1] + across[1] / long * p.width, mid[2] + across[2] / long * p.width];
+            let wide = match (at(mid), at(side)) {
+                (Some(m), Some(n)) => m.distance(n),
+                _ => 0.0,
+            };
+            if let (Some(a), Some(b)) = (a, b) {
+                out.push_str(&format!("trim\t{}\t{}\t{:.0}\t{:.0}\t{:.0}\t{:.0}\t{:.1}\n", p.kind.words(), p.of, a.x + model.0.x as f32, a.y + model.0.y as f32, b.x + model.0.x as f32, b.y + model.0.y as f32, wide));
+            }
         }
     }
     if out != *last {

@@ -272,6 +272,9 @@ pub struct Show {
     pub ground: bool,
     /// Each wall whose framing is priced drawn as its frame: plates, studs, headers.
     pub framing: bool,
+    /// The outside trim the estimate prices (fascia, soffit, corner boards, casing), each piece a board
+    /// where `trim::lay` puts it (call 184). Off, the house is drawn as it was without trim.
+    pub trim: bool,
     /// What the outside is finished in. Off, the finish is taken off the walls and
     /// what is under it is seen: the weather barrier where one is priced, and the
     /// flashing at each opening that has it.
@@ -748,6 +751,11 @@ pub struct Snapshot {
     /// The joists of each floor and the rafters of each roof plane that a priced line names,
     /// laid as lines on the plan (`building::frames`, call 177).
     pub frames: Vec<plumbline_world::building::frames::Frame>,
+    /// Each piece of outside trim the job's lines price, where it lies, and what is left out and why
+    /// (`trim::lay`, call 184): the window draws these and works nothing out.
+    pub trim: plumbline_world::trim::Laid,
+    /// The level each thing a piece of trim is on stands on, by the thing's path (an eave is on none).
+    pub trim_on: std::collections::HashMap<String, String>,
     /// What has no shape to draw, and why.
     pub not_drawn: Vec<(String, String)>,
     pub storeys: Vec<StoreyTotals>,
@@ -933,6 +941,8 @@ pub fn refresh(mut doc: ResMut<Doc>, mut snap: ResMut<Snapshot>) {
     s.drawn = drawn;
     s.not_drawn = not_drawn;
     s.frames = plumbline_world::building::frames::frames(&mut doc.job);
+    s.trim = plumbline_world::trim::lay(&mut doc.job);
+    s.trim_on = s.trim.pieces.iter().filter_map(|p| on.get(&p.of).map(|st| (p.of.clone(), st.clone()))).collect();
     s.work = {
         let mut q = doc.job.world.query::<(&plumbline_world::Node, &plumbline_world::Work)>();
         q.iter(&doc.job.world).filter_map(|(n, w)| w.status.value.map(|v| (n.path.clone(), v))).collect()
