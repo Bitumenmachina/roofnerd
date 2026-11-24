@@ -1519,3 +1519,15 @@ fn a_string_of_no_length_is_no_dimension_and_those_that_could_not_be_read_are_co
     assert_eq!(feet_written("0'-0\""), None);
     assert_eq!(feet_written("0'"), None);
 }
+
+#[test]
+fn a_gap_with_only_its_jambs_drawn_is_said_to_have_nothing_drawn_in_it_from_jamb_to_jamb() {
+    // J191-19. A 12 ft gap in the south wall of a 50 by 20 ft ring, a jamb line across at each end and nothing between them.
+    let mut s = Sheet::default();
+    s.ring(0.0, 0.0, 50.0, 20.0, 0.5);
+    s.cut([0.0, 0.25], [50.0, 0.25], 20.0, 32.0).cut([0.0, -0.25], [50.0, -0.25], 20.0, 32.0);
+    s.line([20.0, -0.25], [20.0, 0.25]).line([32.0, -0.25], [32.0, 0.25]);
+    let d = s.found(Q4);
+    assert!(d.notes.iter().any(|n| n.contains("nothing drawn in it from jamb to jamb")), "{:?}", d.notes);
+    assert!(d.notes.iter().all(|n| !n.contains("no line across)")), "{:?}", d.notes);
+}

@@ -486,6 +486,12 @@ pub fn figure(value: f64, decimals: usize) -> String {
     if part.is_empty() { format!("{minus}{grouped}") } else { format!("{minus}{grouped}.{part}") }
 }
 
+/// A quantity to two places the way the estimate rounds it (`lines::cents`: the half that was meant is rounded up, as on paper, and not down
+/// by what binary arithmetic lost): 1.125 reads 1.13 (call 191 item 18).
+pub fn figure2(value: f64) -> String {
+    figure(if value.is_finite() { crate::lines::cents(value) } else { value }, 2)
+}
+
 /// Dollars as they are written everywhere: to the cent, thousands separated, the minus
 /// before the sign ("-$12.50", never "$-12.50"). One writer (R21-12: it was written
 /// out in about forty places, and a negative came out two ways).

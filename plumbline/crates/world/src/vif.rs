@@ -152,13 +152,18 @@ pub fn vif(job: &mut Job) -> Vif {
 
     // What was traced over each drawing, each thing with its drawing: a figure traced
     // rests on the sheet's scale as well as on the thing it was traced as.
+    let mut laid_openings: BTreeSet<String> = BTreeSet::new();
     let traced_over: BTreeMap<String, String> = {
         let drawings: Vec<String> = elements.iter().filter(|e| e.kind == Kind::Drawing).map(|e| e.path.clone()).collect();
         let mut over = BTreeMap::new();
         for drawing in drawings {
             // What was traced over it, and what was laid from its sheet by `find-walls --lay`: walls, doors and windows (call 191 item 14).
             let mut standing = crate::plans::traced_over(job, &drawing).unwrap_or_default();
-            standing.extend(crate::plans::laid_from(job, &drawing).unwrap_or_default());
+            let laid = crate::plans::laid_from(job, &drawing).unwrap_or_default();
+            // A door or window laid from the sheet is priced by count and names no measure, but its place along its wall is the sheet's:
+            // its lines ride on the scale (call 191 item 16).
+            laid_openings.extend(laid.iter().filter(|p| elements.iter().any(|e| &e.path == *p && matches!(e.kind, Kind::Door | Kind::Window))).cloned());
+            standing.extend(laid);
             for thing in standing {
                 over.insert(thing, drawing.clone());
             }
@@ -173,6 +178,9 @@ pub fn vif(job: &mut Job) -> Vif {
         let amount = sheet.amount.value;
         let Some(e) = job.find(&sheet.path) else { continue };
         let mut rests = BTreeSet::new();
+        if laid_openings.contains(&sheet.path) {
+            rests.insert(sheet.path.clone());
+        }
         let formula = job.world.get::<Cost>(e).and_then(|c| c.lines.iter().find(|l| l.description == sheet.description)).map(|l| l.quantity.clone());
         let typed = job.world.get::<Cost>(e).and_then(|c| c.lines.iter().find(|l| l.description == sheet.description)).is_some_and(|l| typed_unsure(l).is_some());
         if let (Some(Ok(expr)), Some(measure)) = (formula.map(|f| formula::parse(&f)), job.world.get::<Measure>(e)) {
@@ -376,7 +384,7 @@ pub fn vif(job: &mut Job) -> Vif {
         // What rides on a measurement is a line whose quantity is itself in question:
         // a line of a Known length at an Assumed price is not made surer by a tape,
         // and its dollars do not send anyone to measure (call 83, M21-2).
-        let picked: Vec<&Line> = lines.iter().filter(|l| (l.quantity != Status::Known && l.rests.contains(&el.path)) || (identity && l.on == el.path) || (identity && el.kind == Kind::Wall && openings_of.get(&el.path).is_some_and(|o| o.contains(&l.on))) || (l.typed && l.on == el.path)).collect();
+        let picked: Vec<&Line> = lines.iter().filter(|l| (l.quantity != Status::Known && l.rests.contains(&el.path)) || (el.kind == Kind::Drawing && laid_openings.contains(&l.on) && l.rests.contains(&el.path)) || (identity && l.on == el.path) || (identity && el.kind == Kind::Wall && openings_of.get(&el.path).is_some_and(|o| o.contains(&l.on))) || (l.typed && l.on == el.path)).collect();
         counted.extend(picked.iter().map(|l| l.key.clone()));
         let (dollars, dollars_status, n, unpriced) = sum(&picked);
         place(Question { path: el.path.clone(), name: el.name.clone(), kind: el.kind, storey: storey_name(&el.path, el.kind), room: None, clash: None, in_the_way: None, values, dollars, dollars_status, lines: n, unpriced, also }, &mut with, &mut without);
