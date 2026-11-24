@@ -7947,3 +7947,57 @@ said. Changed the other way it kept the short figures. That is a wrong quantity.
 5. Nothing else about changing an assembly moves. Every expectation that moves is
    listed first; it moves only where a changed wall's shared line now reads the new
    assembly's quantity.
+
+### Call 200. A model brought in whole, as built, and what its worker held for a ruling (2026-11-24)
+
+Call 197's points 1 to 7 and call 199 were built by a Sonnet worker under
+`handoff/contracts/contract-197I.md` (`research/worker-report-call197I.md`) and accepted
+by the lead's own run in the worker's copy. The sample house written out and brought
+back has its 22 fixtures, 5 pieces of equipment, 4 footings (136 LF, 10.07 CY) and
+its roof (4 planes, 1,408.72 SF, eaves 144 LF), each made by the change a tool makes,
+each Assumed and sourced to the file; doors, windows and systems keep the file's
+names. Three things did not come to the lead's figures, and the worker bent nothing
+to them. Ruled:
+
+1. **Fittings: 37 of 39, and that is right.** A fitting is brought in by the change
+   the Fitting tool makes, which works its kind out from the runs that meet there.
+   Two of the sample's elbows stand where a third run ends, a joint the tool refuses
+   and the sample made by hand; they are left out and named with the tool's reason.
+   Two more come back as tees where the file says bend, because three ends meet
+   there. The lead's "39" was the first job's count and not what a file can give
+   back. **Owed** (with the ports, below): where what the runs make is not what the
+   file calls the fitting, the reply names the place and both words. The sample's
+   own hand-made joint is a fault of the sample and is left: correcting it moves
+   every count that rests on the sample.
+2. **Open ends are not what they were, and no end is joined on a guess.** In the
+   model a run reaches a fixture through a connection the plan put on the fixture,
+   up to 0.9 ft off its box. The file wrote none of that, so the second job reads
+   supply air 13 open ends (the first has 4), cold water 5 (1), and so on; every
+   extra end is 0.13 to 0.90 ft from a fixture's box. Joining an end to whatever
+   stands within a foot would give the first job's figures and would be a
+   connection nobody drew: refused. As built, the ends read open and the reply says
+   how many and on what. **Decided: the file says what is connected, the way IFC
+   says it**: each connection of a thing set down is written as a port on it
+   (`IfcDistributionPort`, nested in the thing) and each run's end as a port, two
+   that are joined tied by `IfcRelConnectsPorts`; the reader joins what the file's
+   ports say are joined and nothing else. A file without ports reads as built
+   today. That is the next command-line job on a model (contract 200P), and the
+   test that holds the first job's open ends waits in the tree, marked as waiting,
+   for it.
+3. **A run with no size is written** (today three hot-water pipes and two elbows
+   are left out of the file and said): as the run it is, with its line and no body,
+   and comes back with its size Unknown. With contract 200P.
+4. **The roof's property set is `Plumbline_Roof`** (Outline, EdgeRise, EaveHeight,
+   Basis), beside the `Plumbline_Values` the file already carries. The name stays as
+   written when the program's name goes through the code: a file written today
+   must read then.
+5. **Call 199 as built**: a shared line's quantity becomes the new assembly's where
+   it still read as the old one wrote it (200.00 to 140.00 SF, corner boards 20.00
+   to 14.00 LF by the hand figures; a quantity a person typed, 180.00 SF, left and
+   said). The new figures read Assumed because the 3 ft the starter assembly enters
+   is Assumed: right. **The window calls the same change and says nothing of the
+   quantities it rewrote**: it joins contract 197W as a point (say what was
+   rewritten and what was left, in the command line's words).
+6. Not right, and said: a model comes in slowly (17 seconds for the sample house in
+   a build made for testing); how sure each value was is written as words and not
+   read back, so everything brought in is Assumed, which is the safe side.

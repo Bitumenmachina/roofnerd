@@ -144,6 +144,8 @@ demos/vif.sh               # the verify-in-field list: each question, what to me
 demos/export.sh            # the estimate as a workbook of formulas (worked again by a second hand), as CSV, three lenses, and the building as IFC4 checked by IfcOpenShell
 demos/imports.sh           # a price list and an assembly library out as CSV and back; a supplier's list from CSV and from a workbook; a prior estimate set against the job
 demos/model.sh             # another trade's model (IFC) brought in: what comes in, what is listed instead, and the clash it hid
+demos/ifc-whole.sh         # a model brought in whole (call 197): the made-up whole house written out as IFC4 and brought into an empty job: its fixtures and equipment where they stood, its fittings on their runs, its footings, its roof (a hip, and a gable made on two edges) by the change the Roof tool makes, its names; what is left out says what follows; IfcOpenShell as the outside checker
+demos/change-assembly.sh    # an assembly changed for another writes the quantities of the one it becomes (call 199): a wall changed for the wainscot wall and back, each shared line named with what it was and what it is, a quantity typed by hand left as entered and what the new assembly would write said
 demos/planw.sh             # the same in the window, on a real scanned sheet and on a vector plan; pictures in demos/captured/plan
 demos/build.sh             # a floor from the outline its walls enclose, rooms and a hip roof, at the command line, with the figures worked by hand
 demos/buildw.sh            # the same in the window, traced over the made-up plan with the Floor, Room and Roof tools; pictures in demos/captured/build

@@ -172,11 +172,14 @@ fi
 "$P" import ifc "$T/readback.json" "$T/house.ifc" --status Assumed --source "this program's own model, written out" > "$T/in.txt"
 says "$T/in.txt" "16 walls"
 says "$T/in.txt" "10 rooms"
-# What there is nothing here to bring in as, it says, by kind and count; nothing goes missing.
-# Call 65: of the 22 fixtures, the six that IFC has a plumber's word for (water closets,
-# lavatories, tubs) are written as sanitary terminals; the other 16 are as they were.
-says "$T/in.txt" "16 fixture or outlet: nothing here to bring it in as"
-says "$T/in.txt" "6 plumbing fixtures: nothing here to bring it in as"
+# Call 197: the fixtures (of the 22, the six that IFC has a plumber's word for are written as sanitary
+# terminals, call 65, and the other 16 as flow terminals), the 5 pieces of equipment and the fittings come
+# in where they stood; of the 39 fittings written, 37 come in (two are refused where a third run ends at the
+# joint, said by name). What is left out says why, and nothing goes missing.
+says "$T/in.txt" "22 fixtures"
+says "$T/in.txt" "5 pieces of equipment"
+says "$T/in.txt" "37 fittings"
+says "$T/in.txt" "1 pipe fitting: this program would not take it: "
 # (Its walls by type are left out of the comparison: a building model is written with
 # each wall's own thickness and not its type, which the export says, so the types a
 # reader makes for them are the reader's and are named by it.)

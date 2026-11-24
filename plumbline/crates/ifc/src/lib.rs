@@ -29,11 +29,12 @@
 pub mod step;
 pub mod write;
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 use plumbline_world::building::{self, Floor, FloorType, InSystem, Room, Segment, Wall};
 use plumbline_world::editing::{self as ed, Entered};
-use plumbline_world::units::Len;
+use plumbline_world::units::{self, Len};
+use plumbline_world::{solve, Footprint, Placed, Rise};
 use plumbline_world::value::{Status, Val};
 use plumbline_world::{Job, Kind};
 use step::{Entity, File, V};
@@ -282,6 +283,211 @@ impl<'a> Reader<'a> {
     }
 }
 
+/// A wall's, or a strip footing's, body read as an upright box on its line (call 197: one reading
+/// for both): the line it is drawn on, how long and how thick, where its base is and how tall it
+/// is pushed, all in the file's own unit. Why not, where it is not.
+struct Upright {
+    a: [f64; 2],
+    b: [f64; 2],
+    length: f64,
+    way: P3,
+    thickness: f64,
+    base: f64,
+    depth: f64,
+}
+
+impl<'a> Reader<'a> {
+    fn upright(&self, e: &'a Entity) -> Result<Upright, &'static str> {
+        let r = self;
+        if r.pieces(e) > 1 {
+            return Err("its body is made of more than one piece: only a body of one piece is read");
+        }
+        let Some(body) = r.pushed(e) else {
+            return Err("its body is not a plain shape pushed straight, as far as this can read it: it may be curved, cut to a roof, a mesh, or name a part that is not in the file");
+        };
+        let Profile::Rect { x, y, at, along } = body.profile else {
+            return Err("its body is not a rectangle on plan");
+        };
+        let frame = r.placed(r.arg(e, 5)).then(&body.frame);
+        let up = frame.turn(body.way);
+        // Upright to within an eighth of an inch in eight feet.
+        if up[2].abs() < UPRIGHT {
+            return Err("it does not stand upright");
+        }
+        // Its length is the longer side of the rectangle, its thickness the shorter.
+        // Where the file gives the line the wall is drawn on, the side the line runs along is its length: a
+        // wall shorter than it is thick (a pilaster, a 4 in return) has its longer side across the line (call 180, C3).
+        let x_long = match r.axis(e) {
+            Some([p, q]) => {
+                let (dx, dy) = (q[0] - p[0], q[1] - p[1]);
+                let long = dx.hypot(dy);
+                let wx = frame.turn([along[0], along[1], 0.0]);
+                let wy = frame.turn([-along[1], along[0], 0.0]);
+                if long > 1.0e-9 && ((dx * wx[0] + dy * wx[1]) / long).abs() > 0.9999 {
+                    true
+                } else if long > 1.0e-9 && ((dx * wy[0] + dy * wy[1]) / long).abs() > 0.9999 {
+                    false
+                } else {
+                    x >= y
+                }
+            }
+            None => x >= y,
+        };
+        let (length, thickness, way) = if x_long { (x, y, [along[0], along[1], 0.0]) } else { (y, x, [-along[1], along[0], 0.0]) };
+        let middle = frame.place([at[0], at[1], 0.0]);
+        let way = frame.turn(way);
+        let (mut a, mut b) = ([middle[0] - way[0] * length / 2.0, middle[1] - way[1] * length / 2.0], [middle[0] + way[0] * length / 2.0, middle[1] + way[1] * length / 2.0]);
+        let mut length = length;
+        let mut way = way;
+        // A wall this program wrote carries the line it was drawn on: at a corner the body runs
+        // past that line, or stops short of it, so the line, not the body, is the wall (call 179,
+        // C1). Taken where it lies along the body (the same line, and its middle inside the body);
+        // any other axis is left alone.
+        if let Some([p, q]) = r.axis(e) {
+            let (dx, dy) = (q[0] - p[0], q[1] - p[1]);
+            let long = dx.hypot(dy);
+            let (mx, my) = ((p[0] + q[0]) / 2.0 - middle[0], (p[1] + q[1]) / 2.0 - middle[1]);
+            let (u, v) = (mx * way[0] + my * way[1], mx * way[1] - my * way[0]);
+            if long > 1.0e-9 && ((dx * way[0] + dy * way[1]) / long).abs() > 0.9999 && u.abs() <= length / 2.0 && v.abs() <= thickness / 2.0 + 1.0e-6 {
+                let sign = if dx * way[0] + dy * way[1] >= 0.0 { 1.0 } else { -1.0 };
+                a = p;
+                b = q;
+                length = long;
+                way = [sign * way[0], sign * way[1], 0.0];
+            }
+        }
+        let base = if up[2] > 0.0 { middle[2] } else { middle[2] - body.depth };
+        Ok(Upright { a, b, length, way, thickness, base, depth: body.depth })
+    }
+}
+
+/// A body read as a box: where its middle is (in the file's unit), its bottom, its three
+/// sizes (along, across, up) and how far it is turned on plan, in degrees.
+struct Boxed {
+    middle: [f64; 2],
+    bottom: f64,
+    size: P3,
+    angle: f64,
+    round: bool,
+}
+
+impl<'a> Reader<'a> {
+    /// A thing's body as the box it fills (call 197, point 1): a rectangle pushed straight is the
+    /// box it is, a round body the square box round it, an outline the box round its corners along
+    /// the body's own x. A body that leans, or is not a pushed shape, is not read.
+    fn boxed(&self, e: &'a Entity) -> Option<Boxed> {
+        let body = self.pushed(e)?;
+        let frame = self.placed(self.arg(e, 5)).then(&body.frame);
+        let up = frame.turn(body.way);
+        if up[2].abs() < UPRIGHT {
+            return None;
+        }
+        let low = |mid: f64| if up[2] > 0.0 { mid } else { mid - body.depth };
+        match &body.profile {
+            Profile::Rect { x, y, at, along } => {
+                let mid = frame.place([at[0], at[1], 0.0]);
+                let way = frame.turn([along[0], along[1], 0.0]);
+                Some(Boxed { middle: [mid[0], mid[1]], bottom: low(mid[2]), size: [*x, *y, body.depth], angle: way[1].atan2(way[0]).to_degrees(), round: false })
+            }
+            Profile::Circle { radius, at } => {
+                let mid = frame.place([at[0], at[1], 0.0]);
+                Some(Boxed { middle: [mid[0], mid[1]], bottom: low(mid[2]), size: [radius * 2.0, radius * 2.0, body.depth], angle: 0.0, round: true })
+            }
+            Profile::Outline(points) => {
+                let (lo, hi) = points.iter().fold(([f64::MAX; 2], [f64::MIN; 2]), |(lo, hi), p| ([lo[0].min(p[0]), lo[1].min(p[1])], [hi[0].max(p[0]), hi[1].max(p[1])]));
+                let mid = frame.place([(lo[0] + hi[0]) / 2.0, (lo[1] + hi[1]) / 2.0, 0.0]);
+                let way = frame.turn([1.0, 0.0, 0.0]);
+                Some(Boxed { middle: [mid[0], mid[1]], bottom: low(mid[2]), size: [hi[0] - lo[0], hi[1] - lo[1], body.depth], angle: way[1].atan2(way[0]).to_degrees(), round: false })
+            }
+        }
+    }
+    /// Where a thing stood, as the least and the greatest of each coordinate its body reaches (the
+    /// file's unit), or its place alone where its body is not one this reads.
+    fn reach(&self, e: &'a Entity) -> Option<([f64; 3], [f64; 3])> {
+        let placed = self.placed(self.arg(e, 5));
+        let Some(body) = self.pushed(e) else {
+            return self.get(self.arg(e, 5)).map(|_| (placed.o, placed.o));
+        };
+        let frame = placed.then(&body.frame);
+        let points: Vec<[f64; 2]> = match &body.profile {
+            Profile::Rect { x, y, at, along } => {
+                let across = [-along[1], along[0]];
+                [(-0.5, -0.5), (0.5, -0.5), (0.5, 0.5), (-0.5, 0.5)].iter().map(|(u, v)| [at[0] + along[0] * x * u + across[0] * y * v, at[1] + along[1] * x * u + across[1] * y * v]).collect()
+            }
+            Profile::Circle { radius, at } => [(-1.0, -1.0), (1.0, -1.0), (1.0, 1.0), (-1.0, 1.0)].iter().map(|(u, v)| [at[0] + radius * u, at[1] + radius * v]).collect(),
+            Profile::Outline(points) => points.clone(),
+        };
+        let (mut lo, mut hi) = ([f64::MAX; 3], [f64::MIN; 3]);
+        for p in points {
+            for along in [0.0, body.depth] {
+                let at = frame.place([p[0] + body.way[0] * along, p[1] + body.way[1] * along, body.way[2] * along]);
+                for i in 0..3 {
+                    lo[i] = lo[i].min(at[i]);
+                    hi[i] = hi[i].max(at[i]);
+                }
+            }
+        }
+        Some((lo, hi))
+    }
+    /// The area of the one face a roof slab is written as, in the file's unit squared.
+    fn face_area(&self, slab: &'a Entity) -> Option<f64> {
+        let (_, shape) = self.get(self.arg(slab, 6))?;
+        for rep in Reader::list(self.arg(shape, 2)) {
+            let Some((_, rep)) = self.get(rep) else { continue };
+            for item in Reader::list(self.arg(rep, 3)) {
+                let Some((_, set)) = self.get(item) else { continue };
+                if set.name != "IFCPOLYGONALFACESET" {
+                    continue;
+                }
+                let (_, points) = self.get(self.arg(set, 0))?;
+                let coords: Vec<P3> = Reader::list(self.arg(points, 0))
+                    .iter()
+                    .map(|c| {
+                        let n: Vec<f64> = Reader::list(c).iter().filter_map(Reader::number).collect();
+                        (n.len() == 3).then(|| [n[0], n[1], n[2]])
+                    })
+                    .collect::<Option<Vec<_>>>()?;
+                let mut area = 0.0;
+                for face in Reader::list(self.arg(set, 2)) {
+                    let (_, face) = self.get(face)?;
+                    let ring: Vec<P3> = Reader::list(self.arg(face, 0)).iter().filter_map(Reader::number).map(|i| coords.get((i as usize).wrapping_sub(1)).copied()).collect::<Option<Vec<_>>>()?;
+                    let mut sum = [0.0; 3];
+                    for i in 0..ring.len() {
+                        let c = cross(ring[i], ring[(i + 1) % ring.len()]);
+                        sum = [sum[0] + c[0], sum[1] + c[1], sum[2] + c[2]];
+                    }
+                    area += 0.5 * dot(sum, sum).sqrt();
+                }
+                return Some(area);
+            }
+        }
+        None
+    }
+}
+
+/// A thing brought in is called what the file calls it where nothing else in its place goes by
+/// that, else that with its number in the file (call 197, point 5).
+fn keep_name(job: &mut Job, path: &str, called: &str, id: u64) {
+    let called = called.trim();
+    let Some(e) = job.find(path) else { return };
+    let (Some(parent), now) = (job.world.get::<plumbline_world::Node>(e).and_then(|n| n.parent.clone()), job.world.get::<plumbline_world::Node>(e).map(|n| n.name.clone()).unwrap_or_default()) else { return };
+    if called.is_empty() || now == called {
+        return;
+    }
+    let name = if job.children().get(&parent).is_some_and(|c| c.contains_key(called)) { format!("{called} {id}") } else { called.to_string() };
+    if let Some(mut node) = job.world.get_mut::<plumbline_world::Node>(e) {
+        node.name = name;
+    }
+}
+
+/// What a thing is as the model this program wrote says it, less the mark of how sure it is:
+/// `Ceiling register, 4 x 10 (Known; sample plan)` is `Ceiling register, 4 x 10`.
+fn said_less_its_mark(text: &str) -> Option<String> {
+    let at = text.rfind(" (")?;
+    let inside = &text[at + 2..];
+    ["Known;", "Assumed;", "Unknown;"].iter().any(|s| inside.starts_with(s)).then(|| text[..at].trim().to_string()).filter(|t| !t.is_empty())
+}
+
 /// What the model calls a kind of thing, as words: `IFCBEAM` is a beam. The model writes
 /// every such name as one run of capitals, so the words of the commoner ones are given
 /// here; any other is its name less the "IFC", as the model has it.
@@ -472,7 +678,7 @@ pub fn import(job: &mut Job, bytes: &[u8], name: &str, how: Entered) -> Result<B
                 if said_known { "everything from it was brought in Assumed, not Known as was said of it" } else { "nothing from it is surer than was said of it as a whole" }
             ));
         }
-        let property_sets = property_sets.saturating_sub(storey_heights(&r).len());
+        let property_sets = property_sets.saturating_sub(storey_heights(&r).len()).saturating_sub(out.made.get("roofs").copied().unwrap_or(0));
         if property_sets + materials > 0 {
             out.notes.push(format!(
                 "not read: {property_sets} list{} of what the model says of each thing, and {materials} material{}. A thing brought in has its shape, its place and its name, and, where the model gives them, its work mark (new, existing, to demolish or temporary) and its bearing mark, each Assumed; what the model says it is made of, and anything else it says about each thing, is not brought in",
@@ -537,6 +743,7 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
         status: Option<String>,
         carries: Option<bool>,
         type_name: Option<String>,
+        what: Option<String>,
     }
     let mut said_of: HashMap<u64, OfIt> = HashMap::new();
     for (_, rel) in of(&["IFCRELDEFINESBYPROPERTIES"]) {
@@ -563,6 +770,7 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
                         };
                     }
                 }
+                "what it is" if set_name == "Plumbline_Values" => it.what = Reader::text(value).and_then(said_less_its_mark),
                 "type" if set_name == "Plumbline_Values" => it.type_name = Reader::text(value).and_then(|t| t.find(" (type-").map(|at| t[..at].to_string())).filter(|n| !n.is_empty()),
                 _ => {}
             }
@@ -573,6 +781,7 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
                 at.status = at.status.take().or(it.status.clone());
                 at.carries = at.carries.or(it.carries);
                 at.type_name = at.type_name.take().or(it.type_name.clone());
+                at.what = at.what.take().or(it.what.clone());
             }
         }
     }
@@ -731,68 +940,14 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
     let mut wall_marks: Vec<(String, u64, String)> = Vec::new();
     let mut told_apart: Vec<String> = Vec::new();
     for (id, e) in of(&["IFCWALL", "IFCWALLSTANDARDCASE", "IFCWALLELEMENTEDCASE"]) {
-        if r.pieces(e) > 1 {
-            leave(&e.name, "its body is made of more than one piece: only a body of one piece is read");
-            continue;
-        }
-        let Some(body) = r.pushed(e) else {
-            leave(&e.name, "its body is not a plain shape pushed straight, as far as this can read it: it may be curved, cut to a roof, a mesh, or name a part that is not in the file");
-            continue;
-        };
-        let Profile::Rect { x, y, at, along } = body.profile else {
-            leave(&e.name, "its body is not a rectangle on plan");
-            continue;
-        };
-        let frame = r.placed(r.arg(e, 5)).then(&body.frame);
-        let up = frame.turn(body.way);
-        // Upright to within an eighth of an inch in eight feet.
-        if up[2].abs() < UPRIGHT {
-            leave(&e.name, "it does not stand upright");
-            continue;
-        }
-        // Its length is the longer side of the rectangle, its thickness the shorter.
-        // Where the file gives the line the wall is drawn on, the side the line runs along is its length: a
-        // wall shorter than it is thick (a pilaster, a 4 in return) has its longer side across the line (call 180, C3).
-        let x_long = match r.axis(e) {
-            Some([p, q]) => {
-                let (dx, dy) = (q[0] - p[0], q[1] - p[1]);
-                let long = dx.hypot(dy);
-                let wx = frame.turn([along[0], along[1], 0.0]);
-                let wy = frame.turn([-along[1], along[0], 0.0]);
-                if long > 1.0e-9 && ((dx * wx[0] + dy * wx[1]) / long).abs() > 0.9999 {
-                    true
-                } else if long > 1.0e-9 && ((dx * wy[0] + dy * wy[1]) / long).abs() > 0.9999 {
-                    false
-                } else {
-                    x >= y
-                }
+        let body = match r.upright(e) {
+            Ok(body) => body,
+            Err(why) => {
+                leave(&e.name, why);
+                continue;
             }
-            None => x >= y,
         };
-        let (length, thickness, way) = if x_long { (x, y, [along[0], along[1], 0.0]) } else { (y, x, [-along[1], along[0], 0.0]) };
-        let middle = frame.place([at[0], at[1], 0.0]);
-        let way = frame.turn(way);
-        let (mut a, mut b) = ([middle[0] - way[0] * length / 2.0, middle[1] - way[1] * length / 2.0], [middle[0] + way[0] * length / 2.0, middle[1] + way[1] * length / 2.0]);
-        let mut length = length;
-        let mut way = way;
-        // A wall this program wrote carries the line it was drawn on: at a corner the body runs
-        // past that line, or stops short of it, so the line, not the body, is the wall (call 179,
-        // C1). Taken where it lies along the body (the same line, and its middle inside the body);
-        // any other axis is left alone.
-        if let Some([p, q]) = r.axis(e) {
-            let (dx, dy) = (q[0] - p[0], q[1] - p[1]);
-            let long = dx.hypot(dy);
-            let (mx, my) = ((p[0] + q[0]) / 2.0 - middle[0], (p[1] + q[1]) / 2.0 - middle[1]);
-            let (u, v) = (mx * way[0] + my * way[1], mx * way[1] - my * way[0]);
-            if long > 1.0e-9 && ((dx * way[0] + dy * way[1]) / long).abs() > 0.9999 && u.abs() <= length / 2.0 && v.abs() <= thickness / 2.0 + 1.0e-6 {
-                let sign = if dx * way[0] + dy * way[1] >= 0.0 { 1.0 } else { -1.0 };
-                a = p;
-                b = q;
-                length = long;
-                way = [sign * way[0], sign * way[1], 0.0];
-            }
-        }
-        let base = if up[2] > 0.0 { middle[2] } else { middle[2] - body.depth };
+        let (a, b, length, way, thickness, base) = (body.a, body.b, body.length, body.way, body.thickness, body.base);
         let (storey, floor) = storey_of(id, base * k);
         let source = from(e, id);
         let entered = Entered { status: how.status, source: &source };
@@ -880,7 +1035,10 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
         };
         let done = type_for.and_then(|t| ed::opening(job, wall, kind, &t, ed::OnWall::Offset(&feet(along * k)), &feet(sill * k), entered)).and_then(|path| marks(job, &path, id, &source, kind).map(|()| path));
         match done {
-            Ok(_) => made(if kind == Kind::Door { "doors" } else { "windows" }),
+            Ok(path) => {
+                keep_name(job, &path, &r.name(e), id);
+                made(if kind == Kind::Door { "doors" } else { "windows" })
+            }
             Err(why) => leave(&e.name, &format!("this program would not take it: {why}")),
         }
     }
@@ -894,6 +1052,140 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
             leave(&e.name, "a hole with no door or window in it: this program cuts a wall only for one of those, and a floor for nothing yet");
         }
     }
+    // ---- The program's own roof (call 197, point 4). A roof this program wrote carries a list of
+    // what is needed to make it again, `Plumbline_Roof`: its outline round the eaves, what each edge
+    // does (a pitch, or a gable) and how high the eaves are. It is made by the change the Roof tool
+    // makes (`solve::new_roof`), from that, Assumed and sourced to the file. A roof with no such list
+    // is a roof from another program, and is left out as it was.
+    let mut stood_on: Vec<(String, [f64; 3], [f64; 3])> = Vec::new();
+    let mut done: HashSet<u64> = HashSet::new();
+    // Where each run brought in lies, in feet and as the file places it: its ends.
+    let mut run_ends: Vec<(String, P3, P3)> = Vec::new();
+    let mut roof_slabs: HashSet<u64> = HashSet::new();
+    {
+        let mut sets: HashMap<u64, &Entity> = HashMap::new();
+        for (_, rel) in of(&["IFCRELDEFINESBYPROPERTIES"]) {
+            let Some((_, set)) = r.get(r.arg(rel, 5)) else { continue };
+            if set.name == "IFCPROPERTYSET" && Reader::text(r.arg(set, 2)) == Some("Plumbline_Roof") {
+                for obj in Reader::list(r.arg(rel, 4)) {
+                    if let V::Ref(id) = obj {
+                        sets.insert(*id, set);
+                    }
+                }
+            }
+        }
+        let mut parts_of: HashMap<u64, Vec<u64>> = HashMap::new();
+        for (_, rel) in of(&["IFCRELAGGREGATES"]) {
+            if let V::Ref(whole) = r.arg(rel, 4) {
+                for part in Reader::list(r.arg(rel, 5)) {
+                    if let V::Ref(id) = part {
+                        parts_of.entry(*whole).or_default().push(*id);
+                    }
+                }
+            }
+        }
+        for (id, e) in of(&["IFCROOF"]) {
+            let Some(set) = sets.get(&id) else { continue };
+            let prop = |name: &str| -> Option<&Entity> { Reader::list(r.arg(set, 4)).iter().filter_map(|p| r.get(p)).map(|(_, p)| p).find(|p| Reader::text(r.arg(p, 0)) == Some(name)) };
+            let parsed = (|| -> Result<(Vec<[f64; 2]>, Vec<Option<f64>>, f64), String> {
+                let outline = prop("Outline").ok_or("it has no outline")?;
+                let numbers: Vec<f64> = Reader::list(r.arg(outline, 2)).iter().filter_map(Reader::number).collect();
+                if numbers.len() < 6 || numbers.len() % 2 != 0 {
+                    return Err("its outline is not three or more corners".into());
+                }
+                let corners: Vec<[f64; 2]> = numbers.chunks(2).map(|c| [tidy(c[0] * k), tidy(c[1] * k)]).collect();
+                let rises = prop("EdgeRise").ok_or("it does not say what each edge does")?;
+                let edges = Reader::list(r.arg(rises, 2))
+                    .iter()
+                    .map(|v| {
+                        let said = Reader::text(v).ok_or("an edge's rise is not written as a pitch or as a gable")?.trim().to_string();
+                        if said.eq_ignore_ascii_case("gable") {
+                            return Ok(None);
+                        }
+                        said.strip_suffix(":12").and_then(|n| n.trim().parse::<f64>().ok()).filter(|n| n.is_finite()).map(Some).ok_or(format!("\"{said}\" is not a pitch"))
+                    })
+                    .collect::<Result<Vec<_>, String>>()?;
+                if edges.len() != corners.len() {
+                    return Err(format!("it has {} corners and {} edges", corners.len(), edges.len()));
+                }
+                let height = prop("EaveHeight").and_then(|p| Reader::number(r.arg(p, 2))).ok_or("it does not say how high its eaves are")?;
+                Ok((corners, edges, tidy(height * k)))
+            })();
+            let source = from(e, id);
+            let made_roof = parsed.and_then(|(mut corners, mut edges, height)| {
+                // Drawn anticlockwise, as the tool turns what is picked the other way about.
+                let twice: f64 = (0..corners.len()).map(|i| corners[i][0] * corners[(i + 1) % corners.len()][1] - corners[(i + 1) % corners.len()][0] * corners[i][1]).sum();
+                if twice < 0.0 {
+                    let n = corners.len();
+                    corners.reverse();
+                    edges = (0..n).map(|j| edges[(2 * n - 2 - j) % n]).collect();
+                }
+                let sure = |x| Val { value: Some(x), unit: units::PITCH.to_string(), status: how.status, source: source.clone() };
+                let footprint = Footprint {
+                    edges: edges.iter().map(|x| match x { Some(p) => sure(Rise::Pitch(*p)), None => Val { value: Some(Rise::Gable), unit: String::new(), status: how.status, source: source.clone() } }).collect(),
+                    points: Val { value: Some(corners), unit: units::FT.to_string(), status: how.status, source: source.clone() },
+                    eave_height: Val { value: Some(Len::One(height)), unit: units::FT.to_string(), status: how.status, source: source.clone() },
+                };
+                // A roof with this very outline and these edges already in the job would be counted twice.
+                let there = {
+                    let mut q = job.world.query::<&Footprint>();
+                    q.iter(&job.world).any(|f| f.points_ft().is_some_and(|p| p.len() == footprint.points.value.as_ref().map_or(0, |c| c.len()) && p.iter().zip(footprint.points.value.iter().flatten()).all(|(a, b)| (a[0] - b[0]).abs() < 0.001 && (a[1] - b[1]).abs() < 0.001)) && f.edges.iter().map(|e| e.value).eq(footprint.edges.iter().map(|e| e.value)))
+                };
+                if there {
+                    return Err("a roof with this very outline and these edges is already in the job: a second would be counted twice".to_string());
+                }
+                let taken: Vec<String> = {
+                    let mut q = job.world.query::<(&plumbline_world::Node, &Kind)>();
+                    q.iter(&job.world).filter(|(_, kind)| **kind == Kind::Roof).map(|(n, _)| n.name.clone()).collect()
+                };
+                let called = r.name(e);
+                let called = if called.is_empty() || taken.contains(&called) { (1..).map(|n| if n == 1 { "roof".to_string() } else { format!("roof {n}") }).find(|n| !taken.contains(n)).unwrap_or_default() } else { called };
+                solve::new_roof(job, &called, footprint)
+            });
+            let slabs = parts_of.get(&id).cloned().unwrap_or_default();
+            match made_roof {
+                Ok((path, report)) => {
+                    done.insert(id);
+                    roof_slabs.extend(slabs.iter().copied());
+                    if let Err(why) = marks(job, &path, id, &source, Kind::Roof) {
+                        out.notes.push(format!("a mark on {path} was not put on it: {why}"));
+                    }
+                    made("roofs");
+                    for _ in 0..report.planes {
+                        made("roof planes");
+                    }
+                    // The planes made are set beside the roof slabs in the file.
+                    job.derive();
+                    let mine: Vec<f64> = {
+                        let mut q = job.world.query::<(&plumbline_world::Node, &Kind, &plumbline_world::Measure)>();
+                        q.iter(&job.world).filter(|(n, kind, _)| **kind == Kind::RoofPlane && n.parent.as_deref() == Some(path.as_str())).filter_map(|(_, _, m)| m.0.get("surface_area").and_then(|d| d.value)).collect()
+                    };
+                    let theirs: Vec<f64> = slabs.iter().filter_map(|s| r.file.entities.get(s)).filter_map(|s| r.face_area(s)).map(|a| a * k * k).collect();
+                    let (mut a, mut b) = (mine.clone(), theirs.clone());
+                    a.sort_by(f64::total_cmp);
+                    b.sort_by(f64::total_cmp);
+                    let agree = a.len() == b.len() && a.iter().zip(&b).all(|(x, y)| (x - y).abs() < 0.01);
+                    if !agree {
+                        let total = |v: &[f64]| (v.iter().sum::<f64>() * 100.0).round() / 100.0;
+                        out.notes.push(format!(
+                            "the roof's planes made here are {} and come to {} SF, and the roof slabs in the file are {} and come to {} SF: they differ, so the roof here is not the roof in the file (made from the roof's outline, its pitches and its eave height, which the file gives)",
+                            a.len(),
+                            total(&a),
+                            b.len(),
+                            total(&b)
+                        ));
+                    }
+                }
+                Err(why) => {
+                    done.insert(id);
+                    if let Some(reach) = r.reach(e) {
+                        stood_on.push((said(&e.name), [reach.0[0] * k, reach.0[1] * k, reach.0[2] * k], [reach.1[0] * k, reach.1[1] * k, reach.1[2] * k]));
+                    }
+                    leave(&e.name, &format!("this program would not take it: {why}"));
+                }
+            }
+        }
+    }
     // ---- Floor slabs.
     let root = job.world.get::<plumbline_world::Node>(job.root()).map(|n| n.path.clone()).ok_or("the job has no root")?;
     let mut floor_types: HashMap<i64, String> = HashMap::new();
@@ -903,6 +1195,9 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
     for (id, e) in of(&["IFCSLAB", "IFCSLABSTANDARDCASE", "IFCSLABELEMENTEDCASE"]) {
         // A slab the model says is a roof is a roof, not a floor (J17B-18).
         if matches!(r.arg(e, 8), V::Enum(k) if k == "ROOF") {
+            if roof_slabs.contains(&id) {
+                continue;
+            }
             leave("IFCROOFSLAB", "a roof is not brought in from a model yet: draw it from its footprint and its pitch");
             continue;
         }
@@ -1041,8 +1336,14 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
         if !matches!(group.name.as_str(), "IFCDISTRIBUTIONSYSTEM" | "IFCSYSTEM" | "IFCDISTRIBUTIONCIRCUIT") {
             continue;
         }
+        // A kind IFC has no word for is written by its name (the object type and the long name): a
+        // name this program has for a system is that system.
+        let by_name = || -> Option<&'static str> {
+            [r.arg(group, 4), r.arg(group, 5)].into_iter().filter_map(Reader::text).find_map(|t| building::CLASSIFICATIONS.iter().find(|(c, _)| c.eq_ignore_ascii_case(t.trim())).map(|(c, _)| *c))
+        };
         let class = match r.arg(group, 6) {
             V::Enum(t) => match t.as_str() {
+                "USERDEFINED" => by_name(),
                 "AIRCONDITIONING" | "VENTILATION" | "HEATING" => Some("Supply Air"),
                 "EXHAUST" => Some("Exhaust Air"),
                 "DOMESTICCOLDWATER" => Some("Domestic Cold Water"),
@@ -1060,9 +1361,21 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
             systems_not_known += 1;
             continue;
         };
-        let path = match ed::system_of_class(job, class) {
-            Ok(path) => path,
-            Err(_) => ed::system(job, &r.name(group), class)?,
+        // The job's own system of that kind where it has one; else a new one called what the file
+        // calls it, with its capitals (call 197, point 5).
+        let have: Option<String> = {
+            let mut q = job.world.query::<(&plumbline_world::Node, &building::SystemInfo)>();
+            let mut all: Vec<String> = q.iter(&job.world).filter(|(_, s)| s.classification.eq_ignore_ascii_case(class)).map(|(n, _)| n.path.clone()).collect();
+            all.sort();
+            all.into_iter().next()
+        };
+        let path = match have {
+            Some(path) => path,
+            None => {
+                let called = r.name(group);
+                let taken = job.children().get(&root).is_some_and(|c| c.contains_key(called.as_str()));
+                if called.is_empty() || taken { ed::system_of_class(job, class)? } else { ed::system(job, &called, class)? }
+            }
         };
         for thing in Reader::list(r.arg(rel, 4)) {
             if let V::Ref(id) = thing {
@@ -1130,7 +1443,7 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
         let source = from(e, id);
         let entered = Entered { status: how.status, source: &source };
         let inches = |x: f64| format!("{} in", tidy(x * k * 12.0));
-        let done = (|| -> Result<(), String> {
+        let done = (|| -> Result<String, String> {
             let run_type = match across.1 {
                 None => ed::segment_type_for(job, kind, &inches(across.0), entered)?,
                 Some(depth) => {
@@ -1174,16 +1487,284 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
                 building::check_in_system(&path, kind, &on)?;
                 job.put(&path, on)?;
             }
-            Ok(())
+            Ok(path)
         })();
         match done {
-            Ok(()) => made(match kind {
-                Kind::Duct => "ducts",
-                Kind::Pipe => "pipes",
-                Kind::Conduit => "conduits",
-                _ => "cables",
-            }),
+            Ok(path) => {
+                run_ends.push((path, [start[0] * k, start[1] * k, start[2] * k], [end[0] * k, end[1] * k, end[2] * k]));
+                made(match kind {
+                    Kind::Duct => "ducts",
+                    Kind::Pipe => "pipes",
+                    Kind::Conduit => "conduits",
+                    _ => "cables",
+                })
+            }
             Err(why) => leave(&e.name, &format!("this program would not take it: {why}")),
+        }
+    }
+    // The file's units to feet, for what stood where a left-out thing did (call 197, point 6).
+    let reach_of = |e: &Entity| -> Option<([f64; 3], [f64; 3])> { r.reach(e).map(|(lo, hi)| ([lo[0] * k, lo[1] * k, lo[2] * k], [hi[0] * k, hi[1] * k, hi[2] * k])) };
+    let has_place = |e: &Entity| r.get(r.arg(e, 5)).is_some_and(|(_, p)| p.name == "IFCLOCALPLACEMENT");
+    // ---- Footings (call 197, point 3): a strip footing as a footing along its line, a pad footing as a
+    // pad, each by the change that makes one. A footing of another sort, or whose body is not a straight
+    // box, is left out with the reason.
+    for (id, e) in of(&["IFCFOOTING"]) {
+        if !has_place(e) {
+            continue;
+        }
+        done.insert(id);
+        let sort = match r.arg(e, 8) {
+            V::Enum(t) => t.as_str(),
+            _ => "",
+        };
+        let source = from(e, id);
+        let entered = Entered { status: how.status, source: &source };
+        let outcome: Result<String, String> = (|| {
+            let kept = said_of.get(&id).and_then(|it| it.type_name.clone());
+            match sort {
+                "STRIP_FOOTING" => {
+                    let body = r.upright(e).map_err(|why| why.to_string())?;
+                    let (storey, floor) = storey_of(id, body.base * k);
+                    if ((body.base + body.depth) * k - floor).abs() > 0.001 {
+                        return Err("its top is not at its level's floor: a footing here has its top at the floor of its level".to_string());
+                    }
+                    let width = format!("{} in", tidy(body.thickness * k * 12.0));
+                    let wanted = {
+                        let (len, unit) = units::parse_length(&width)?;
+                        len.feet(unit)?
+                    };
+                    let existing: Option<String> = {
+                        let mut q = job.world.query::<(&plumbline_world::Node, &plumbline_world::WallType)>();
+                        let mut all: Vec<String> = q.iter(&job.world).filter(|(_, t)| t.footing && t.layers.is_empty() && t.thickness.feet().is_some_and(|x| (x - wanted).abs() < 1e-9)).map(|(n, _)| n.path.clone()).collect();
+                        all.sort();
+                        all.into_iter().next()
+                    };
+                    let type_path = match existing {
+                        Some(path) => path,
+                        None => {
+                            let root = job.world.get::<plumbline_world::Node>(job.root()).map(|n| n.path.clone()).ok_or("the job has no root")?;
+                            let wanted_name = kept.clone().unwrap_or_else(|| format!("footing {width}"));
+                            let name = if job.children().get(&root).is_some_and(|c| c.contains_key(wanted_name.as_str())) { format!("{wanted_name} {id}") } else { wanted_name };
+                            ed::footing_type(job, &name, &width, entered)?
+                        }
+                    };
+                    let line = [[tidy(body.a[0] * k), tidy(body.a[1] * k)], [tidy(body.b[0] * k), tidy(body.b[1] * k)]];
+                    // A footing along this very line already on the level (the model brought in a second time)
+                    // would be counted twice: it is not made again.
+                    let near = |p: [f64; 2], q: [f64; 2]| (p[0] - q[0]).abs() < 0.001 && (p[1] - q[1]).abs() < 0.001;
+                    let there = {
+                        let mut q = job.world.query::<(&plumbline_world::Node, &Kind, &Wall)>();
+                        q.iter(&job.world).any(|(n, kind, w)| *kind == Kind::Footing && n.parent.as_deref() == Some(storey.as_str()) && w.line_ft().is_some_and(|l| (near(l[0], line[0]) && near(l[1], line[1])) || (near(l[0], line[1]) && near(l[1], line[0]))))
+                    };
+                    if there {
+                        return Err("it is already on this level: a footing along this very line would be counted twice".to_string());
+                    }
+                    let made = ed::footings(job, &storey, &type_path, &line, false, &feet(body.depth * k), entered)?;
+                    made.into_iter().next().ok_or_else(|| "no footing was made".to_string())
+                }
+                "PAD_FOOTING" => {
+                    let b = r.boxed(e).ok_or("its body is not a straight box")?;
+                    if b.angle.abs() > 1.0e-6 {
+                        return Err("it is turned on the plan: a pad footing here stands square to it".to_string());
+                    }
+                    let (storey, floor) = storey_of(id, b.bottom * k);
+                    let (across, deep) = (format!("{} in", tidy(b.size[0] * k * 12.0)), format!("{} in", tidy(b.size[1] * k * 12.0)));
+                    let ft = |typed: &str| -> Result<f64, String> {
+                        let (len, unit) = units::parse_length(typed)?;
+                        len.feet(unit)
+                    };
+                    let wanted = (ft(&across)?, ft(&deep)?);
+                    let existing: Option<String> = {
+                        let mut q = job.world.query::<(&plumbline_world::Node, &plumbline_world::SegmentType)>();
+                        let mut all: Vec<String> = q
+                            .iter(&job.world)
+                            .filter(|(_, t)| t.category == Kind::PadFooting && t.round == b.round && t.width.feet().is_some_and(|x| (x - wanted.0).abs() < 1e-9) && (b.round || t.depth.as_ref().and_then(|d| d.feet()).is_some_and(|x| (x - wanted.1).abs() < 1e-9)))
+                            .map(|(n, _)| n.path.clone())
+                            .collect();
+                        all.sort();
+                        all.into_iter().next()
+                    };
+                    let type_path = match existing {
+                        Some(path) => path,
+                        None => {
+                            let root = job.world.get::<plumbline_world::Node>(job.root()).map(|n| n.path.clone()).ok_or("the job has no root")?;
+                            let wanted_name = kept.clone().unwrap_or_else(|| if b.round { format!("pad footing {across} round") } else { format!("pad footing {across} by {deep}") });
+                            let name = if job.children().get(&root).is_some_and(|c| c.contains_key(wanted_name.as_str())) { format!("{wanted_name} {id}") } else { wanted_name };
+                            ed::framing_type(job, &name, Kind::PadFooting, &across, if b.round { None } else { Some(deep.as_str()) }, None, entered)?
+                        }
+                    };
+                    ed::pad(job, &storey, &type_path, [tidy(b.middle[0] * k), tidy(b.middle[1] * k)], &format!("{} in", tidy(b.size[2] * k * 12.0)), &feet((b.bottom + b.size[2]) * k - floor), entered)
+                }
+                "" | "NOTDEFINED" => Err("the model does not say whether it is a strip footing or a pad footing".to_string()),
+                other => Err(format!("its sort is a {}, which is neither a strip footing nor a pad footing: only those two are brought in", other.to_lowercase().replace('_', " "))),
+            }
+        })();
+        match outcome {
+            Ok(path) => {
+                keep_name(job, &path, &r.name(e), id);
+                if let Err(why) = marks(job, &path, id, &source, Kind::Footing) {
+                    out.notes.push(format!("a mark on {path} was not put on it: {why}"));
+                }
+                made(if sort == "PAD_FOOTING" { "pad footings" } else { "footings" });
+            }
+            Err(why) => {
+                if let Some(reach) = reach_of(e) {
+                    stood_on.push((said(&e.name), reach.0, reach.1));
+                }
+                let plain = why.starts_with("its ") || why.starts_with("the model") || why.starts_with("it ");
+                leave(&e.name, &if plain { why } else { format!("this program would not take it: {why}") });
+            }
+        }
+    }
+    // ---- Things set down: fixtures, equipment and furnishings (call 197, point 1). Each is a box the
+    // size of its body in the file, set down by the change that sets one down, Assumed, and called what
+    // the file calls it. A body this does not read leaves its size unknown, and says so.
+    const FIXTURES: [&str; 7] = ["IFCSANITARYTERMINAL", "IFCFLOWTERMINAL", "IFCOUTLET", "IFCAIRTERMINAL", "IFCLIGHTFIXTURE", "IFCSTACKTERMINAL", "IFCWASTETERMINAL"];
+    const FURNISHINGS: [&str; 3] = ["IFCFURNITURE", "IFCFURNISHINGELEMENT", "IFCSYSTEMFURNITUREELEMENT"];
+    const EQUIPMENT: [&str; 28] = [
+        "IFCDISTRIBUTIONFLOWELEMENT", "IFCDISTRIBUTIONELEMENT", "IFCDISTRIBUTIONCONTROLELEMENT", "IFCDISTRIBUTIONCHAMBERELEMENT", "IFCENERGYCONVERSIONDEVICE", "IFCFLOWMOVINGDEVICE", "IFCFLOWSTORAGEDEVICE", "IFCFLOWTREATMENTDEVICE",
+        "IFCELECTRICDISTRIBUTIONBOARD", "IFCUNITARYEQUIPMENT", "IFCBOILER", "IFCPUMP", "IFCFAN", "IFCTANK", "IFCTRANSFORMER", "IFCCOMPRESSOR", "IFCCOIL", "IFCCONDENSER", "IFCEVAPORATOR", "IFCHEATEXCHANGER", "IFCFILTER",
+        "IFCELECTRICGENERATOR", "IFCSWITCHINGDEVICE", "IFCPROTECTIVEDEVICE", "IFCAIRTOAIRHEATRECOVERY", "IFCCHILLER", "IFCHUMIDIFIER", "IFCELECTRICMOTOR",
+    ];
+    let mut set_down: Vec<(String, Kind, P3, [f64; 3])> = Vec::new();
+    let every_class: Vec<&str> = FIXTURES.iter().chain(&FURNISHINGS).chain(&EQUIPMENT).copied().collect();
+    for (id, e) in of(&every_class) {
+        if !has_place(e) {
+            continue;
+        }
+        done.insert(id);
+        let kind = if FIXTURES.contains(&e.name.as_str()) {
+            Kind::Fixture
+        } else if FURNISHINGS.contains(&e.name.as_str()) {
+            Kind::Furnishing
+        } else {
+            Kind::Equipment
+        };
+        let source = from(e, id);
+        let entered = Entered { status: how.status, source: &source };
+        let body = r.boxed(e);
+        let origin = r.placed(r.arg(e, 5)).o;
+        let (middle, bottom) = match &body {
+            Some(b) => (b.middle, b.bottom),
+            None => ([origin[0], origin[1]], origin[2]),
+        };
+        let (storey, floor) = storey_of(id, bottom * k);
+        let called = r.name(e);
+        let what = said_of.get(&id).and_then(|it| it.what.clone()).unwrap_or_else(|| if called.is_empty() { kind.stem().to_string() } else { called.clone() });
+        let at = [tidy(middle[0] * k), tidy(middle[1] * k)];
+        let offset = feet(bottom * k - floor);
+        let outcome = (|| -> Result<String, String> {
+            // A thing of this kind in this very place already on the level (the model brought in a second
+            // time) would be counted twice: it is not set down again.
+            let there = {
+                let mut q = job.world.query::<(&plumbline_world::Node, &Kind, &Placed)>();
+                q.iter(&job.world).any(|(n, other, p)| {
+                    n.parent.as_deref() == Some(storey.as_str())
+                        && *other == kind
+                        && p.at_ft().is_some_and(|c| (c[0] - at[0]).abs() < 0.001 && (c[1] - at[1]).abs() < 0.001)
+                        && p.offset.feet().is_some_and(|z| (z - (bottom * k - floor)).abs() < 0.001)
+                        && (called.is_empty() || n.name == called || n.name.starts_with(&format!("{called} ")))
+                })
+            };
+            if there {
+                return Err(format!("a {} in this very place is already on this level: a second would be counted twice", kind.stem()));
+            }
+            let size = body.as_ref().map(|b| [tidy(b.size[0] * k), tidy(b.size[1] * k), tidy(b.size[2] * k)]);
+            let path = ed::place(job, &storey, kind, &what, at, &offset, size, system_of.get(&id).map(String::as_str), entered)?;
+            if size.is_none() {
+                let at_it = job.find(&path).ok_or("the new thing is not there")?;
+                let mut placed = job.world.get::<Placed>(at_it).cloned().ok_or("the new thing has no place")?;
+                placed.size = Val::unknown("ft", "the model's body for it is not a shape this reads, so how big it is is not known");
+                job.put(&path, placed)?;
+            }
+            if let Some(b) = &body {
+                if b.angle.abs() > 1.0e-6 {
+                    let now = (b.angle * 1.0e6).round() / 1.0e6 + 0.0;
+                    ed::turn(job, &path, now, entered)?;
+                }
+            }
+            keep_name(job, &path, &called, id);
+            Ok(path)
+        })();
+        match outcome {
+            Ok(path) => {
+                set_down.push((path, kind, [at[0], at[1], bottom * k], body.as_ref().map(|b| [b.size[0] * k, b.size[1] * k, b.size[2] * k]).unwrap_or([0.0; 3])));
+                made(match kind {
+                    Kind::Fixture => "fixtures",
+                    Kind::Furnishing => "furnishings",
+                    _ => "pieces of equipment",
+                });
+            }
+            Err(why) => {
+                if let Some(reach) = reach_of(e) {
+                    stood_on.push((said(&e.name), reach.0, reach.1));
+                }
+                leave(&e.name, &format!("this program would not take it: {why}"));
+            }
+        }
+    }
+    // ---- Fittings, on the runs they join (point 2). A fitting in the file names no run: it has no
+    // ports and no relation, only its place. It is put where runs' ends meet at that place, by the
+    // change that puts a fitting there, which works out its kind from the runs.
+    for (id, e) in of(&["IFCDUCTFITTING", "IFCPIPEFITTING", "IFCCABLECARRIERFITTING", "IFCCABLEFITTING", "IFCFLOWFITTING"]) {
+        if !has_place(e) {
+            continue;
+        }
+        done.insert(id);
+        let source = from(e, id);
+        let entered = Entered { status: how.status, source: &source };
+        let Some(b) = r.boxed(e) else {
+            if let Some(reach) = reach_of(e) {
+                stood_on.push((said(&e.name), reach.0, reach.1));
+            }
+            leave(&e.name, "its body is not a box this reads, so where the runs it joins meet cannot be told");
+            continue;
+        };
+        let (storey, floor) = storey_of(id, b.bottom * k);
+        let middle_z = (b.bottom + b.size[2] / 2.0) * k - floor;
+        let outcome = ed::fitting(job, &storey, [tidy(b.middle[0] * k), tidy(b.middle[1] * k)], Some(&feet(middle_z)), None, entered);
+        match outcome {
+            Ok(fitted) => {
+                keep_name(job, &fitted.path, &r.name(e), id);
+                made("fittings");
+            }
+            Err(why) => {
+                if let Some(reach) = reach_of(e) {
+                    stood_on.push((said(&e.name), reach.0, reach.1));
+                }
+                leave(&e.name, &format!("this program would not take it: {why}"));
+            }
+        }
+    }
+    // ---- Runs that end at a fixture or a piece of equipment are joined to it, as the change that joins
+    // one does (point 2): a run's end inside the thing's box.
+    {
+        let runs = run_ends.clone();
+        let mut not_joined: Vec<String> = Vec::new();
+        let mut joined = 0usize;
+        let joining = format!("{}: the run ends at it, in the model brought in", how.source);
+        for (thing, kind, at, size) in set_down.clone() {
+            if !matches!(kind, Kind::Fixture | Kind::Equipment) || size == [0.0; 3] {
+                continue;
+            }
+            let reach = size[0].hypot(size[1]) / 2.0 + 0.1;
+            let near = |p: P3| (p[0] - at[0]).abs() <= reach && (p[1] - at[1]).abs() <= reach && p[2] >= at[2] - 0.1 && p[2] <= at[2] + size[2] + 0.1;
+            for (run, a, b) in &runs {
+                if !(near(*a) || near(*b)) {
+                    continue;
+                }
+                match ed::connect(job, &thing, run, Entered { status: how.status, source: &joining }) {
+                    Ok(_) => joined += 1,
+                    Err(why) if why.contains("already has a connection") || why.starts_with("neither end of") => {}
+                    Err(why) => not_joined.push(format!("{run} at {thing}: {why}")),
+                }
+            }
+        }
+        if joined > 0 {
+            out.notes.push(format!("{joined} run{} ending at a fixture or a piece of equipment {} joined to it, where it stood", if joined == 1 { "" } else { "s" }, if joined == 1 { "was" } else { "were" }));
+        }
+        if !not_joined.is_empty() {
+            out.notes.push(format!("{} run{} end{} at a fixture or a piece of equipment and could not be joined to it: {}", not_joined.len(), if not_joined.len() == 1 { "" } else { "s" }, if not_joined.len() == 1 { "s" } else { "" }, not_joined.join("; ")));
         }
     }
     // ---- Everything else that is a thing with a place and a shape: listed.
@@ -1198,10 +1779,13 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
     for id in &ids {
         let e = &r.file.entities[id];
         let is_placed = r.get(r.arg(e, 5)).is_some_and(|(_, p)| p.name == "IFCLOCALPLACEMENT" || p.name == "IFCGRIDPLACEMENT");
-        if READ.contains(&e.name.as_str()) {
+        if READ.contains(&e.name.as_str()) || done.contains(id) {
             continue;
         }
         if is_placed {
+            if let Some(reach) = reach_of(e) {
+                stood_on.push((said(&e.name), reach.0, reach.1));
+            }
             leave(&e.name, "nothing here to bring it in as");
         } else if Reader::text(r.arg(e, 0)).is_some_and(|mark| mark.len() == 22) && e.args.len() >= 7 && !e.name.starts_with("IFCREL") && !e.name.ends_with("TYPE") && !e.name.ends_with("STYLE") && !e.name.ends_with("TEMPLATE") && !NOT_THINGS.contains(&e.name.as_str()) {
             leave(&e.name, "the model gives it no place, and there is nothing here to bring it in as");
@@ -1212,6 +1796,30 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
     }
     if systems_not_known > 0 {
         out.notes.push(format!("{systems_not_known} system{} in the model {} of a sort this program has no name for: what is on {} was brought in on no system", if systems_not_known == 1 { "" } else { "s" }, if systems_not_known == 1 { "is" } else { "are" }, if systems_not_known == 1 { "it" } else { "them" }));
+    }
+    // What follows from what was left out (call 197, point 6): the runs' ends that stood on a thing not
+    // brought in read open here, where they read joined in the model.
+    if !stood_on.is_empty() {
+        job.derive();
+        let net = building::network::network(job, None, None, building::network::TOLERANCE_FT)?;
+        let mut by_what: BTreeMap<String, usize> = BTreeMap::new();
+        for at in net.open.iter().filter_map(|i| net.nodes.get(*i)).map(|n| n.at) {
+            let reach = 0.1;
+            if let Some((what, _, _)) = stood_on.iter().find(|(_, lo, hi)| (0..3).all(|i| at[i] >= lo[i] - reach && at[i] <= hi[i] + reach)) {
+                *by_what.entry(what.clone()).or_insert(0) += 1;
+            }
+        }
+        let total: usize = by_what.values().sum();
+        if total > 0 {
+            out.notes.push(format!(
+                "{total} run end{} read open here: {} stood on {} that {} not brought in ({})",
+                if total == 1 { "" } else { "s" },
+                if total == 1 { "it" } else { "each" },
+                if by_what.len() == 1 && total == 1 { "a thing" } else { "things" },
+                if by_what.len() == 1 && total == 1 { "was" } else { "were" },
+                by_what.iter().map(|(what, n)| format!("{n} on {what}")).collect::<Vec<_>>().join(", ")
+            ));
+        }
     }
     out.notes.push(format!("the model is in {}: every length was turned into feet and kept to a ten-thousandth of a foot", out.unit));
     out.left_out = left.into_iter().map(|((class, why), n)| (class, n, why)).collect();

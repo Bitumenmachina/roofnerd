@@ -70,9 +70,12 @@ hand "$T/g1.txt" "$EAST" "40 SF, 9.5 13.5 9.5" "[$EAST]: gable ~40 SF; top (0, 9
 hand "$T/g1.txt" "$WEST" "40 SF, 9.5 13.5 9.5" "[$WEST]: gable ~40 SF; top (0, 9.5) (8, 13.5) (16, 9.5) ft"
 echo "  each says what it rests on (the wall, the rake over it, the plane of the roof):"
 says "$T/g1.txt" "rests on: $EAST#pl::wall, rake-"
+# Call 197, point 7: "none" is marked ~ where it is Assumed, as `show` marks it (call 192: none takes the weakest of the
+# roof, the eave and the wall, and every house here is traced, so Assumed). The four checks of "none" below moved from
+# "none: ..." to "~ none: ..." by that decision, and by nothing else.
 echo "  the south and the north wall: an eave is over each, none, and it says so:"
-says "$T/g1.txt" "[$SOUTH]: none: an eave is over it"
-says "$T/g1.txt" "[$NORTH]: none: an eave is over it"
+says "$T/g1.txt" "[$SOUTH]: ~ none: an eave is over it"
+says "$T/g1.txt" "[$NORTH]: ~ none: an eave is over it"
 echo "  a thing no line asks the figure of does not carry it, and net_area is what it was (16 x 9 = 144 SF on the west wall):"
 "$P" show "$J" "$WEST" > "$T/show-west.txt"
 lacks "$T/show-west.txt" "gable area"
@@ -114,14 +117,14 @@ hand "$T/g3.txt" "$EAST" "72 SF, 9.5 to 17.5" "[$EAST]: gable ~72 SF; top (0, 9.
 hand "$T/g3.txt" "$WEST (runs north to south)" "72 SF, 17.5 to 9.5" "[$WEST]: gable ~72 SF; top (0, 17.5) (16, 9.5) ft"
 echo "  the north wall, under the high edge, rises 8.5 ft along all 24 ft: 204.00 SF, its top level at 17.5 ft; the south, under the eave: none:"
 hand "$T/g3.txt" "$NORTH" "204 SF, level 17.5" "[$NORTH]: gable ~204 SF; top (0, 17.5) (24, 17.5) ft"
-says "$T/g3.txt" "[$SOUTH]: none: an eave is over it"
+says "$T/g3.txt" "[$SOUTH]: ~ none: an eave is over it"
 
 echo
 echo "== 4. A hip roof: eaves all round, no wall has a gable, and the siding is what it was =="
 J4="$T/hip.json"
 house "$J4" "P P P P"
 "$P" gable "$J4" > "$T/g4.txt"
-for w in $SOUTH $EAST $NORTH $WEST; do says "$T/g4.txt" "[$w]: none: an eave is over it"; done
+for w in $SOUTH $EAST $NORTH $WEST; do says "$T/g4.txt" "[$w]: ~ none: an eave is over it"; done
 "$P" import assemblies "$J4" starter >/dev/null
 for w in $SOUTH $EAST $NORTH $WEST; do
     "$P" apply "$J4" "$w" "Exterior wall, 2x6, lap siding" --source "the starter library" >/dev/null

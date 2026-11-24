@@ -28,10 +28,10 @@ cmp -s "$J" "$T/before.json" || { echo "FAIL: a refused model changed the job"; 
 OUT="$("$P" import ifc "$J" demos/ifc/made-up-house.ifc --status Assumed --source "the designer's model (made up)")"
 echo "$OUT" | sed 's/^/    /'
 # The model holds two levels, four walls, a door, a window, a slab, a space, a duct, a
-# pipe, and a beam, a stair and a chair.
-for made in "2 levels" "4 walls" "1 door" "1 window" "1 floor" "1 room" "1 duct" "1 pipe"; do says "brought in" "$made" "$OUT"; done
-says "what was not" "not brought in: 3 things" "$OUT"
-for left in "1 beam: nothing here to bring it in as" "1 stair: nothing here to bring it in as" "1 furniture: nothing here to bring it in as"; do says "listed" "$left" "$OUT"; done
+# pipe, and a beam, a stair and a chair. The chair is set down as a furnishing (call 197, point 1).
+for made in "2 levels" "4 walls" "1 door" "1 window" "1 floor" "1 room" "1 duct" "1 pipe" "1 furnishing"; do says "brought in" "$made" "$OUT"; done
+says "what was not" "not brought in: 2 things" "$OUT"
+for left in "1 beam: nothing here to bring it in as" "1 stair: nothing here to bring it in as"; do says "listed" "$left" "$OUT"; done
 says "its unit" "the model is in meters: every length was turned into feet" "$OUT"
 "$P" check "$J"
 

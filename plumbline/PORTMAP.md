@@ -265,6 +265,16 @@ from BIMCraft at the same commit is listed here by hand, and is checked by its o
   `decode` are written with `and_then`, because this workspace is on the 2021 edition.
 - `crates/ifc/src/lib.rs`, the importer over it, is ours (DECISIONS.md call 47):
   BIMCraft's `import.rs` builds BIMCraft's model and was read, not ported.
+- `crates/ifc/src/lib.rs`, a model brought in whole (call 197, contract 197I) is ours, and `tools/portmap.sh` does not read
+  it. Searched all of BIMCraft: `grep -rln -i "ifc" crates apps` (76 files) and read `core/src/import.rs`, `core/src/ifc.rs`,
+  `core/src/family.rs`, `core/src/ifc/classes.rs`. A fixture, a fitting or furniture is read there as a generic component of
+  its class, shape from the body (`import.rs`, `NOT_GENERIC` at 44 to 80 lists the ports among what never comes in as one);
+  **no port or relation between a fitting and a run is read anywhere** (`grep -n "IFCRELCONNECTSPORT\|IFCDISTRIBUTIONPORT"
+  crates/core/src/import.rs` finds only that exclusion), so a fitting is put here by this program's own change where runs'
+  ends meet. A footing whose sort is not strip (or footing beam) is read there as an isolated footing (`import.rs:2424`):
+  here a strip and a pad are read by their sorts and every other sort is left out and said; the rule is written fresh. A roof
+  there is made again from its slabs' faces (`import.rs:2003`); here from a list this program writes on its own roof
+  (`Plumbline_Roof`), by the Roof tool's change, because the faces do not say a pitch or a gable. No code is taken.
 - `crates/world/src/gable.rs` (call 192: a wall under a rake rises to the roof) is ours, and `tools/portmap.sh` does not read
   it. Searched all of BIMCraft: `grep -rli 'gable' crates apps` (21 files: the roof tool's gable ends, `rvt/src/roofs.rs`,
   `core/src/{commands,model,skeleton,sketch,walls,import,ifc}.rs`) and `grep -rli 'attach_top\|top_profile' crates apps`. What is

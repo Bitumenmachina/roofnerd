@@ -28,11 +28,12 @@ fn a_model_comes_in_as_storeys_walls_openings_a_floor_a_room_and_runs_and_the_re
     assert_eq!((b.schema.as_str(), b.unit.as_str()), ("IFC4", "meters"));
     assert!((b.feet_per_unit - 1.0 / 0.3048).abs() < 1.0e-12);
     let made: Vec<(&str, usize)> = b.made.iter().map(|(k, n)| (k.as_str(), *n)).collect();
-    assert_eq!(made, [("doors", 1), ("ducts", 1), ("floors", 1), ("levels", 2), ("pipes", 1), ("rooms", 1), ("walls", 4), ("windows", 1)]);
-    // The beam, the stair and the chair: each listed, none dropped.
+    // Call 197, point 1: the chair is a furnishing and is set down where it stood.
+    assert_eq!(made, [("doors", 1), ("ducts", 1), ("floors", 1), ("furnishings", 1), ("levels", 2), ("pipes", 1), ("rooms", 1), ("walls", 4), ("windows", 1)]);
+    // The beam and the stair: each listed, none dropped.
     let left: Vec<(&str, usize)> = b.left_out.iter().map(|(c, n, _)| (c.as_str(), *n)).collect();
     // Call 50: what the model calls a kind of thing is said in words.
-    assert_eq!(left, [("beam", 1), ("furniture", 1), ("stair", 1)]);
+    assert_eq!(left, [("beam", 1), ("stair", 1)]);
     assert!(b.left_out.iter().all(|(_, _, why)| why == "nothing here to bring it in as"));
     assert!(b.notes.iter().any(|n| n.contains("the model is in meters")));
     job.derive();
