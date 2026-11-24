@@ -22,7 +22,7 @@ use plumbline_world::building::forms::Form;
 use std::collections::{BTreeMap, HashMap};
 
 use plumbline_world::building::{self, FittingKind, Shape, SystemInfo};
-use plumbline_world::{roof, view, Cost, Discipline, Fitting, Job, JobInfo, Kind, Level, Node};
+use plumbline_world::{roof, view, Cost, Discipline, Fitting, Footprint, Job, JobInfo, Kind, Level, Node, Rise};
 
 type P3 = [f64; 3];
 
@@ -583,6 +583,29 @@ pub fn export(job: &mut Job, file: &str, when: &str) -> Result<Written, String> 
         roofs.push((roof.clone(), id));
         on_building.push(id);
         count("roofs");
+        // What is needed to make this roof again (call 197, point 4): its outline round the eaves, what
+        // each edge does and how high the eaves are, in a list of this program's own name, with how
+        // sure each is and where it came from. (The overhang is in the outline, which is drawn at the
+        // eaves; each plane's area is in the roof slabs under it.)
+        if let Some(footprint) = job.find(roof).and_then(|e| job.world.get::<Footprint>(e)).cloned() {
+            if let (Some(points), Some(height)) = (footprint.points_ft(), footprint.eave_height.feet()) {
+                if footprint.edges.len() == points.len() && footprint.edges.iter().all(|e| e.value.is_some()) {
+                    let corners = points.iter().flat_map(|p| [format!("IFCLENGTHMEASURE({})", real(p[0])), format!("IFCLENGTHMEASURE({})", real(p[1]))]).collect::<Vec<_>>().join(",");
+                    let outline = o.add(format!("IFCPROPERTYLISTVALUE('Outline','the corners round the eaves, each as east then north, in feet, in order',({corners}),$)"));
+                    let rises = footprint.edges.iter().map(|e| match e.value {
+                        Some(Rise::Pitch(p)) => format!("IFCLABEL({})", text(&view::pitch_said(p))),
+                        _ => "IFCLABEL('gable')".to_string(),
+                    });
+                    let rises = o.add(format!("IFCPROPERTYLISTVALUE('EdgeRise','what each edge does, the edge from the first corner to the second first: its rise in 12, or a gable',({}),$)", rises.collect::<Vec<_>>().join(",")));
+                    let eave = o.add(format!("IFCPROPERTYSINGLEVALUE('EaveHeight','how high the eaves are above the datum, in feet',IFCLENGTHMEASURE({}),$)", real(height)));
+                    let edges = footprint.edges.iter().enumerate().map(|(i, e)| format!("{}: {:?}, {}", i + 1, e.status, e.source)).collect::<Vec<_>>().join("; ");
+                    let basis = format!("outline ({:?}; {}); edges ({edges}); eave height ({:?}; {})", footprint.points.status, footprint.points.source, footprint.eave_height.status, footprint.eave_height.source);
+                    let basis = o.add(format!("IFCPROPERTYSINGLEVALUE('Basis','how sure each is, and where it came from',IFCTEXT({}),$)", text(&basis)));
+                    let set = o.add(format!("IFCPROPERTYSET({},$,'Plumbline_Roof',$,(#{outline},#{rises},#{eave},#{basis}))", o.id(&format!("{roof} makes it again"))));
+                    o.add(format!("IFCRELDEFINESBYPROPERTIES({},$,$,$,(#{id}),#{set})", o.id(&format!("{roof} has what makes it again"))));
+                }
+            }
+        }
     }
     if !planes_out.is_empty() {
         not_written.push(("roof plane".into(), planes_out.len(), "it cannot be placed in space: a value its shape needs is not known".into()));

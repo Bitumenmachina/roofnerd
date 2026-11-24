@@ -31,6 +31,49 @@ pub struct Header {
     pub extra: BTreeMap<String, serde_json::Value>,
 }
 
+/// A line both assemblies have, that read as the old assembly wrote it, and now reads as the new one writes it
+/// (call 199): its quantity as a figure before and after, and as it is written before and after.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Rewritten {
+    pub line: String,
+    pub was: String,
+    pub now: String,
+    pub was_written: String,
+    pub now_written: String,
+}
+
+/// Why a shared line's quantity was not made the new assembly's.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum LeftAsIs {
+    /// A person changed its quantity (its formula or an entry is no longer the old assembly's).
+    Entered,
+    /// The old assembly is no longer in the job, so the line cannot be compared with what it wrote.
+    OldAssemblyGone,
+    /// The new quantity comes out in another unit than the line is priced and ordered in.
+    Unit,
+}
+
+/// A line both assemblies have, whose quantity was left as it was, and what the new assembly would have written.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Left {
+    pub line: String,
+    pub has: String,
+    pub has_written: String,
+    pub would: String,
+    pub would_written: String,
+    pub why: LeftAsIs,
+}
+
+/// What changing a thing's assembly did (call 199): the lines added, the lines taken off, the shared lines whose
+/// quantity is now the new assembly's, and the shared lines left as they were.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct Changed {
+    pub added: Vec<String>,
+    pub taken: Vec<String>,
+    pub rewritten: Vec<Rewritten>,
+    pub left: Vec<Left>,
+}
+
 pub struct Job {
     pub header: Header,
     pub world: World,
@@ -809,6 +852,16 @@ impl Job {
     /// and all; the rest of the new one's lines are added. Lines put on the thing by hand
     /// are not touched. Gives the lines added and the lines taken off.
     pub fn change_assembly(&mut self, path: &str, assembly: &str, status: Status, source: &str) -> Result<(Vec<String>, Vec<String>), String> {
+        self.change_assembly_said(path, assembly, status, source).map(|c| (c.added, c.taken))
+    }
+
+    /// As `change_assembly`, and saying what became of the lines the two assemblies share (call 199). Such a line keeps
+    /// what a person can have entered on it: its price, its waste, how it is ordered, whether it is off. Its quantity
+    /// (the formula, and the entries and stretch-out the formula takes) becomes the new assembly's where the line still
+    /// reads as the old assembly wrote it; where a person changed it, or the old assembly is no longer in the job to be
+    /// compared with, or the new quantity comes out in another unit than the line is priced in, it stays as it is. Each
+    /// is named, with the figure before and after.
+    pub fn change_assembly_said(&mut self, path: &str, assembly: &str, status: Status, source: &str) -> Result<Changed, String> {
         let e = self.find(path).ok_or_else(|| format!("no element {path}"))?;
         let kind = *self.world.get::<Kind>(e).ok_or_else(|| format!("{path} has no kind"))?;
         let mut all: Vec<(String, String, Recipe)> = Vec::new();
@@ -820,11 +873,11 @@ impl Job {
         let new: Vec<&(String, String, Recipe)> = all.iter().filter(|r| r.0 == assembly || r.1 == assembly).collect();
         let (Some(have), [new]) = (have, new.as_slice()) else {
             // Nothing to take the place of, or no one assembly of that name: as a first one is given.
-            return self.apply_as(path, assembly, status, source).map(|added| (added, Vec::new()));
+            return self.apply_as(path, assembly, status, source).map(|added| Changed { added, ..Changed::default() });
         };
         // The same assembly again: what it lacks of it is put back, or it is said to be whole.
         if have == new.1 {
-            return self.apply_as(path, assembly, status, source).map(|added| (added, Vec::new()));
+            return self.apply_as(path, assembly, status, source).map(|added| Changed { added, ..Changed::default() });
         }
         if !new.2.applies_to.contains(&kind) {
             return Err(format!("{:?} goes on {}, and {path} is a {}", new.1, new.2.applies_to.iter().map(|k| format!("a {}", k.said())).collect::<Vec<_>>().join(" or "), kind.said()));
@@ -839,6 +892,62 @@ impl Job {
         if old.is_some_and(|r| r.2.cost.code.value == cost.code.value) {
             cost.code = new.2.cost.code.clone();
         }
+        // The lines both have: each keeps what was entered on it; its quantity is the new assembly's where it still reads as
+        // the old assembly wrote it (call 199).
+        let measure = self.world.get::<Measure>(e).cloned();
+        let height = self.world.get::<Height>(e).cloned();
+        let on = lines::On { kind, measure: measure.as_ref(), height: height.as_ref() };
+        let figure = |l: &CostLine| -> (Option<f64>, Option<&'static str>) {
+            match lines::read(&on, l) {
+                Ok(read) => (read.worked.value, Some(read.unit)),
+                Err(_) => (None, None),
+            }
+        };
+        let said = |l: &CostLine| -> String {
+            match figure(l) {
+                (Some(v), Some(unit)) => format!("{} {unit}", crate::view::figure2(v)),
+                _ => "no figure".to_string(),
+            }
+        };
+        let (mut rewritten, mut left) = (Vec::new(), Vec::new());
+        let mut probes: Vec<(bool, usize, CostLine)> = Vec::new();
+        for line in cost.lines.iter_mut() {
+            let Some(nl) = new.2.cost.lines.iter().find(|n| n.description == line.description) else { continue };
+            let reads_the_same = |a: &CostLine, b: &CostLine| a.quantity == b.quantity && same_entries(&a.inputs, &b.inputs) && same_stretch(&a.stretch_out, &b.stretch_out);
+            // Nothing to say where the new assembly writes it as the line is.
+            let would_change = line.quantity != nl.quantity || nl.inputs.iter().any(|(k, v)| !line.inputs.get(k).is_some_and(|h| h.value == v.value && h.unit == v.unit)) || !same_stretch(&line.stretch_out, &nl.stretch_out);
+            if !would_change {
+                continue;
+            }
+            let old_line = old.and_then(|r| r.2.cost.lines.iter().find(|o| o.description == line.description));
+            let (has, has_written, would_written) = (said(line), written(line), written(nl));
+            let why = match old_line {
+                None if old.is_none() => Some(LeftAsIs::OldAssemblyGone),
+                Some(o) if reads_the_same(line, o) => None,
+                _ => Some(LeftAsIs::Entered),
+            };
+            if let Some(why) = why {
+                probes.push((true, left.len(), nl.clone()));
+                left.push(Left { line: line.description.clone(), has, has_written, would: String::new(), would_written, why });
+                continue;
+            }
+            let mut candidate = line.clone();
+            candidate.quantity = nl.quantity.clone();
+            candidate.inputs = nl.inputs.clone();
+            candidate.stretch_out = nl.stretch_out.clone();
+            // The unit it comes out in has to be the one it is priced and ordered in: a price does not carry from one to another.
+            let (units_now, units_new) = (figure(line).1, figure(&candidate).1);
+            // (The new assembly's figure for it is worked out below, where the thing's figures include what the new
+            // formula names.)
+            if units_now.is_none() || units_now != units_new {
+                probes.push((true, left.len(), nl.clone()));
+                left.push(Left { line: line.description.clone(), has, has_written, would: String::new(), would_written, why: LeftAsIs::Unit });
+                continue;
+            }
+            probes.push((false, rewritten.len(), candidate.clone()));
+            rewritten.push(Rewritten { line: line.description.clone(), was: has, now: String::new(), was_written: has_written, now_written: would_written });
+            *line = candidate;
+        }
         let mut added = Vec::new();
         for l in &new.2.cost.lines {
             if !cost.lines.iter().any(|h| h.description == l.description) {
@@ -849,8 +958,39 @@ impl Job {
         check::cost(path, kind, &cost)?;
         let assigned = Condition(Val { value: Some(new.1.clone()), unit: String::new(), status, source: source.into() });
         check::condition(path, &assigned)?;
+        // What each comes to as the new assembly writes it. A figure such as the wall's area below a wainscot is worked
+        // out only where a line names it, so the new quantities are put on the thing beside its lines, its figures are
+        // worked out again, and they are read; the thing then takes its lines and nothing else.
+        if !probes.is_empty() {
+            let mut probed = cost.clone();
+            for (i, (_, _, l)) in probes.iter().enumerate() {
+                let mut l = l.clone();
+                l.description = format!("probe {i}");
+                probed.lines.push(l);
+            }
+            self.world.entity_mut(e).insert(probed);
+            self.derive();
+            let measure = self.world.get::<Measure>(e).cloned();
+            let on = lines::On { kind, measure: measure.as_ref(), height: height.as_ref() };
+            let work = |l: &CostLine| match lines::read(&on, l) {
+                Ok(read) => match read.worked.value {
+                    Some(v) => format!("{} {}", crate::view::figure2(v), read.unit),
+                    None => "no figure".to_string(),
+                },
+                Err(why) => format!("no figure ({why})"),
+            };
+            for (is_left, at, l) in &probes {
+                let text = work(l);
+                if *is_left {
+                    left[*at].would = text;
+                } else {
+                    rewritten[*at].now = text;
+                }
+            }
+        }
         self.world.entity_mut(e).insert((cost, assigned));
-        Ok((added, taken))
+        self.derive();
+        Ok(Changed { added, taken, rewritten, left })
     }
 
     /// The unit a cost line comes out in, and the unit it is priced in.
@@ -908,6 +1048,36 @@ impl Job {
         }
         out
     }
+}
+
+/// A line's entries are the same where each has the same names with the same values (how sure each is does not make them another).
+fn same_entries(a: &BTreeMap<String, Val<Len>>, b: &BTreeMap<String, Val<Len>>) -> bool {
+    a.len() == b.len() && a.iter().all(|(k, v)| b.get(k).is_some_and(|w| w.value == v.value && w.unit == v.unit))
+}
+
+fn same_stretch(a: &Option<Val<Len>>, b: &Option<Val<Len>>) -> bool {
+    match (a, b) {
+        (None, None) => true,
+        (Some(x), Some(y)) => x.value == y.value && x.unit == y.unit,
+        _ => false,
+    }
+}
+
+/// A line's quantity as it is written: its formula, and the entries and stretch-out it takes.
+fn written(l: &CostLine) -> String {
+    let mut out = l.quantity.clone();
+    if let Some(so) = &l.stretch_out {
+        if let Some(len) = &so.value {
+            out.push_str(&format!(", stretch out = {}", units::show_length(len, &so.unit)));
+        }
+    }
+    for (name, v) in &l.inputs {
+        match &v.value {
+            Some(len) => out.push_str(&format!(", {} = {}", name.replace('_', " "), units::show_length(len, &v.unit))),
+            None => out.push_str(&format!(", {} = not known", name.replace('_', " "))),
+        }
+    }
+    out
 }
 
 pub fn slug(s: &str) -> String {

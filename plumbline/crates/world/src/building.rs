@@ -1194,6 +1194,46 @@ pub fn measures(world: &mut World) -> HashMap<String, BTreeMap<String, Derived>>
                         below.push((name, figure));
                     }
                 }
+                // The length of the wall's corner boards above a height a line of it names (call 194): at each outside
+                // corner the board's length less that height, never less than nothing, added up. A stone wainscot that turns
+                // the corner takes the boards up from its top. The height is a length entered on the line
+                // (`corner_board_length_above_wainscot` takes the line's `wainscot`), and the figure is as sure as that entry
+                // and as the corner boards' own length. Given only where a line names it.
+                let mut above: Vec<(String, Derived)> = Vec::new();
+                for l in cost.iter().flat_map(|c| c.lines.iter()).filter(|l| !l.off) {
+                    let Ok(e) = crate::formula::parse(&l.quantity) else { continue };
+                    for name in crate::formula::names(&e).into_iter().filter(|n| n.starts_with(crate::formula::ABOVE) && n.len() > crate::formula::ABOVE.len()) {
+                        let f_above = "for each outside corner, the corner board's length less the height the line enters, never less than nothing, added up";
+                        let input_name = &name[crate::formula::ABOVE.len()..];
+                        if let Some(first) = above.iter().position(|(n, _)| *n == name) {
+                            // A second line with the same name: the two have to give one height.
+                            let height_of = |x: &crate::components::CostLine| x.inputs.get(input_name).map(|v| v.feet());
+                            let one = cost.iter().flat_map(|c| c.lines.iter()).filter(|x| !x.off && crate::formula::parse(&x.quantity).is_ok_and(|e| crate::formula::names(&e).contains(&name))).map(height_of).collect::<Vec<_>>();
+                            if one.windows(2).any(|w| w[0] != w[1]) {
+                                above[first].1 = Derived::refused("LF", f_above, &inputs, &format!("two lines of this wall give {:?} two heights", crate::view::words(input_name)));
+                            }
+                            continue;
+                        }
+                        let figure = match (l.inputs.get(input_name), corner_figures.get(me)) {
+                            (None, _) => Derived::refused("LF", f_above, &inputs, &format!("{:?} is not a height entered on the line", crate::view::words(input_name))),
+                            _ if unit_fault => Derived::refused("LF", f_above, &inputs, &format!("the wall line {NOT_CONVERTED}")),
+                            (Some(_), None) => Derived::refused("LF", f_above, &inputs, "the wall's outside corners are not worked"),
+                            (Some(hv), Some([n, board])) => match (hv.feet(), n.worked(), board.worked()) {
+                                (None, _, _) => Derived::refused("LF", f_above, &inputs, &format!("the height {:?} is not known", crate::view::words(input_name))),
+                                (_, None, _) => Derived::refused("LF", f_above, &inputs, if n.note.is_empty() { "the wall's outside corners are not worked" } else { &n.note }),
+                                (_, _, None) => Derived::refused("LF", f_above, &inputs, if board.note.is_empty() { "the wall's corner boards are not worked" } else { &board.note }),
+                                (Some(h_ft), Some(count), Some(boards)) => {
+                                    let mut rests = inputs.clone();
+                                    rests.extend(board.inputs.iter().filter(|i| !inputs.contains(i)).cloned());
+                                    // Each corner's board is the wall's height; the entry is held between nothing and that height.
+                                    let up = if count > 0.0 { count * (boards / count - h_ft.clamp(0.0, boards / count)) } else { 0.0 };
+                                    Derived::new(Some(up), "LF", &[board.status, hv.status], f_above, &rests)
+                                }
+                            },
+                        };
+                        above.push((name, figure));
+                    }
+                }
                 let f_net = "face_area − opening_area";
                 let net = match (fault, face.value, open.value) {
                     (Some(why), _, _) => Derived::refused("SF", f_net, &inputs, &why),
@@ -1214,7 +1254,7 @@ pub fn measures(world: &mut World) -> HashMap<String, BTreeMap<String, Derived>>
                 if let Some(nl) = net_length {
                     m.insert("net_length".into(), nl);
                 }
-                for (name, figure) in below {
+                for (name, figure) in below.into_iter().chain(above) {
                     m.insert(name, figure);
                 }
                 // How thick it is: its type's thickness, as sure as the type and the

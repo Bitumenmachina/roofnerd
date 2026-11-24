@@ -35,6 +35,11 @@ house), then 10, then 14 last and by itself: it changes how every view is turned
   after; a check that fails because the view now turns about another point is NOT
   edited: record what it wanted, what it gets, and a picture before and after.
 - **15. A maker's sheet made into an item** says its trade is not said yet.
+- **16 (call 200, point 5). An assembly changed for another says what it rewrote.**
+  `crates/app/src/main.rs` calls `change_assembly` in two places; use
+  `Job::change_assembly_said` and say, in the words `plumbline apply --change`
+  uses, each line whose quantity now reads as the new assembly's (old and new) and
+  each left as entered. Do it with 11 to 13.
 
 ## Rules
 - Files you may touch: `crates/app/src/*.rs`; `demos/fixes197w.sh` (new) and

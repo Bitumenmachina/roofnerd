@@ -222,6 +222,16 @@ pub fn parse(text: &str) -> Result<Expr, String> {
 /// is the wall's net area below the length the line enters as `wainscot` (call 179, C2).
 pub const BELOW: &str = "net_area_below_";
 
+/// The start of a wall's corner-board figure that takes a height from the line:
+/// `corner_board_length_above_wainscot` is the corner boards' length above the length the line
+/// enters as `wainscot` (call 194), as `net_area_below_wainscot` is the face below it.
+pub const ABOVE: &str = "corner_board_length_above_";
+
+/// Is this name a figure of a wall that takes a height from the line, and what is the entry?
+pub fn height_entry(name: &str) -> Option<&str> {
+    name.strip_prefix(BELOW).or_else(|| name.strip_prefix(ABOVE)).filter(|i| !i.is_empty())
+}
+
 /// Every name the formula uses, once each, in the order they first appear. A figure that
 /// takes a height from the line (`net_area_below_wainscot`) uses that entry (`wainscot`) too.
 pub fn names(expr: &Expr) -> Vec<String> {
@@ -232,7 +242,7 @@ pub fn names(expr: &Expr) -> Vec<String> {
                 if !out.contains(n) {
                     out.push(n.clone());
                 }
-                if let Some(input) = n.strip_prefix(BELOW).filter(|i| !i.is_empty()) {
+                if let Some(input) = height_entry(n) {
                     if !out.iter().any(|o| o == input) {
                         out.push(input.to_string());
                     }

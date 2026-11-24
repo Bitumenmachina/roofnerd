@@ -10583,8 +10583,20 @@ wainscot round the ground level. Every price is made up. Worked by hand:
 6. The front door has no casing line by length, and the foundation walls have no
    corner-board line.
 
-Not built yet. What the window then shows (boards from the top of the stone, casing
-at 17 windows, fascia and soffit where priced) is the window builder's half, after.
+**Built (2026-11-24), the command line's half.** `research/worker-report-call194.md`.
+Run by the lead in the worker's copy: the six command-line crates' tests pass (world
+514 with 9 new in `tests/call194.rs`, each seen red by the worker first);
+`demos/sixteen-trim.sh` holds its six points (16 corner-board pieces come to 128.00 LF
+and the lines price 128.00; 68 casing pieces 289.00 LF; fascia 144.00 LF; soffit
+108.00 SF; a ground wall's boards are two of 7 ft from 3 ft up); all 48 command-line
+demonstrations pass; the three gates, `portmap.sh` and `licenses.sh` pass. **Changed
+figures**: the sample house's job cost is $393,981.66 (was $390,260.26) and its
+price $468,050.22 (was $463,629.19); the starter wall over a stone wainscot prices
+its corner boards from the top of the stone (14 LF on a 10 ft wall with two
+corners, was 20). **Not run**: the window's tests and demonstrations on this
+change; they are run when the window builder's work is merged. **Not right**: the
+window has not been looked at with the sample's trim on; an assembly changed for
+another keeps the old quantity on a shared line (call 199, decided, not built).
 
 ## The bench: an item looked at alone. A demonstration, written before it is built (call 195, step A; 2026-11-24)
 
@@ -10683,7 +10695,28 @@ them, and the lead read them again from `takeoff` and `show`):
 7. The file passes IfcOpenShell as IFC4 with the roof's new property set in it, and
    a roof slab from a file that has no such set is left out and said, as before.
 
-Not built yet.
+**Built (2026-11-24), with two of the lead's figures not met and ruled on (call 200).**
+`research/worker-report-call197I.md`. Run by the lead in the worker's copy: the six
+command-line crates' tests pass (ifc 32, one more marked as waiting for the ports);
+all 50 command-line demonstrations pass, `demos/ifc-whole.sh` and
+`demos/change-assembly.sh` new among them; IfcOpenShell finds no fault in the house
+or in a roof with two gables; the three gates, `portmap.sh` and `licenses.sh` pass.
+The second job has its **22 fixtures, 5 pieces of equipment, 4 footings (136 LF,
+10.07 CY) and its roof (4 planes, 1,408.72 SF, eaves 144 LF)**; a door is "front
+door". **Not met**: fittings are **37, not 39** (point 1 above: the two left out are
+a joint the sample made by hand and the Fitting tool refuses; they are named); and
+**open ends are not what they were** (point 2: supply air 13 where the first job
+has 4, cold water 5 where it has 1): the file does not yet say what is connected,
+and nothing is joined on a guess. Both are decided in call 200; the second is the
+next job on a model (below). **Expectations moved, each by a written decision**:
+`crates/ifc/tests/ifc.rs` and `demos/model.sh` (a chair in a made-up file now comes
+in as a furnishing: 2 things left out, not 3); `demos/export.sh` (the sample's
+fixtures, equipment and fittings are now counted as brought in); `demos/gable.sh`
+(the four checks of "none: an eave is over it" read "~ none", call 197 point 7:
+moved by the lead, the worker had not run it). **Not right**: a model comes in
+slowly (17 seconds for the sample house in a build made for testing); the window
+has not been run on any of it (`demos/bringw.sh` will show 2 things left out where
+its picture shows 3).
 
 ## The window's six points of call 197: a demonstration, written before it is built (2026-11-24)
 
@@ -10766,7 +10799,36 @@ no opening and two outside corners, the starter assemblies brought in. By hand:
 5. The sample whole house and every other demonstration: no figure moves (none
    changes one assembly for another across these lines); any that does is listed.
 
-Not built yet. It rides with contract 197I's worker, as a second part.
+**Built (2026-11-24)** with the model brought in whole, by the same worker.
+`demos/change-assembly.sh` holds the five steps (200.00 to 140.00 SF and $560.00;
+corner boards 20.00 to 14.00 LF; back again; 180.00 SF typed, left and said); four
+new tests in `crates/world/tests/call199.rs`. The new figures read Assumed
+(`~140.00 SF`), because the 3 ft the starter assembly enters is Assumed. No existing
+expectation moved. **Changed behaviour**: an assembly changed for another now
+rewrites the quantity of a line both have. **Not right**: the window makes the same
+change and does not yet say which quantities it rewrote (contract 197W, point 16).
+
+## The file says what is connected: a demonstration, written before it is built (call 200; 2026-11-24)
+
+`demos/ifc-whole.sh`, extended. The sample house written out and brought into an empty
+job, as before. By the first job's own count (the worker of call 197 ran one count on
+both jobs; the worker of this job runs it again first and its figures are the ones
+held to):
+
+1. Open ends by system in the second job are the first job's: **supply air 4, cold
+   water 1, power 1; return air, refrigerant, hot water and lighting none**;
+   sanitary and vent as the first job's count gives them (the last worker read 2 and
+   2 where the lead had written sanitary 1 from a judge's note: the count decides).
+   Today the second job reads 13, 5, 1; 2, 1, 4, 1; 5 and 5.
+2. The three hot-water runs with no size are in the file and come back, their size
+   Unknown, counted; the hot-water system has the runs it had.
+3. No end is joined that the file does not say is joined: a made-up file with a run
+   ending 0.5 ft from a fixture and no port reads that end open, and says so.
+4. The two fittings that come back as tees where the file says bend are named in
+   the reply, each with its place and both words.
+5. The file passes IfcOpenShell as IFC4 with its ports in it.
+
+Not built yet.
 
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
@@ -10832,17 +10894,15 @@ above):
    worker to set the design beside the code before any of it is built). Step C (its shape as data) **is designed** too: call 198,
    its demonstration above ("The bench, step C"); contract it the same way, after
    B. D to F follow and are not designed.
-1. **The sample whole house prices its outside trim** (call 194: the decision, the
-   figures by hand above, and `handoff/contracts/contract-194.md`). A command-line
-   worker was started on it at 16:35 UTC in a second working copy; if no patch of it
-   is in the tree when you read this, it did not land: start it again from the
-   contract. Its window half (boards from the top of the stone, pictures retaken)
-   follows.
+1. **The sample whole house prices its outside trim** (call 194): the command
+   line's half is in. Owed: the window looked at with it on (the sample's pictures
+   retaken, `dressw`, `tradesw`, `lightw` run), at the merge with the bench.
 2. **The second window judge's findings** (call 197, `research/judgment-window-1124b.md`):
-   a model brought in whole (`handoff/contracts/contract-197I.md`, command line,
-   after call 194's worker); the two tool-chest points ride with the bench
-   (contract 195A); points 10 to 15 are a window fix job after the bench:
-   `handoff/contracts/contract-197W.md`, its demonstration above.
+   a model brought in whole is in, but for what is connected: **the file says what
+   is connected** (call 200, `handoff/contracts/contract-200P.md`, its demonstration
+   above) is the next command-line job on a model. The two tool-chest points ride
+   with the bench (contract 195A); points 10 to 16 are a window fix job after the
+   bench: `handoff/contracts/contract-197W.md`, its demonstration above.
 3. **Corner boards that run up a rake wall** (the model's trim pieces); the roof with
    a thickness and no coloured edge lines in the 3D view; ground at the wall's foot.
 4. **The scan path finished**: call 190 point 3 (the by-ceiling finder's sure walls

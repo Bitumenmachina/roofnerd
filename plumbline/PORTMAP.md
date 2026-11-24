@@ -265,6 +265,16 @@ from BIMCraft at the same commit is listed here by hand, and is checked by its o
   `decode` are written with `and_then`, because this workspace is on the 2021 edition.
 - `crates/ifc/src/lib.rs`, the importer over it, is ours (DECISIONS.md call 47):
   BIMCraft's `import.rs` builds BIMCraft's model and was read, not ported.
+- `crates/ifc/src/lib.rs`, a model brought in whole (call 197, contract 197I) is ours, and `tools/portmap.sh` does not read
+  it. Searched all of BIMCraft: `grep -rln -i "ifc" crates apps` (76 files) and read `core/src/import.rs`, `core/src/ifc.rs`,
+  `core/src/family.rs`, `core/src/ifc/classes.rs`. A fixture, a fitting or furniture is read there as a generic component of
+  its class, shape from the body (`import.rs`, `NOT_GENERIC` at 44 to 80 lists the ports among what never comes in as one);
+  **no port or relation between a fitting and a run is read anywhere** (`grep -n "IFCRELCONNECTSPORT\|IFCDISTRIBUTIONPORT"
+  crates/core/src/import.rs` finds only that exclusion), so a fitting is put here by this program's own change where runs'
+  ends meet. A footing whose sort is not strip (or footing beam) is read there as an isolated footing (`import.rs:2424`):
+  here a strip and a pad are read by their sorts and every other sort is left out and said; the rule is written fresh. A roof
+  there is made again from its slabs' faces (`import.rs:2003`); here from a list this program writes on its own roof
+  (`Plumbline_Roof`), by the Roof tool's change, because the faces do not say a pitch or a gable. No code is taken.
 - `crates/world/src/gable.rs` (call 192: a wall under a rake rises to the roof) is ours, and `tools/portmap.sh` does not read
   it. Searched all of BIMCraft: `grep -rli 'gable' crates apps` (21 files: the roof tool's gable ends, `rvt/src/roofs.rs`,
   `core/src/{commands,model,skeleton,sketch,walls,import,ifc}.rs`) and `grep -rli 'attach_top\|top_profile' crates apps`. What is
@@ -360,3 +370,5 @@ from BIMCraft at the same commit is listed here by hand, and is checked by its o
 | `rooms_of` | ours |  |  | the room each clash and each hole is in, or "outside any room" (call 177); `grep -rni 'clash' crates/core/src` finds two comments and a variable |
 | `SHARPEST_CORNER_DEG` | ours |  |  | the corner under which a carried line is cut square; BIMCraft's `MITRE` (`crates/core/src/draw.rs`) is a reach of 50 offsets, about 1 degree, past which its offset refuses: `grep -rn 'SHARPEST' crates/core/src`: nothing; the lead's 15 degrees (call 190) |
 | `carried_out` | ported | `offset_poly` | `crates/core/src/draw.rs:379` | a line of points moved to its left or right, corners where the moved stretches meet (also `offset` in `crates/core/src/stairs.rs:182`, the bisector form). Searched all of BIMCraft: `grep -rln -i 'offset\|location.line\|justif' crates apps` is 162 files; the ones that offset a line of points are `draw.rs` (`offset`, `offset_poly`), `stairs.rs` (`offset`), `ui-egui/src/draw.rs` (`offset_line`, one line); the walls' location line (`walls.rs`, `tests.rs:3677`) is where a wall stands against its line, not an offset of clicks. Changed: lines of points only (BIMCraft's also moves arcs); a corner under 15 degrees is cut square, where BIMCraft's refuses past a reach of 50 offsets |
+
+**Call 194 (not a public item of the building model, so not a row).** `formula::ABOVE`, the figure `corner_board_length_above_<entry>` (a wall's corner boards above a height the line enters), is ours. Searched all of BIMCraft (`/home/user/ipedrax/bimcraft`): `grep -rli 'wainscot\|corner_board\|cornerboard\|water.table\|water_table' .` over crates and apps (rs, ts, md, toml) finds no file, and `grep -rli 'corner.board\|fascia\|soffit' .` only two Italian translation files (`translations/ui/it.po`, `translations/project/it.po`): no corner board, no trim that stops at a wainscot or a base course, no figure for either. Nothing ported; NOTICE unchanged.

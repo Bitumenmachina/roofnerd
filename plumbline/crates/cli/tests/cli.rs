@@ -367,7 +367,8 @@ fn a_type_is_a_walls_or_a_footings_from_the_moment_it_is_made() {
 
 #[test]
 fn the_estimate_is_read_by_item_and_comes_to_the_same_job_cost() {
-    // The made-up whole house: 399 lines of the sheet are 52 items. Its four strip
+    // The made-up whole house: 432 lines of the sheet are 56 items (call 194: 33 lines and 4 items more than 399 and 52, the outside
+    // trim: corner boards, exterior casing, fascia and soffit, each one item). Its four strip
     // footings, 2.9630 + 2.0741 + 2.9630 + 2.0741 = 10.0742 CY at a made-up $450.00,
     // are one row of 4 places at $4,533.40, under Division 3 at $32,485.40, and the
     // foot is the job cost `estimate` gives.
@@ -379,7 +380,7 @@ fn the_estimate_is_read_by_item_and_comes_to_the_same_job_cost() {
     let out = Command::new(bin).arg("estimate").arg(&job).arg("by-item").output().unwrap();
     let said = String::from_utf8_lossy(&out.stdout).to_string();
     assert!(out.status.success(), "{said}");
-    assert!(said.contains("THE ESTIMATE, BY ITEM: 52 items from 399 lines"), "{said}");
+    assert!(said.contains("THE ESTIMATE, BY ITEM: 56 items from 432 lines"), "{said}");
     let squeezed = |line: &str| line.split_whitespace().collect::<Vec<_>>().join(" ");
     let rows: Vec<String> = said.lines().map(squeezed).collect();
     assert!(rows.iter().any(|r| r == "Division 3 Concrete $32,485.40"), "{said}");
@@ -388,8 +389,9 @@ fn the_estimate_is_read_by_item_and_comes_to_the_same_job_cost() {
     let job_cost = every.lines().map(squeezed).find(|l| l.starts_with("Job cost ")).unwrap();
     // Call 179, C2: $85.50 more than it was ($390,174.76): the siding below the 3 ft of the stone is taken off by what
     // lies below it (9 SF of windows with their sills at 2 1/2 ft, at $9.50), and not by the stone's length.
-    assert!(job_cost.starts_with("Job cost $390,260.26"), "{job_cost}");
-    assert!(rows.last().unwrap().ends_with("$390,260.26"), "{said}");
+    // Call 194: $3,721.40 more, the outside trim: $390,260.26 + $3,721.40 = $393,981.66.
+    assert!(job_cost.starts_with("Job cost $393,981.66"), "{job_cost}");
+    assert!(rows.last().unwrap().ends_with("$393,981.66"), "{said}");
     // A word that is not a way to read it is refused, and says the two that are.
     let no = Command::new(bin).arg("estimate").arg(&job).arg("by-thing").output().unwrap();
     assert_eq!(no.status.code(), Some(1));

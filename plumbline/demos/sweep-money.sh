@@ -127,9 +127,11 @@ says "$T/south.txt" "quantity: Cedar lap siding, installed 223.99 SF"
 # The totals. Before: the job cost $394,677.48. By hand the fall is the base (427.20), 3 LF less stone at
 # $95 (285.00) and 399 SF less siding at $9.50 (3,790.50): 4,502.70, less the 9 SF of windows below the stone that call 179 (C2)
 # no longer takes off twice, at $9.50 (85.50): 4,417.20, to the cent of each line's rounding.
+# Call 194: the sample house then priced its outside trim, $3,721.40 more (33 lines: STATUS.md, "The sample whole house prices its
+# outside trim"), so the job cost now falls by 4,417.20 - 3,721.40 = 695.80, to the cent of each line's rounding.
 "$P" estimate "$T/sixteen.json" > "$T/est.txt"
 JC="$(grep -E '^  Job cost ' "$T/est.txt" | head -1 | grep -oE '[0-9,]+\.[0-9]+' | head -1 | tr -d ,)"
-awk -v jc="$JC" 'BEGIN { was = 394677.48; fall = was - jc; printf "    job cost was $394,677.48, now $%.2f: it falls by $%.2f (by hand $4,417.20)\n", jc, fall; if (fall < 4417.15 || fall > 4417.25) exit 1 }' || { echo "FAIL: the job cost did not fall by what was worked by hand"; exit 1; }
+awk -v jc="$JC" 'BEGIN { was = 394677.48; fall = was - jc; printf "    job cost was $394,677.48, now $%.2f: it falls by $%.2f (by hand $4,417.20 less the $3,721.40 of outside trim the sample now prices: $695.80)\n", jc, fall; if (fall < 695.75 || fall > 695.85) exit 1 }' || { echo "FAIL: the job cost did not fall by what was worked by hand"; exit 1; }
 
 echo
 echo
