@@ -174,6 +174,39 @@ pub struct Draw {
     pub cabinets: Option<(String, String)>,
     /// The switch "Countertop" beside the Cabinets fields is off (it is on to begin with).
     pub without_top: bool,
+    /// The Wall tool's choice "Centerline" or "Face" as the person made it (call 190): Some(true) is
+    /// Face, Some(false) Centerline; None, which is Face over a scan's sheet and Centerline anywhere else.
+    pub face_choice: Option<bool>,
+    /// The faces each scan's sheet shows under the storey, on the plan: what a wall's clicks land on and
+    /// are carried by.
+    pub sheets: Vec<crate::plans::SheetFaces>,
+    /// The run of walls last laid by a scan's face: what "Other side" lays on the other side.
+    pub faced: Option<Faced>,
+}
+
+/// A run of walls laid by the faces of a scan's sheet (call 190): the clicks, the walls they made, and
+/// the lines those were laid on, so that the next click carries on from them and "Other side" can lay
+/// them again.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Faced {
+    pub storey: String,
+    /// The scan's drawing: its path and its name.
+    pub drawing: String,
+    pub name: String,
+    pub clicks: Vec<[f64; 2]>,
+    pub closed: bool,
+    pub walls: Vec<String>,
+    /// The line each wall was last laid on.
+    pub lines: Vec<[[f64; 2]; 2]>,
+    /// The thickness of the type the walls are of, in feet.
+    pub thickness: f64,
+    pub flipped: bool,
+    /// Laid on the center line: the clicks are carried onto the faces and corners, and not out by half a wall.
+    pub centre: bool,
+    /// What the sheet showed for each stretch, and the side each body was laid on (true: the left of the
+    /// way it runs).
+    pub seen: Vec<crate::plans::Seen>,
+    pub body_left: Vec<Option<bool>>,
 }
 
 /// What the window enters is Assumed, and says where it came from: the window itself, or
@@ -341,6 +374,8 @@ pub fn start(doc: &mut Doc, tool: Tool) {
 /// `ask`: show the tool's sizes to be typed over before it is taken in hand (call 64).
 /// Not asked again when they have just been typed.
 fn begin(doc: &mut Doc, tool: Tool, ask: bool) {
+    // A tool taken in hand again starts afresh: "Other side" is for the walls just laid, not for an older run.
+    doc.draw.faced = None;
     doc.draw.picked.clear();
     doc.draw.tool = None;
     doc.letting_go(Some(Entry::Settings(tool)));
@@ -620,6 +655,28 @@ pub fn pick(doc: &mut Doc, at: [f64; 2], source: Option<String>) {
     let mut warned = false;
     let made: Option<Result<String, String>> = match tool {
         Tool::Wall | Tool::Run(_) => {
+            // Over a scan's sheet a wall is laid by the scan's face (call 190).
+            if tool == Tool::Wall {
+                match wall_by_face(doc, &storey, at, &s, traced) {
+                    ByFace::NotByFace => {}
+                    ByFace::From(said) => {
+                        doc.say(Tone::Done, said);
+                        doc.touch();
+                        return;
+                    }
+                    ByFace::Laid(result) => {
+                        match result {
+                            Ok(what) => {
+                                doc.edit(tool.name());
+                                doc.say(Tone::Done, what);
+                            }
+                            Err(why) => cant(doc, &doing(tool), why),
+                        }
+                        doc.redraw();
+                        return;
+                    }
+                }
+            }
             doc.draw.picked.push(at);
             let [.., a, b] = doc.draw.picked.as_slice() else {
                 doc.say(Tone::Done, format!("{}: from here. Click the next point, or type a length.", tool.name()));
@@ -646,12 +703,18 @@ pub fn pick(doc: &mut Doc, at: [f64; 2], source: Option<String>) {
             if result.is_ok() {
                 doc.job.derive();
             }
+            // "Face" chosen where no scan lies under the point: said, and laid on its center line.
+            let no_scan = tool == Tool::Wall && doc.draw.face_choice == Some(true);
             Some(result.map(|made| {
                 let long = made.last().and_then(|path| doc.job.find(path)).and_then(|e| doc.job.world.get::<plumbline_world::Measure>(e)).and_then(|m| m.0.get("plan_length").and_then(|d| d.value));
-                match long {
+                let mut said = match long {
                     Some(feet) => format!("Added {}, {} long.", made.join(", "), units::feet_as_ft_in(feet, 16)),
                     None => format!("Added {}.", made.join(", ")),
+                };
+                if no_scan {
+                    said.push_str(" Face is chosen, and no scan lies under this point: the wall is laid on its center line.");
                 }
+                said
             }))
         }
         Tool::Door | Tool::Window => {
@@ -833,6 +896,191 @@ pub fn pick(doc: &mut Doc, at: [f64; 2], source: Option<String>) {
         }
         Some(Err(why)) => cant(doc, &doing(tool), why),
         None => {}
+    }
+    doc.redraw();
+}
+
+/// What a Wall pick came to over a scan.
+enum ByFace {
+    /// Not over a scan with Face on: the wall is laid as it always was.
+    NotByFace,
+    /// The first point of a wall: what to say.
+    From(String),
+    /// A wall laid by the scan's face, or why not.
+    Laid(Result<String, String>),
+}
+
+/// A click this near the first of a run's clicks (in feet) closes the run on it.
+const CLOSES_FT: f64 = 0.3;
+
+fn near(a: [f64; 2], b: [f64; 2], within: f64) -> bool {
+    (a[0] - b[0]).hypot(a[1] - b[1]) <= within
+}
+
+/// The line a wall is on now, in feet.
+fn wall_line(job: &mut plumbline_world::Job, path: &str) -> Option<[[f64; 2]; 2]> {
+    let e = job.find(path)?;
+    job.world.get::<plumbline_world::Wall>(e)?.line.value
+}
+
+fn inches(feet: f64) -> String {
+    units::show_length(&units::Len::One((feet * 12.0 * 16.0).round() / 16.0), "in")
+}
+
+/// Whether the run is still as it was laid: its walls are there on the lines they were laid on.
+fn run_stands(job: &mut plumbline_world::Job, run: &Faced) -> bool {
+    run.walls.len() == run.lines.len() && run.walls.iter().zip(&run.lines).all(|(w, l)| wall_line(job, w).is_some_and(|now| near(now[0], l[0], 1e-6) && near(now[1], l[1], 1e-6)))
+}
+
+/// Each wall of a run on the line the faces gave it, saying by its source which were laid by a face.
+fn relay(job: &mut plumbline_world::Job, run: &Faced, laying: &crate::plans::ByFace) -> Result<(), String> {
+    let by_face = !run.centre;
+    use crate::plans::Seen;
+    if laying.lines.len() != run.walls.len() {
+        return Err("the walls and the faces do not agree on how many there are".into());
+    }
+    let tidy = |x: f64| (x * 1.0e4).round() / 1.0e4 + 0.0;
+    for ((path, line), seen) in run.walls.iter().zip(&laying.lines).zip(&laying.seen) {
+        let e = job.find(path).ok_or_else(|| format!("no element {path}"))?;
+        let mut w = job.world.get::<plumbline_world::Wall>(e).cloned().ok_or_else(|| format!("{path} is not a wall"))?;
+        let line = [[tidy(line[0][0]), tidy(line[0][1])], [tidy(line[1][0]), tidy(line[1][1])]];
+        let source = match seen {
+            Seen::Nothing => w.line.source.clone(),
+            _ if !by_face => w.line.source.clone(),
+            _ => format!("traced by its face over the scan {}", run.name),
+        };
+        w.line = plumbline_world::Val { value: Some(line), unit: w.line.unit.clone(), status: w.line.status.max(Status::Assumed), source };
+        plumbline_world::building::check_wall(path, Kind::Wall, &w)?;
+        job.put(path, w)?;
+    }
+    Ok(())
+}
+
+/// The side a run's walls lie on, as a builder says it: for a ring, outside or inside the line clicked.
+fn side_said(run: &Faced) -> String {
+    if run.closed {
+        // Shoelace: counter-clockwise is positive, and its left is the inside.
+        let c = &run.clicks;
+        let area: f64 = (0..c.len()).map(|i| c[i][0] * c[(i + 1) % c.len()][1] - c[(i + 1) % c.len()][0] * c[i][1]).sum();
+        if let Some(left) = run.body_left.iter().find_map(|l| *l) {
+            return if left != (area > 0.0) { "outside the line clicked".to_string() } else { "inside the line clicked".to_string() };
+        }
+    }
+    if run.flipped { "on the room's side of the line clicked".to_string() } else { "on the side away from the room".to_string() }
+}
+
+/// What the faces did to a run's last stretch, in words.
+fn face_said(run: &Faced, seen: &crate::plans::Seen) -> String {
+    use crate::plans::Seen;
+    match seen {
+        Seen::Face { room: Some(_) } => format!("Laid by the scan's face: the wall's body is {}, so its center is {} off the line clicked (half the type's {}). If that is the wrong side, press Other side.", side_said(run), inches(run.thickness / 2.0), inches(run.thickness)),
+        Seen::Face { room: None } => "The scan cannot tell which side the room is on: the wall's body is laid to the right of the way you clicked. If that is the wrong side, press Other side.".to_string(),
+        Seen::Both { gap } => format!("The scan shows both faces of this wall: {} between the faces, and the type is {}. The center line is laid between the faces.", inches(*gap), inches(run.thickness)),
+        Seen::Nothing => "The scan shows no face here: the wall is laid on the line clicked.".to_string(),
+    }
+}
+
+/// A wall's pick over a scan's sheet, set by the scan's face (call 190): the click lands on the face the
+/// sheet shows, and the wall is laid with its center half its thickness to the side away from the room, or
+/// between the two faces where the sheet shows both. A click with no face near stays where the hand put it
+/// and says so. What is laid is a center line and a type, as any wall.
+fn wall_by_face(doc: &mut Doc, storey: &str, at: [f64; 2], s: &[&str], traced: &str) -> ByFace {
+    // Over a scan's sheet the clicks land on its faces; with Face (to begin with) the wall is laid by the
+    // face, with Centerline its center is on the line the click and the face give.
+    let Some(scan) = crate::plans::scan_under(doc, storey, at) else { return ByFace::NotByFace };
+    let centre = doc.draw.face_choice == Some(false);
+    let faces: Vec<crate::plans::SheetFace> = doc.draw.sheets.iter().find(|f| f.path == scan.path).map(|f| f.faces.clone()).unwrap_or_default();
+    let thick = units::parse_length(s[0]).and_then(|(len, unit)| len.feet(unit)).unwrap_or(0.0);
+    doc.draw.picked.push(at);
+    let picked = doc.draw.picked.clone();
+    let [.., a, b] = picked.as_slice() else {
+        if centre {
+            return ByFace::From("Wall: from here. Click the next point, or type a length.".to_string());
+        }
+        let said = if crate::plans::on_a_face(&faces, at) { "Wall: from here, on the scan's face. Click the next point, or type a length.".to_string() } else { "Wall: from here. The scan shows no face here: this point stays where you clicked. Click the next point, or type a length.".to_string() };
+        return ByFace::From(said);
+    };
+    let (a, b) = (*a, *b);
+    let mut run = match doc.draw.faced.take() {
+        Some(run) if run.storey == storey && run.drawing == scan.path && run.centre == centre && !run.closed && run.clicks.last().is_some_and(|l| near(*l, a, 1e-6)) && (run.thickness - thick).abs() < 1e-9 && run_stands(&mut doc.job, &run) => run,
+        _ => Faced { storey: storey.to_string(), drawing: scan.path.clone(), name: scan.name.clone(), clicks: vec![a], closed: false, walls: Vec::new(), lines: Vec::new(), thickness: thick, flipped: false, centre, seen: Vec::new(), body_left: Vec::new() },
+    };
+    let closes = run.clicks.len() >= 3 && near(b, run.clicks[0], CLOSES_FT);
+    if !closes {
+        run.clicks.push(b);
+    }
+    let laying = crate::plans::by_face(&run.clicks, closes, &faces, if centre { 0.0 } else { thick }, run.flipped);
+    let result = ed::all_or_nothing(&mut doc.job, |job| {
+        let t = ed::wall_type_for(job, s[0], how(SOURCE))?;
+        let made = ed::walls(job, storey, &t, &[a, b], false, ed::Top::Height(s[1]), how(traced))?;
+        run.walls.extend(made);
+        relay(job, &run, &laying)?;
+        Ok(())
+    });
+    match result {
+        Ok(()) => {
+            run.closed = closes;
+            run.lines = laying.lines.iter().map(|l| [[(l[0][0] * 1.0e4).round() / 1.0e4 + 0.0, (l[0][1] * 1.0e4).round() / 1.0e4 + 0.0], [(l[1][0] * 1.0e4).round() / 1.0e4 + 0.0, (l[1][1] * 1.0e4).round() / 1.0e4 + 0.0]]).collect();
+            run.seen = laying.seen.clone();
+            run.body_left = laying.body_left.clone();
+            doc.draw.picked = vec![b];
+            doc.job.derive();
+            let last = run.walls.last().cloned().unwrap_or_default();
+            let long = doc.job.find(&last).and_then(|e| doc.job.world.get::<plumbline_world::Measure>(e)).and_then(|m| m.0.get("plan_length").and_then(|d| d.value));
+            let mut said = match long {
+                Some(feet) => format!("Added {last}, {} long.", units::feet_as_ft_in(feet, 16)),
+                None => format!("Added {last}."),
+            };
+            if let (Some(seen), false) = (run.seen.last(), centre) {
+                said.push(' ');
+                said.push_str(&face_said(&run, seen));
+            }
+            doc.draw.faced = Some(run);
+            ByFace::Laid(Ok(said))
+        }
+        Err(why) => {
+            doc.draw.picked = vec![a];
+            ByFace::Laid(Err(why))
+        }
+    }
+}
+
+/// "Other side": the run of walls last laid by a scan's face, laid again with their bodies on the other
+/// side of the line clicked (call 190).
+pub fn other_side(doc: &mut Doc) {
+    let Some(mut run) = doc.draw.faced.clone() else {
+        cant(doc, "lay the walls on the other side", "no wall has been laid by a scan's face");
+        doc.touch();
+        return;
+    };
+    let faces: Vec<crate::plans::SheetFace> = doc.draw.sheets.iter().find(|f| f.path == run.drawing).map(|f| f.faces.clone()).unwrap_or_default();
+    if !run_stands(&mut doc.job, &run) {
+        cant(doc, "lay the walls on the other side", "those walls have been changed since they were laid");
+        doc.touch();
+        return;
+    }
+    if run.centre {
+        cant(doc, "lay the walls on the other side", "they were laid on the center line, which has no other side");
+        doc.touch();
+        return;
+    }
+    run.flipped = !run.flipped;
+    let ring: &[[f64; 2]] = &run.clicks;
+    let laying = crate::plans::by_face(ring, run.closed, &faces, run.thickness, run.flipped);
+    let result = ed::all_or_nothing(&mut doc.job, |job| relay(job, &run, &laying));
+    match result {
+        Ok(()) => {
+            run.lines = laying.lines.iter().map(|l| [[(l[0][0] * 1.0e4).round() / 1.0e4 + 0.0, (l[0][1] * 1.0e4).round() / 1.0e4 + 0.0], [(l[1][0] * 1.0e4).round() / 1.0e4 + 0.0, (l[1][1] * 1.0e4).round() / 1.0e4 + 0.0]]).collect();
+            run.seen = laying.seen.clone();
+            run.body_left = laying.body_left.clone();
+            let single = run.seen.iter().filter(|s| matches!(s, crate::plans::Seen::Face { .. })).count();
+            let said = format!("Laid on the other side: {single} wall{} of this run now {} {}, so {} center{} {} {} off the line clicked (half the type's {}).", if single == 1 { "" } else { "s" }, if single == 1 { "has its body" } else { "have their bodies" }, side_said(&run), if single == 1 { "its" } else { "their" }, if single == 1 { "" } else { "s" }, if single == 1 { "is" } else { "are" }, inches(run.thickness / 2.0), inches(run.thickness));
+            doc.draw.faced = Some(run);
+            doc.job.derive();
+            doc.edit("laid the walls on the other side");
+            doc.say(Tone::Done, said);
+        }
+        Err(why) => cant(doc, "lay the walls on the other side", why),
     }
     doc.redraw();
 }
@@ -1477,13 +1725,23 @@ pub fn pointer(mut doc: ResMut<Doc>, snap_shot: Res<Snapshot>, plans: Res<crate:
         let mut scene = snap::scene(&mut doc.job, &storey, skip.as_deref());
         // A drawing's own lines, where its file has them: their ends, their middles and
         // their crossings are places to pick, as a wall's are.
+        let mut sheets = Vec::new();
         for l in snap_shot.drawings.iter().filter(|l| l.storey == storey) {
             if let Some(read) = plans.read.get(&l.path) {
                 for line in &read.lines {
                     scene.segment(l.on_plan(line[0]), l.on_plan(line[1]), None);
                 }
+                // A scan's sheet shows the faces of its walls: places to pick, and what a wall
+                // traced over it is set by (call 190).
+                if let Some(faces) = crate::plans::sheet_faces(l, read) {
+                    for f in &faces.faces {
+                        scene.segment(f.line[0], f.line[1], None);
+                    }
+                    sheets.push(faces);
+                }
             }
         }
+        doc.draw.sheets = sheets;
         doc.draw.scene = Some((doc.geometry, storey.clone(), skip.clone(), pages, scene));
     }
     let Some((_, _, _, _, scene)) = &doc.draw.scene else { return };

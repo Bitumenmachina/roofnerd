@@ -25,8 +25,9 @@
 # 16 ft, with 2 ft of paper all round, at 24 dots to the foot: (24 + 4) x 24 = 672 dots
 # wide by (16 + 4) x 24 = 480 high, so 672 dots are 28 ft. Its lower left corner is 2 ft
 # short of the room's: (2, 2) ft. The walls lie on the plan at east 4 ft and 28 ft, north
-# 4 ft and 20 ft. The wall drawn over it, from the southwest corner east for 24 ft, is a
-# line from (4, 4) to (28, 4): 24 LF.
+# 4 ft and 20 ft. The wall drawn over it, from the southwest corner east for 24 ft, is 24 LF;
+# its centre is on the room's south face (north 4 ft) when it is laid by its centre, and 3 in
+# outside it (north 3.75 ft) when it is laid by the face, which over a scan it is (call 190).
 #
 # It drives the real program with a real pointer and keyboard on a virtual display, which
 # needs Xvfb, xdotool and a Vulkan driver (Mesa's software one will do), and measures the
@@ -316,8 +317,12 @@ if len(walls) != 1:
 (a, b), line = walls[0]["line"]["value"], walls[0]["line"]
 length = ((b[0] - a[0]) ** 2 + (b[1] - a[1]) ** 2) ** 0.5
 print("    the wall runs from (%.2f, %.2f) to (%.2f, %.2f): %.2f LF, %s, %s" % (a[0], a[1], b[0], b[1], length, line["status"], line["source"]))
-if abs(a[0] - 4) > 0.6 or abs(a[1] - 4) > 0.6 or abs(b[1] - a[1]) > 0.01 or abs(length - 24) > 0.01:
-    print("FAIL: wanted a wall from about (4, 4) east for 24 ft, over the room's south wall"); sys.exit(1)
+# Call 190: a wall drawn over a scan is laid by the scan's face. The room's south face is at north 4 ft and
+# the room lies north of it, so the 6 in wall's body is south of the face and its centre half the type's
+# thickness (3 in) south of it: north 3.75 ft, where it was 4 ft when the centre went on the face. Its ends
+# are where the clicks landed along the face, as before (east 4 ft, 24 ft long).
+if abs(a[0] - 4) > 0.6 or abs(a[1] - 3.75) > 0.05 or abs(b[1] - a[1]) > 0.01 or abs(length - 24) > 0.01:
+    print("FAIL: wanted a wall from about (4, 3.75) east for 24 ft, 3 in outside the room's south face"); sys.exit(1)
 if line["status"] != "Assumed" or "made-up-room" not in line["source"]:
     print("FAIL: the wall is not Assumed and traced from the scan's sheet"); sys.exit(1)
 PY

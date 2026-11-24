@@ -96,9 +96,38 @@ pub struct Read {
     pub lost: Vec<String>,
     /// The file is not the one the drawing was made from.
     pub changed: bool,
+    /// Where a scan's sheet shows a wall's face (call 190): the straight lines its points make,
+    /// 2 ft long or more, in the page's units from its lower-left corner. None for a sheet that is
+    /// not a scan's.
+    pub faces: Vec<plumbline_plans::faces::Face>,
 }
 
-type Arrived = Result<(plumbline_plans::Page, bool), String>;
+type Arrived = Result<(plumbline_plans::Page, bool, Vec<plumbline_plans::faces::Face>), String>;
+
+/// The faces a scan's sheet shows, in the page's own units. The picture the page reader hands over
+/// may be smaller than the page (a sheet over 4,096 dots a side is shrunk), so the dots to the foot the
+/// faces are read at are the picture's own, and what is read is carried back to the page's units
+/// (call 190). `feet_per_unit` is the drawing's scale.
+pub fn scan_faces(page: &plumbline_plans::Page, feet_per_unit: f64) -> Vec<plumbline_plans::faces::Face> {
+    let (pw, ph) = (f64::from(page.picture.width), f64::from(page.picture.height));
+    if !(feet_per_unit > 0.0) || pw < 1.0 || ph < 1.0 || page.size[0] <= 0.0 || page.size[1] <= 0.0 {
+        return Vec::new();
+    }
+    // Picture dots to the foot, along the page's width.
+    let (kx, ky) = (page.size[0] / pw, page.size[1] / ph);
+    let dots_per_foot = 1.0 / (feet_per_unit * kx);
+    let mut faces = plumbline_plans::faces::faces_rgba(&page.picture.rgba, page.picture.width, page.picture.height, dots_per_foot);
+    for f in &mut faces {
+        for end in &mut f.line {
+            *end = [end[0] * kx, end[1] * ky];
+        }
+        if let Some((_, gap)) = f.pair.as_mut() {
+            // How far apart two faces lie, in page units, along the sheet's width.
+            *gap *= kx;
+        }
+    }
+    faces
+}
 
 #[derive(Resource, Default)]
 pub struct Plans {
@@ -169,7 +198,7 @@ pub fn read(mut doc: ResMut<Doc>, mut plans: ResMut<Plans>, mut images: ResMut<A
     for (path, key, result) in arrived {
         plans.reading.remove(&path);
         match result {
-            Ok((page, changed)) => {
+            Ok((page, changed, faces)) => {
                 // The sheet with its smaller copies after it, so a whole page seen small
                 // keeps its thin lines.
                 let (width, height) = (page.picture.width, page.picture.height);
@@ -203,7 +232,24 @@ pub fn read(mut doc: ResMut<Doc>, mut plans: ResMut<Plans>, mut images: ResMut<A
                 if changed || !from_scan {
                     doc.say(if changed { Tone::Refused } else { Tone::Done }, said);
                 }
-                plans.read.insert(path, Read { key, image: images.add(image), lines: page.lines, lost: page.lost, changed });
+                // What the scan's sheet shows to trace over, said once, on the card that brought it in
+                // if that is still up (call 190): it is the card a person is reading just then.
+                if from_scan {
+                    let name = laid(&mut doc.job).iter().find(|l| l.path == path).map(|l| l.name.clone()).unwrap_or_default();
+                    let head = format!("Brought in the scan {name:?}");
+                    if doc.message.starts_with(&head) {
+                        let line = match faces.len() {
+                            0 => "No straight line 2 ft long or more shows on its sheet: trace it by eye.".to_string(),
+                            1 => "Its sheet shows 1 straight line 2 ft long or more, for the Wall tool to land on.".to_string(),
+                            n => format!("Its sheet shows {n} straight lines 2 ft long or more, for the Wall tool to land on."),
+                        };
+                        if !doc.message.contains(&line) {
+                            doc.message.push('\n');
+                            doc.message.push_str(&line);
+                        }
+                    }
+                }
+                plans.read.insert(path, Read { key, image: images.add(image), lines: page.lines, lost: page.lost, changed, faces });
             }
             Err(why) => {
                 doc.say(Tone::Refused, format!("{path}: its page cannot be shown: {why}"));
@@ -227,6 +273,8 @@ pub fn read(mut doc: ResMut<Doc>, mut plans: ResMut<Plans>, mut images: ResMut<A
             continue;
         }
         let (file, page, bytes, checksum, size) = (folder.join(&key.0), key.1, l.drawing.bytes, l.drawing.checksum.clone(), l.drawing.size);
+        // A scan's sheet has its faces read on this thread too (call 190).
+        let scan_scale = if l.drawing.file.source.starts_with("scan ") { l.drawing.feet_per_unit() } else { None };
         let (send, receive) = channel::<Arrived>();
         std::thread::spawn(move || {
             let result = std::fs::read(&file).map_err(|e| format!("{} {}. Put it back beside the job, or take this drawing out and lay the file again from where it is now", file.file_name().and_then(|n| n.to_str()).unwrap_or("the file"), why_not_opened(&e))).and_then(|data| {
@@ -237,7 +285,8 @@ pub fn read(mut doc: ResMut<Doc>, mut plans: ResMut<Plans>, mut images: ResMut<A
                     if (p.size[0] - size[0]).abs() > 0.01 || (p.size[1] - size[1]).abs() > 0.01 {
                         return Err(format!("its page is {} by {} in the file, and the drawing was made at {} by {}", p.size[0], p.size[1], size[0], size[1]));
                     }
-                    Ok((p, changed))
+                    let faces = scan_scale.map(|k| scan_faces(&p, k)).unwrap_or_default();
+                    Ok((p, changed, faces))
                 })
             });
             let _ = send.send(result);
@@ -375,5 +424,518 @@ fn thicken(rgba: &mut [u8], width: usize, height: usize, r: usize) {
                 rgba[at..at + 3].copy_from_slice(&[40, 40, 40]);
             }
         }
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// A wall traced over a scan, set by its face (DECISIONS.md call 190)
+//
+// A scan shows the face of a wall, not its centre. The clicks of a wall are carried to the faces the
+// scan's sheet shows (`SheetFace`, from `Read::faces`), and the wall is laid with its centre half its
+// thickness to the side away from the room, or, where the sheet shows both faces of it, between them.
+// What a line of clicks becomes when carried out is `plumbline_world::editing::carry::carried_out`; what
+// is here is which face each stretch of the clicks is on, and where two faces meet.
+// ---------------------------------------------------------------------------------------------
+
+type P2 = [f64; 2];
+
+/// A click is on a face when it lies within this many feet of the face's line. Assumed (the lead's call
+/// 190 reads a face to 1/16 in on a made-up scan and a real phone scan is out by a few inches).
+pub const ON_FACE_FT: f64 = 0.25;
+/// Two faces that cross within this many feet of the click that joins them are one corner, and the click
+/// is carried to where they cross. Assumed.
+pub const CORNER_REACH_FT: f64 = 1.5;
+/// Two stretches whose faces run nearer parallel than this (the sine of the angle between them) are not a
+/// corner. About 10 degrees. Assumed.
+pub const NOT_PARALLEL: f64 = 0.17;
+
+/// A face of a scan's sheet, laid on the plan in feet.
+#[derive(Clone, Debug, PartialEq)]
+pub struct SheetFace {
+    /// From its west end to its east, or from its south end to its north.
+    pub line: [P2; 2],
+    /// Some(true): the room is to the left of `line[0]` to `line[1]`; Some(false): to its right; None: the
+    /// sheet cannot tell.
+    pub room: Option<bool>,
+    /// The other face of the same wall: its place in the list of faces and how far apart the two are, in feet.
+    pub pair: Option<(usize, f64)>,
+}
+
+/// The faces of one scan's sheet, on the plan.
+#[derive(Clone, Debug, PartialEq)]
+pub struct SheetFaces {
+    /// The drawing's path and its name.
+    pub path: String,
+    pub name: String,
+    pub faces: Vec<SheetFace>,
+}
+
+/// A drawing's faces laid on the plan, if it is a scan's.
+pub fn sheet_faces(l: &Laid, read: &Read) -> Option<SheetFaces> {
+    if !l.drawing.file.source.starts_with("scan ") {
+        return None;
+    }
+    let (k, _) = l.shown();
+    let faces = read.faces.iter().map(|f| SheetFace { line: [l.on_plan(f.line[0]), l.on_plan(f.line[1])], room: f.room, pair: f.pair.map(|(j, gap)| (j, gap * k)) }).collect();
+    Some(SheetFaces { path: l.path.clone(), name: l.name.clone(), faces })
+}
+
+/// Whether a drawing is a scan's sheet.
+pub fn is_scan(l: &Laid) -> bool {
+    l.drawing.file.source.starts_with("scan ")
+}
+
+/// The scan under a place on a storey: the last one laid whose page holds it.
+pub fn scan_under(doc: &mut Doc, storey: &str, at: P2) -> Option<Laid> {
+    under(doc, storey, at).filter(is_scan)
+}
+
+fn sub(a: P2, b: P2) -> P2 {
+    [a[0] - b[0], a[1] - b[1]]
+}
+fn dot(a: P2, b: P2) -> f64 {
+    a[0] * b[0] + a[1] * b[1]
+}
+fn cross(a: P2, b: P2) -> f64 {
+    a[0] * b[1] - a[1] * b[0]
+}
+fn len(a: P2) -> f64 {
+    a[0].hypot(a[1])
+}
+fn unit(a: P2, b: P2) -> P2 {
+    let d = sub(b, a);
+    let n = len(d);
+    if n == 0.0 {
+        [1.0, 0.0]
+    } else {
+        [d[0] / n, d[1] / n]
+    }
+}
+
+impl SheetFace {
+    fn dir(&self) -> P2 {
+        unit(self.line[0], self.line[1])
+    }
+    /// How far a point lies to the left of the face's line (minus: to its right).
+    fn left_of(&self, p: P2) -> f64 {
+        cross(self.dir(), sub(p, self.line[0]))
+    }
+    /// A point carried square onto the face's line.
+    fn onto(&self, p: P2) -> P2 {
+        let d = self.dir();
+        let t = dot(sub(p, self.line[0]), d);
+        [self.line[0][0] + d[0] * t, self.line[0][1] + d[1] * t]
+    }
+    /// How far along the face's line, from its first end, a point lies.
+    fn along(&self, p: P2) -> f64 {
+        dot(sub(p, self.line[0]), self.dir())
+    }
+    fn length(&self) -> f64 {
+        len(sub(self.line[1], self.line[0]))
+    }
+    /// How far a point is from the face itself (its ends count), in feet.
+    pub fn distance(&self, p: P2) -> f64 {
+        let t = self.along(p).clamp(0.0, self.length());
+        let d = self.dir();
+        len(sub(p, [self.line[0][0] + d[0] * t, self.line[0][1] + d[1] * t]))
+    }
+}
+
+/// Whether a click lies on a face of the sheet.
+pub fn on_a_face(faces: &[SheetFace], p: P2) -> bool {
+    faces.iter().any(|f| f.distance(p) <= ON_FACE_FT)
+}
+
+/// The face the stretch from `p` to `q` runs along: both its ends lie within `ON_FACE_FT` of the face's
+/// line and one of them over the face itself. Of those, the nearest, then the longer.
+fn face_of_stretch(faces: &[SheetFace], p: P2, q: P2) -> Option<usize> {
+    let mut best: Option<(usize, f64, f64)> = None;
+    for (i, f) in faces.iter().enumerate() {
+        // Where the sheet shows both faces of a wall, a click on either is on the wall.
+        let other = f.pair.and_then(|(j, _)| faces.get(j));
+        let off = |x: P2| other.map_or(f.left_of(x).abs(), |o| f.left_of(x).abs().min(o.left_of(x).abs()));
+        let (dp, dq) = (off(p), off(q));
+        if dp > ON_FACE_FT || dq > ON_FACE_FT {
+            continue;
+        }
+        let over = |t: f64| t >= -ON_FACE_FT && t <= f.length() + ON_FACE_FT;
+        if !(over(f.along(p)) || over(f.along(q))) {
+            continue;
+        }
+        let (near, long) = (dp + dq, f.length());
+        // Nearer by more than a half inch; then the longer.
+        let better = match best {
+            None => true,
+            Some((_, n, l)) => near < n - 0.04 || (near <= n + 0.04 && long > l),
+        };
+        if better {
+            best = Some((i, near, long));
+        }
+    }
+    best.map(|b| b.0)
+}
+
+/// Where two faces' lines cross, if they are not parallel.
+fn crossing(a: &SheetFace, b: &SheetFace) -> Option<P2> {
+    let (da, db) = (a.dir(), b.dir());
+    let s = cross(da, db);
+    if s.abs() < NOT_PARALLEL {
+        return None;
+    }
+    let t = cross(sub(b.line[0], a.line[0]), db) / s;
+    Some([a.line[0][0] + da[0] * t, a.line[0][1] + da[1] * t])
+}
+
+/// How far, in feet, a line's free end may be carried to meet another face (a partition's end that the scan
+/// stops short of the wall it meets). Assumed.
+pub const TEE_REACH_FT: f64 = 0.6;
+
+/// Where the end of a stretch on face `f`, at `p`, meets another face that crosses it: the crossing of
+/// `f`'s line with the nearest face that is not parallel to it (nor its own pair), if that crossing lies on
+/// that face and within `TEE_REACH_FT` of `p`.
+fn tee(faces: &[SheetFace], f: usize, p: P2) -> Option<P2> {
+    let own = &faces[f];
+    let mut best: Option<(f64, P2)> = None;
+    for (g, other) in faces.iter().enumerate() {
+        if g == f || own.pair.is_some_and(|(j, _)| j == g) {
+            continue;
+        }
+        let Some(x) = crossing(own, other) else { continue };
+        let reach = len(sub(x, p));
+        // On the other face itself, to a few inches past its ends.
+        let on_it = other.along(x) >= -ON_FACE_FT && other.along(x) <= other.length() + ON_FACE_FT;
+        if on_it && reach <= TEE_REACH_FT && best.is_none_or(|b| reach < b.0) {
+            best = Some((reach, x));
+        }
+    }
+    best.map(|b| b.1)
+}
+
+/// Where two lines (each by its two points) meet, if they are not parallel.
+fn meet(a: [P2; 2], b: [P2; 2]) -> Option<P2> {
+    let (da, db) = (unit(a[0], a[1]), unit(b[0], b[1]));
+    let s = cross(da, db);
+    if s.abs() < NOT_PARALLEL {
+        return None;
+    }
+    let t = cross(sub(b[0], a[0]), db) / s;
+    Some([a[0][0] + da[0] * t, a[0][1] + da[1] * t])
+}
+
+/// What the sheet showed for one stretch of the clicks.
+#[derive(Clone, Debug, PartialEq)]
+pub enum Seen {
+    /// The stretch is on one face. `room`: which side the room is on, as seen running along the
+    /// stretch (Some(true): to its left); None where the sheet cannot tell.
+    Face { room: Option<bool> },
+    /// The stretch is on a face and the sheet shows the wall's other face too, this far apart in feet.
+    Both { gap: f64 },
+    /// No face is near: the stretch stays where the hand put it.
+    Nothing,
+}
+
+/// A line of clicks laid by the faces under it.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ByFace {
+    /// The centre line of the wall of each stretch of the clicks (a ring's last runs back to its first).
+    pub lines: Vec<[P2; 2]>,
+    pub seen: Vec<Seen>,
+    /// The side the bodies lie on, for each stretch that has one: true is the left of the way it runs.
+    pub body_left: Vec<Option<bool>>,
+}
+
+/// `clicks` (a line of them, or with `closed` a ring) laid by the faces: each stretch carried onto the
+/// face it runs along, each corner where two faces cross, and then out by half the `thickness` to the
+/// side away from the room (to the other side with `flip`), or, where both faces of a wall are shown,
+/// to between them. A stretch with no face under it is as clicked. One line of stretches carried the
+/// same way is carried out together, so that each corner is where the two walls' faces meet.
+pub fn by_face(clicks: &[P2], closed: bool, faces: &[SheetFace], thickness: f64, flip: bool) -> ByFace {
+    let n = clicks.len();
+    if n < 2 {
+        return ByFace { lines: Vec::new(), seen: Vec::new(), body_left: Vec::new() };
+    }
+    let closed = closed && n >= 3;
+    let stretches = if closed { n } else { n.saturating_sub(1) };
+    let at = |i: usize| clicks[i % n];
+    let on: Vec<Option<usize>> = (0..stretches).map(|i| face_of_stretch(faces, at(i), at(i + 1))).collect();
+    // Where each stretch starts and ends: carried onto its face's line, and at a corner where the face
+    // before and the face after cross near the click.
+    let mut start: Vec<P2> = (0..stretches).map(|i| on[i].map_or(at(i), |f| faces[f].onto(at(i)))).collect();
+    let mut end: Vec<P2> = (0..stretches).map(|i| on[i].map_or(at(i + 1), |f| faces[f].onto(at(i + 1)))).collect();
+    let mut joined = vec![false; stretches];
+    for j in 0..n {
+        // The corner at click j: between stretch j-1 and stretch j.
+        let (before, after) = if j == 0 { (if closed { Some(stretches - 1) } else { None }, 0) } else if j == n - 1 && !closed { (Some(j - 1), usize::MAX) } else { (Some(j - 1), j) };
+        let (Some(b), true) = (before, after != usize::MAX) else { continue };
+        let (Some(fb), Some(fa)) = (on[b], on[after]) else { continue };
+        if fb == fa {
+            // One face all the way: the stretches meet on its line.
+            let m = faces[fb].onto(at(j));
+            end[b] = m;
+            start[after] = m;
+            joined[b] = true;
+            continue;
+        }
+        if let Some(x) = crossing(&faces[fb], &faces[fa]) {
+            if len(sub(x, at(j))) <= CORNER_REACH_FT {
+                end[b] = x;
+                start[after] = x;
+                joined[b] = true;
+                continue;
+            }
+        }
+        // Faces that do not cross near the click: the two ends are as near as they are; where they are
+        // within a few inches of one another (a face cut by a doorway), they are one point.
+        if len(sub(end[b], start[after])) <= 0.05 {
+            let m = [(end[b][0] + start[after][0]) / 2.0, (end[b][1] + start[after][1]) / 2.0];
+            end[b] = m;
+            start[after] = m;
+            joined[b] = true;
+        }
+    }
+    // The free ends of a line of clicks that run to a wall the scan stops short of are carried to it.
+    if !closed {
+        if let Some(f) = on[0] {
+            if let Some(x) = tee(faces, f, start[0]) {
+                start[0] = x;
+            }
+        }
+        if let Some(f) = on[stretches - 1] {
+            if let Some(x) = tee(faces, f, end[stretches - 1]) {
+                end[stretches - 1] = x;
+            }
+        }
+    }
+    // The way each stretch is carried: by how much, and to which side.
+    let mut seen = Vec::with_capacity(stretches);
+    let mut carry: Vec<(f64, bool)> = Vec::with_capacity(stretches);
+    let mut body_left = Vec::with_capacity(stretches);
+    for i in 0..stretches {
+        let Some(f) = on[i] else {
+            seen.push(Seen::Nothing);
+            carry.push((0.0, true));
+            body_left.push(None);
+            continue;
+        };
+        let face = &faces[f];
+        let run = unit(start[i], end[i]);
+        // Whether the face's own way of running is this stretch's.
+        let same = dot(face.dir(), run) >= 0.0;
+        if let Some((g, gap)) = face.pair.filter(|(g, _)| *g < faces.len()) {
+            // The centre goes between the two faces: half the distance toward the other.
+            let middle = [(faces[g].line[0][0] + faces[g].line[1][0]) / 2.0, (faces[g].line[0][1] + faces[g].line[1][1]) / 2.0];
+            let toward_left = face.left_of(middle) > 0.0;
+            let left = if same { toward_left } else { !toward_left };
+            seen.push(Seen::Both { gap });
+            carry.push((gap / 2.0, left));
+            body_left.push(None);
+        } else {
+            let room_left = face.room.map(|r| if same { r } else { !r });
+            // The body is on the side away from the room; where the sheet cannot tell, to the right of the
+            // way the stretch runs (outward of a ring clicked counter-clockwise).
+            let left = !room_left.unwrap_or(true) != flip;
+            seen.push(Seen::Face { room: room_left });
+            carry.push((thickness / 2.0, left));
+            body_left.push(Some(left));
+        }
+    }
+    // One line of stretches that meet end to end and are carried the same way is carried out together.
+    let together = stretches >= 2 && (0..if closed { stretches } else { stretches - 1 }).all(|i| joined[i]) && carry.iter().all(|c| (c.0 - carry[0].0).abs() < 1e-9 && c.1 == carry[0].1) && carry[0].0 > 0.0;
+    if together {
+        let mut ring: Vec<P2> = (0..stretches).map(|i| start[i]).collect();
+        if !closed {
+            ring.push(end[stretches - 1]);
+        }
+        let out = plumbline_world::editing::carry::carried_out(&ring, carry[0].0, carry[0].1, closed);
+        let wanted = if closed { stretches } else { stretches + 1 };
+        if out.len() == wanted {
+            let lines = (0..stretches).map(|i| [out[i], out[(i + 1) % out.len()]]).collect();
+            return ByFace { lines, seen, body_left };
+        }
+    }
+    let mut lines: Vec<[P2; 2]> = (0..stretches)
+        .map(|i| {
+            let (by, left) = carry[i];
+            let two = plumbline_world::editing::carry::carried_out(&[start[i], end[i]], by, left, false);
+            if two.len() == 2 { [two[0], two[1]] } else { [start[i], end[i]] }
+        })
+        .collect();
+    // Stretches carried by different amounts, or to different sides, or beside one the sheet shows no face of:
+    // each corner is still where the two walls' own lines meet.
+    let reach = 4.0 * carry.iter().fold(0.0_f64, |m, c| m.max(c.0)) + 0.3;
+    let corners = if closed { stretches } else { stretches - 1 };
+    for b in 0..corners {
+        let a = (b + 1) % stretches;
+        match (on[b].is_some(), on[a].is_some()) {
+            (true, true) if joined[b] => {
+                if let Some(x) = meet(lines[b], lines[a]) {
+                    if len(sub(x, lines[b][1])) <= reach && len(sub(x, lines[a][0])) <= reach {
+                        lines[b][1] = x;
+                        lines[a][0] = x;
+                    }
+                }
+            }
+            // A stretch with no face beside one that has: it runs to where that wall's line ends.
+            (true, false) if len(sub(lines[b][1], lines[a][0])) <= reach => lines[a][0] = lines[b][1],
+            (false, true) if len(sub(lines[b][1], lines[a][0])) <= reach => lines[b][1] = lines[a][0],
+            _ => {}
+        }
+    }
+    ByFace { lines, seen, body_left }
+}
+
+#[cfg(test)]
+mod by_face_tests {
+    use super::*;
+
+    fn face(a: P2, b: P2, room: Option<bool>) -> SheetFace {
+        SheetFace { line: [a, b], room, pair: None }
+    }
+
+    /// The house of demos/tracew.sh as a scan's sheet shows it: 30 by 16 ft inside, the four outside
+    /// walls one face each (seen from indoors), a partition with both faces, 4 1/2 in apart, 18 ft in.
+    fn house() -> Vec<SheetFace> {
+        let mut f = vec![
+            face([0.0, 0.0], [30.0, 0.0], Some(true)),
+            face([30.0, 0.0], [30.0, 16.0], Some(true)),
+            face([0.0, 16.0], [30.0, 16.0], Some(false)),
+            face([0.0, 0.0], [0.0, 16.0], Some(false)),
+            // The partition's faces stop 2 in short of the walls they meet: the scan sees nothing in the corner.
+            face([17.8125, 0.2], [17.8125, 15.8], Some(false)),
+            face([18.1875, 0.2], [18.1875, 15.8], Some(true)),
+        ];
+        f[4].pair = Some((5, 0.375));
+        f[5].pair = Some((4, 0.375));
+        f
+    }
+
+    fn close(a: P2, b: P2) -> bool {
+        (a[0] - b[0]).abs() < 1e-6 && (a[1] - b[1]).abs() < 1e-6
+    }
+
+    #[test]
+    fn the_outside_walls_are_carried_out_by_half_the_type() {
+        // Four clicks a few inches off the faces' ends, then back to the first.
+        let clicks = [[0.0, 0.1], [29.9, 0.0], [30.0, 15.9], [0.1, 16.0]];
+        let laid = by_face(&clicks, true, &house(), 0.5, false);
+        assert_eq!(laid.lines.len(), 4);
+        let corners = [[-0.25, -0.25], [30.25, -0.25], [30.25, 16.25], [-0.25, 16.25]];
+        for (i, line) in laid.lines.iter().enumerate() {
+            assert!(close(line[0], corners[i]) && close(line[1], corners[(i + 1) % 4]), "wall {i}: {line:?}");
+        }
+        assert!(laid.seen.iter().all(|s| matches!(s, Seen::Face { room: Some(true) })), "{:?}", laid.seen);
+        // 30.5 + 16.5 + 30.5 + 16.5
+        let length: f64 = laid.lines.iter().map(|l| (l[1][0] - l[0][0]).hypot(l[1][1] - l[0][1])).sum();
+        assert!((length - 94.0).abs() < 1e-9, "{length}");
+    }
+
+    #[test]
+    fn the_other_side_puts_the_bodies_inside() {
+        let clicks = [[0.0, 0.0], [30.0, 0.0], [30.0, 16.0], [0.0, 16.0]];
+        let laid = by_face(&clicks, true, &house(), 0.5, true);
+        let corners = [[0.25, 0.25], [29.75, 0.25], [29.75, 15.75], [0.25, 15.75]];
+        for (i, line) in laid.lines.iter().enumerate() {
+            assert!(close(line[0], corners[i]) && close(line[1], corners[(i + 1) % 4]), "wall {i}: {line:?}");
+        }
+    }
+
+    #[test]
+    fn the_same_ring_clicked_clockwise_is_carried_out_too() {
+        // The body is away from the room whichever way the hand goes round.
+        let clicks = [[0.0, 0.0], [0.0, 16.0], [30.0, 16.0], [30.0, 0.0]];
+        let laid = by_face(&clicks, true, &house(), 0.5, false);
+        let corners = [[-0.25, -0.25], [-0.25, 16.25], [30.25, 16.25], [30.25, -0.25]];
+        for (i, line) in laid.lines.iter().enumerate() {
+            assert!(close(line[0], corners[i]) && close(line[1], corners[(i + 1) % 4]), "wall {i}: {line:?}");
+        }
+    }
+
+    #[test]
+    fn a_partition_goes_between_its_two_faces_from_either_face() {
+        for x in [17.8125, 18.1875] {
+            for flip in [false, true] {
+                // Clicked south to north, and north to south.
+                let up = by_face(&[[x, 0.2], [x, 15.8]], false, &house(), 0.375, flip);
+                assert!(close(up.lines[0][0], [18.0, 0.0]) && close(up.lines[0][1], [18.0, 16.0]), "{:?}", up.lines);
+                assert_eq!(up.seen, vec![Seen::Both { gap: 0.375 }]);
+                let down = by_face(&[[x, 15.8], [x, 0.2]], false, &house(), 0.375, flip);
+                assert!(close(down.lines[0][0], [18.0, 16.0]) && close(down.lines[0][1], [18.0, 0.0]), "{:?}", down.lines);
+            }
+        }
+    }
+
+    #[test]
+    fn a_partition_clicked_on_one_face_at_one_end_and_the_other_at_the_other() {
+        let laid = by_face(&[[17.8125, 0.2], [18.1875, 15.8]], false, &house(), 0.375, false);
+        assert!(close(laid.lines[0][0], [18.0, 0.0]) && close(laid.lines[0][1], [18.0, 16.0]), "{:?}", laid.lines);
+    }
+
+    #[test]
+    fn a_ring_with_one_side_the_sheet_shows_no_face_of_still_meets_at_its_corners() {
+        // The west wall's face is not seen (a wardrobe stands in front of it).
+        let mut faces = house();
+        faces.remove(3);
+        let clicks = [[0.0, 0.0], [30.0, 0.0], [30.0, 16.0], [0.0, 16.0]];
+        let laid = by_face(&clicks, true, &faces, 0.5, false);
+        assert_eq!(laid.seen[3], Seen::Nothing, "{:?}", laid.seen);
+        for i in 0..4 {
+            assert!(close(laid.lines[i][1], laid.lines[(i + 1) % 4][0]), "wall {i} meets wall {}: {:?}", (i + 1) % 4, laid.lines);
+        }
+        // The three seen sides are carried out 3 in and their corners are where their lines meet.
+        assert!(close(laid.lines[0][1], [30.25, -0.25]) && close(laid.lines[1][1], [30.25, 16.25]), "{:?}", laid.lines);
+        // The unseen side stays on the line clicked, from end to end of its neighbours.
+        assert!((laid.lines[3][0][0] - 0.0).abs() < 1e-6 && (laid.lines[3][1][0] - 0.0).abs() < 1e-6, "{:?}", laid.lines);
+    }
+
+    #[test]
+    fn a_click_with_no_face_near_stays_where_it_was_put() {
+        let clicks = [[9.0, 3.0], [12.0, 3.0]];
+        let laid = by_face(&clicks, false, &house(), 0.5, false);
+        assert_eq!(laid.seen, vec![Seen::Nothing]);
+        assert!(close(laid.lines[0][0], [9.0, 3.0]) && close(laid.lines[0][1], [12.0, 3.0]));
+        assert!(!on_a_face(&house(), [9.0, 3.0]));
+        assert!(on_a_face(&house(), [9.0, 0.05]));
+    }
+
+    #[test]
+    fn a_sheet_that_cannot_tell_the_room_is_laid_to_the_right_and_says_so() {
+        let faces = vec![face([0.0, 0.0], [30.0, 0.0], None)];
+        let laid = by_face(&[[0.0, 0.0], [30.0, 0.0]], false, &faces, 0.5, false);
+        assert_eq!(laid.seen, vec![Seen::Face { room: None }]);
+        assert!(close(laid.lines[0][0], [0.0, -0.25]), "{:?}", laid.lines);
+    }
+
+    #[test]
+    fn one_face_cut_by_a_doorway_is_still_one_wall() {
+        // A south wall seen in two pieces with a 3 ft doorway between, traced across it in two clicks.
+        let faces = vec![face([0.0, 0.0], [10.0, 0.0], Some(true)), face([13.0, 0.0], [30.0, 0.0], Some(true))];
+        let laid = by_face(&[[0.0, 0.0], [30.0, 0.0]], false, &faces, 0.5, false);
+        assert!(close(laid.lines[0][0], [0.0, -0.25]) && close(laid.lines[0][1], [30.0, -0.25]), "{:?}", laid.lines);
+    }
+
+    /// A sheet the page reader shrank: the dots to the foot are the picture's own, and what is read comes back
+    /// in the page's units (call 190).
+    #[test]
+    fn a_sheet_that_was_shrunk_gives_its_faces_in_the_pages_units() {
+        // The page is 8192 by 2048 dots at 48 to the foot; the picture the reader made of it is half that.
+        let (pw, ph) = (4096u32, 1024u32);
+        let mut rgba = vec![255u8; (pw * ph * 4) as usize];
+        // A band of points 8 rows deep, rows 500 to 507 from the top, from dot 100 to dot 2100.
+        for y in 500..508 {
+            for x in 100..2100 {
+                let at = ((y * pw + x) * 4) as usize;
+                rgba[at..at + 4].copy_from_slice(&[100, 100, 100, 255]);
+            }
+        }
+        let page = plumbline_plans::Page { sort: plumbline_plans::Sort::Png, pages: 1, size: [8192.0, 2048.0], picture: plumbline_plans::Picture { width: pw, height: ph, rgba }, lines: Vec::new(), dashed: Vec::new(), cuts: Vec::new(), pictures: 0, lost: Vec::new() };
+        let faces = scan_faces(&page, 1.0 / 48.0);
+        assert_eq!(faces.len(), 1, "{faces:?}");
+        let [a, b] = faces[0].line;
+        // The band's middle is 3.5 dots below row 500, so row 503.5 from the top: 1024 - 503.5 = 520.5 from
+        // the bottom in picture dots, twice that in page units (the half dot's own correction is a dot).
+        assert!((a[1] - 2.0 * 520.5).abs() < 6.0 && (b[1] - 2.0 * 520.5).abs() < 6.0, "{faces:?}");
+        assert!((a[0] - 2.0 * 100.0).abs() < 12.0 && (b[0] - 2.0 * 2100.0).abs() < 12.0, "{faces:?}");
+        // Read as if its dots were the page's, it would be half as far across.
+        assert!(b[0] - a[0] > 3900.0, "{faces:?}");
     }
 }

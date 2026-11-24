@@ -7245,3 +7245,19 @@ only where it was better.
   job is byte for byte the command line's.
 - **The sheet's clash tables** each say their count by name, and "Laid in a floor or a
   wall" is a table of its own; the window's counts are the model's.
+
+**Call 190 point 2, as built (2026-11-24).** In the window, over a scan's sheet, the
+Wall tool is set by the scan's face. Each click lands on a face read from the sheet's
+own picture; the wall is laid with its body on the side away from the room and its
+centre half its type's thickness off the line clicked; the card says so and "Other
+side" lays it on the other. A choice "Centerline | Face" is on the tool (Face over a
+scan, Centerline everywhere else: nothing drawn over a plan moved). Where the scan
+shows both faces the centre goes between them and the card says how far apart they
+are beside the type's thickness. A click with no face near stays where the hand put
+it and says the scan shows no face there. The builder's choices, kept: a wall's free
+end within about 7 in of a face that crosses it is carried to that face (a scanned
+partition stops a couple of inches short of the wall it meets); a wall whose room
+side the scan cannot tell is laid to the right of the way it was clicked, and says
+so. One expectation moved by this call, the reason beside it: the wall of
+`demos/scanw.sh` is 3 in outside the room's face (north 3.75 ft) where it was on it
+(north 4 ft), and its check is tighter than it was.

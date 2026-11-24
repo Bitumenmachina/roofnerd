@@ -42,6 +42,7 @@ such reading, and STATUS.md says where each thing it found stands).
 | `roofw` | `demos/roofw.sh` |
 | `roomlinew` (`01` to `06`) | `demos/roomlinew.sh` |
 | `scanw` (`01` to `15`) | `demos/scanw.sh` |
+| `tracew` (`01` to `08`) | `demos/tracew.sh` |
 | `tools` | `demos/toolsw.sh` |
 | `turnw` | `demos/turnw.sh` |
 

@@ -1671,6 +1671,29 @@ fn build_bar(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snap
                     doc.open_form(Entry::Settings(tool), values, i);
                 });
             }
+            // How a wall is set to the line clicked (call 190): by its center, or by its face. Over a
+            // scan's sheet it is on Face to begin with; anywhere else on Centerline. After walls were
+            // laid by a scan's face, "Other side" lays them on the other.
+            if tool == Tool::Wall {
+                let over_a_scan = snap.drawings.iter().any(|l| Some(&l.storey) == doc.show.storey.as_ref() && crate::plans::is_scan(l));
+                let by_face = doc.draw.face_choice.unwrap_or(over_a_scan);
+                strip.spawn(Node { flex_direction: FlexDirection::Column, row_gap: px(2.0), flex_shrink: 0.0, ..default() }).with_children(|c| {
+                    c.spawn((text(fonts, "SET BY", 11.0, Weight::Semibold, theme::ink_faint()), TextLayout::no_wrap(), Pickable::IGNORE));
+                    c.spawn(Node { column_gap: px(4.0), ..default() }).with_children(|b| {
+                        on_click(&mut button(b, fonts, "Centerline", "", !by_face), |doc| {
+                            doc.draw.face_choice = Some(false);
+                            doc.touch();
+                        });
+                        on_click(&mut button(b, fonts, "Face", "", by_face), |doc| {
+                            doc.draw.face_choice = Some(true);
+                            doc.touch();
+                        });
+                        if doc.draw.faced.as_ref().is_some_and(|run| !run.centre && run.seen.iter().any(|s| matches!(s, crate::plans::Seen::Face { .. }))) {
+                            on_click(&mut button(b, fonts, "Other side", "", false), |doc| crate::tools::other_side(doc));
+                        }
+                    });
+                });
+            }
             // A run of cabinet boxes (call 156): where along the wall it starts and the boxes'
             // codes, typed side by side; and the switch for the countertop over them.
             if tool == Tool::Cabinets {

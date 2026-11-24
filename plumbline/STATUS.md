@@ -10049,6 +10049,45 @@ What is not right:
 - `roomlinew`'s colour check sits on its bound.
 - The look: the light is a little better and the house still reads as a model.
 
+## A wall traced over a scan is set by its face: built in the window (call 190; 2026-11-24)
+
+Built by the window builder (Sonnet) on the tree merged at 579afa3; accepted by the
+lead by its diff, its pictures (`demos/captured/tracew/`, 04 and 07 read by the lead)
+and the runs named here and in the merge that follows.
+
+- **First, the merged tree in the window** (owed since the merge at 579afa3): `pricew`
+  (41 assemblies, never before checked in the window), `scanw`, `planw`, `movew`,
+  `tradesw`, `glassw` and `lightw` all passed on the frozen merged build, first run
+  each.
+- **`demos/tracew.sh`** (new): the made-up house of the demonstration's section
+  above, brought in as a scan and traced. Four walls clicked a few inches off the
+  inside corners land on the scan's faces and are laid 3 in outside them: 93.99 LF
+  (94.00 by hand: the made-up scan's points are rough, as a real one's are, and its
+  faces read to the sixteenth). The card: "Laid by the scan's face: the wall's body
+  is outside the line clicked, so its center is 3 in off the line clicked (half the
+  type's 6 in). If that is the wrong side, press Other side." The same clicks on
+  Centerline, on a second level, give the smaller house. The partition goes between
+  its two faces and says the scan shows 4 1/2 in. A click away from every face stays
+  where it was put and says so. The script's check was shown to fail twice by
+  changing what it expects.
+- `scanw` (its one expectation moved, as call 190 says), `planw`, `d2` and `bringw`
+  pass on the builder's frozen build: walls drawn with no scan under them did not
+  move. `tracew` failed once (a click that accepts the tool's sizes was lost while a
+  build ran beside it) and passed when run again alone.
+- **On real phone scans** (not in the repository): the three sheets give 12, 11 and
+  5 faces to pick from; no wall showed both faces. The small room was traced through
+  the window: three walls laid by the scan's face, the fourth where the scan has no
+  face, and the card said so. The other two were not traced through the window.
+
+What is not right:
+- The accept-click that was lost under load is the same path the eighteenth judgment
+  found; it has not failed on a quiet machine, and it is watched.
+- The scan's cut is drawn so heavy that a traced wall covers it; the faces the
+  click lands on are not themselves shown.
+- Two of the three real scans were not traced in the window.
+- Call 190 point 3 (the walls the by-ceiling finder is sure of, shown to take) is
+  not built.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **As of 2026-11-23 (the lead, after the merge of that day). Read this block first; what
