@@ -1556,7 +1556,7 @@ fn find_core(lines: &[[[f64; 2]; 2]], feet_per_unit: Option<f64>, page: [f64; 2]
             } else if none.1 - none.0 > BARE_GAP_MOST && !drawn_in_gap(none.0, none.1) {
                 // Wider than a door and nothing drawn in it (call 191 item 2): bare paper. No wall is laid across it.
                 groups.push(std::mem::replace(&mut cur, (vec![w[1]], Vec::new())));
-                out.notes.push(format!("both lines of a wall stop for {} at {}, wider than 8 ft with nothing drawn in it (no leaf, no swing, no line across): taken as one wall ending and another beginning, and no door is found there", inch_said(none.1 - none.0), place_said(shift(at(fa.u, fa.n, none.0, cc), origin))));
+                out.notes.push(format!("both lines of a wall stop for {} at {}, wider than 8 ft with nothing drawn in it from jamb to jamb (no leaf, no swing, no line across between them): taken as one wall ending and another beginning, and no door is found there", inch_said(none.1 - none.0), place_said(shift(at(fa.u, fa.n, none.0, cc), origin))));
             } else if none.1 - none.0 > JOINT_MOST {
                 cur.1.push(none);
                 cur.0.push(w[1]);

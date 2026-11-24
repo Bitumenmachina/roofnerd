@@ -10238,6 +10238,33 @@ What is not right:
 - A door's casing at a wall's end overlaps the corner board (a drawing matter).
 - The judge read the main checkout, which was commits behind: the STATUS sections
   its brief named were not there, and it worked its own hand figures (they agreed).
+## Call 191's fixes judged, and what the second judge found fixed (2026-11-24)
+
+A second cold judge (Sonnet; `research/judgment-fixes-191.md`) ran the first judge's
+cases again on the fixed program and went round each fix: **fourteen of the fifteen
+hold, none is unfixed, one was incomplete.** The lead decided four points
+(DECISIONS.md, "Call 191, the fixes judged"); the same worker fixed them; the lead
+ran the tests, every command-line demonstration and the gates on the result (in the
+commit's message).
+
+Changed, and named:
+- **Doors and windows laid from a sheet ride on its scale** in the verify-in-field
+  list, as its walls do (point 14 said so and counted walls only): on the judge's
+  house $3,572.00 and 5 lines where it read $3,072.00 and 4; a door priced alone,
+  $500.00 where it read "no dollars riding on it". A door traced by hand is as it was.
+- **The soffit's corner sentence says both counts.** On an L-shaped roof at a 9 in
+  overhang: 5 corners, 2.81 SF, in two runs; 1 inside corner, 0.56 SF, in neither;
+  2.25 SF more than the roof has. (The lead's hand figure for this was wrong: it
+  counted six outside corners where an L has five. The builder said so.)
+- A figure printed to two places in the trim list is rounded as the estimate rounds
+  (1.125 reads 1.13).
+- A gap with only its jambs drawn is said to have nothing drawn in it from jamb to
+  jamb.
+
+What is not right: the trim list totals a kind from its lines' unrounded lengths
+(four rakes, 53.67 LF) where the estimate's four printed lines add to 53.68; a trim
+line cannot be switched off to try that case (only a labor line can).
+
 ## A wall traced over a scan is set by its face: built in the window (call 190; 2026-11-24)
 
 Built by the window builder (Sonnet) on the tree merged at 579afa3; accepted by the

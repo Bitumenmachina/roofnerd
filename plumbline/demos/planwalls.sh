@@ -846,7 +846,8 @@ says "a wall of 30 ft" "30' 0\" long" "$OUT"
 says "a wall of 28 ft" "28' 0\" long" "$OUT"
 lacks "no wall of 73 ft" "73' 0\" long" "$OUT"
 says "the gap is said with where" "both lines of a wall stop for 14' 6\" at" "$OUT"
-says "and why" "wider than 8 ft with nothing drawn in it (no leaf, no swing, no line across)" "$OUT"
+# call 191 point 19: the words say "from jamb to jamb" (the jambs are lines across the ends); the old words read "(no leaf, no swing, no line across)".
+says "and why" "wider than 8 ft with nothing drawn in it from jamb to jamb (no leaf, no swing, no line across between them)" "$OUT"
 LAID="$("$P" find-walls "$JI" "$DI" --plan 1 --lay)"
 TAKE="$("$P" takeoff "$JI")"
 grep -E "walls +[0-9]+ +100\.00 LF" <<<"$TAKE" >/dev/null && echo "    takeoff: walls 100.00 LF (drawing 1 alone)" || { echo "FAIL: the walls are not 100.00 LF"; echo "$TAKE" | head; exit 1; }
@@ -937,6 +938,20 @@ done
 "$P" vif "$JR" > "$T/c191-vif1.txt"
 sed 's/^/    | /' "$T/c191-vif1.txt" | grep -E "$DR|scale" | head -4
 grep -F "$DR" "$T/c191-vif1.txt" | grep -qF '$2,700.00' && echo "    the sheet's scale: \$2,700.00 riding (by hand 900 SF x \$3.00)" || { echo "FAIL: \$2,700.00 is not riding on the scale"; cat "$T/c191-vif1.txt"; exit 1; }
+echo "  (call 191 item 16) doors laid from the sheet ride on its scale too. By hand: the 50 by 20 ft house with its 16 ft garage door laid 7 ft high: 140 LF x 9 ft = 1,260 SF gross, less 16 x 7 = 112 SF, 1,148 SF net at a made-up \$3.00/SF = \$3,444.00 (4 lines), the door at \$500.00: \$3,944.00 riding on the scale, 5 lines; the door priced alone: \$500.00:"
+JG16="$T/c191-g16.json"; DG16="$(new_job "$JG16" "$T/garage.pdf" 1)"; scale_wide "$JG16" "$DG16" 121.5 1030.5 "50 ft 6 in"
+"$P" find-walls "$JG16" "$DG16" --lay --doors "7 ft" >/dev/null
+DOOR16="$(grep -oE ' door-[0-9]+' <<<"$("$P" show "$JG16")" | sort -u | head -1 | tr -d ' ')"
+"$P" line "$JG16" "$DOOR16" "Entry door, prehung" 1 --division 8 >/dev/null
+"$P" set "$JG16" "$DOOR16" unit_cost '$500.00/EA' --line "Entry door, prehung" --status Known --source "made-up price" >/dev/null
+"$P" vif "$JG16" > "$T/c191-vif16a.txt"
+grep -F "$DG16" "$T/c191-vif16a.txt" | grep -qF '$500.00, 1 line' && echo "    the door alone: \$500.00 riding on the scale, 1 line" || { echo "FAIL: the door's \$500.00 does not ride on the scale"; cat "$T/c191-vif16a.txt"; exit 1; }
+for w in $(grep -oE ' wall-[0-9]+' <<<"$("$P" show "$JG16")" | sort -u); do
+  "$P" line "$JG16" "$w" "Lap siding" net_area --division 7 >/dev/null
+  "$P" set "$JG16" "$w" unit_cost '$3.00/SF' --line "Lap siding" --status Known --source "made-up price" >/dev/null
+done
+"$P" vif "$JG16" > "$T/c191-vif16b.txt"
+grep -F "$DG16" "$T/c191-vif16b.txt" | grep -qF '$3,944.00, 5 lines' && echo "    walls and door: \$3,944.00 riding on the scale, 5 lines (by hand)" || { echo "FAIL: not \$3,944.00 and 5 lines"; cat "$T/c191-vif16b.txt"; exit 1; }
 echo "  (B9) strings that cannot be used are counted: \"0'-0\\\"\" has no length, \"240 in\" is inches alone, \"9.144 m\" and \"2744 mm\" are metric:"
 sheet_of badstrings
 JS="$T/c191-s.json"; DS="$(new_job "$JS" "$T/badstrings.pdf" 1)"

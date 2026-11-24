@@ -315,6 +315,18 @@ says "$T/c12.txt" "2.25 SF is corner counted in two runs (4 corners)"
 "$P" trim "$H" > "$T/c12t.txt"
 says "$T/c12t.txt" "counts each corner where two runs meet in both: 4 corners, 2.25 SF in all"
 says "$T/c12t.txt" "0.5625 SF is in both runs"
+echo "  C12 again (call 191 item 17). An L-shaped roof (the walls' lines (0,0) (24,0) (24,16) (12,16) (12,26) (0,26), the roof a foot outside them, an overhang of 9 in): by hand an L has six corners: five outside, in two runs, 5 x 0.5625 = 2.8125 SF (2.81), and one inside, a square of 0.5625 SF (0.56) in neither; the formula gives 2.8125 - 0.5625 = 2.25 SF more than the roof has:"
+LH="$T/lroof.json"
+"$P" new "$LH" "L roof (not a real job)" >/dev/null
+LS="$(made "$("$P" level "$LH" ground --elevation "0 ft" --height "9 ft" "${A[@]}")")"
+LW="$(made "$("$P" type "$LH" wall "wall 6 in" --thickness "6 in" "${A[@]}")")"
+"$P" wall "$LH" "$LS" "$LW" --points "0,0 24,0 24,16 12,16 12,26 0,26" --closed --height "9 ft" "${A[@]}" >/dev/null
+"$P" roof "$LH" "L roof" --points "-1,-1 25,-1 25,17 13,17 13,27 -1,27" --pitch 6:12 --eave-height "9 ft" "${A[@]}" >/dev/null
+for e in $(grep -oE 'eave-[0-9]+' <<<"$("$P" show "$LH")" | sort -u); do "$P" line "$LH" "$e" "Soffit" "true_length * overhang" --division 6 >/dev/null; done
+"$P" trim "$LH" --pieces > "$T/c17.txt"
+says "$T/c17.txt" "2.81 SF is corner counted in two runs (5 corners) and 0.56 SF at the 1 inside corner is counted in neither: the lines price 2.25 SF more than the roof has"
+"$P" trim "$LH" > "$T/c17t.txt"
+says "$T/c17t.txt" "each corner where two runs meet in both (5 corners, 2.81 SF in two runs) and the square at each inside corner in neither (1 inside corner, 0.56 SF), so it gives 2.25 SF more than the roof has"
 echo "  C13. A quantity is said as the estimate says it, to 2 places: the rake fascia of the gable house, by hand 4 x 10.0623 = 40.2492, said 40.25 and not 40.2492:"
 lacks "$T/pieces.txt" "40.2492 LF; the lines price"
 

@@ -303,9 +303,9 @@ fn say_other(out: &mut Laid, totals: &mut [Option<f64>; 6], no_fig: &mut [usize;
         match q.worked() {
             Some(v) if q.unit == kind.unit() => {
                 *totals[kind.index()].get_or_insert(0.0) += v;
-                out.left_out.push(format!("{called}: \"{desc}\" prices {} {} by \"{quantity}\", which is not {figure}: no piece of its {} is drawn from it, and {} {} of what it prices is not drawn", crate::view::figure(v, 2), kind.unit(), kind.words(), crate::view::figure(v, 2), kind.unit()));
+                out.left_out.push(format!("{called}: \"{desc}\" prices {} {} by \"{quantity}\", which is not {figure}: no piece of its {} is drawn from it, and {} {} of what it prices is not drawn", crate::view::figure2(v), kind.unit(), kind.words(), crate::view::figure2(v), kind.unit()));
             }
-            Some(v) => out.left_out.push(format!("{called}: \"{desc}\" prices {} {} by \"{quantity}\", which is not {figure} and not a figure in {}: no piece of its {} is drawn from it and it is set against no total", crate::view::figure(v, 2), if q.unit.is_empty() { "of something" } else { q.unit.as_str() }, kind.unit(), kind.words())),
+            Some(v) => out.left_out.push(format!("{called}: \"{desc}\" prices {} {} by \"{quantity}\", which is not {figure} and not a figure in {}: no piece of its {} is drawn from it and it is set against no total", crate::view::figure2(v), if q.unit.is_empty() { "of something" } else { q.unit.as_str() }, kind.unit(), kind.words())),
             None => {
                 no_fig[kind.index()] += 1;
                 out.left_out.push(format!("{called}: \"{desc}\" has no figure (\"{quantity}\", which is not {figure}), so its {} is not drawn", kind.words()));

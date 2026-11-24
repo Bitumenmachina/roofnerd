@@ -235,8 +235,10 @@ pub struct Corner {
     pub b: String,
     /// Where the two edges meet, in feet.
     pub at: P2,
-    /// The area both runs count, in SF.
+    /// The area both runs count, in SF; at an inside corner, the area neither counts.
     pub area: f64,
+    /// An inside corner (the roof's edge turns in): the two runs leave the square at it uncovered, and count it in neither.
+    pub inside: bool,
 }
 
 /// The intersection of two convex polygons (Sutherland-Hodgman), as a polygon.
@@ -346,7 +348,23 @@ pub fn soffit_corners(world: &mut World) -> Vec<Corner> {
                     let both = clip(ra, &rb);
                     let area = if both.len() >= 3 { area_of(&both) } else { 0.0 };
                     if area > 1e-6 {
-                        out.push(Corner { a: edges[i].0.clone(), b: edges[j].0.clone(), at: p, area });
+                        out.push(Corner { a: edges[i].0.clone(), b: edges[j].0.clone(), at: p, area, inside: false });
+                    } else {
+                        // Edge `j` leaving the corner on the outer side of edge `i`'s soffit: the roof turns in, and the strips each side
+                        // of the two edges leave the parallelogram between them (d x d at a right angle) in neither (call 191 item 17).
+                        let unit = |k: usize, e: usize| {
+                            let (near, far) = (edges[k].1[e], edges[k].1[1 - e]);
+                            let (dx, dy) = (far[0] - near[0], far[1] - near[1]);
+                            let long = dx.hypot(dy);
+                            [dx / long, dy / long]
+                        };
+                        let (ui, uj) = (unit(i, ea), unit(j, eb));
+                        let left = [-ui[1], ui[0]];
+                        let inward = if ea == 0 { left } else { [-left[0], -left[1]] };
+                        let sin = (ui[0] * uj[1] - ui[1] * uj[0]).abs();
+                        if sin > 1e-3 && uj[0] * inward[0] + uj[1] * inward[1] < -1e-3 {
+                            out.push(Corner { a: edges[i].0.clone(), b: edges[j].0.clone(), at: p, area: edges[i].3 * edges[j].3 / sin, inside: true });
+                        }
                     }
                 }
             }

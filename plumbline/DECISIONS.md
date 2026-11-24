@@ -7355,12 +7355,17 @@ flawed. What is decided:
     net face at a made-up $3.00, $3,072.00; the door $500.00: **$3,572.00 riding on
     the sheet's scale, 5 lines**, where it read $3,072.00 and 4. A door priced alone
     on a sheet: $500.00 riding, where it read "no dollars riding on it".
-17. **The soffit's corner sentence says what it counts.** On an L-shaped roof six
-    outside corners are in two runs each and the one inside corner is in neither;
-    the sentence said "5 corners" for the net. It says both: by hand at a 9 in
-    overhang, 6 x 0.5625 = 3.38 SF counted twice, 0.56 SF at the inside corner
-    counted in neither, 2.81 SF more than the roof has. (STATUS.md had this as a
-    thing not right; it is now said.)
+17. **The soffit's corner sentence says what it counts.** On an L-shaped roof the
+    five outside corners are in two runs each and the one inside corner is in
+    neither; the sentence gave the outside corners and was silent on the inside one.
+    It says both, and what they come to: by hand at a 9 in overhang, 5 x 0.5625 =
+    2.81 SF counted twice, 0.56 SF at the inside corner counted in neither, so
+    length times overhang gives 2.25 SF more than the roof has (four corners' worth,
+    as on any roof whose eaves turn square all the way round). **The lead first
+    wrote this with six outside corners and 3.38 SF: an L has six corners, five
+    outside and one inside. The builder said so and did not bend the program; the
+    figures here are the right ones.** (STATUS.md had the inside corner as a thing
+    not right; it is now said.)
 18. **A figure printed to two places is rounded the way the estimate rounds it**:
     1.125 reads 1.13, not 1.12.
 19. A gap with only its jambs drawn is said to have nothing drawn in it "from jamb to

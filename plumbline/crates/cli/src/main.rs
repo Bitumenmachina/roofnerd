@@ -357,6 +357,33 @@ fn clashes(job: &mut plumbline_world::Job, clearance: Option<f64>) -> Result<Str
 
 /// What the building comes to: each storey's walls and floors, then each system's runs by
 /// kind and size, its fittings by kind, and what is set on it. The same figures the sheet window shows.
+/// What the soffit taken off as length times overhang counts at its corners (call 191 items 12 and 17): corners where two runs meet are in
+/// both, an inside corner is in neither, and the net is how much more the formula gives than the roof has.
+fn soffit_corner_figures(corners: &[plumbline_world::trim::Corner]) -> (usize, f64, usize, f64) {
+    let (twice, none): (Vec<_>, Vec<_>) = corners.iter().partition(|c| !c.inside);
+    (twice.len(), twice.iter().map(|c| c.area).sum(), none.len(), none.iter().map(|c| c.area).sum())
+}
+
+fn corner_count(n: usize, what: &str) -> String {
+    if n == 1 { format!("1 {what}") } else { format!("{n} {what}s") }
+}
+
+fn soffit_corners_said(corners: &[plumbline_world::trim::Corner]) -> String {
+    let (n, a, m, b) = soffit_corner_figures(corners);
+    if m == 0 {
+        return format!("each corner where two runs meet in both: {}, {} SF in all", corner_count(n, "corner"), view::figure2(a));
+    }
+    format!("each corner where two runs meet in both ({}, {} SF in two runs) and the square at each inside corner in neither ({}, {} SF), so it gives {} SF more than the roof has", corner_count(n, "corner"), view::figure2(a), corner_count(m, "inside corner"), view::figure2(b), view::figure2(a - b))
+}
+
+fn soffit_corners_said_priced(corners: &[plumbline_world::trim::Corner]) -> String {
+    let (n, a, m, b) = soffit_corner_figures(corners);
+    if m == 0 {
+        return format!("{} SF is corner counted in two runs ({})", view::figure2(a), corner_count(n, "corner"));
+    }
+    format!("{} SF is corner counted in two runs ({}) and {} SF at the {} is counted in neither: the lines price {} SF more than the roof has", view::figure2(a), corner_count(n, "corner"), view::figure2(b), corner_count(m, "inside corner"), view::figure2(a - b))
+}
+
 /// The outside trim's figures, each as the model works it out (call 185): the same figures a cost line's quantity reads.
 fn trim_said(job: &mut plumbline_world::Job) -> String {
     use plumbline_world::trim;
@@ -406,7 +433,14 @@ fn trim_said(job: &mut plumbline_world::Job) -> String {
                     let at_corner: Vec<String> = corners
                         .iter()
                         .filter(|c| c.a == f.path || c.b == f.path)
-                        .map(|c| format!("its soffit and {}'s lie over one another at the corner at ({}, {}): {} SF is in both runs when soffit is taken as length times overhang", name_of(if c.a == f.path { &c.b } else { &c.a }), view::num(c.at[0]), view::num(c.at[1]), view::num((c.area * 10_000.0).round() / 10_000.0)))
+                        .map(|c| {
+                            let (other, sq) = (name_of(if c.a == f.path { &c.b } else { &c.a }), view::num((c.area * 10_000.0).round() / 10_000.0));
+                            if c.inside {
+                                format!("its soffit and {other}'s leave the square at the inside corner at ({}, {}) uncovered: {sq} SF is in neither run when soffit is taken as length times overhang", view::num(c.at[0]), view::num(c.at[1]))
+                            } else {
+                                format!("its soffit and {other}'s lie over one another at the corner at ({}, {}): {sq} SF is in both runs when soffit is taken as length times overhang", view::num(c.at[0]), view::num(c.at[1]))
+                            }
+                        })
                         .collect();
                     let corner = if at_corner.is_empty() { String::new() } else { format!("; {}", at_corner.join("; ")) };
                     format!("{} long; overhang {}{}{corner}", info[&f.path].2, shown(d, "ft"), if d.value.is_some() { under } else { String::new() })
@@ -422,8 +456,7 @@ fn trim_said(job: &mut plumbline_world::Job) -> String {
     };
     section(&mut out, "Eaves and rakes:", &[trim::OVERHANG], &[Kind::Eave, Kind::Rake]);
     if !corners.is_empty() {
-        let all: f64 = corners.iter().map(|c| c.area).sum();
-        let _ = writeln!(out, "  Soffit is taken off as the length of the edges times the overhang, with waste on top, and that counts each corner where two runs meet in both: {}, {} SF in all (the formula stays; this is how much of the soffit it is).", if corners.len() == 1 { "1 corner".to_string() } else { format!("{} corners", corners.len()) }, view::figure(all, 2));
+        let _ = writeln!(out, "  Soffit is taken off as the length of the edges times the overhang, with waste on top, and that counts {} (the formula stays; this is how much of the soffit it is).", soffit_corners_said(&corners));
     }
     section(&mut out, "Walls:", &[trim::OUTSIDE_CORNERS], &[Kind::Wall]);
     section(&mut out, "Windows and doors:", &[trim::CASING_LENGTH], &[Kind::Window, Kind::Door]);
@@ -479,7 +512,7 @@ fn trim_pieces_said(job: &mut plumbline_world::Job) -> String {
         }
         let area = kind.unit() == "SF";
         let sum: f64 = mine.iter().map(|p| ((p.to[0] - p.from[0]).powi(2) + (p.to[1] - p.from[1]).powi(2) + (p.to[2] - p.from[2]).powi(2)).sqrt() * if area { p.width } else { 1.0 }).sum();
-        let drawn = format!("{} piece{} {} to {} {}", mine.len(), if mine.len() == 1 { "" } else { "s" }, if mine.len() == 1 { "comes" } else { "come" }, view::figure(sum, 2), kind.unit());
+        let drawn = format!("{} piece{} {} to {} {}", mine.len(), if mine.len() == 1 { "" } else { "s" }, if mine.len() == 1 { "comes" } else { "come" }, view::figure2(sum), kind.unit());
         let lacking = if no_figure == 0 { String::new() } else { format!("; {} of its lines {} no figure", no_figure, if no_figure == 1 { "has" } else { "have" }) };
         match priced {
             // The lines price it and every one has no figure: "no figure", not nothing (call 191 item 11).
@@ -490,8 +523,8 @@ fn trim_pieces_said(job: &mut plumbline_world::Job) -> String {
                 // The same to the cent is the same: both are said as the estimate says them, to 2 places (call 191 item 13).
                 let cents = |x: f64| (x * 100.0).round();
                 let same = cents(sum) == cents(priced);
-                let short = if !same && priced > sum { format!(": {} {} of what the lines price is not drawn", view::figure(priced - sum, 2), kind.unit()) } else { String::new() };
-                let _ = writeln!(out, "  {}: {drawn}; the lines price {} {}{lacking}{}{short}", kind.words(), view::figure(priced, 2), kind.unit(), if same { "" } else { " (they differ: see what is left out)" });
+                let short = if !same && priced > sum { format!(": {} {} of what the lines price is not drawn", view::figure2(priced - sum), kind.unit()) } else { String::new() };
+                let _ = writeln!(out, "  {}: {drawn}; the lines price {} {}{lacking}{}{short}", kind.words(), view::figure2(priced), kind.unit(), if same { "" } else { " (they differ: see what is left out)" });
             }
         }
     }
@@ -500,8 +533,7 @@ fn trim_pieces_said(job: &mut plumbline_world::Job) -> String {
         let drawn_soffit: std::collections::HashSet<&str> = laid.pieces.iter().filter(|p| matches!(p.kind, PieceKind::Soffit | PieceKind::RakeSoffit)).map(|p| p.of.as_str()).collect();
         let both: Vec<_> = trim::soffit_corners(&mut job.world).into_iter().filter(|c| drawn_soffit.contains(c.a.as_str()) && drawn_soffit.contains(c.b.as_str())).collect();
         if !both.is_empty() {
-            let all: f64 = both.iter().map(|c| c.area).sum();
-            let _ = writeln!(out, "  Of the soffit the lines price, {} SF is corner counted in two runs ({}): that is how soffit is taken off, the length of the edges times the overhang, and the pieces drawn lie over one another there.", view::figure(all, 2), if both.len() == 1 { "1 corner".to_string() } else { format!("{} corners", both.len()) });
+            let _ = writeln!(out, "  Of the soffit the lines price, {}: that is how soffit is taken off, the length of the edges times the overhang, and the pieces drawn lie over one another at the corners that are counted twice.", soffit_corners_said_priced(&both));
         }
     }
     if laid.pieces.is_empty() && laid.left_out.is_empty() {

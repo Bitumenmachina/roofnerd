@@ -388,9 +388,27 @@ pub fn laid_from(job: &mut Job, drawing: &str) -> Result<Vec<String>, String> {
     drawing_of(job, drawing)?;
     let name = job.find(drawing).and_then(|e| job.world.get::<Node>(e).map(|n| n.name.clone())).unwrap_or_default();
     let source = format!("found on sheet {name}");
-    let placed: Vec<String> = crate::view::elements(job).into_iter().filter(|e| e.rows.iter().any(|r| !r.derived && r.basis == source)).map(|e| e.path).collect();
-    // What stands in a place the sheet gave: a wall, a door, a window. (The wall type made for them is a size, not a place.)
-    Ok(placed.into_iter().filter(|p| job.find(p).and_then(|e| job.world.get::<Kind>(e)).is_some_and(|k| matches!(k, Kind::Wall | Kind::Door | Kind::Window))).collect())
+    // What stands in a place the sheet gave: a wall, and a door or window in one of those walls. (The wall type made for them is a size, not
+    // a place.) A door's or window's own source is the sheet's, or, where its heights were said when the walls were found (a plan gives
+    // none), the person's: its place along the wall is the sheet's all the same (call 191 item 16).
+    let said = "said when the walls were found";
+    let all = crate::view::elements(job);
+    let walls: Vec<String> = all.iter().filter(|e| e.kind == Kind::Wall && e.rows.iter().any(|r| !r.derived && r.basis == source)).map(|e| e.path.clone()).collect();
+    let mut out: Vec<String> = Vec::new();
+    for e in &all {
+        let mine = if e.kind == Kind::Wall {
+            walls.contains(&e.path)
+        } else if matches!(e.kind, Kind::Door | Kind::Window) {
+            let parent = job.find(&e.path).and_then(|x| job.world.get::<Node>(x)).and_then(|n| n.parent.clone());
+            parent.is_some_and(|p| walls.contains(&p)) && e.rows.iter().any(|r| !r.derived && (r.basis == source || r.basis == said))
+        } else {
+            false
+        };
+        if mine {
+            out.push(e.path.clone());
+        }
+    }
+    Ok(out)
 }
 
 /// What stands where a drawing's scale or place put it: what was traced over it and what was laid from its sheet.
