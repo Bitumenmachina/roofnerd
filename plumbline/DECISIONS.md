@@ -8077,3 +8077,52 @@ lead read the two files against the files as they were: 33 lines of trim and the
 - **The rule this cost**: a demonstration's own words are searched for FAILED and
   FAIL after a run, as well as its exit read. The lead's runs do that from now
   (the 51 logs of this job's run were searched), and `handoff/README.md` says so.
+
+### Call 202. The file says what is connected, as built; an item's size as typed is the model's (2026-11-24)
+
+Call 200's points 1 to 3 and the model's change for an item's size were built by a
+Sonnet worker under `handoff/contracts/contract-200P.md`
+(`research/worker-report-call200P.md`) and accepted by the lead's own run in the
+worker's copy.
+
+1. **Written, the way IFC4 says it.** Each connection of a fixture, a piece of
+   equipment or a fitting is an `IfcDistributionPort` nested in it by `IfcRelNests`;
+   each run has one at each end; two that the model holds as joined are tied by
+   `IfcRelConnectsPorts`. The sample house writes 332 connection points and 147
+   ties, and IfcOpenShell finds no fault. On every screen and in every reply the
+   word is "connection point"; "port" is the file's word and stays in the file.
+2. **Read: joined where the file says so, and nowhere else.** A run is joined to a
+   connection only where a tie says so and the run's end stands at the point
+   (within 0.05 ft); a tie whose end is not at its point joins nothing and is
+   said. A file with no connection points reads as it did. A run end that reads
+   open within a foot of a fixture is named with how far off it is, and is left
+   open. IFC2x3's way of putting a port on an element is read as well.
+3. **The sample house comes back with the open ends it had**: supply air 4, cold
+   water 1, sanitary 1, vent 1, power 1, the rest none, the same in both jobs by
+   `takeoff`'s own count. (The worker of call 197 had read sanitary and vent as 2
+   each by asking each system for the whole network it sits in; `takeoff`'s figure
+   is the one a person sees and is the one held to.)
+4. **A run with no size is written** as the run it is, with its line and no body,
+   and comes back with its size Unknown, counted. With the three hot-water runs
+   back, the hot main's elbow at the water heater has three ends and comes back a
+   tee: 37 fittings still, three of them tees where the file says bend, each named
+   in the reply with its place and both words.
+5. **Ruled on what the worker asked**: the two elbows with no size are written
+   too, with their place and no body, and come back with size Unknown. A thing
+   that is in the job is in the file. With the next command-line job on a model.
+6. **Where the schema was read.** buildingSMART's own pages could not be reached
+   from this machine. The worker read IfcOpenShell's own copy of the IFC4 and
+   IFC2x3 schemas, with the where-rules, by running it, and says so. Nothing was
+   written from memory.
+7. **An item's size as typed is one change in the model** (`editing::item_size`):
+   a size that differs is the item changed, Assumed, in the words New item uses
+   (now one copy, in the model); the same size again is the check, Known; things
+   set down follow; it gives back what happened in words the window and the
+   command line both say. A test holds it to the window's own three steps, the
+   saved job byte for byte alike. **The window still does it its own way** until
+   contract 197W's point 17 makes it call this.
+8. Not right, and said: a model takes about 20 seconds to come in, in a build
+   made for testing; a fitting's own connection points are written and not read
+   (the fitting is made from the runs that meet there, as before); where a tie
+   names the wrong end of a run and another run happens to end at the connection,
+   the two are still joined by where they stand.

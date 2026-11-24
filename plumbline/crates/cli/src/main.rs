@@ -2255,6 +2255,19 @@ fn run(args: &[String]) -> Result<(), String> {
                     return Ok(());
                 }
             }
+            // An item's width, depth or height typed with no status is the item's size typed (contract 200P): a
+            // size that differs is the item changed, Assumed; the same again is the check, Known, checked on site;
+            // each thing set down from it follows. --source, where given, says who checked it.
+            if matches!(field.to_lowercase().as_str(), "width" | "depth" | "height") && status.is_none() && line.is_none() {
+                let (mut job, _) = read(path)?;
+                let item_path = job.world.query::<(&plumbline_world::Node, &plumbline_world::Item)>().iter(&job.world).find(|(n, _)| n.path == *element || n.name.eq_ignore_ascii_case(element.trim())).map(|(n, _)| n.path.clone());
+                if let Some(item_path) = item_path {
+                    let done = plumbline_world::editing::item_size(&mut job, &item_path, &field.to_lowercase(), &value, source.as_deref().unwrap_or(""))?;
+                    std::fs::write(path, file::save(&mut job)).map_err(|e| format!("cannot write {path}: {e}"))?;
+                    say!("{}", done.said());
+                    return Ok(());
+                }
+            }
             let status = match status.as_deref() {
                 Some("Known") => Status::Known,
                 Some("Assumed") => Status::Assumed,

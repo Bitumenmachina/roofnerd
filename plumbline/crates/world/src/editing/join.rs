@@ -552,6 +552,95 @@ pub fn connect(job: &mut Job, thing: &str, run: &str, how: Entered) -> Result<us
     })
 }
 
+/// What a model brought in says of one connection on a thing (a port): what it is called, what sort of
+/// connection it is, what it carries and which way it goes.
+#[derive(Clone, Debug)]
+pub struct PortSaid {
+    pub name: String,
+    pub kind: ConnectorKind,
+    pub domain: Option<Domain>,
+    pub flow: Flow,
+}
+
+/// A connection put on a fixture or a piece of equipment because a model brought in says there is one
+/// (call 200). It is the change `connect` makes, opened to what the file gives: where `connect` finds the
+/// run's end by its being inside the thing's box, this is told which end (`end`: 0 the first, 1 the
+/// second), and where there is no run the connection is made at `at`, a place in space (feet), as the file
+/// places it. No end is joined because it is near: the caller says which, from what the file ties. The
+/// connection is Assumed (never Known on a file's say-so), sourced as `how` says, and says it was a port of
+/// the file. A connection already there (one of the same sort in the same place) is refused, so a model
+/// brought in twice puts none twice. Returns which of the thing's connections it is, counted from one.
+pub fn connect_port(job: &mut Job, thing: &str, run: Option<(&str, usize)>, at: P3, said: &PortSaid, how: Entered) -> Result<usize, String> {
+    all_or_nothing(job, |job| {
+        let kind = job.kind(thing).ok_or_else(|| format!("no element {thing}"))?;
+        if !matches!(kind, Kind::Fixture | Kind::Equipment) {
+            return Err(format!("{thing} is {kind:#}: a connection is put on a fixture or a piece of equipment"));
+        }
+        let e = job.find(thing).ok_or_else(|| format!("no element {thing}"))?;
+        let info = match run {
+            Some((path, end)) => {
+                let r = run_info(job, path)?;
+                if end > 1 {
+                    return Err(format!("{path} has two ends: {end} is not one of them"));
+                }
+                Some((r, end))
+            }
+            None => None,
+        };
+        let placed = job.world.get::<Placed>(e).cloned().ok_or_else(|| format!("{thing} has no position"))?;
+        let tree = building::Tree::of(&mut job.world);
+        let base = tree.storey_of(thing).and_then(|s| tree.levels.get(s)).and_then(|l| l.elevation.feet()).ok_or_else(|| format!("{thing} is under no level whose floor height is known"))?;
+        let centre = placed.at_ft().ok_or_else(|| format!("where {thing} stands is not known"))?;
+        let offset = placed.offset.feet().ok_or_else(|| format!("{thing}'s height above its level is not known"))?;
+        let angle = placed.angle_deg().ok_or_else(|| format!("how far {thing} is turned is not known"))?;
+        let (sin, cos) = angle.to_radians().sin_cos();
+        let point = match &info {
+            Some((r, end)) => if *end == 0 { r.a } else { r.b },
+            None => at,
+        };
+        let (dx, dy) = (point[0] - centre[0], point[1] - centre[1]);
+        let q = [dx * cos + dy * sin, -dx * sin + dy * cos, point[2] - base - offset];
+        let tol = FIT_TOLERANCE_FT;
+        let of_kind = match &info {
+            Some((r, _)) => ConnectorKind::for_run(r.kind).ok_or_else(|| format!("a {:?} has no connection that joins it", r.kind))?,
+            None => said.kind,
+        };
+        let mut connectors = job.world.get::<Connectors>(e).cloned().unwrap_or(Connectors(Vec::new()));
+        if connectors.0.iter().any(|c| c.kind == of_kind && c.at_ft().is_some_and(|c| (c[0] - q[0]).abs() + (c[1] - q[1]).abs() + (c[2] - q[2]).abs() <= tol)) {
+            return Err(format!("{thing} already has a connection where {}", run.map(|r| format!("{} ends", r.0)).unwrap_or_else(|| "this one is".into())));
+        }
+        let its_system = info.as_ref().and_then(|(r, _)| r.system.as_ref()).and_then(|s| job.find(s)).and_then(|s| job.world.get::<SystemInfo>(s).cloned());
+        let domain = said.domain.or(match (&info, &its_system) {
+            (Some((r, _)), Some(s)) if r.kind == Kind::Pipe => Domain::of_system(&s.classification),
+            _ => None,
+        });
+        let name = if said.name.is_empty() { its_system.map(|s| s.classification).unwrap_or_default() } else { said.name.clone() };
+        let mut status = placed.at.status.max(placed.offset.status).max(placed.size.status).max(how.status);
+        if let Some(a) = &placed.angle {
+            status = status.max(a.status);
+        }
+        if let Some((r, _)) = &info {
+            status = status.max(r.status);
+        }
+        let source = match run {
+            Some((path, _)) => format!("{}; the file ties it to the end of {path}", how.source),
+            None => format!("{}; where the file puts it", how.source),
+        };
+        connectors.0.push(Connector {
+            name,
+            kind: of_kind,
+            domain,
+            flow: said.flow,
+            at: Val { value: Some([tidy(q[0] * 12.0), tidy(q[1] * 12.0), tidy(q[2] * 12.0)]), unit: units::IN.into(), status: written(status), source },
+            size: info.as_ref().and_then(|(r, _)| r.section.as_ref().map(|t| t.width.clone())),
+        });
+        building::check_connectors(thing, kind, &connectors)?;
+        let which = connectors.0.len();
+        job.put(thing, connectors)?;
+        Ok(which)
+    })
+}
+
 /// Join the run that ends at a point of the plan (in feet) to the fixture or the piece of
 /// equipment that stands there: `connect`, for a pointer that picks the place and not
 /// the two names. Returns the thing, the run, and which of the thing's connectors it is.

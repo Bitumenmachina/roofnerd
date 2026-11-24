@@ -34,7 +34,7 @@ pub mod stretch;
 
 pub use history::{History, UNDO_LIMIT};
 pub use stretch::{move_wall, read_move, way_said, Followed, Moved, Resized, RoofMoved};
-pub use join::{connect, connect_at, fit_all, fitting, split, Fitted, PassedOver};
+pub use join::{connect, connect_at, connect_port, fit_all, fitting, split, Fitted, PassedOver, PortSaid};
 pub(crate) use measure::takes_among;
 pub use measure::{measure, measure_on_line, takes, Measured, Reading};
 
@@ -1588,6 +1588,136 @@ pub(crate) fn placed_follow(job: &mut Job, item_path: &str, item_name: &str, ite
         followed.push(at);
     }
     Ok(followed)
+}
+
+/// Where an item's size typed in a window comes from: said once, here, for New item and for a size typed over.
+pub const ITEM_SIZE_TYPED: &str = "typed in the window; not yet checked against its maker's sheet";
+
+/// What typing a size on an item did.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum HowSized {
+    /// A size that differs from the item's: the item is changed, and is Assumed.
+    Changed,
+    /// The same size again, or the word "same": the check, Known, checked on site.
+    Checked,
+}
+
+/// What `item_size` did, for a window and a command line to say alike.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ItemSizeDone {
+    /// The item's name.
+    pub item: String,
+    /// `width`, `depth` or `height`.
+    pub what: String,
+    pub how: HowSized,
+    /// The size it had, in the item's own words ("36 in"); none where it had none.
+    pub old: Option<String>,
+    /// The size it has.
+    pub new: String,
+    /// Each thing set down from the item that now follows it, by path.
+    pub followed: Vec<String>,
+    /// Whether the item's name carries the size it had ("Vanity, 36 in" from 36 in to 48 in), so that its name is
+    /// no longer true.
+    pub name_carries_old: bool,
+    /// What else the measuring change had to say (a run pulled off a joint, say).
+    pub also: Vec<String>,
+}
+
+impl ItemSizeDone {
+    /// What happened, in the words a window and the command line both use.
+    pub fn said(&self) -> String {
+        let (name, what, now) = (&self.item, &self.what, &self.new);
+        let mut said = match self.how {
+            HowSized::Checked => format!("{name}: {what} {now} is checked: Known, checked on site."),
+            HowSized::Changed => {
+                let follow = match self.followed.len() {
+                    0 => "Nothing is set down from it yet.".to_string(),
+                    1 => "1 thing set down from it follows.".to_string(),
+                    n => format!("{n} things set down from it follow."),
+                };
+                let note = self.old.as_ref().map(|old| format!(" (it was {old})")).unwrap_or_default();
+                let renamed = match (&self.old, self.name_carries_old) {
+                    (Some(old), true) => format!(" Its name still reads {old}: Rename item changes it."),
+                    _ => String::new(),
+                };
+                format!("{name}: {what} is now {now}{note}. Assumed: {ITEM_SIZE_TYPED}. {follow} To check it, type {now} again on its {what}: that makes it Known, checked on site.{renamed}")
+            }
+        };
+        for line in &self.also {
+            said.push('\n');
+            said.push_str(line);
+        }
+        said
+    }
+}
+
+/// An item's width, depth or height typed (call 195 step A; contract 200P). One change, all of it or none:
+/// - a size that differs from the one the item has is the item changed: the value is Assumed, its source the words
+///   New item uses (`ITEM_SIZE_TYPED`: typed, not yet checked against its maker's sheet);
+/// - the same size again, or the word "same", is the check: Known, "checked on site" (`who`, where given, goes
+///   after it);
+/// - every thing set down from the item follows, its size and how sure that is, as sure as the item's three
+///   sizes together are (`placed_follow`);
+/// - a size that is not a length changes nothing and says why.
+pub fn item_size(job: &mut Job, path: &str, what: &str, typed: &str, who: &str) -> Result<ItemSizeDone, String> {
+    all_or_nothing(job, |job| {
+        let e = job.find(path).ok_or_else(|| format!("no element {path}"))?;
+        let item = job.world.get::<Item>(e).cloned().ok_or_else(|| format!("{path} is not an item"))?;
+        let name = job.world.get::<Node>(e).map(|n| n.name.clone()).unwrap_or_else(|| path.to_string());
+        let was = match what {
+            "width" => &item.width,
+            "depth" => &item.depth,
+            "height" => &item.height,
+            other => return Err(format!("an item has a width, a depth and a height: {other:?} is none of them")),
+        };
+        let word_same = typed.trim().eq_ignore_ascii_case("same");
+        let parsed = if word_same { None } else { Some(units::parse_length(typed)?) };
+        let was_text = was.value.as_ref().map(|len| units::show_length(len, &was.unit));
+        // The same size again: the feet are the same to a ten-thousandth of an inch.
+        let again = word_same || parsed.zip(was.feet()).is_some_and(|((len, unit), old)| was.status != Status::Unknown && len.feet(unit).is_ok_and(|now| (now - old).abs() < 1.0e-5));
+        let text_of = |job: &Job, what: &str| -> String {
+            let it = job.world.get::<Item>(e);
+            let v = it.map(|it| match what {
+                "width" => &it.width,
+                "depth" => &it.depth,
+                _ => &it.height,
+            });
+            v.and_then(|v| v.value.as_ref().map(|len| units::show_length(len, &v.unit))).unwrap_or_default()
+        };
+        let follower_of = |a: &String| a.strip_suffix(" is one of it and is now that size").map(str::to_string);
+        if again {
+            let source = if who.is_empty() { "checked on site".to_string() } else { format!("checked on site: {who}") };
+            let done = measure(job, path, what, Reading::Same, None, &source)?;
+            let followed: Vec<String> = done.also.iter().filter_map(follower_of).collect();
+            let also: Vec<String> = done.also.iter().filter(|a| follower_of(a).is_none()).cloned().collect();
+            return Ok(ItemSizeDone { item: name, what: what.to_string(), how: HowSized::Checked, old: was_text.clone(), new: was_text.unwrap_or_else(|| text_of(job, what)), followed, name_carries_old: false, also });
+        }
+        let done = measure(job, path, what, Reading::Length(typed), None, ITEM_SIZE_TYPED)?;
+        // The size is the item changed, and what is not yet checked is Assumed.
+        let mut it = job.world.get::<Item>(e).cloned().unwrap_or(item);
+        match what {
+            "width" => it.width.status = Status::Assumed,
+            "depth" => it.depth.status = Status::Assumed,
+            _ => it.height.status = Status::Assumed,
+        }
+        job.put(path, it.clone())?;
+        // What follows it is as sure as the item's sizes together are: where the three were all Known, the ones set
+        // down said Known a moment ago, and are put right to what the model says of the item's size.
+        let followed: Vec<String> = done.also.iter().filter_map(follower_of).collect();
+        if let Ok((feet, status, from)) = it.size_ft() {
+            for at in &followed {
+                let Some(mut placed) = job.find(at).and_then(|f| job.world.get::<Placed>(f)).cloned() else { continue };
+                if placed.size.status != status {
+                    placed.size = Val { value: Some(feet), unit: "ft".into(), status, source: format!("{name}: {from}") };
+                    job.put(at, placed)?;
+                }
+            }
+        }
+        job.derive();
+        let also: Vec<String> = done.also.iter().filter(|a| follower_of(a).is_none()).cloned().collect();
+        let name_carries_old = was_text.as_ref().is_some_and(|old| !old.is_empty() && name.contains(old.as_str()));
+        Ok(ItemSizeDone { item: name, what: what.to_string(), how: HowSized::Changed, old: was_text, new: text_of(job, what), followed, name_carries_old, also })
+    })
 }
 
 /// A source after something was done to the value it stands on: where the value came

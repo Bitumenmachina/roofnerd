@@ -156,8 +156,10 @@ says "$T/ifc.txt" "17 windows"
 says "$T/ifc.txt" "2 floors"
 says "$T/ifc.txt" "10 rooms"
 says "$T/ifc.txt" "4 roof planes"
-# What a model has no place for, or what has no shape, is counted and said.
-says "$T/ifc.txt" "its size is not known, so it has no shape to write"
+# What a model has no place for, or what has no shape, is counted and said. (The three hot-water runs with no size are
+# written, as lines with no body, since call 200; the two elbows between them have no shape and are said.)
+says "$T/ifc.txt" "it has no shape: its size is not known"
+! grep -qF "its size is not known, so it has no shape to write" "$T/ifc.txt" || { echo "FAIL: a run with no size is still said to have no shape"; exit 1; }
 says "$T/ifc.txt" "x type: each thing is written with its own size"
 if python3 -c "import ifcopenshell" 2>/dev/null; then
   python3 tools/ifc-check.py "$T/house.ifc" > "$T/checked.txt" || { echo "FAIL: IfcOpenShell finds a fault in the model"; cat "$T/checked.txt"; exit 1; }

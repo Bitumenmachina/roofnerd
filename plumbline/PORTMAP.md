@@ -235,6 +235,12 @@ BIMCraft: https://github.com/IPedrax/bimcraft at
 | `fit_all` | ours |  |  | as `fitting`, at every joint; `grep -rn 'fn fit_all' crates/core/src`: nothing |
 | `connect` | ours |  |  | a connector made where a run ends at a thing; `grep -rn 'fn connect(' crates/core/src`: nothing. BIMCraft's connectors are drawn in the family (`family.rs`, `Connector`) |
 | `connect_at` | ours |  |  | `connect`, for a point picked on the plan; `grep -rn 'fn connect_at' crates/core/src`: nothing |
+| `PortSaid` | ours |  |  | what a model brought in says of one connection on a thing (a port): its name, its sort, what it carries, which way it goes (call 200); `grep -rn 'struct PortSaid' crates/core/src`: nothing, and BIMCraft reads no port: `grep -rn 'IFCDISTRIBUTIONPORT' crates/core/src` finds only the line that leaves ports out of what is brought in (`import.rs:63`) |
+| `connect_port` | ours |  |  | `connect`, opened to what a file's ports say: told which end of a run, or a place where there is no run, and Assumed, sourced to the file (call 200); `grep -rn 'fn connect_port' crates/core/src`: nothing |
+| `ITEM_SIZE_TYPED` | ours |  |  | where an item's size typed in a window comes from, said once (contract 200P); `grep -rn 'ITEM_SIZE_TYPED' crates/core/src`: nothing |
+| `HowSized` | ours |  |  | what typing a size on an item did: the item changed, or the check; `grep -rn 'enum HowSized' crates/core/src`: nothing |
+| `ItemSizeDone` | ours |  |  | what `item_size` did, for a window and a command line to say alike; `grep -rn 'struct ItemSizeDone' crates/core/src`: nothing |
+| `item_size` | ours |  |  | an item's width, depth or height typed: the item changed (Assumed) or the check (Known), what is set down from it following (contract 200P; call 195 step A); `grep -rn 'fn item_size' crates/core/src`: nothing |
 | `MAX_CLEARANCE_FT` | ours |  |  | clash detection is this program's; `grep -rni clash crates/core/src`: six lines, two comments (`inquiry.rs:3`, `link.rs:72`) and a variable in `import.rs` (3273 to 3364) for parameter names that collide on import; nothing tests one solid against another. |
 | `NEVER_TESTED` | ours |  |  | clash detection is this program's; `grep -rni clash crates/core/src`: six lines, two comments (`inquiry.rs:3`, `link.rs:72`) and a variable in `import.rs` (3273 to 3364) for parameter names that collide on import; nothing tests one solid against another. |
 | `Reading` | ours |  |  | a measurement taken on site put on a value is this program's: BIMCraft keeps no certainty on a value. `grep -rniwE 'measured|verified|assumed|certain' crates/core/src/{commands,model,engine,constraints}.rs`: every hit is a dimension line, a room's area or a laser scan's point cloud (`commands.rs:177`, `11550`), none a value marked as measured. What a run's heights are held to is its `justify` (`commands.rs:8794`), which the model here already carries |
@@ -275,6 +281,18 @@ from BIMCraft at the same commit is listed here by hand, and is checked by its o
   here a strip and a pad are read by their sorts and every other sort is left out and said; the rule is written fresh. A roof
   there is made again from its slabs' faces (`import.rs:2003`); here from a list this program writes on its own roof
   (`Plumbline_Roof`), by the Roof tool's change, because the faces do not say a pitch or a gable. No code is taken.
+- `crates/ifc/src/write.rs` (ports) and `crates/ifc/src/lib.rs` (reading them), and `crates/world/src/editing/join.rs`
+  (`connect_port`), call 200 (contract 200P), are ours, and `tools/portmap.sh` does not read them. Searched all of BIMCraft
+  (`/home/user/ipedrax/bimcraft`): `grep -rlwi "ports\?\|connectors\?\|RelConnects[A-Za-z]*\|RelNests\|IfcDistributionPort" crates apps
+  --include=*.rs` is 36 files, read for what they do with a port or a connector of a model: `core/src/import.rs:52,63` names
+  `IFCDISTRIBUTIONPORT` among what is never brought in as a thing (and it is the only place the word is in the tree:
+  `grep -rn "IFCDISTRIBUTIONPORT\|IFCRELNESTS\|IFCRELCONNECTS\|DistributionPort\|RelNests" crates apps`); `core/src/ifc.rs:1587-1615`
+  writes a placed device's electrical connector as a property set and says in a comment that "a pipe's waits for IFC's ports";
+  `family.rs`, `network.rs`, `water.rs` work on connectors in BIMCraft's own model (the network is already ported as
+  `building/network.rs`); `rvt/src/pipes.rs` reads a Revit pipe's two connector origins as its line. **No port is written or read
+  anywhere in BIMCraft, and no relation between ports.** Nothing is ported; NOTICE unchanged. What a port is and how it is put on an
+  element and tied is read from IfcOpenShell's own IFC4 schema and the buildingSMART texts it carries (buildingSMART's own pages
+  could not be reached from this machine); IfcOpenShell is run as the checker and never linked.
 - `crates/world/src/gable.rs` (call 192: a wall under a rake rises to the roof) is ours, and `tools/portmap.sh` does not read
   it. Searched all of BIMCraft: `grep -rli 'gable' crates apps` (21 files: the roof tool's gable ends, `rvt/src/roofs.rs`,
   `core/src/{commands,model,skeleton,sketch,walls,import,ifc}.rs`) and `grep -rli 'attach_top\|top_profile' crates apps`. What is

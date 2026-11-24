@@ -10859,7 +10859,17 @@ held to):
    the reply, each with its place and both words.
 5. The file passes IfcOpenShell as IFC4 with its ports in it.
 
-Not built yet.
+**Built (2026-11-24); call 202.** `research/worker-report-call200P.md`. Run by the
+lead in the worker's copy (the counts are in the commit that carries it). The
+second job's open ends are the first job's by `takeoff`: **supply air 4, cold water
+1, sanitary 1, vent 1, power 1, the rest none**; the three unsized hot-water runs
+come back, size Unknown; a made-up file with a run ending half a foot from a
+fixture and no connection point reads that end open and says how far; the three
+fittings that come back as tees where the file says bend are named. 332 connection
+points and 147 ties in the sample house's file; IfcOpenShell finds no fault.
+**Not right**: the two elbows with no size are still left out of the file and said
+(ruled: written, with the next job); a model comes in slowly; the window has not
+been run on it.
 
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
