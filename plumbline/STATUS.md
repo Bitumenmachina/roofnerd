@@ -10709,7 +10709,7 @@ above):
   walls by itself, after four rounds; the person traces and the scan helps. A clean
   single plan on a sheet is found mostly right; a hatched, crowded one is not.
 
-**What is owed, in order** (brought up to date 2026-11-24, 17:00 UTC).
+**What is owed, in order** (brought up to date 2026-11-24, 16:40 UTC).
 0. **The bench for items (call 195). Patrick has asked for it three times; it is at
    the head.** Step A (an item looked at alone, sized on its panel, the saved job
    unchanged) has its demonstration written above ("The bench: an item looked at
@@ -10722,11 +10722,11 @@ above):
    saved job. D to F follow.
 1. **The sample whole house prices its outside trim** (call 194: the decision, the
    figures by hand above, and `handoff/contracts/contract-194.md`). A command-line
-   worker was started on it at 16:40 UTC in a second working copy; if no patch of it
+   worker was started on it at 16:35 UTC in a second working copy; if no patch of it
    is in the tree when you read this, it did not land: start it again from the
    contract. Its window half (boards from the top of the stone, pictures retaken)
    follows.
-2. **A second window judge** was started at 16:35 UTC on the build of a0d8477: the
+2. **A second window judge** was started at 16:31 UTC on the build of a0d8477: the
    tool chest, a designer's model in and the BIM model out through the window, the
    gable, trim only where priced, the eight fixes. If `research/` has no
    `judgment-window-1124b.md`, it did not finish: run it again from
