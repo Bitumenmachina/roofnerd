@@ -7601,3 +7601,54 @@ waits until two pictures agree, and until it has one a single failure of it is r
 again before it is believed. Working out the gables costs 1.7 thousandths of a
 second a redraw on the sample house, beside 3.2 for the trim: nothing is kept
 between redraws.
+
+### Call 194. The sample whole house prices its outside trim (2026-11-24)
+
+Trim is drawn only where the estimate prices it (call 193). The made-up whole house
+(`plumbline sixteen`) priced no outside trim, so the house a stranger opens first
+shows bare windows and bare corners. It is the lead's call what the sample prices;
+every price in it is made up and says so.
+
+1. **Corner boards on each outside wall of the two levels** (the four walls named
+   "... wall" on each; never the partitions, never the foundation walls): "Corner
+   boards, 5/4 x 6 cedar", Material, division 6, $6.25/LF. On the upper level the
+   line is priced by `corner_board_length` (18 LF a wall: two corners, 9 ft). **On
+   the ground level the stone wainscot turns the corner and the boards stand on
+   it**, so the line there is priced by a new figure, `corner_board_length_above_wainscot`,
+   with `wainscot` entered on the line as 3 ft, the way the siding line beside it
+   already enters it.
+2. **The new figure, and what it means.** `corner_board_length_above_<entry>` is, for
+   each of the wall's outside corners, the corner board's length less the height the
+   line enters under that name, never less than nothing, added up. It takes its
+   status from the weakest of the corner boards' length and the entered height. It
+   follows `net_area_below_<entry>` (call 179, C2) in how it is named, read, shown in
+   the worked formula and refused when the entry is missing or is not a length. A
+   line priced by it is a corner-board line to everything that asks (the pieces, the
+   window's "drawn where priced"): **its pieces start at the entered height**, so the
+   length of the pieces laid is the quantity priced, by one arithmetic. Why a figure
+   and not `corner_board_length - outside_corners * wainscot` typed on the line: the
+   typed formula would price 14 LF while the pieces laid, and the boards drawn, ran
+   20 LF to the ground.
+3. **Casing at each window**: "Exterior casing, 5/4 x 4 cedar", Material, division 6,
+   $5.40/LF, by `casing_length`. The front door keeps its "Casing and trim" by the
+   each ($120, inside and outside together) and gets no line by length: it would be
+   bought twice.
+4. **Fascia and soffit at each eave**: "Fascia, 1x8 cedar", `true_length`, $4.80/LF;
+   "Soffit, cedar plywood, vented", `true_length * overhang`, $6.20/SF; both Material,
+   division 6. The soffit formula is the starter library's (call 191 kept it; the
+   2.25 SF in two runs at the four corners is said by `plumbline trim`, and stays
+   said).
+5. **Nothing else about the sample moves**, and no rounding rule, no status rule and
+   no starter assembly changes. The starter library's wainscot wall
+   ("Exterior wall, 2x6, lap siding over a stone wainscot") has the same fault the
+   sample would have had: its Corner boards line is priced to the ground. It moves to
+   the new figure with its `wainscot` entry in the same change, and the tests and
+   demonstrations that apply that assembly are listed with the rest.
+6. **Every expectation that moves is listed before one is changed**, with the old
+   figure, the new, and the sum that takes one to the other. An expectation moves
+   only by the figures worked in STATUS.md under this call, or by a figure that
+   follows from them and is worked beside it. Anything that moves otherwise is
+   handed back unmoved, with what was seen.
+7. **Known and left**: `plumbline trim` gives a corner-board figure for the four
+   concrete foundation walls (8 LF each). It is geometry, nothing prices it, and no
+   starter assembly for a foundation wall names it; it is not changed here.

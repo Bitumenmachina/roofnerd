@@ -10545,6 +10545,47 @@ What is not right:
 - The roof is still a sheet with coloured edge lines; there is no ground at the
   foot of the wall; the sample whole house prices no outside trim and looks bare.
 
+## The sample whole house prices its outside trim: a demonstration, written before it is built (call 194; 2026-11-24)
+
+`demos/sixteen-trim.sh`, at the command line, on `plumbline sixteen`. The house is 40 ft
+by 28 ft on two levels (walls 10 ft on the ground level, 9 ft above), a hip roof whose
+four eaves are 42, 30, 42 and 30 LF with 0.75 ft of overhang, 17 windows, a 3 ft stone
+wainscot round the ground level. Every price is made up. Worked by hand:
+
+| What | Quantity | At | Amount |
+|---|---|---|---|
+| Corner boards, upper level: 4 walls, each 2 corners of 9 ft | 4 x 18 = 72 LF | $6.25/LF | $450.00 |
+| Corner boards, ground level, standing on the stone: 4 walls, each 2 x (10 - 3) | 4 x 14 = 56 LF | $6.25/LF | $350.00 |
+| Exterior casing, ground level's 8 windows: 20+20+18+14+16+15+14+18 | 135 LF | $5.40/LF | $729.00 |
+| Exterior casing, upper level's 9 windows: 19+20+20+18+14+16+15+14+18 | 154 LF | $5.40/LF | $831.60 |
+| Fascia, 4 eaves: 42+30+42+30 | 144 LF | $4.80/LF | $691.20 |
+| Soffit, 4 eaves: 144 x 0.75 | 108 SF | $6.20/SF | $669.60 |
+| **Added** | 33 lines (8 walls, 17 windows, 4 eaves twice) | | **$3,721.40** |
+
+1. `plumbline estimate`: Material was $199,666.53 on 205 lines and is **$203,387.93 on
+   238**; job cost was $390,260.26 on 399 lines and is **$393,981.66 on 432**; division
+   6 was $51,074.22 on 41 lines and is **$54,795.62 on 74**; no other class and no
+   other division moves. Overhead at 10 % is 39,398.166, **$39,398.17**; profit at 8 %
+   on 433,379.83 is 34,670.3864, **$34,670.39**; the price was $463,629.19 and is
+   **$468,050.22** (the three figures above it add to it, to the cent).
+2. A ground-level outside wall's corner-board line reads 14 LF and shows what it is
+   made of: two corners, each 10 ft less the 3 ft entered as `wainscot`. With the
+   `wainscot` entry taken off the line, the line is refused and says the entry is
+   missing: it is not priced to the ground and it is not nothing.
+3. `plumbline trim --pieces`: the corner boards laid on a ground-level outside wall are
+   two pieces of 7 ft that start 3 ft above the wall's foot; on an upper wall two of
+   9 ft from its foot. The pieces of every corner-board line add to 128 LF and of
+   every window's casing line to 289 LF: what the estimate prices.
+4. `plumbline trim` says what it said: the figures of the walls are not changed
+   (20 and 18 LF a wall), and the soffit's 2.25 SF in two runs is still said.
+5. The starter wainscot wall applied to a 10 ft wall with two outside corners, its
+   `wainscot` 3 ft: Corner boards 14 LF where it was 20.
+6. The front door has no casing line by length, and the foundation walls have no
+   corner-board line.
+
+Not built yet. What the window then shows (boards from the top of the stone, casing
+at 17 windows, fascia and soffit where priced) is the window builder's half, after.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **As of 2026-11-24, 16:30 UTC (the lead). Read this block first; what is below it is
