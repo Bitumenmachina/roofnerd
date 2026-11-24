@@ -10279,55 +10279,71 @@ What is not right:
 
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
-**As of 2026-11-23 (the lead, after the merge of that day). Read this block first; what
-is below it is older and is kept for what it says of the window's history.**
+**As of 2026-11-24 (the lead). Read this block first; what is below it is older and is
+kept for what it says of the window's history.**
 
 **Where the work is.** Branch `claude/hopeful-cannon-kng8eo` (pushed; the same commits
-are pushed to `claude/nifty-tesla-qmn44n`). Head: the merge 90aed89 and what follows
-it. On that merge, run by the lead: the whole workspace builds; `cargo test
---workspace` 714 passed, 0 failed; all 45 command-line demonstrations pass; the three
-gates, `portmap.sh` and `licenses.sh` pass. **No window demonstration has been run on
-the merged tree**; 33 passed on the window builder's build just before it. It is not a
-release candidate and is not tagged.
+are pushed to `claude/nifty-tesla-qmn44n`). Head: the merge b207e7b and what follows
+it. On that merge, run by the lead: the whole workspace builds; every crate's tests,
+the window's included, 853 passed and none failed; `tools/committed.sh` passes; the
+three gates, `portmap.sh` and `licenses.sh` pass. The 46 command-line demonstrations
+passed on the same command-line code the commit before. **The window demonstrations
+have not been run on this merge** (the builder working from it runs the key ones
+first); all 34 passed on the merge before it (579afa3: 27 on the builder's build of
+its source, the 7 key ones again on the merged build). It is not a release candidate
+and is not tagged.
 
-**What Patrick ruled that week** (DECISIONS.md, his words in each): call 172, the
-purpose (the first 3D-first, renovation-first platform, taking in a PDF, a model or a
-LiDAR scan, free, for every person, so that what a tradesman knows is not lost); call
-174 (the builder runs on its own and asks him nothing; this machine's pictures are the
-proof for now; a sweep by every person who looks at the building; one name, BuildOS);
-call 184's question ("What is your plan for hyper realistic ?"). He reads pictures:
-send them as each piece lands.
+**What Patrick ruled** (DECISIONS.md, his words in each): call 172, the purpose (the
+first 3D-first, renovation-first platform, taking in a PDF, a model or a LiDAR scan,
+free, for every person); call 174 (the builder runs on its own and asks him nothing;
+this machine's pictures are the proof for now; a sweep by every person who looks at
+the building; one name, BuildOS); call 184's question (the plan for a house that
+looks real); and call 187, after he asked whether the work was drifting: **the window
+first**; command-line work only fixes what real files or a judge show wrong, or
+works out a figure the next window job needs; at most two agents at a time; what he
+is sent is a picture of something he can now do in the window, or a figure from a
+real file. He reads pictures.
 
-**What was built that week, and where each stands** (each has a section above):
-- In the window: call 169 (thirteen items), call 177 (a trade's view: eight trade
-  buttons, sizes on the work, the frame drawn, a run never a hairline, a clash names
-  its room), call 178 (the window made clean; item 12 not built). Not judged by a
-  judge who drives the window.
-- At the command line, each judged and its findings fixed: structure and joists (164,
-  165), the plan set (168; judged twice: 179 D, 182), a wall moved (170; 179 B, 180),
-  the money fixes (175; 179 C, 180), what a wall carries and stands on (176; 180).
-- Walls found in a scan (173; judged twice, both rounds fixed: 179 A, 183). Walls found on a drawn plan (181; **not judged**). **Both
-  finders have seen only made-up scans and sheets.**
+**What was built since the last block, and where each stands** (each has a section
+above):
+- In the window: a wall moved says what followed it, and the saved job is the
+  command line's (call 171 item 1); the sun set by time of day and month (call 184
+  step 2; soft shadows, contact shadows and glow tried and left out); a wall traced
+  over a scan lands on the scan's face and is laid by it (call 190 point 2). None
+  has been tried by a judge who drives the window.
+- At the command line: the outside trim priced (185) and where each piece lies
+  (184 step 1, the model's half); both wall-finders run on real files for the first
+  time, and fixed for what those showed (188); the scan's finder also built the
+  published way, as an option (189); the sheet's own dimensions used for its scale;
+  a judge's fifteen findings on all of that fixed (191), and those fixes with a
+  second judge now.
+- **What real files showed, plainly.** Neither finder turns a real phone scan into a
+  room's walls by itself, after four rounds; the published method lays no wall that
+  is not there and misses some. So the person traces and the scan helps (call 190).
+  A clean single plan on a sheet is found mostly right; a floor plan crowded with
+  hatching and cabinet lines is not found, and nothing is laid from it unasked.
 
 **What is owed, in order.**
-1. Every window demonstration rerun on the merged tree, its pictures read; a wall
-   moved in the window demonstrated (it now takes its floor, footing and roof).
-2. Call 184, the look, steps 1 and 2 (outside detail that casts shadow, each piece
-   with the line that prices it; the light finished). The model's half of step 1
-   (figures and starter lines for fascia, soffit, gutters, corner boards, casing)
-   needs its own call and hand figures before a builder gets it.
-3. The window's half of what exists only at the command line: beam, post and pad
-   footing tools, the plan set under Write out, Move saying what followed (call 171);
-   the bearing tint and the top bar's mark (call 176); the offer to find walls when a
-   scan or a drawn plan is brought in (calls 173, 181); the model's new clash counts.
-4. Call 183 merged and judged; call 181 judged; a real phone scan and an architect's
-   real sheet through the finders (Patrick has both; nothing is asked of him: a public
-   sheet with drawn lines is to be found, the one on hand is a scan of paper).
-5. Call 178 item 12; the sweep's list (the section "The sweep: one list") from item 4
-   on: the renovation seen in 3D with before and after, the owner's view, sections and
-   elevations, each trade's depth as tables; openings' sizes, swings and tags on the
-   plan set.
-6. One name through the code (call 174 item 4); a download for each kind of machine;
+1. The outside trim drawn in the window from the model's pieces, each casting its
+   shadow (call 184 step 1; contract and demonstration written; a builder has it).
+   This, not the light, is what changes whether it looks like a house.
+2. A judge who drives the window: the moved wall, the sun, the scan traced by its
+   face, and the trim when it is drawn. Then its findings fixed.
+3. Call 190 point 3 (the walls the by-ceiling finder is sure of, shown to take); the
+   other two real scans traced through the window; the scan's cut drawn lighter so a
+   traced wall does not cover it.
+4. The window's half of what exists only at the command line: walls found on a
+   drawn plan offered when a sheet is brought in, with `--plan`, the sheet's
+   dimension strings for its scale; beam, post and pad footing tools; the plan set
+   under Write out; the bearing tint (call 176); Move's "Alone" switch.
+5. What the last window pictures showed wrong: the plan running under the right
+   panel; the sky the same colour at every hour; the Sun card buttons only; the
+   click that accepts a tool's sizes lost once under load (watched: J18's path).
+6. Call 184 steps 3 to 6 (materials, the inside, the scan as the real house, the
+   place); call 178 item 12; the sweep's list from item 4 on (the renovation seen
+   in 3D before and after, the owner's view, sections and elevations, each trade's
+   depth as tables); a pocket door found as a door; a hatched floor plan.
+7. One name through the code (call 174 item 4); a download for each kind of machine;
    `TRY-IT.md` reissued; the thirteen items of CLAUDE.md's release candidate.
 
 **How the week was run, so it is not learned again.**
@@ -10343,6 +10359,12 @@ send them as each piece lands.
   patch on an integration copy, tests, commits there and pushes that commit to the
   branch; when the window builder is done its work is committed and the pushed head
   merged into it.
+- **A restart stops every agent and every background run and keeps the disk.** It
+  happened once (2026-11-24, 00:00 UTC): resume the stopped agent with a message, do
+  not start a new one; run again whatever was mid-run. A check-in every 40 minutes
+  catches a lost done-signal. `tools/committed.sh` needs about 8 GB free and fails
+  with "No space left" under that: clear the workspace's own crates first
+  (`cargo clean -p` each), keeping a frozen copy of the two programs elsewhere.
 - **The disk is the limit** (about 39 GB in all): two builders beside the window's
   filled it twice. Clear a working copy's `target` the moment its patch is verified;
   keep at most one frozen copy of the program.
