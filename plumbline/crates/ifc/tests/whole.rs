@@ -135,7 +135,8 @@ fn p2_fittings_come_in_on_their_runs() {
     assert!(left.iter().any(|(_, n, why)| *n == 1 && why.contains("leave (16.3, 22.7) the same way, one over the other")), "{left:#?}");
     // A fitting is what the runs that meet make it: its kind is worked out, not copied. The first job's 41 Bends
     // less the 2 with no size (not written) and the 2 not brought in are 37; 2 of those have a third run's end at
-    // the joint (the first-floor trunk at (19, 17) and the return riser at (21.2, 27)) and are Tees here.
+    // the joint (the first-floor trunk at (19, 17), the return riser at (21.2, 27), and, since the three hot-water runs
+    // with no size are in the file (call 200), the hot main's elbow at the water heater, (16.3, 26.5)) and are Tees here.
     let kinds = |job: &mut Job| {
         let mut q = job.world.query::<&Fitting>();
         let mut v: Vec<String> = q.iter(&job.world).map(|f| format!("{:?}", f.kind)).collect();
@@ -143,29 +144,39 @@ fn p2_fittings_come_in_on_their_runs() {
         v
     };
     let (a, c) = (kinds(&mut job), kinds(&mut back));
-    assert_eq!(a.iter().filter(|k| *k == "Bend").count(), c.iter().filter(|k| *k == "Bend").count() + 6, "{a:?} {c:?}");
-    assert_eq!(c.iter().filter(|k| *k == "Tee").count(), 2);
+    assert_eq!(a.iter().filter(|k| *k == "Bend").count(), c.iter().filter(|k| *k == "Bend").count() + 7, "{a:?} {c:?}");
+    assert_eq!(c.iter().filter(|k| *k == "Tee").count(), 3);
     // Each system's runs are joined as the fittings brought in join them: nothing reads more open than where a thing
     // was not brought in or a run end stands off the thing it serves (see the ignored test below).
     let (was, is) = (open_ends(&mut job), open_ends(&mut back));
     assert_eq!(is.get("Power"), was.get("Power"), "{is:?}");
 }
 
-/// HELD FOR A RULING (reported to the lead): the first job closes a run's end at a fixture by a connector
-/// the plan put where the run arrives, which can be up to a foot off the thing's box; the model has no port
-/// and no relation, only each thing's place, so a run end off the box reads open on the way back. These are the
-/// lead's figures.
+/// Call 200: the file says what is connected, so each system reads as closed as it was. The figures are the
+/// first job's own, by what `takeoff` counts as an open end (an end is said on its run's system, a connection on
+/// the system that carries what it says): supply air 4, cold water 1, sanitary 1, vent 1, power 1, the rest none.
+/// (The count `network(Some(system))` gives asks each system for the whole network it is in, so it reads sanitary
+/// 2 and vent 2 for the one open end of each: not the figure a person reads.)
 #[test]
-#[ignore = "held for a ruling: run ends off a fixture's box read open; see the report"]
 fn p2_each_system_reads_as_closed_as_it_was() {
     let (mut job, text) = written();
-    let (mut back, _) = brought(&text);
-    let (was, is) = (open_ends(&mut job), open_ends(&mut back));
-    for (class, n) in [("Supply Air", 4), ("Domestic Cold Water", 1), ("Power", 1), ("Refrigerant", 0)] {
+    let (mut back, b) = brought(&text);
+    let by_takeoff = |job: &mut Job| -> BTreeMap<String, usize> {
+        job.derive();
+        let mut out = BTreeMap::new();
+        for t in building::takeoff(job).into_iter().filter(|t| !t.classification.is_empty()) {
+            *out.entry(t.classification.clone()).or_insert(0) += t.joined.open.len();
+        }
+        out
+    };
+    let (was, is) = (by_takeoff(&mut job), by_takeoff(&mut back));
+    for (class, n) in [("Supply Air", 4), ("Return Air", 0), ("Refrigerant", 0), ("Domestic Cold Water", 1), ("Domestic Hot Water", 0), ("Sanitary", 1), ("Vent", 1), ("Power", 1), ("Lighting", 0)] {
         assert_eq!(was.get(class), Some(&n), "the first job: {was:?}");
-        assert_eq!(is.get(class), Some(&n), "the second job: {is:?}");
+        assert_eq!(is.get(class), Some(&n), "the second job: {is:?} {:#?}", b.notes);
     }
     assert_eq!(is, was);
+    // And by the network of each system, as the test of Power below asks it: the same in both jobs.
+    assert_eq!(open_ends(&mut back), open_ends(&mut job));
 }
 
 /// Point 3. 4 strip footings, 136 LF, 10.07 CY of concrete; a pad footing; a footing of
@@ -353,3 +364,4 @@ fn the_same_model_twice_counts_no_footing_and_no_roof_twice() {
     assert_eq!(count(&mut job, Kind::Equipment), 5);
     assert_eq!(count(&mut job, Kind::Fitting), 37);
 }
+

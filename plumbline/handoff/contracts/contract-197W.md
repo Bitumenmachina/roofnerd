@@ -40,6 +40,18 @@ house), then 10, then 14 last and by itself: it changes how every view is turned
   `Job::change_assembly_said` and say, in the words `plumbline apply --change`
   uses, each line whose quantity now reads as the new assembly's (old and new) and
   each left as entered. Do it with 11 to 13.
+- **17. The window stops doing the model's work for a typed size.** When
+  `editing::item_size` is in `crates/world` (contract 200P, part 2), `tools::item_size`
+  calls it and says what it gives back; the setting back to Assumed and the mending
+  of the things set down go. `demos/benchw.sh` passes unchanged. If the model's
+  change is not in the tree when you start, leave this point and say so.
+- **18. "Priced as" on an item's panel and on the bench** (call 196; the model's
+  half is in: `editing::item_priced_as`). A row on the item's panel that says what
+  the item is priced as, or that it is not priced; a click lists the assemblies
+  that go on its kind; picking one says how many set down follow, in the model's
+  words. Its demonstration step: the starter water heater priced as "Bought and
+  set" from its panel, two set down, and the estimate window showing their four
+  lines; a price typed for the heater on one of them reads on both.
 
 ## Rules
 - Files you may touch: `crates/app/src/*.rs`; `demos/fixes197w.sh` (new) and

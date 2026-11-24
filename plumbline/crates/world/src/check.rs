@@ -504,8 +504,9 @@ pub fn made_of(path: &str, kind: Kind, m: &MadeOf) -> Result<(), String> {
 /// How a material is bought and what it costs: an order factor that is a usable number
 /// in a unit like `lb/SF`, and prices, each in dollars for the unit it is bought in.
 pub fn supply(path: &str, kind: Kind, s: &Supply) -> Result<(), String> {
-    if kind != Kind::Material {
-        return Err(format!("{path}: {kind:#} cannot carry a material's supply; only a Material element can"));
+    // A material, or an item (a Type), which is its own entry in the price list (call 196).
+    if !matches!(kind, Kind::Material | Kind::Type) {
+        return Err(format!("{path}: {kind:#} cannot carry a material's supply; only a Material element or an item can"));
     }
     let mut per = None;
     if let Some(o) = &s.order {

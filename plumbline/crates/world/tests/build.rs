@@ -180,7 +180,7 @@ fn a_placed_item_is_drawn_as_its_item_says_or_as_its_name_says_or_as_its_box() {
     let inches = |x: f64| Val { value: Some(Len::One(x)), unit: "in".to_string(), status: Status::Assumed, source: "a made-up catalog".to_string() };
     let unknown = || Val::<String>::unknown("", "not chosen");
     let mut make = |name: &str, form: Option<&str>| {
-        let item = Item { category: Kind::Fixture, maker: unknown(), model: unknown(), width: inches(24.0), depth: inches(24.0), height: inches(36.0), weight: None, sheet: String::new(), division: None, form: form.map(str::to_string) };
+        let item = Item { category: Kind::Fixture, maker: unknown(), model: unknown(), width: inches(24.0), depth: inches(24.0), height: inches(36.0), weight: None, sheet: String::new(), division: None, form: form.map(str::to_string), priced_as: None };
         ed::item(&mut job, name, item).unwrap()
     };
     // What it is drawn as is the item's to say: a thing whose name says nothing, drawn
@@ -194,7 +194,7 @@ fn a_placed_item_is_drawn_as_its_item_says_or_as_its_name_says_or_as_its_box() {
     assert_eq!(drawn_as(&sink, [10.0, 4.0]), None);
     assert_eq!(drawn_as(&lavatory, [16.0, 4.0]), Some(Form::Washbasin));
     // An item drawn as nothing the program draws is refused where it is made.
-    let bad = Item { category: Kind::Fixture, maker: unknown(), model: unknown(), width: inches(24.0), depth: inches(24.0), height: inches(36.0), weight: None, sheet: String::new(), division: None, form: Some("gazebo".into()) };
+    let bad = Item { category: Kind::Fixture, maker: unknown(), model: unknown(), width: inches(24.0), depth: inches(24.0), height: inches(36.0), weight: None, sheet: String::new(), division: None, form: Some("gazebo".into()), priced_as: None };
     assert!(ed::item(&mut job, "Gazebo", bad).unwrap_err().contains("drawn as: \"gazebo\" is not something a thing can be drawn as"));
 }
 
@@ -208,7 +208,7 @@ fn a_thing_set_down_is_turned_a_quarter_at_a_time_and_a_fitting_is_not() {
     let level = ed::storey(&mut job, "ground", "0 ft", "8 ft", KNOWN).unwrap();
     let inches = |x: f64| Val { value: Some(Len::One(x)), unit: "in".to_string(), status: Status::Assumed, source: "a made-up catalog".to_string() };
     let unknown = || Val::<String>::unknown("", "not chosen");
-    let item = Item { category: Kind::Equipment, maker: unknown(), model: unknown(), width: inches(15.0), depth: inches(4.0), height: inches(30.0), weight: None, sheet: String::new(), division: None, form: None };
+    let item = Item { category: Kind::Equipment, maker: unknown(), model: unknown(), width: inches(15.0), depth: inches(4.0), height: inches(30.0), weight: None, sheet: String::new(), division: None, form: None, priced_as: None };
     let panel = ed::item(&mut job, "Panelboard", item).unwrap();
     let placed = ed::place_item(&mut job, &level, &panel, [10.0, 6.0], "0 ft", KNOWN).unwrap();
     let turned = |job: &mut Job| placements(job).0.into_iter().find(|p| p.path == placed).map(|p| match p.shape { Shape::Box { at, size, angle } => (at, size, angle), _ => panic!("not a box") }).unwrap();
@@ -261,7 +261,7 @@ fn an_item_is_renamed_with_what_stands_and_is_not_deleted_from_under_it() {
     let inches = |x: f64| Val { value: Some(Len::One(x)), unit: "in".to_string(), status: Status::Assumed, source: "a made-up catalog".to_string() };
     let unknown = || Val::<String>::unknown("", "not chosen");
     let make = |job: &mut Job, name: &str| {
-        let item = Item { category: Kind::Equipment, maker: unknown(), model: unknown(), width: inches(27.0), depth: inches(24.0), height: inches(29.0), weight: None, sheet: String::new(), division: None, form: None };
+        let item = Item { category: Kind::Equipment, maker: unknown(), model: unknown(), width: inches(27.0), depth: inches(24.0), height: inches(29.0), weight: None, sheet: String::new(), division: None, form: None, priced_as: None };
         ed::item(job, name, item).unwrap()
     };
     let (oven, hood) = (make(&mut job, "Wall oven, 27 in"), make(&mut job, "Range hood"));

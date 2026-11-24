@@ -145,7 +145,7 @@ done
 echo
 echo "== The starter library's 'Framed floor' and 'Asphalt shingle roof, whole roof' now count their joists and rafters =="
 "$P" import assemblies "$J" starter > "$T/in.txt"
-says "$T/in.txt" "set: 41"
+says "$T/in.txt" "set: 42"
 BASE="$(made "$("$P" floor "$J" "$GROUND" "$FT" --points "30,0 54,0 54,16 30,16" "${K[@]}")")"
 "$P" apply "$J" "$BASE" "Framed floor" --source "the starter library" >/dev/null
 "$P" show "$J" | tr -s ' ' > "$T/show.txt"

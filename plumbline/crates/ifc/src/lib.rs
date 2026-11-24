@@ -34,7 +34,7 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 use plumbline_world::building::{self, Floor, FloorType, InSystem, Room, Segment, Wall};
 use plumbline_world::editing::{self as ed, Entered};
 use plumbline_world::units::{self, Len};
-use plumbline_world::{solve, Footprint, Placed, Rise};
+use plumbline_world::{solve, FittingKind, Footprint, Placed, Rise};
 use plumbline_world::value::{Status, Val};
 use plumbline_world::{Job, Kind};
 use step::{Entity, File, V};
@@ -259,6 +259,27 @@ impl<'a> Reader<'a> {
             }
         }
         None
+    }
+    /// A run drawn with no body, only the line it is drawn on (the "Axis" of its shape, two points): its two
+    /// ends as the file places them, in the file's unit. None where it has a body, or no such line.
+    fn line_only(&self, product: &'a Entity) -> Option<(P3, P3)> {
+        let (_, shape) = self.get(self.arg(product, 6))?;
+        let frame = self.placed(self.arg(product, 5));
+        let reps: Vec<&Entity> = Reader::list(self.arg(shape, 2)).iter().filter_map(|rep| self.get(rep).map(|(_, e)| e)).collect();
+        if reps.len() != 1 || Reader::text(self.arg(reps[0], 1)) != Some("Axis") {
+            return None;
+        }
+        let items = Reader::list(self.arg(reps[0], 3));
+        let [item] = items else { return None };
+        let (_, line) = self.get(item)?;
+        if line.name != "IFCPOLYLINE" {
+            return None;
+        }
+        let points: Vec<P3> = Reader::list(self.arg(line, 0)).iter().filter_map(|p| self.triple(p)).collect();
+        match points.as_slice() {
+            [p, q] if (0..3).any(|i| (p[i] - q[i]).abs() > 1.0e-9) => Some((frame.place(*p), frame.place(*q))),
+            _ => None,
+        }
     }
     fn name(&self, e: &'a Entity) -> String {
         Reader::text(self.arg(e, 2)).unwrap_or("").trim().to_string()
@@ -631,6 +652,10 @@ fn free_name(job: &mut Job, parent: &str, called: &str, kind: &str, id: u64) -> 
     } else {
         called.to_string()
     }
+}
+
+fn dist3(a: P3, b: P3) -> f64 {
+    ((a[0] - b[0]).powi(2) + (a[1] - b[1]).powi(2) + (a[2] - b[2]).powi(2)).sqrt()
 }
 
 fn tidy(x: f64) -> f64 {
@@ -1061,6 +1086,46 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
     let mut done: HashSet<u64> = HashSet::new();
     // Where each run brought in lies, in feet and as the file places it: its ends.
     let mut run_ends: Vec<(String, P3, P3)> = Vec::new();
+    // The same, by the run's number in the file, for what the file's ports say is joined to it.
+    let mut run_by_id: HashMap<u64, (String, P3, P3)> = HashMap::new();
+    // ---- Ports (call 200): what the file says is connected. A port is on what it is nested in
+    // (`IfcRelNests`, in order; IFC2x3 and older files tie a port to its element by
+    // `IfcRelConnectsPortToElement`), and two ports are tied by `IfcRelConnectsPorts`. A connection point is never a
+    // thing of its own here.
+    let port_ids: HashSet<u64> = of(&["IFCDISTRIBUTIONPORT", "IFCPORT"]).into_iter().map(|(id, _)| id).collect();
+    let mut owner_of: HashMap<u64, u64> = HashMap::new();
+    let mut ports_of: HashMap<u64, Vec<u64>> = HashMap::new();
+    for (_, rel) in of(&["IFCRELNESTS"]) {
+        let V::Ref(whole) = r.arg(rel, 4) else { continue };
+        for part in Reader::list(r.arg(rel, 5)) {
+            if let V::Ref(p) = part {
+                if port_ids.contains(p) {
+                    owner_of.insert(*p, *whole);
+                    ports_of.entry(*whole).or_default().push(*p);
+                }
+            }
+        }
+    }
+    for (_, rel) in of(&["IFCRELCONNECTSPORTTOELEMENT"]) {
+        if let (V::Ref(p), V::Ref(whole)) = (r.arg(rel, 4), r.arg(rel, 5)) {
+            if port_ids.contains(p) && !owner_of.contains_key(p) {
+                owner_of.insert(*p, *whole);
+                ports_of.entry(*whole).or_default().push(*p);
+            }
+        }
+    }
+    let mut tied_to: HashMap<u64, Vec<u64>> = HashMap::new();
+    for (_, rel) in of(&["IFCRELCONNECTSPORTS"]) {
+        if let (V::Ref(a), V::Ref(b)) = (r.arg(rel, 4), r.arg(rel, 5)) {
+            tied_to.entry(*a).or_default().push(*b);
+            tied_to.entry(*b).or_default().push(*a);
+        }
+    }
+    let file_has_ports = !port_ids.is_empty();
+    for id in &port_ids {
+        done.insert(*id);
+    }
+    let mut runs_unsized = 0usize;
     let mut roof_slabs: HashSet<u64> = HashSet::new();
     {
         let mut sets: HashMap<u64, &Entity> = HashMap::new();
@@ -1420,42 +1485,50 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
             leave(&e.name, "its body is made of more than one piece: only a body of one piece is read");
             continue;
         }
-        let Some(body) = r.pushed(e) else {
-            leave(&e.name, "its body is not a circle or a rectangle pushed along its run");
-            continue;
-        };
-        let frame = r.placed(r.arg(e, 5)).then(&body.frame);
-        let way = frame.turn(body.way);
-        let (start, across): (P3, (f64, Option<f64>)) = match &body.profile {
-            Profile::Circle { radius, at } => (frame.place([at[0], at[1], 0.0]), (radius * 2.0, None)),
-            Profile::Rect { x, y, at, along } => {
-                // Its width is whichever side lies level; its depth the other.
-                let level = frame.turn([along[0], along[1], 0.0])[2].abs() < 0.5;
-                (frame.place([at[0], at[1], 0.0]), if level { (*x, Some(*y)) } else { (*y, Some(*x)) })
-            }
-            Profile::Outline(_) => {
+        // A run with no size is drawn as its line alone: it comes in as the run it is, its size Unknown (call 200).
+        let line_only = if r.pushed(e).is_none() && r.pieces(e) == 0 { r.line_only(e) } else { None };
+        let (start, end, across): (P3, P3, Option<(f64, Option<f64>)>) = if let Some((p, q)) = line_only {
+            (p, q, None)
+        } else {
+            let Some(body) = r.pushed(e) else {
                 leave(&e.name, "its body is not a circle or a rectangle pushed along its run");
                 continue;
-            }
+            };
+            let frame = r.placed(r.arg(e, 5)).then(&body.frame);
+            let way = frame.turn(body.way);
+            let (start, across): (P3, (f64, Option<f64>)) = match &body.profile {
+                Profile::Circle { radius, at } => (frame.place([at[0], at[1], 0.0]), (radius * 2.0, None)),
+                Profile::Rect { x, y, at, along } => {
+                    // Its width is whichever side lies level; its depth the other.
+                    let level = frame.turn([along[0], along[1], 0.0])[2].abs() < 0.5;
+                    (frame.place([at[0], at[1], 0.0]), if level { (*x, Some(*y)) } else { (*y, Some(*x)) })
+                }
+                Profile::Outline(_) => {
+                    leave(&e.name, "its body is not a circle or a rectangle pushed along its run");
+                    continue;
+                }
+            };
+            let end = [start[0] + way[0] * body.depth, start[1] + way[1] * body.depth, start[2] + way[2] * body.depth];
+            (start, end, Some(across))
         };
-        let end = [start[0] + way[0] * body.depth, start[1] + way[1] * body.depth, start[2] + way[2] * body.depth];
         let (storey, floor) = storey_of(id, start[2].min(end[2]) * k);
         let source = from(e, id);
         let entered = Entered { status: how.status, source: &source };
         let inches = |x: f64| format!("{} in", tidy(x * k * 12.0));
         let done = (|| -> Result<String, String> {
-            let run_type = match across.1 {
-                None => ed::segment_type_for(job, kind, &inches(across.0), entered)?,
-                Some(depth) => {
-                    let called = format!("{} by {}", inches(across.0), inches(depth));
+            let run_type: Option<String> = match across {
+                None => None,
+                Some((width, None)) => Some(ed::segment_type_for(job, kind, &inches(width), entered)?),
+                Some((width, Some(depth))) => {
+                    let called = format!("{} by {}", inches(width), inches(depth));
                     let known = {
                         let mut q = job.world.query::<(&plumbline_world::Node, &building::SegmentType)>();
                         q.iter(&job.world).find(|(n, t)| n.name == called && t.category == kind).map(|(n, _)| n.path.clone())
                     };
-                    match known {
+                    Some(match known {
                         Some(path) => path,
-                        None => ed::segment_type(job, &called, kind, &inches(across.0), Some(&inches(depth)), entered)?,
-                    }
+                        None => ed::segment_type(job, &called, kind, &inches(width), Some(&inches(depth)), entered)?,
+                    })
                 }
             };
             let (z0, z1) = (start[2] * k - floor, end[2] * k - floor);
@@ -1474,7 +1547,10 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
             let called = free_name(job, &storey, &r.name(e), kind.stem(), id);
             let path = job.add(&storey, kind, &called)?;
             let segment = Segment {
-                type_name: path_val(&source, &run_type),
+                type_name: match &run_type {
+                    Some(t) => path_val(&source, t),
+                    None => Val::unknown("", "the model gives this run no size: it is drawn as its line alone"),
+                },
                 line: Val { value: Some(line), unit: "ft".into(), status: how.status, source: source.clone() },
                 offset: val(&source, z0),
                 end_offset: ((z1 - z0).abs() > 0.001).then(|| val(&source, z1)),
@@ -1491,6 +1567,10 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
         })();
         match done {
             Ok(path) => {
+                if across.is_none() {
+                    runs_unsized += 1;
+                }
+                run_by_id.insert(id, (path.clone(), [start[0] * k, start[1] * k, start[2] * k], [end[0] * k, end[1] * k, end[2] * k]));
                 run_ends.push((path, [start[0] * k, start[1] * k, start[2] * k], [end[0] * k, end[1] * k, end[2] * k]));
                 made(match kind {
                     Kind::Duct => "ducts",
@@ -1627,6 +1707,7 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
         "IFCELECTRICGENERATOR", "IFCSWITCHINGDEVICE", "IFCPROTECTIVEDEVICE", "IFCAIRTOAIRHEATRECOVERY", "IFCCHILLER", "IFCHUMIDIFIER", "IFCELECTRICMOTOR",
     ];
     let mut set_down: Vec<(String, Kind, P3, [f64; 3])> = Vec::new();
+    let mut thing_by_id: BTreeMap<u64, String> = BTreeMap::new();
     let every_class: Vec<&str> = FIXTURES.iter().chain(&FURNISHINGS).chain(&EQUIPMENT).copied().collect();
     for (id, e) in of(&every_class) {
         if !has_place(e) {
@@ -1688,6 +1769,7 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
         })();
         match outcome {
             Ok(path) => {
+                thing_by_id.insert(id, path.clone());
                 set_down.push((path, kind, [at[0], at[1], bottom * k], body.as_ref().map(|b| [b.size[0] * k, b.size[1] * k, b.size[2] * k]).unwrap_or([0.0; 3])));
                 made(match kind {
                     Kind::Fixture => "fixtures",
@@ -1726,6 +1808,34 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
         match outcome {
             Ok(fitted) => {
                 keep_name(job, &fitted.path, &r.name(e), id);
+                // What the file calls it, against what the runs that meet there make it (call 200).
+                let (said_kind, ok) = match r.arg(e, 8) {
+                    V::Enum(w) => match w.as_str() {
+                        "BEND" => (Some("bend"), matches!(fitted.kind, FittingKind::Bend)),
+                        "JUNCTION" => (Some("junction"), matches!(fitted.kind, FittingKind::Tee | FittingKind::Cross)),
+                        "TEE" => (Some("tee"), matches!(fitted.kind, FittingKind::Tee)),
+                        "CROSS" => (Some("cross"), matches!(fitted.kind, FittingKind::Cross)),
+                        "TRANSITION" | "REDUCER" => (Some("transition"), matches!(fitted.kind, FittingKind::Transition)),
+                        "CONNECTOR" => (Some("coupling"), matches!(fitted.kind, FittingKind::Coupling)),
+                        _ => (None, true),
+                    },
+                    _ => (None, true),
+                };
+                if let (Some(word), false) = (said_kind, ok) {
+                    let made_kind = match fitted.kind {
+                        FittingKind::Bend => "bend",
+                        FittingKind::Tee => "tee",
+                        FittingKind::Cross => "cross",
+                        FittingKind::Transition => "transition",
+                        FittingKind::Coupling => "coupling",
+                    };
+                    out.notes.push(format!(
+                        "the fitting at ({}, {}, {}) is not what the file calls it: the file calls it a {word}, the runs there make a {made_kind}, and it is brought in as a {made_kind}",
+                        tidy(b.middle[0] * k),
+                        tidy(b.middle[1] * k),
+                        tidy(middle_z)
+                    ));
+                }
                 made("fittings");
             }
             Err(why) => {
@@ -1736,9 +1846,108 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
             }
         }
     }
-    // ---- Runs that end at a fixture or a piece of equipment are joined to it, as the change that joins
-    // one does (point 2): a run's end inside the thing's box.
-    {
+    // ---- What is connected to a fixture or a piece of equipment (call 200). A file with ports says it: each
+    // port on a thing is its connection there, put where the file puts it by the change that makes a
+    // connection; where the file ties it to the end of a run that stands at it, that run is joined to it, by
+    // the change the Connect tool makes, and no other end is joined for being near. A file with no ports
+    // says nothing, and reads as it always did: a run's end inside a thing's box is joined to it.
+    if file_has_ports {
+        let (mut connections, mut joined, mut no_sort) = (0usize, 0usize, 0usize);
+        let mut apart: Vec<String> = Vec::new();
+        let mut refused: Vec<String> = Vec::new();
+        for (id, thing) in &thing_by_id {
+            let Some(ports) = ports_of.get(id) else { continue };
+            let kind = job.kind(thing);
+            if !matches!(kind, Some(Kind::Fixture | Kind::Equipment)) {
+                continue;
+            }
+            for pid in ports {
+                let Some(port) = r.file.entities.get(pid) else { continue };
+                let place = r.placed(r.arg(port, 5)).o;
+                let at = [place[0] * k, place[1] * k, place[2] * k];
+                let sort = match r.arg(port, 8) {
+                    V::Enum(w) => match w.as_str() {
+                        "DUCT" => Some(plumbline_world::ConnectorKind::Duct),
+                        "PIPE" => Some(plumbline_world::ConnectorKind::Pipe),
+                        "CABLECARRIER" => Some(plumbline_world::ConnectorKind::Conduit),
+                        "CABLE" => Some(plumbline_world::ConnectorKind::Power),
+                        _ => None,
+                    },
+                    _ => None,
+                };
+                let domain = match r.arg(port, 9) {
+                    V::Enum(w) => match w.as_str() {
+                        "DOMESTICCOLDWATER" | "WATERSUPPLY" => Some(plumbline_world::Domain::Cold),
+                        "DOMESTICHOTWATER" => Some(plumbline_world::Domain::Hot),
+                        "SEWAGE" | "DRAINAGE" | "WASTEWATER" => Some(plumbline_world::Domain::Waste),
+                        "VENT" => Some(plumbline_world::Domain::Vent),
+                        "STORMWATER" | "RAINWATER" => Some(plumbline_world::Domain::Storm),
+                        "GAS" => Some(plumbline_world::Domain::Gas),
+                        _ => None,
+                    },
+                    _ => None,
+                };
+                let flow = match r.arg(port, 7) {
+                    V::Enum(w) if w == "SOURCE" => plumbline_world::Flow::Out,
+                    V::Enum(w) if w == "SINK" => plumbline_world::Flow::In,
+                    _ => plumbline_world::Flow::Both,
+                };
+                // The end of a run that the file ties it to, where that run is one brought in.
+                let mut tie: Option<(String, usize)> = None;
+                for peer in tied_to.get(pid).into_iter().flatten() {
+                    let Some(whole) = owner_of.get(peer) else { continue };
+                    let Some((run, a, b)) = run_by_id.get(whole) else { continue };
+                    let (da, db) = (dist3(*a, at), dist3(*b, at));
+                    let (end, d) = if da <= db { (0, da) } else { (1, db) };
+                    if d <= 0.05 {
+                        tie = Some((run.clone(), end));
+                    } else {
+                        {
+                        let mut called = |path: &str| job.find(path).and_then(|e| job.world.get::<plumbline_world::Node>(e)).map(|n| n.name.clone()).unwrap_or_else(|| path.to_string());
+                        apart.push(format!("a connection of {} is tied to the end of {}, which is {} ft from it", called(thing), called(run), tidy(d)));
+                    }
+                    }
+                    break;
+                }
+                let sort_or_run = sort.or_else(|| tie.as_ref().and_then(|(run, _)| job.kind(run)).and_then(plumbline_world::ConnectorKind::for_run));
+                let Some(sort) = sort_or_run else {
+                    no_sort += 1;
+                    continue;
+                };
+                let source = from(port, *pid);
+                let entered = Entered { status: how.status, source: &source };
+                let said = ed::PortSaid { name: r.name(port), kind: sort, domain, flow };
+                match ed::connect_port(job, thing, tie.as_ref().map(|(run, end)| (run.as_str(), *end)), at, &said, entered) {
+                    Ok(_) => {
+                        connections += 1;
+                        if tie.is_some() {
+                            joined += 1;
+                        }
+                    }
+                    Err(why) if why.contains("already has a connection") => {}
+                    Err(why) => refused.push(format!("{thing}: {why}")),
+                }
+            }
+        }
+        if connections > 0 {
+            out.notes.push(format!(
+                "{connections} connection{} on fixtures and equipment {} brought in from the file's connection points, each Assumed; {joined} {} tied to the end of a run and {} joined to it, and no other end was joined for being near",
+                if connections == 1 { "" } else { "s" },
+                if connections == 1 { "was" } else { "were" },
+                if joined == 1 { "was" } else { "were" },
+                if joined == 1 { "is" } else { "are" }
+            ));
+        }
+        if !apart.is_empty() {
+            out.notes.push(format!("{} connection point{} tied in the file to the end of a run that is not at it, and not joined: {}", apart.len(), if apart.len() == 1 { " is" } else { "s are" }, apart.join("; ")));
+        }
+        if no_sort > 0 {
+            out.notes.push(format!("{no_sort} connection point{} on a fixture or a piece of equipment {} no sort (duct, pipe, cable) and no run to take it from: not brought in", if no_sort == 1 { "" } else { "s" }, if no_sort == 1 { "says" } else { "say" }));
+        }
+        if !refused.is_empty() {
+            out.notes.push(format!("{} connection{} this program would not take: {}", refused.len(), if refused.len() == 1 { "" } else { "s" }, refused.join("; ")));
+        }
+    } else {
         let runs = run_ends.clone();
         let mut not_joined: Vec<String> = Vec::new();
         let mut joined = 0usize;
@@ -1765,6 +1974,46 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
         }
         if !not_joined.is_empty() {
             out.notes.push(format!("{} run{} end{} at a fixture or a piece of equipment and could not be joined to it: {}", not_joined.len(), if not_joined.len() == 1 { "" } else { "s" }, if not_joined.len() == 1 { "s" } else { "" }, not_joined.join("; ")));
+        }
+    }
+    if runs_unsized > 0 {
+        out.notes.push(format!("{runs_unsized} run{} {} no size: {} drawn as a line alone, and {} in with its size Unknown", if runs_unsized == 1 { "" } else { "s" }, if runs_unsized == 1 { "has" } else { "have" }, if runs_unsized == 1 { "it is" } else { "each is" }, if runs_unsized == 1 { "comes" } else { "come" }));
+    }
+    // Run ends that stand at a thing but are joined to nothing, said (call 200): nothing is joined for being
+    // near, so where an end stands within a foot of a fixture or a piece of equipment and nothing joins it,
+    // that is said, with how far.
+    {
+        job.derive();
+        let net = building::network::network(job, None, None, building::network::TOLERANCE_FT)?;
+        let mut near_but_open: Vec<String> = Vec::new();
+        for node in net.open.iter().filter_map(|i| net.nodes.get(*i)) {
+            let Some(building::network::Joint::RunEnd { run, .. }) = node.joints.first() else { continue };
+            for (thing, kind, at, size) in &set_down {
+                if !matches!(kind, Kind::Fixture | Kind::Equipment) || *size == [0.0; 3] {
+                    continue;
+                }
+                let angle = job.find(thing).and_then(|e| job.world.get::<Placed>(e)).and_then(|p| p.angle_deg()).unwrap_or(0.0);
+                let (sin, cos) = angle.to_radians().sin_cos();
+                let (dx, dy, dz) = (node.at[0] - at[0], node.at[1] - at[1], node.at[2] - at[2]);
+                let local = [dx * cos + dy * sin, -dx * sin + dy * cos, dz];
+                let out_by = [(local[0].abs() - size[0] / 2.0).max(0.0), (local[1].abs() - size[1] / 2.0).max(0.0), (-local[2]).max(local[2] - size[2]).max(0.0)];
+                let d = (out_by[0] * out_by[0] + out_by[1] * out_by[1] + out_by[2] * out_by[2]).sqrt();
+                if d <= 1.0 {
+                    let mut name = |path: &str| job.find(path).and_then(|e| job.world.get::<plumbline_world::Node>(e)).map(|n| n.name.clone()).unwrap_or_else(|| path.to_string());
+                    near_but_open.push(format!("{} {:.2} ft from {}", name(run), d, name(thing)));
+                }
+            }
+        }
+        if !near_but_open.is_empty() {
+            near_but_open.sort();
+            out.notes.push(format!(
+                "{} run end{} stand{} within a foot of a fixture or a piece of equipment that the file gives no connection there, and read{} open: {}",
+                near_but_open.len(),
+                if near_but_open.len() == 1 { "" } else { "s" },
+                if near_but_open.len() == 1 { "s" } else { "" },
+                if near_but_open.len() == 1 { "s" } else { "" },
+                near_but_open.join("; ")
+            ));
         }
     }
     // ---- Everything else that is a thing with a place and a shape: listed.

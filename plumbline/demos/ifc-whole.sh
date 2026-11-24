@@ -8,8 +8,11 @@
 # The job and every figure are made up (no real job data) and live in a temporary folder. Every step fails the script if the program
 # does not say what the step expects. The figures are worked in STATUS.md ("a model brought in whole: a demonstration") and by hand
 # in the comments here. NOT BUILT, held for a ruling (said by this script, not asserted): the first job's 39 written fittings come
-# in as 37 (two refused by the change that puts a fitting where runs meet), and the open ends it had at fixtures are not
-# reproduced: the model holds no port, so a run's end off a fixture's box reads open.
+# in as 37 (two refused by the change that puts a fitting where runs meet), three of them as tees where the file says bend.
+# What is connected (call 200, contract 200P): each connection of a thing and each end of a run is written as a connection point
+# (IFC's IfcDistributionPort, nested by IfcRelNests), each two the model holds as joined tied (IfcRelConnectsPorts); the reader
+# joins what the file's ties say and nothing else, so the second job's open ends by system are the first job's: supply air 4,
+# cold water 1, sanitary 1, vent 1, power 1, the others none (takeoff's count: the first job's own).
 set -euo pipefail
 cd "$(dirname "$0")/.."
 if [ -n "${PLUMBLINE_BIN:-}" ]; then echo "using the program in $PLUMBLINE_BIN, not building"; else cargo build --quiet -p plumbline; fi
@@ -27,6 +30,9 @@ echo "== The first job: the made-up whole house, written out as a model, brought
 "$P" export ifc "$T/first.json" "$T/first.ifc" > "$T/export.txt"
 says "$T/export.txt" "22 fixtures"
 says "$T/export.txt" "39 fittings"
+says "$T/export.txt" "332 connection points"
+says "$T/export.txt" "147 connection point ties"
+lacks "$T/export.txt" "hot to the kitchen sink, piece"
 "$P" new "$T/second.json" "Second (not a real job)" >/dev/null
 "$P" import ifc "$T/second.json" "$T/first.ifc" --status Known --source "made-up model" > "$T/in.txt"
 # 1. By the first job's own figures: 22 fixtures and 5 pieces of equipment, each where it stood.
@@ -38,7 +44,16 @@ echo "-- Point 2: fittings come in on their runs (HELD for a ruling: 37 of the 3
 says "$T/in.txt" "37 fittings"
 says "$T/in.txt" "1 pipe fitting: this program would not take it: "
 says "$T/in.txt" "leave (16.3, 22.7) the same way, one over the other"
-says "$T/in.txt" "22 runs ending at a fixture or a piece of equipment were joined to it, where it stood"
+# 46 connections of the 22 fixtures and 5 pieces of equipment (the first job's own), each tied to the end of a run that stands at it.
+says "$T/in.txt" "46 connections on fixtures and equipment were brought in from the file's connection points, each Assumed; 46 were tied to the end of a run and are joined to it, and no other end was joined for being near"
+# Where the file calls a fitting a bend and the runs that meet there make a tee: the place and both words (three of them).
+[ "$(grep -c "the file calls it a bend, the runs there make a tee, and it is brought in as a tee" "$T/in.txt")" = 3 ] || { echo "FAIL: three fittings are not named as tees where the file says bend"; cat "$T/in.txt"; exit 1; }
+says "$T/in.txt" "the fitting at (19, 17, 8.4) is not what the file calls it"
+says "$T/in.txt" "the fitting at (21.2, 27, 0.9) is not what the file calls it"
+says "$T/in.txt" "the fitting at (16.3, 26.5, 6) is not what the file calls it"
+# The three hot-water runs with no size are in the file and come back, their size Unknown and counted.
+says "$T/in.txt" "63 pipes"
+says "$T/in.txt" "3 runs have no size: each is drawn as a line alone, and come in with its size Unknown"
 # 3. Four strip footings, 136 LF (the four outside walls' 136 LF), 136 x 2 ft x 1 ft / 27 = 10.07 CY of concrete.
 echo "-- Point 3: footings --"
 says "$T/in.txt" "4 footings"
@@ -75,7 +90,8 @@ for line in "walls 8 210.00 LF" "wall face, gross 2,026.00 SF" "wall face, net 1
     grep -qF -- "$line" "$T/f.txt" && grep -qF -- "$line" "$T/s.txt" || { echo "FAIL: a figure differs: $line"; diff "$T/f.txt" "$T/s.txt" | head -20; exit 1; }
     printf '    both say: %s\n' "$line"
 done
-grep -E "^(Duct|Pipe|Cable|Conduit) " "$T/f.txt" | grep -v "size unknown" | sort > "$T/f.runs"
+# (The three hot-water runs with no size are in both now: call 200.)
+grep -E "^(Duct|Pipe|Cable|Conduit) " "$T/f.txt" | sort > "$T/f.runs"
 grep -E "^(Duct|Pipe|Cable|Conduit) " "$T/s.txt" | sort > "$T/s.runs"
 grep -E "^(Fixture|Equipment) " "$T/f.txt" | sort > "$T/f.things"
 grep -E "^(Fixture|Equipment) " "$T/s.txt" | sort > "$T/s.things"
@@ -84,6 +100,29 @@ cmp -s "$T/f.things" "$T/s.things" || { echo "FAIL: the fixtures and equipment d
 printf '    every run and every fixture and piece of equipment: the same lines in both\n'
 "$P" check "$T/second.json" > "$T/check.txt" 2>&1 || { echo "FAIL: the second job does not check"; cat "$T/check.txt"; exit 1; }
 printf '    the second job checks\n'
+# The open ends, by system, are the first job's: the order of the takeoff is supply air, return air, refrigerant, cold water, hot
+# water, sanitary, vent, power, lighting.
+echo "-- What is connected: the open ends by system, the first job's and the second's --"
+for j in first second; do grep -oE "[0-9]+ open ends?" "$T/$j.takeoff" | tr '\n' ',' > "$T/$j.open"; done
+cmp -s "$T/first.open" "$T/second.open" || { echo "FAIL: the open ends differ"; cat "$T/first.open" "$T/second.open"; exit 1; }
+[ "$(cat "$T/second.open")" = "4 open ends,0 open ends,0 open ends,1 open end,0 open ends,1 open end,1 open end,1 open end,0 open ends," ] || { echo "FAIL: the open ends are not supply air 4, cold water 1, sanitary 1, vent 1, power 1"; cat "$T/second.open"; exit 1; }
+printf '    open ends by system, both jobs: supply air 4, return air 0, refrigerant 0, cold water 1, hot water 0, sanitary 1, vent 1, power 1, lighting 0\n'
+grep -qF "Hot water  (Domestic Hot Water; 17 straight pieces" "$T/f.txt" || grep -qF "Hot water (Domestic Hot Water; 17 straight pieces" "$T/f.txt" || { echo "FAIL: the first job's hot water is not 17 pieces"; exit 1; }
+grep -qF "Hot water (Domestic Hot Water; 17 straight pieces" "$T/s.txt" || { echo "FAIL: the second job's hot water does not have the runs it had"; grep -n "Hot water" "$T/s.txt"; exit 1; }
+printf '    hot water: 17 straight pieces in both jobs (the three with no size among them)\n'
+echo "-- Nothing is joined because it is near --"
+N="$T/near.json"
+"$P" new "$N" "Near (not a real job)" >/dev/null
+NS="$(grep -oE 'level-[0-9]+' <("$P" level "$N" ground --elevation "0 ft" --height "9 ft" "${A[@]}") | head -1)"
+NY="$(grep -oE 'system-[0-9]+' <("$P" system "$N" "Cold water" "Domestic Cold Water") | head -1)"
+NT="$(grep -oE 'type-[0-9]+' <("$P" type "$N" pipe "3/4 in" --round "3/4 in" "${A[@]}") | head -1)"
+"$P" place "$N" "$NS" fixture "Water closet" --at "10,10" --offset "0 ft" --size "1.5,2,2" --system "$NY" "${A[@]}" >/dev/null
+"$P" run "$N" "$NS" pipe "$NT" --points "11.25,10 11.25,4" --height "1 ft" --system "$NY" "${A[@]}" >/dev/null
+"$P" export ifc "$N" "$T/near.ifc" >/dev/null
+"$P" new "$T/near2.json" "Near, brought in (not a real job)" >/dev/null
+"$P" import ifc "$T/near2.json" "$T/near.ifc" --status Assumed --source "made-up model" > "$T/near-in.txt"
+grep -qE "note: 1 run end stands within a foot of a fixture or a piece of equipment that the file gives no connection there, and reads open: pipe [0-9]* 0\.50 ft from Water closet" "$T/near-in.txt" || { echo "FAIL: an end 0.5 ft off a fixture is not said to read open"; cat "$T/near-in.txt"; exit 1; }
+printf '    a run ending 0.5 ft from a fixture, nothing tied: reads open, and says so\n'
 # What is still not brought in: no fixture, footing or roof in the list; and every value is Assumed, none Known on the file's say-so.
 grep -E "^  not brought in" "$T/in.txt" | head -1 | grep -qF "2 things" || { echo "FAIL: not brought in is not just the two fittings"; cat "$T/in.txt"; exit 1; }
 lacks "$T/in.txt" "fixture or outlet"
@@ -152,10 +191,24 @@ echo "== The model passes IfcOpenShell (an outside checker, never linked) =="
 if python3 -c "import ifcopenshell" 2>/dev/null; then
     python3 tools/ifc-check.py "$T/first.ifc" > "$T/checked.txt" || { echo "FAIL: IfcOpenShell finds a fault in the house"; cat "$T/checked.txt"; exit 1; }
     python3 tools/ifc-check.py "$T/gable.ifc" > "$T/checked-gable.txt" || { echo "FAIL: IfcOpenShell finds a fault in the gable roof"; cat "$T/checked-gable.txt"; exit 1; }
+    # And the ties, by an outside check of its own: the two ports of each IfcRelConnectsPorts are at one place in space.
+    python3 - "$T/first.ifc" <<'PY' || { echo "FAIL: a tie joins two points that are not at one place"; exit 1; }
+import sys, ifcopenshell, ifcopenshell.util.placement as pl
+m = ifcopenshell.open(sys.argv[1])
+ties = m.by_type("IfcRelConnectsPorts")
+bad = 0
+for t in ties:
+    a = pl.get_local_placement(t.RelatingPort.ObjectPlacement)[:3, 3]
+    b = pl.get_local_placement(t.RelatedPort.ObjectPlacement)[:3, 3]
+    if max(abs(a - b)) > 0.011:
+        bad += 1
+print(f"    {len(ties)} ties, {len(m.by_type('IfcDistributionPort'))} ports: each tie's two ports at one place" if not bad else f"    {bad} ties join two ports that are apart")
+sys.exit(1 if bad else 0)
+PY
     sed 's/^/    /' "$T/checked.txt" | head -2
     sed 's/^/    /' "$T/checked-gable.txt" | head -1
 else
     echo "demos/ifc-whole.sh needs IfcOpenShell to validate the model (python3 -c 'import ifcopenshell' fails; set PYTHONPATH to where it is)"; exit 2
 fi
 echo
-echo "ifc-whole: all of it holds (points 1 to 7, but for what is held for a ruling and said above)."
+echo "ifc-whole: all of it holds (points 1 to 7 of call 197, and what is connected: call 200 points 1 to 3)."

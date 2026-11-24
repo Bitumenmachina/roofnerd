@@ -1344,19 +1344,27 @@ pub fn estimate(job: &mut Job) -> Estimate {
     // The job's materials, to show the price a line made of one is extended at.
     let mut materials: Vec<(String, String, Supply)> = Vec::new();
     for &e in &order {
-        if let (Some(node), Some(Kind::Material), Some(supply)) = (w.get::<Node>(e), w.get::<Kind>(e).copied(), w.get::<Supply>(e)) {
+        if let (Some(node), Some(Kind::Material | Kind::Type), Some(supply)) = (w.get::<Node>(e), w.get::<Kind>(e).copied(), w.get::<Supply>(e)) {
             materials.push((node.name.clone(), node.path.clone(), supply.clone()));
         }
     }
     let mut suppliers: Vec<String> = materials.iter().flat_map(|m| m.2.quotes.keys().cloned()).collect();
     suppliers.sort();
     suppliers.dedup();
+    // A line made of the element's material, on a thing set down from an item, is made of its item (call 196).
+    let item_material: std::collections::HashMap<String, String> = order.iter().filter_map(|&e| match (w.get::<Node>(e), w.get::<crate::Item>(e)) {
+        (Some(n), Some(_)) => Some((n.path.clone(), crate::editing::item_material_name(&n.name))),
+        _ => None,
+    }).collect();
 
     let mut lines = Vec::new();
     for &e in &order {
         let (Some(node), Some(kind), Some(cost)) = (w.get::<Node>(e), w.get::<Kind>(e).copied(), w.get::<Cost>(e)) else { continue };
         // A condition's recipe is not on the job's sheet; it carries its lines in `pl::recipe`.
-        let made_of = w.get::<MadeOf>(e).and_then(|m| m.0.value.clone());
+        let made_of = w.get::<MadeOf>(e).and_then(|m| m.0.value.clone()).or_else(|| match w.get::<MadeOf>(e) {
+            Some(_) => None,
+            None => w.get::<crate::Placed>(e).and_then(|p| p.item.as_ref()).and_then(|i| item_material.get(i).cloned()),
+        });
         let found = made_of.as_ref().and_then(|name| {
             let found: Vec<&(String, String, Supply)> = materials.iter().filter(|(n, p, _)| p == name || crate::check::same_name(n, name)).collect();
             (found.len() == 1).then(|| found[0].clone())

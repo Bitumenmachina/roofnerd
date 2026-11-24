@@ -241,13 +241,21 @@ pub fn derive(world: &mut World) -> Vec<String> {
     let mut materials: Vec<(String, String, Supply)> = Vec::new();
     let mut mq = world.query::<(&Node, &Kind, &Supply)>();
     for (node, kind, supply) in mq.iter(world) {
-        if *kind == Kind::Material {
+        // A material, or an item that has its own price (call 196).
+        if matches!(*kind, Kind::Material | Kind::Type) {
             materials.push((node.name.clone(), node.path.clone(), supply.clone()));
         }
     }
+    // What each item's price list entry is called, by the item's path: a line made of the element's material, on a
+    // thing set down from an item, is made of its item (call 196).
+    let mut item_material: HashMap<String, String> = HashMap::new();
+    let mut iq = world.query::<(&Node, &crate::Item)>();
+    for (node, _) in iq.iter(world) {
+        item_material.insert(node.path.clone(), crate::editing::item_material_name(&node.name));
+    }
     #[allow(clippy::type_complexity)]
-    let mut q = world.query::<(&Node, &Kind, Option<&Outline>, Option<&Pitch>, Option<&Taper>, Option<&Run>, Option<&Height>, Option<&Cost>, Option<&Allowance>, Option<&MadeOf>, Option<&Condition>, Option<&mut Measure>, Option<&mut LineQuantities>)>();
-    for (node, kind, outline, pitch, taper, run, height, cost, allowance, made_of, condition, measure, line_quantities) in q.iter_mut(world) {
+    let mut q = world.query::<(&Node, &Kind, Option<&Outline>, Option<&Pitch>, Option<&Taper>, Option<&Run>, Option<&Height>, Option<&Cost>, Option<&Allowance>, Option<&MadeOf>, Option<&Condition>, Option<&crate::Placed>, Option<&mut Measure>, Option<&mut LineQuantities>)>();
+    for (node, kind, outline, pitch, taper, run, height, cost, allowance, made_of, condition, placed, measure, line_quantities) in q.iter_mut(world) {
         let me = &node.path;
         let mut m = BTreeMap::new();
 
@@ -312,8 +320,21 @@ pub fn derive(world: &mut World) -> Vec<String> {
         let mut lq = BTreeMap::new();
         if let Some(cost) = cost {
             let on = lines::On { kind: *kind, measure: Some(&new), height };
+            // What the element is made of: what it says; failing that, if it is one of an item set down, its item
+            // (a wall, a floor or a roof is none of them and is as it was).
+            let of_its_item = placed.and_then(|p| p.item.as_ref().map(|i| (i, p.what.status)));
             let stock = match made_of.map(|m| &m.0) {
-                None => lines::Stock::NotSaid,
+                None => match of_its_item.and_then(|(item, status)| item_material.get(item).map(|name| (name, status))) {
+                    None => lines::Stock::NotSaid,
+                    Some((name, status)) => {
+                        let found: Vec<&(String, String, Supply)> = materials.iter().filter(|(n, _, _)| crate::check::same_name(n, name)).collect();
+                        match found.as_slice() {
+                            [(name, path, supply)] => lines::Stock::Found { path, name, status, supply },
+                            [] => lines::Stock::Missing(format!("it is priced from the price list under {name:?}, and the price list has no price for that item yet")),
+                            many => lines::Stock::Missing(format!("it is priced from the price list as {name:?}, and the job has {} materials of that name ({}); use the path", many.len(), many.iter().map(|f| f.1.clone()).collect::<Vec<_>>().join(", "))),
+                        }
+                    }
+                },
                 Some(m) => match &m.value {
                     None => lines::Stock::Missing(format!("what the element is made of is not known ({})", m.source)),
                     Some(name) => {

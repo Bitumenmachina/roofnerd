@@ -50,6 +50,34 @@ When done: `git add -N . && git diff --binary -- plumbline > SCRATCH/review/call
 - Tests FIRST, run red, quoted. `demos/ifc-whole.sh` gains the open ends by system
   and the hot-water runs; its row in `README.md` says so.
 
+## Part 2, after the above is whole: an item's size as typed (the model's change the window needs)
+The window's bench (call 195, step A) types a size on an item's panel. The model
+has no change for that, so `crates/app/src/tools.rs` (`item_size`) runs the
+measuring change and then sets the size back to Assumed and mends how sure the
+things set down are: the window doing the model's work (DECISIONS.md, "Call 195,
+step A, as built"; call 197 points 8 and 9 say what must happen).
+- Add to `crates/world/src/editing.rs` one change, `item_size`, that takes the
+  item, which of width, depth and height, and the size as typed, and does all of
+  it: a size that differs from the one the item has is the item changed, Assumed,
+  with the source New item uses (find the words in `crates/app/src/tools.rs`,
+  `TYPED`, and move them to the model so there is one copy); the same size again
+  is the check, Known, "checked on site"; every thing set down from the item
+  follows, its size and how sure it is, by `placed_follow`. It gives back what
+  happened in a form the window and the command line can both say: changed or
+  checked, the old and new size in the item's words, how many followed, and
+  whether the item's name carries the old size.
+- The command line says it the same way where an item's size is set today (find
+  the verb; do not add one).
+- Tests first, run red, quoted: a size that differs; the same again; an item with
+  nothing set down; with two set down; a size that is not a length; an item's
+  name that carries the old size ("Vanity, 36 in" to 48 in) and one that does not.
+- Read `crates/app/src/tools.rs` `item_size` and the tests in `crates/app/src/bench.rs`
+  to see exactly what the window does today, and make the model's change give the
+  same saved job for the same typing (a test: the two files, byte for byte, built
+  from the window's steps as the window's test states them). **Do not edit
+  `crates/app`**: say in the report what the window's function becomes when it
+  calls yours.
+
 ## Rules
 - Files you may touch: `crates/ifc/src/`, `crates/ifc/tests/`, `crates/world/src/`
   only where the reader needs a change a tool already makes opened to it (say

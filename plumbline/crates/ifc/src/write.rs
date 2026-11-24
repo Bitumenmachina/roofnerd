@@ -21,7 +21,7 @@
 use plumbline_world::building::forms::Form;
 use std::collections::{BTreeMap, HashMap};
 
-use plumbline_world::building::{self, FittingKind, Shape, SystemInfo};
+use plumbline_world::building::{self, ConnectorKind, Connectors, Domain, Flow, FittingKind, Shape, SystemInfo};
 use plumbline_world::{roof, view, Cost, Discipline, Fitting, Footprint, Job, JobInfo, Kind, Level, Node, Rise};
 
 type P3 = [f64; 3];
@@ -221,6 +221,15 @@ impl Out {
         let set = self.add(format!("IFCPOLYGONALFACESET(#{points},.F.,(#{face}),$)"));
         self.shape("Tessellation", set)
     }
+    /// A run with no size: only the line it is drawn on, from its own start to `length` along its own
+    /// z (IFC's "Axis"), and no body.
+    fn line_only(&mut self, length: f64) -> u64 {
+        let (first, last) = (self.point([0.0, 0.0, 0.0]), self.point([0.0, 0.0, length]));
+        let line = self.add(format!("IFCPOLYLINE((#{first},#{last}))"));
+        let axis = self.axis;
+        let rep = self.add(format!("IFCSHAPEREPRESENTATION(#{axis},'Axis','Curve3D',(#{line}))"));
+        self.add(format!("IFCPRODUCTDEFINITIONSHAPE($,$,(#{rep}))"))
+    }
     fn shape(&mut self, how: &str, item: u64) -> u64 {
         let body = self.body;
         let rep = self.add(format!("IFCSHAPEREPRESENTATION(#{body},'Body','{how}',(#{item}))"));
@@ -240,6 +249,34 @@ fn along(a: P3, b: P3) -> Option<(P3, P3, f64)> {
     // Across, and level: square to the run on plan; for a riser, east.
     let across = if flat < 1.0e-9 { [1.0, 0.0, 0.0] } else { [-way[1] / flat, way[0] / flat, 0.0] };
     Some((way, across, length))
+}
+
+/// IFC4's word for the system a classification names (`IfcDistributionSystemEnum`), where it has one.
+fn system_word(class: &str) -> Option<&'static str> {
+    Some(match class {
+        "Supply Air" => "VENTILATION",
+        "Exhaust Air" => "EXHAUST",
+        "Domestic Cold Water" => "DOMESTICCOLDWATER",
+        "Domestic Hot Water" => "DOMESTICHOTWATER",
+        "Sanitary" => "SEWAGE",
+        "Vent" => "VENT",
+        "Refrigerant" => "REFRIGERATION",
+        "Power" => "ELECTRICAL",
+        "Lighting" => "LIGHTING",
+        _ => return None,
+    })
+}
+
+/// IFC4's word for what a pipe connection carries.
+fn domain_word(d: Domain) -> &'static str {
+    match d {
+        Domain::Cold => "DOMESTICCOLDWATER",
+        Domain::Hot => "DOMESTICHOTWATER",
+        Domain::Waste => "SEWAGE",
+        Domain::Vent => "VENT",
+        Domain::Storm => "STORMWATER",
+        Domain::Gas => "GAS",
+    }
 }
 
 /// The job's building as an IFC4 file. `when` is the moment it is written, as the file's
@@ -333,6 +370,10 @@ pub fn export(job: &mut Job, file: &str, when: &str) -> Result<Written, String> 
     let mut rooms_of: BTreeMap<u64, Vec<u64>> = BTreeMap::new();
     let mut on_system: BTreeMap<String, Vec<u64>> = BTreeMap::new();
     let mut written: Vec<(String, u64)> = Vec::new();
+    // Where each run and each thing with connections is placed (its local placement), and how long a run is:
+    // the ports are placed in it (call 200).
+    let mut placement_of: HashMap<String, u64> = HashMap::new();
+    let mut run_length: HashMap<String, f64> = HashMap::new();
     let up = [0.0, 0.0, 1.0];
 
     // Where two walls, or two footings, end at one point square to each other (a plain
@@ -436,11 +477,15 @@ pub fn export(job: &mut Job, file: &str, when: &str) -> Result<Written, String> 
                 let body = match (round, rect) {
                     (Some(d), _) => o.pushed_circle(d / 2.0, length),
                     (None, Some((width, depth))) => o.pushed_rect([0.0, 0.0], *width, *depth, length),
+                    // A run drawn with no size is the run it is: its line, and no body (call 200).
+                    (None, None) if matches!(p.kind, Kind::Duct | Kind::Pipe | Kind::Conduit | Kind::Cable) => o.line_only(length),
                     (None, None) => {
                         not_written.push((format!("{} {}", p.kind.stem(), p.name), 1, "its size is not known, so it has no shape to write".into()));
                         continue;
                     }
                 };
+                placement_of.insert(p.path.clone(), at);
+                run_length.insert(p.path.clone(), length);
                 let (class, sort, what) = match p.kind {
                     Kind::Duct => ("IFCDUCTSEGMENT", "RIGIDSEGMENT", "ducts"),
                     Kind::Pipe => ("IFCPIPESEGMENT", "RIGIDSEGMENT", "pipes"),
@@ -457,6 +502,7 @@ pub fn export(job: &mut Job, file: &str, when: &str) -> Result<Written, String> 
             Shape::Box { at, size, angle } => {
                 let turn = angle.to_radians();
                 let placed_at = o.placed(Some(within), [at[0], at[1], at[2] - floor], up, [turn.cos(), turn.sin(), 0.0]);
+                placement_of.insert(p.path.clone(), placed_at);
                 let body = o.pushed_rect([0.0, 0.0], size[0], size[1], size[2]);
                 match p.kind {
                     // A pad footing: BIMCraft's isolated footing, `IFCFOOTING .PAD_FOOTING.`.
@@ -527,6 +573,108 @@ pub fn export(job: &mut Job, file: &str, when: &str) -> Result<Written, String> 
             on_system.entry(system.clone()).or_default().push(id);
         }
         written.push((p.path.clone(), id));
+    }
+
+    // ---- Ports (call 200). What is connected is said the way IFC says it: each connection of a thing set
+    // down or of a fitting is an `IfcDistributionPort` on it, placed where the connection is; each end of a
+    // run is a port at that end; each is nested in what it is on (`IfcRelNests`, in order); two that the
+    // model holds as joined (a run's end at a connection, or two runs' ends meeting alone) are tied once by
+    // `IfcRelConnectsPorts`. A third end at one place is joined by being there, as the model joins it.
+    let mut port_of: HashMap<(String, usize), u64> = HashMap::new();
+    let mut ports_made = 0usize;
+    {
+        let class_of = |job: &mut Job, system: &Option<String>| -> Option<String> { system.as_ref().and_then(|s| job.find(s)).and_then(|e| job.world.get::<SystemInfo>(e)).map(|i| i.classification.clone()) };
+        for p in &placed {
+            let Some(&parent) = placement_of.get(&p.path) else { continue };
+            let mut nested: Vec<u64> = Vec::new();
+            match &p.shape {
+                Shape::Run { .. } => {
+                    let Some(&length) = run_length.get(&p.path) else { continue };
+                    let word = match p.kind {
+                        Kind::Duct => "DUCT",
+                        Kind::Pipe => "PIPE",
+                        Kind::Conduit => "CABLECARRIER",
+                        Kind::Cable => "CABLE",
+                        _ => continue,
+                    };
+                    let system = class_of(job, &p.system).and_then(|c| system_word(&c)).map(|w| format!(".{w}.")).unwrap_or_else(|| ".NOTDEFINED.".into());
+                    for (end, (z, out)) in [(0.0, -1.0), (length, 1.0)].into_iter().enumerate() {
+                        let at = o.placed(Some(parent), [0.0, 0.0, z], [0.0, 0.0, out], [1.0, 0.0, 0.0]);
+                        let name = if end == 0 { "first end" } else { "second end" };
+                        let id = o.add(format!("IFCDISTRIBUTIONPORT({},$,'{name}',$,$,#{at},$,.SOURCEANDSINK.,.{word}.,{system})", o.id(&format!("{} port {end}", p.path))));
+                        port_of.insert((p.path.clone(), end), id);
+                        nested.push(id);
+                    }
+                }
+                Shape::Box { .. } => {
+                    let Some(e) = job.find(&p.path) else { continue };
+                    let Some(connectors) = job.world.get::<Connectors>(e).cloned() else { continue };
+                    // What a duct, conduit or cable connection carries is what the thing it is on is on.
+                    let its = class_of(job, &p.system).and_then(|c| system_word(&c));
+                    for (i, c) in connectors.0.iter().enumerate() {
+                        let Some(at) = c.at_ft() else { continue };
+                        let place = o.placed(Some(parent), at, [0.0, 0.0, 1.0], [1.0, 0.0, 0.0]);
+                        let flow = match c.flow {
+                            Flow::Out => "SOURCE",
+                            Flow::In => "SINK",
+                            Flow::Both => "SOURCEANDSINK",
+                        };
+                        let word = match c.kind {
+                            ConnectorKind::Duct => "DUCT",
+                            ConnectorKind::Pipe => "PIPE",
+                            ConnectorKind::Conduit => "CABLECARRIER",
+                            ConnectorKind::Power => "CABLE",
+                        };
+                        let system = c.domain.map(domain_word).or_else(|| system_word(&c.name)).or_else(|| if c.kind == ConnectorKind::Pipe { None } else { its }).map(|w| format!(".{w}.")).unwrap_or_else(|| ".NOTDEFINED.".into());
+                        let id = o.add(format!("IFCDISTRIBUTIONPORT({},$,{},$,$,#{place},$,.{flow}.,.{word}.,{system})", o.id(&format!("{} port {i}", p.path)), name_or_none(&c.name)));
+                        port_of.insert((p.path.clone(), i), id);
+                        nested.push(id);
+                    }
+                }
+                _ => continue,
+            }
+            if !nested.is_empty() {
+                ports_made += nested.len();
+                o.add(format!("IFCRELNESTS({},$,$,$,#{},({}))", o.id(&format!("{} has ports", p.path)), written.iter().find(|w| w.0 == p.path).map(|w| w.1).unwrap_or(0), nested.iter().map(|i| format!("#{i}")).collect::<Vec<_>>().join(",")));
+            }
+        }
+        for _ in 0..ports_made {
+            count("connection points");
+        }
+        // The ties, from where the model has two of them at one place.
+        let mut ties = 0usize;
+        if let Ok(net) = building::network::network(job, None, None, building::network::TOLERANCE_FT) {
+            for node in &net.nodes {
+                let mut things: Vec<u64> = Vec::new();
+                let mut ends: Vec<u64> = Vec::new();
+                for joint in &node.joints {
+                    match joint {
+                        building::network::Joint::Connector { element, index, .. } => {
+                            if let Some(id) = port_of.get(&(element.clone(), *index)) {
+                                things.push(*id);
+                            }
+                        }
+                        building::network::Joint::RunEnd { run, end } => {
+                            if let Some(id) = port_of.get(&(run.clone(), usize::from(*end))) {
+                                ends.push(*id);
+                            }
+                        }
+                        building::network::Joint::RunSide { .. } => {}
+                    }
+                }
+                let mut pairs: Vec<(u64, u64)> = things.iter().copied().zip(ends.iter().copied()).collect();
+                if things.is_empty() && ends.len() == 2 {
+                    pairs.push((ends[0], ends[1]));
+                }
+                for (a, b) in pairs {
+                    o.add(format!("IFCRELCONNECTSPORTS({},$,$,$,#{a},#{b},$)", o.id(&format!("tie {a} {b}"))));
+                    ties += 1;
+                }
+            }
+        }
+        for _ in 0..ties {
+            count("connection point ties");
+        }
     }
 
     // ---- Rooms: each as the outline its floor area is the area of, as high as its
