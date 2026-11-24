@@ -10715,6 +10715,38 @@ Not built yet.
 
 Not built yet. It follows the bench (contract 195A).
 
+## The bench, step C: an item's shape as data. A demonstration, written before it is built (call 198; 2026-11-24)
+
+`demos/shapes.sh`, at the command line first. By hand, from `building/forms.rs` as it
+is (BIMCraft's base cabinet: a 100 mm plinth but no more than 14 % of the height, a
+40 mm top but no more than 6 %, a 60 mm toe space but no more than 14 % of the
+depth, a 20 mm lip but no more than 5 %):
+
+1. The starter vanity, 36 in wide, 21 in deep, 34 1/2 in high (876.3 mm high, 533.4
+   deep): plinth 100 mm (14 % would be 122.7), top 40 mm (6 % would be 52.6), toe
+   60 mm (14 % would be 74.7), lip 20 mm (5 % would be 26.7). Its shape is **three
+   blocks**, each 36 in across (18 in each side of the middle):
+   the plinth, from the back to 2.362 in short of the front, up from 0 to 3.937 in;
+   the case, from the back to 0.787 in short of the front, up from 3.937 to
+   32.925 in; the top, the whole 21 in, up from 32.925 to 34.5 in.
+   `plumbline shapes` prints those figures, from the rows of the starter table.
+2. Each of the thirteen starter shapes, at three sizes: its blocks from the table
+   are the blocks today's code gives, each figure within a hundred-millionth of a
+   foot. (The test that lets the code be taken out.)
+3. A shape of the user's own, "wall-hung closet", two rows (a tank against the
+   wall, a bowl in front of it, clear of the floor), brought in with the chest; an
+   item drawn as it; `plumbline shapes` prints its two blocks at the item's sizes,
+   worked by hand in the script from the two rows.
+4. The two tables written out and brought into a second job, then written again:
+   the same to the byte. An item naming a shape that is not there is refused,
+   naming it.
+5. A job saved before this change opens; every thing set down in it has the blocks
+   it had; its estimate's price is the figure it was.
+6. A cost line's quantity written `min(net_area, 100 SF)` on a wall of 120 SF net
+   reads 100.00 SF and shows what it is made of; on a wall of 80 SF, 80.00 SF.
+
+Not built, and not contracted until steps A and B are in.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **As of 2026-11-24, 16:30 UTC (the lead). Read this block first; what is below it is
@@ -10776,9 +10808,9 @@ above):
    window builder as soon as the window is free. Step B (an item carries its cost) **is designed**: call
    196, with its demonstration above ("The bench, step B"); it wants a contract in
    the shape of `handoff/contracts/contract-194.md` (command line first, the
-   worker to set the design beside the code before any of it is built). Step C (its
-   shape as data, PROPOSALS.md 28) is **the lead's to design**: it changes the
-   saved job. D to F follow.
+   worker to set the design beside the code before any of it is built). Step C (its shape as data) **is designed** too: call 198,
+   its demonstration above ("The bench, step C"); contract it the same way, after
+   B. D to F follow and are not designed.
 1. **The sample whole house prices its outside trim** (call 194: the decision, the
    figures by hand above, and `handoff/contracts/contract-194.md`). A command-line
    worker was started on it at 16:35 UTC in a second working copy; if no patch of it

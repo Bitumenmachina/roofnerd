@@ -7858,3 +7858,49 @@ cannot be reached. Decided, point by point:
 18. Not tried by this judge: three wordings of call 193 (B, D and F in part), and
     the written file through IfcOpenShell from the window (the same writer is
     checked at the command line by `demos/export.sh`).
+
+### Call 198. The bench, step C, designed: an item's shape as data (2026-11-24; the lead's design, not built)
+
+Call 195 left step C to the lead because it changes the saved job. This is the
+design, from the code as read (`building/forms.rs`: a shape is already a list of
+blocks worked from a thing's three sizes, by thirteen pieces of code ported from
+BIMCraft's families; `formula.rs`: the language a cost line's quantity is written
+in). The worker's first job is to set it beside the code and BIMCraft's
+`crates/core/src/family.rs` (parameters, formulas, forms, connectors) and stop
+where they disagree.
+
+1. **A shape is a named list of blocks.** A block is a box, or an upright round
+   that fills its box, between six figures: across from and to (from the middle),
+   back from and to (from the back, which is the side that goes to a wall, toward
+   the front), up from and to (from the foot). Each figure is a formula in the
+   item's `width`, `depth` and `height`, in the language cost lines use and read by
+   the same reader, a fixed size written with its unit ("4 in"). Each block says
+   what it is made of, from the materials the window already draws.
+2. **The built-in shapes become rows.** The starter chest gains a table of shapes
+   (`library/shapes.csv`: one row a block). The thirteen shapes the program draws
+   today are written as its rows, and a test holds each to the code it replaces,
+   block for block, at three sizes, before that code is taken out. One arithmetic:
+   after it, a shape is worked from its rows and nowhere else. Where today's code
+   uses the lesser of a fixed size and a share of the thing ("a 100 mm plinth, no
+   more than 14 % of the height"), the formula language gains `min(a, b)` and
+   `max(a, b)`, for cost lines as well: one language.
+3. **An item's "Drawn as" names a shape**, as it names one of the thirteen now.
+   "box" stays the plain box.
+4. **The saved job** carries the shapes its items name. A job saved before opens
+   and draws as it did: the starter shapes are in the program, as the starter
+   assemblies are. The tool chest written out is two tables, items and shapes;
+   each round-trips to the byte; an item that names a shape the job does not have
+   is refused on the way in, naming the shape.
+5. **A shape is a drawing and is in no quantity.** Nothing is priced by it and a
+   clash still tests the item's box, so a block carries no Known or Assumed: the
+   item's three sizes do, as now. The window and `plumbline items` say so where a
+   shape is shown.
+6. **On the bench** (the window's half, after): the blocks of the item's shape are
+   listed on its panel; a block is added, its six figures typed, its material
+   picked, taken away; the item on the bench follows as each is entered; "Keep as
+   a new shape" names it, and the item is drawn as it. Pulling a block's face by
+   hand comes after typing works.
+7. **Not in C**: a block that is not a box or an upright round (a sloped or turned
+   one: BIMCraft's profiles and revolves); a shape's own sizes beyond the three
+   (a toe-kick height a person sets); the body written to the BIM file from the
+   blocks. They are said here so they are not built round.
