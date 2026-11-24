@@ -206,6 +206,11 @@ Proposed, in two steps.
 It is new scope and a change to the job file, so it waits for Patrick's word. Whether
 a geometry library does any of it is QUESTIONS.md Q27.
 
+**2026-11-24: taken up.** Patrick asked for the bench a third time; DECISIONS.md call
+195 reads three asks as his word and orders the work in steps A to F (the bench as a
+place first, with no change to the saved job; then an item's cost; then its shape as
+data, which is this proposal's step 1).
+
 ## 29. A wall runs up to the roof over it: the gable end (2026-11-16, from judgment 24A, J24A-17)
 
 A hip made a gable takes a plane off the roof and leaves a triangle of air over the

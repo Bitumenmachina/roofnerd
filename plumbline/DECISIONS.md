@@ -7652,3 +7652,76 @@ every price in it is made up and says so.
 7. **Known and left**: `plumbline trim` gives a corner-board figure for the four
    concrete foundation walls (8 LF each). It is geometry, nothing prices it, and no
    starter assembly for a foundation wall names it; it is not changed here.
+
+### Call 195. Patrick, 2026-11-24: the bench for items, asked a third time, is taken up (and how it was read)
+
+His words, on reading the review page: "why does it not list anything about design
+capabilities or the "BIM" workshop / bench for equipment , cabinetry and other trade
+items that can be repeatable , modifiable and database ? Also I do not see anything
+about IFC ingestion or export as well as input of any other items so other agents or
+opus 5.5 can work on this while I'm out of context with fable 5.2".
+
+**The page.** It left them out, and that was the lead's omission: it showed the
+window, the trades and the scan and said nothing of what can be drawn, the item
+library, or what comes in and goes out. The page now has each, with what it lacks,
+and `handoff/` is in the repository for whoever builds next.
+
+**The bench.** This is the third time he has asked for it (call 105, 2026-11-16: "a
+workbench for items for trade that can be modified like a database of items /
+library"; call 111, the same words; now). Twice it was answered with the table and
+the item's panel, and the bench itself was left in PROPOSALS.md 28 to wait for his
+word. **Three asks are his word.** It is taken up, at the head of what is owed, in
+steps, each one shown to him as a picture of something he can do.
+
+How each clause is read against what there is:
+- *"equipment, cabinetry and other trade items"*: the tool chest has 48 starter
+  items in their trades, cabinet boxes by catalog code among them, and a maker's
+  sheet makes one more. Held.
+- *"repeatable"*: an item is set down any number of times and each follows it. Held.
+- *"modifiable"*: its sizes, trade, name and what it is drawn as are changed on its
+  panel. Held, **with the house still in view and the item lost in it**: that is
+  not a bench.
+- *"database"*: the chest is a table written out, changed in a spreadsheet and
+  brought back without loss. Held. **Not held**: an item carries no price, unit or
+  labor of its own, so the table is a list of sizes and not yet what an estimator
+  means by a database of items.
+- *"BIM workshop / bench"*: **not built.** No item can be looked at alone, and its
+  shape is one of thirteen built in.
+
+**The steps, in order** (the window first, call 187):
+- **A. The bench as a place.** "Bench" on an item's panel puts the house away and
+  stands the item alone on a floor of its own, lined every foot, drawn as it is drawn
+  when set down, with its width, depth and height dimensioned in the words its panel
+  uses and in the colour of how sure each is. Its panel stays; a size typed there
+  changes the item on the bench as it is typed and says how many set down from it
+  follow. The view flies there and back and never jumps; "Back to the house" or Esc
+  returns to the view that was left. No drawing tool is offered on the bench and no
+  clash is worked there. It is a way of looking: **the saved job does not change**
+  and no number is worked in the window. An item never set down goes on the bench
+  the same way.
+- **B. An item carries its cost.** A price, a unit and labor on the item, so that
+  what is set down from it is priced from it and the chest written out is a priced
+  table. This is what a number means and a change to the chest's table: the lead
+  designs it (one arithmetic: a thing set down is priced by its item's lines unless
+  a line is entered on the thing, and says which) before a worker touches it.
+- **C. The item's shape as data** (PROPOSALS.md 28, step 1): blocks between figures
+  worked from its sizes, ported from BIMCraft's `Family`; the thirteen built-in
+  shapes become rows of the starter chest. A change to the saved job: the lead's.
+- **D. Where it connects**: hot, cold, waste, supply, return, power, each a place on
+  the item, so a run can be drawn to it and a clash can tell a connection from a
+  conflict.
+- **E. A maker's model brought in as an item**: an IFC object from a manufacturer
+  read into the chest, its sizes Assumed and sourced to the file.
+- **F. A cabinet by rule**: a base, wall or tall box of any width from one row, as
+  the trade orders them, so the chest is not one row a width.
+
+A is a window job with no change to any number and is contracted now. B and C wait
+on the lead's design, not on Patrick.
+
+**IFC and what else comes in.** Nothing was missing from the program that the page
+could have shown: `import ifc` reads IFC2x3 and IFC4, `export ifc` writes IFC4 that
+IfcOpenShell passes, and the window has "Designer's model" under Bring in and "BIM
+model" under Write out. What it lacks is on the page and in `handoff/README.md`:
+layers as material layer sets, types, a MasterFormat classification on each
+element, a designer's runs and equipment as things in the model. The second window
+judge (2026-11-24) is the first to try the two through the window.

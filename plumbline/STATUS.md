@@ -10586,6 +10586,42 @@ wainscot round the ground level. Every price is made up. Worked by hand:
 Not built yet. What the window then shows (boards from the top of the stone, casing
 at 17 windows, fascia and soffit where priced) is the window builder's half, after.
 
+## The bench: an item looked at alone. A demonstration, written before it is built (call 195, step A; 2026-11-24)
+
+`demos/benchw.sh`, in the window, on the house `demos/itemlibw.sh` uses, with the
+starter tool chest brought in and "Vanity, 36 in" set down twice. The starter vanity
+is 36 in wide, 21 in deep and 34 1/2 in high, each Assumed ("a typical size; the
+product is not chosen"). By hand:
+
+1. The vanity opened from the Items list (Change), then **Bench**: no wall, floor or
+   roof of the house is on screen; the vanity stands alone on a floor lined every
+   foot; three dimensions read "36 in", "21 in" and "34 1/2 in", each in the colour
+   Assumed is shown in. The window says what is on the bench, its three sizes, and
+   that "Back to the house" returns. The picture is looked at: it is a vanity (a base
+   cabinet), not a bare box, and nothing of it is under a panel.
+2. No drawing tool is offered on the bench (Wall, Door and the rest are not on the
+   map of controls); the item's panel is.
+3. Width typed as `48 in` on the panel: the dimension reads "48 in"; the window says
+   the vanity is 48 in wide and that **2** set down from it follow. With the view at
+   rest the vanity's width on screen is 48 / 36 = **1.333** times what it was (held
+   between 1.28 and 1.39); its depth and height on screen do not change (within 2
+   dots).
+4. **Back to the house**: the house is on screen again, and a corner of it is within
+   2 dots of where it was before the bench (the view that was left). Saved with F2,
+   `plumbline show` gives the item and both vanities set down as 48 in wide, Assumed,
+   "typed in the window; not yet checked against its maker's sheet"; depth and
+   height as they were. The estimate's price before and after is the same figure
+   (a vanity's width prices nothing in that job).
+5. Bench again, then **Esc**: the same return as "Back to the house".
+6. **Undo** after coming back: the item and both set down are 36 in wide again.
+7. An item never set down ("Water heater, 50 gal": 22 in, 22 in, 60 in) goes on the
+   bench the same way, drawn as a tank, with its three sizes.
+8. The saved job written after all of it, and the same steps done without the bench
+   (the width typed on the panel with the house in view): the two files are the same
+   to the byte. The bench is a way of looking.
+
+Not built yet.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **As of 2026-11-24, 16:30 UTC (the lead). Read this block first; what is below it is
@@ -10602,6 +10638,14 @@ pass. The commit after it (the gable drawn) says in its message what was run on 
 **Not every window demonstration has been run since the merge 579afa3** (34 passed
 then); the ones whose houses the later work touched have. It is not a release
 candidate and is not tagged.
+
+**Two commits after a0d8477 change only written records** (calls 194 and 195, their
+demonstrations by hand, two contracts, the handoff's notes): `tools/committed.sh` was
+not run on them, because a window judge was driving timed runs on this machine and a
+build beside it costs it clicks; `git diff --stat a0d8477..` shows only `.md` files,
+the three gates passed in the commit hook, and a0d8477 itself passed the commit
+check. They were pushed so the record cannot be lost with the session. The next
+commit that changes the program is checked from what is in it, as always.
 
 **What Patrick ruled** (DECISIONS.md, his words in each): call 172, the purpose (the
 first 3D-first, renovation-first platform, taking in a PDF, a model or a LiDAR scan,
@@ -10631,13 +10675,25 @@ above):
   walls by itself, after four rounds; the person traces and the scan helps. A clean
   single plan on a sheet is found mostly right; a hatched, crowded one is not.
 
-**What is owed, in order.**
-1. **The sample whole house prices its outside trim** (fascia, soffit, corner boards,
-   casing by length). Since call 193 it shows bare windows and corners because
-   nothing in it prices them. This moves its price and every figure resting on it:
-   a command-line worker reports the model's figures and lists every expectation
-   that would move; the lead works the arithmetic and rules before anything changes.
-2. **A second window judge**: trim only where priced, the gable, and the eight fixes.
+**What is owed, in order** (brought up to date 2026-11-24, 17:00 UTC).
+0. **The bench for items (call 195). Patrick has asked for it three times; it is at
+   the head.** Step A (an item looked at alone, sized on its panel, the saved job
+   unchanged) has its demonstration written above ("The bench: an item looked at
+   alone") and is a window job with no change to any number: contract it to a
+   window builder as soon as the window is free. Steps B (an item carries its price,
+   unit and labor) and C (its shape as data, PROPOSALS.md 28) are **the lead's to
+   design first**: they change what a number means and the saved job. D to F follow.
+1. **The sample whole house prices its outside trim** (call 194: the decision, the
+   figures by hand above, and `handoff/contracts/contract-194.md`). A command-line
+   worker was started on it at 16:40 UTC in a second working copy; if no patch of it
+   is in the tree when you read this, it did not land: start it again from the
+   contract. Its window half (boards from the top of the stone, pictures retaken)
+   follows.
+2. **A second window judge** was started at 16:35 UTC on the build of a0d8477: the
+   tool chest, a designer's model in and the BIM model out through the window, the
+   gable, trim only where priced, the eight fixes. If `research/` has no
+   `judgment-window-1124b.md`, it did not finish: run it again from
+   `handoff/judge-brief-window.md`. Its findings want a call and a fix job.
 3. **Corner boards that run up a rake wall** (the model's trim pieces); the roof with
    a thickness and no coloured edge lines in the 3D view; ground at the wall's foot.
 4. **The scan path finished**: call 190 point 3 (the by-ceiling finder's sure walls

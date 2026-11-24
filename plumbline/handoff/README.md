@@ -68,6 +68,11 @@ session's scratch area and were lost with it.
   item in the window). A maker's sheet (PDF) is read into an item whose sizes are
   Assumed and sourced to the line of the sheet (`import spec`). A placed thing
   follows its item when the item changes, and can be turned.
+  **What it is not yet, and Patrick has asked for three times: a bench.** No item
+  can be looked at alone; it carries no price, unit or labor; its shape is one of
+  thirteen built in; it has no places to connect to; a maker's IFC object cannot
+  be made into one. `../DECISIONS.md` call 195 takes it up in steps A to F and
+  `../STATUS.md` has step A's demonstration. It is at the head of what is owed.
 - **Assemblies**: a starter library of 41 assemblies, 200 lines
   (`library/sixteen-divisions.csv`), brought in, applied to a wall, room, roof or
   opening, changed for another, written out and brought back.
@@ -78,6 +83,15 @@ session's scratch area and were lost with it.
   supplier, a subcontractor and the PM; the verify-in-field list; the item
   library; the plan set (PDF); the building as IFC4, validated by IfcOpenShell
   (run only as an outside checker) and read back by the program.
+- **Where IFC stands.** Out: walls, slabs, roofs, doors, windows, footings, spaces,
+  columns and beams by level, with base quantity sets (`Qto_*`), the common
+  property sets (`Pset_*Common`: existing, to demolish or new; load-bearing), and
+  IDs that hold from one writing to the next. In: walls, openings, slabs, roofs
+  and spaces; what cannot be placed is listed as left out. **Not yet**: a wall's
+  layers as material layer sets; types; a MasterFormat classification on each
+  element; a designer's ducts, pipes and equipment arriving as things in the
+  model; an item of the tool chest tied to a maker's IFC object. `crates/ifc` is
+  the reader and writer; `demos/export.sh` and `demos/ifc.sh` are the checks.
 
 ## Where real files are, and are not
 Real job, client and supplier data never enters the repository. The real phone
