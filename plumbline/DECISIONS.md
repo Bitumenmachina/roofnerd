@@ -7904,3 +7904,29 @@ where they disagree.
    one: BIMCraft's profiles and revolves); a shape's own sizes beyond the three
    (a toe-kick height a person sets); the body written to the BIM file from the
    blocks. They are said here so they are not built round.
+
+### Call 199. An assembly changed for another writes the quantities of the one it becomes (2026-11-24)
+
+Found by the worker of call 194, and older than it. When a thing's assembly is
+changed for another (`apply --change`, the window's change of assembly), a line the
+two share by name "stays as it is, price and all" (`job.rs` `change_assembly`). The
+starter plain wall and the wall over a stone wainscot share "Lap siding", "Hang the
+siding" and "Corner boards" by name and write them with different quantities. So a
+plain wall changed to the wainscot wall kept siding and corner boards to the ground
+**and** gained the stone: the siding behind the stone bought twice, and nothing
+said. Changed the other way it kept the short figures. That is a wrong quantity.
+
+1. A line both assemblies have keeps what a person can have entered on it: its
+   price, its waste, how it is ordered, its supplier prices, whether it is off.
+2. **Its quantity becomes the new assembly's** (the formula and the entries the
+   formula takes, such as `wainscot = 3 ft`) **where the line still reads as the old
+   assembly wrote it**. The reply names each line whose quantity changed, with the
+   old and the new.
+3. Where a person changed the quantity on the line (its formula or an entry is no
+   longer the old assembly's), it stays, and the reply says the line was left as
+   entered and what the new assembly would have written.
+4. Where the old assembly is no longer in the job (its lines cannot be compared),
+   the line stays and the reply says so.
+5. Nothing else about changing an assembly moves. Every expectation that moves is
+   listed first; it moves only where a changed wall's shared line now reads the new
+   assembly's quantity.

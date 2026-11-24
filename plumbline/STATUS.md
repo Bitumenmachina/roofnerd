@@ -10747,6 +10747,27 @@ depth, a 20 mm lip but no more than 5 %):
 
 Not built, and not contracted until steps A and B are in.
 
+## An assembly changed for another: a demonstration, written before it is built (call 199; 2026-11-24)
+
+`demos/change-assembly.sh`, at the command line. A wall 20 ft long and 10 ft high with
+no opening and two outside corners, the starter assemblies brought in. By hand:
+
+1. The plain lap-siding wall applied: Lap siding 20 x 10 = **200.00 SF**; Corner
+   boards 2 x 10 = **20.00 LF**. Lap siding priced at a made-up $4.00/SF: $800.00.
+2. Changed for the wall over a stone wainscot: Lap siding 200 - 20 x 3 =
+   **140.00 SF**, still at $4.00: **$560.00**; Hang the siding 140.00 SF; Corner
+   boards 2 x (10 - 3) = **14.00 LF**. The reply names the three lines, each with
+   200 to 140 or 20 to 14, and the lines it added (the stone).
+3. Changed back: 200.00 SF, $800.00, 20.00 LF; the stone's lines taken off and named.
+4. On the plain wall the siding's quantity typed as `net_area * 0.9` (180.00 SF),
+   then changed for the wainscot wall: Lap siding stays **180.00 SF**, and the reply
+   says it was left as entered and that the new assembly writes
+   `net_area - net_area_below_wainscot + gable_area`. Corner boards still go to 14.00.
+5. The sample whole house and every other demonstration: no figure moves (none
+   changes one assembly for another across these lines); any that does is listed.
+
+Not built yet. It rides with contract 197I's worker, as a second part.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **As of 2026-11-24, 16:30 UTC (the lead). Read this block first; what is below it is

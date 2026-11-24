@@ -56,6 +56,16 @@ When done, from the working copy's root:
 - Tests FIRST, run red, quoted. A demonstration `demos/ifc-whole.sh` (new) to the
   seven points in STATUS.md, and its row in `README.md`.
 
+## Part 2, after the above is whole: call 199 (an assembly changed for another)
+Read plumbline/DECISIONS.md "### Call 199" and plumbline/STATUS.md "An assembly
+changed for another: a demonstration", and `crates/world/src/job.rs`
+`change_assembly`. Build the five points; tests first, run red, quoted;
+`demos/change-assembly.sh` (new) to the five steps; the reply of `apply --change`
+in `crates/cli/src/` says what the call says it says. Before changing any
+expectation, list every test and demonstration that changes one assembly for
+another and what each reads before and after. `crates/app` is not touched: say in
+the report which window code calls `change_assembly` and what it will now show.
+
 ## Rules
 - Files you may touch: `crates/ifc/src/`, `crates/ifc/tests/`, `crates/world/src/`
   only where the reader needs a change a tool already makes opened to it (say
