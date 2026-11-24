@@ -10777,6 +10777,22 @@ its picture shows 3).
 7. (15) A maker's sheet with no trade in it made into an item: the message says its
    trade is not said yet and where it is picked.
 
+8. (16, call 200 point 5) The wall of `demos/change-assembly.sh` (20 ft long, 10 ft
+   high, no opening, two outside corners) with the plain lap-siding wall on it,
+   changed in the window for the wall over a stone wainscot: the message names
+   Lap siding and Hang the siding, each **200.00 SF to 140.00 SF**, and Corner
+   boards, **20.00 LF to 14.00 LF**, and the lines it added. With the siding's
+   quantity typed first as `net_area * 0.9`: the message says Lap siding was left
+   as entered at **180.00 SF**.
+9. (17) `demos/benchw.sh` passes unchanged with the window calling the model's
+   `item_size`, and its saved job is the same to the byte as before the change.
+10. (18) The starter water heater set down twice. On its panel "Priced as" reads
+   that it is not priced; a click lists what goes on equipment; "Bought and set"
+   picked: the message says **2** set down follow. The estimate window shows four
+   lines, two of them the heater by its own name with no price. $1,850.00 typed
+   for the heater on one of them reads on both: **$3,700.00**. The same from the
+   bench.
+
 Not built yet. It follows the bench (contract 195A).
 
 ## The bench, step C: an item's shape as data. A demonstration, written before it is built (call 198; 2026-11-24)
@@ -10873,28 +10889,37 @@ been run on it.
 
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
-**As of 2026-11-24, 16:30 UTC (the lead). Read this block first; what is below it is
+**As of 2026-11-24, 22:10 UTC (the lead). Read this block first; what is below it is
 older and is kept for what it says of the window's history. `handoff/README.md` is how
-the work is run, with the judges' briefs and five real contracts as patterns.**
+the work is run, with the judges' briefs and the contracts as patterns (ten of them
+now, three not yet started).**
 
 **Where the work is.** Branch `claude/hopeful-cannon-kng8eo` (pushed; the same commits
-are pushed to `claude/nifty-tesla-qmn44n`). On the last merge, 2a05f51, run by the
-lead: every crate's tests, the window's included, 878 passed; `tools/committed.sh`
-passes; the gates, `portmap.sh` and `licenses.sh` pass; 47 command-line
-demonstrations pass on the same command-line code; of the window's demonstrations
-`pricew`, `trimw`, `moneyw`, `tracew` and `gablew` were run on the merged build and
-pass. The commit after it (the gable drawn) says in its message what was run on it.
-**Not every window demonstration has been run since the merge 579afa3** (34 passed
-then); the ones whose houses the later work touched have. It is not a release
+are pushed to `claude/nifty-tesla-qmn44n`). The pushed head when this was written is
+8820f44: the merge of the bench (call 195 step A), the sample house's trim (194), a
+model brought in whole (197, 199, 200), an item's cost (196, 201) and what is
+connected in the file (202). Run by the lead on that tree: **every crate's tests,
+the window's included, 948 passed, none failed**; the six command-line crates'
+tests, all 51 command-line demonstrations (their words searched for FAIL), the
+gates, `portmap.sh` and `licenses.sh` on each piece before it was merged. On the
+merge before it (the bench, 194, 197: the tree of c02118b) **twelve window
+demonstrations passed**, each on its first proper run: `benchw`, `dressw`,
+`tradesw`, `lightw`, `bringw`, `pricew`, `trimw`, `moneyw`, `gablew`, `gableendw`,
+`itemlibw`, `glassw`. **On 8820f44 itself eight window demonstrations passed**, each on its first
+run, on the frozen build of that tree: `pricew` (42 starter assemblies), `itemlibw`,
+`itemneww`, `itemsw`, `benchw`, `bringw`, `moneyw`, `cabinetsw`; their pictures are
+committed with this note. **`tools/committed.sh` had not been run since a0d8477
+when this was written**: each piece was pushed on its own checks so that it could
+not be lost with the session, and the commit check is run on the commit that
+carries this note. The
+commit that reports it says so; if none does, run it first. It is not a release
 candidate and is not tagged.
 
-**Two commits after a0d8477 change only written records** (calls 194 and 195, their
-demonstrations by hand, two contracts, the handoff's notes): `tools/committed.sh` was
-not run on them, because a window judge was driving timed runs on this machine and a
-build beside it costs it clicks; `git diff --stat a0d8477..` shows only `.md` files,
-the three gates passed in the commit hook, and a0d8477 itself passed the commit
-check. They were pushed so the record cannot be lost with the session. The next
-commit that changes the program is checked from what is in it, as always.
+**The machine.** Each commit runs the earlier program's build and tests through the
+commit hook and leaves 4 GB in `src-tauri/target` of whichever copy was committed
+from; with two working copies that is 8 GB of a disk that has under 12 free. Delete
+it in the copy you are not committing from, and `cargo clean -p` the seven crates
+before `tools/committed.sh`.
 
 **What Patrick ruled** (DECISIONS.md, his words in each): call 172, the purpose (the
 first 3D-first, renovation-first platform, taking in a PDF, a model or a LiDAR scan,
@@ -10924,26 +10949,40 @@ above):
   walls by itself, after four rounds; the person traces and the scan helps. A clean
   single plan on a sheet is found mostly right; a hatched, crowded one is not.
 
-**What is owed, in order** (brought up to date 2026-11-24, 16:40 UTC).
-0. **The bench for items (call 195). Patrick has asked for it three times; it is at
-   the head.** Step A (an item looked at alone, sized on its panel, the saved job
-   unchanged) has its demonstration written above ("The bench: an item looked at
-   alone") and is a window job with no change to any number: contract it to a
-   window builder as soon as the window is free. Step B (an item carries its cost) **is designed**: call
-   196, with its demonstration above ("The bench, step B"); it wants a contract in
-   the shape of `handoff/contracts/contract-194.md` (command line first, the
-   worker to set the design beside the code before any of it is built). Step C (its shape as data) **is designed** too: call 198,
-   its demonstration above ("The bench, step C"); contract it the same way, after
-   B. D to F follow and are not designed.
-1. **The sample whole house prices its outside trim** (call 194): the command
-   line's half is in. Owed: the window looked at with it on (the sample's pictures
-   retaken, `dressw`, `tradesw`, `lightw` run), at the merge with the bench.
-2. **The second window judge's findings** (call 197, `research/judgment-window-1124b.md`):
-   a model brought in whole is in, but for what is connected: **the file says what
-   is connected** (call 200, `handoff/contracts/contract-200P.md`, its demonstration
-   above) is the next command-line job on a model. The two tool-chest points ride
-   with the bench (contract 195A); points 10 to 16 are a window fix job after the
-   bench: `handoff/contracts/contract-197W.md`, its demonstration above.
+**What is owed, in order** (brought up to date 2026-11-24, 22:10 UTC).
+0. **The bench for items (call 195). Patrick has asked for it three times; it stays
+   at the head until it is whole.**
+   - Step A (an item looked at alone) is **built** and in the pushed head. Not yet
+     tried by a judge.
+   - Step B (an item carries its cost, calls 196 and 201): the model's and the
+     command line's half is **built** and in the pushed head. **Owed: its window
+     half**, "Priced as" on the item's panel and on the bench: contract 197W,
+     point 18.
+   - Step C (an item's shape as data, call 198): a command-line worker was started
+     on `handoff/contracts/contract-198.md` at 21:50 UTC in a second working copy.
+     If `research/` has no `worker-report-call198.md`, it did not land: start it
+     again from the contract. Its window half (blocks listed and typed on the
+     bench) is not contracted.
+   - D (where an item connects: the model now holds connections and the BIM file
+     writes them, call 202, so this is a window job and a column of the chest), E
+     (a maker's BIM object brought in as an item), F (a cabinet by rule): not
+     designed.
+1. **The window fix job, `handoff/contracts/contract-197W.md`** (points 10 to 18: the
+   second judge's six, an assembly changed for another says what it rewrote, the
+   window calls the model's `item_size`, "Priced as" on the panel). Its
+   demonstration is above ("The window's six points of call 197"); points 16 to 18
+   want their steps added to it before the builder starts. **Start it as soon as
+   the head is checked.** With it: `demos/captured/trades/` retaken (it is stale:
+   the sample before its trim).
+2. **A third window judge**, cold, on what was built today and never tried by
+   anyone but its builder: the bench, the sample house with its trim on, a model
+   brought in whole with its connections (through the window: "Designer's model"),
+   an item priced from the chest once 197W's point 18 is in.
+2a. **Small, on a model**: the two elbows with no size written to the file (call
+   202 point 5); a fitting's own connection points read; a model that comes in in
+   20 seconds; **a beam and a column in a model are still left out with "nothing
+   here to bring it in as"** (`demos/captured/bring/03-model.png`), which is not
+   true: the program has beams and posts.
 3. **Corner boards that run up a rake wall** (the model's trim pieces); the roof with
    a thickness and no coloured edge lines in the 3D view; ground at the wall's foot.
 4. **The scan path finished**: call 190 point 3 (the by-ceiling finder's sure walls
