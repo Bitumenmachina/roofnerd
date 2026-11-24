@@ -10449,6 +10449,28 @@ What is not right:
   `pricew`, `gablew`) have not been run with this: if a figure of theirs moves it is
   ruled on at the merge.
 
+## The gable drawn: a demonstration, written before it is built (call 192, the window's half; 2026-11-24)
+
+`demos/gableendw.sh`, in the window, on the house of "The outside trim priced" (24 by
+16 ft, 9 ft walls, a gable roof 1 ft out all round, ridge east-west, 6 in 12), its
+walls given the starter lap siding, made at the command line and opened.
+
+Worked by hand (every figure is the model's; the window draws the wall's top line):
+
+- **From the street at the west end**: the triangle between the wall's top and the
+  rake is the wall, sided like the wall under it, to 13 ft 6 in at the ridge. A place
+  in the middle of it (8 ft along the wall, 11 ft up) reads the siding's colour,
+  where on the build before it read the sky or the far side of the roof.
+- **The west wall selected**: its panel reads "Gable 40.00 SF", Assumed; the sheet's
+  lap siding line for that wall reads 184.00 SF. The south wall's panel has no
+  "Gable" line.
+- **Finishes off**: the weather barrier shows on the gable as on the wall under it.
+- **A shed roof** on the same walls: the north wall stands 17 ft 6 in to the roof
+  along its whole length, the east and west walls rise from 9 ft 6 in at the south
+  to 17 ft 6 in at the north.
+- **A hip roof** on the same walls: the street view is dot for dot the picture of
+  the build before.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **As of 2026-11-24 (the lead). Read this block first; what is below it is older and is
