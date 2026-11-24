@@ -17,6 +17,8 @@
 //!
 //! Everything here is in feet. Nothing here changes the job.
 
+use bevy_ecs::prelude::{Entity, World};
+
 use crate::check::{self, FIT_TOLERANCE_FT};
 use crate::components::*;
 use crate::geom;
@@ -120,9 +122,14 @@ pub struct Found {
 
 /// The planes in the job that can be placed, in job order, and the ones that cannot.
 pub fn solid_planes(job: &mut Job) -> (Vec<SolidPlane>, Vec<String>) {
+    let order = job.order.clone();
+    solid_planes_in(&job.world, &order)
+}
+
+/// The same, from the world and the things to look at (a gable's wall asks it of the world alone, call 192).
+pub(crate) fn solid_planes_in(w: &World, order: &[Entity]) -> (Vec<SolidPlane>, Vec<String>) {
     let (mut planes, mut left_out) = (Vec::new(), Vec::new());
-    for &e in &job.order {
-        let w = &job.world;
+    for &e in order {
         let (Some(node), Some(kind)) = (w.get::<Node>(e), w.get::<Kind>(e)) else { continue };
         if !kind.is_area() {
             continue;

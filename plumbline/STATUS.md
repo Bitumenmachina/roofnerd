@@ -10415,6 +10415,40 @@ says (DECISIONS.md, call 193, A to H). The steps the fixes come to, new ones in
   cut is darker than the cut beside it).
 - **H.** The Sun at 6:00 pm, "Later" pressed: it says it goes no later.
 
+## A wall under a rake rises to the roof: the model's half built (call 192; 2026-11-24)
+
+Built by a Sonnet worker in a second working copy, tests first; accepted by the lead
+on its own runs (in the commit's message). `plumbline gable <job>` lists each wall's
+gable, the reason for each "none", and what each rests on; `gable_area` is a figure
+of the wall that a cost line may name; the wall's top is a line of points for the
+window to draw (`crates/world/src/gable.rs`). Nothing is saved: it is worked out.
+`demos/gable.sh` walks the section "A wall under a rake rises to the roof: a
+demonstration" above, and every hand figure there held: 40.00 SF an end with its top
+(0, 9.5), (8, 13.5), (16, 9.5); under a shed roof 72.00 SF a side and 204.00 SF on
+the high wall; a hip roof and a house with no roof, none.
+
+Changed, and named:
+- **The starter outside-wall assemblies price the gable**: weather barrier and
+  cladding on `net_area + gable_area`, sheathing on `face_area + gable_area`. On the
+  demonstration's house the lap siding goes from 720.00 SF, $2,880.00 to 800.00 SF,
+  $3,200.00, and the sheathing from 24 sheets to 26. What is inside stays as it was.
+  **A job with a gable end and those lines prices more than it did; a hip-roofed job
+  (the sample whole house) is byte for byte what it was.** No existing test or
+  demonstration had such a house, so none moved.
+- A wall with a gable says on its framing lines that the gable's frame is not counted.
+- "None: an eave is over it" is as sure as the roof it rests on (Assumed under an
+  Assumed roof), so a quantity that adds it does not read Known on a guess.
+
+What is not right:
+- The window does not draw the wall to its top yet: the gable is still an open
+  triangle on screen. That is the next window job after call 193's fixes.
+- The frame of a gable and the labor of sheathing it are not counted (said).
+- Not tested: a wall of two stretches in line under one rake; walls stacked on two
+  storeys; a roof entered as planes with no footprint, on odd shapes.
+- The window's demonstrations that give a gabled house the starter siding (`trimw`,
+  `pricew`, `gablew`) have not been run with this: if a figure of theirs moves it is
+  ruled on at the merge.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **As of 2026-11-24 (the lead). Read this block first; what is below it is older and is

@@ -63,7 +63,7 @@ const TOL: f64 = crate::check::FIT_TOLERANCE_FT;
 const STRAIGHT: f64 = 0.017_452_406_437_283_512;
 
 /// The figures given only where a line names them.
-pub(crate) const GIVEN_WHERE_NAMED: [&str; 4] = [OVERHANG, OUTSIDE_CORNERS, CORNER_BOARD_LENGTH, CASING_LENGTH];
+pub(crate) const GIVEN_WHERE_NAMED: [&str; 5] = [OVERHANG, OUTSIDE_CORNERS, CORNER_BOARD_LENGTH, CASING_LENGTH, crate::gable::GABLE_AREA];
 
 /// The paths of the things of these kinds that have a line naming one of these figures.
 pub(crate) fn naming(world: &mut World, kinds: &[Kind], figures: &[&str]) -> HashSet<String> {
@@ -76,32 +76,32 @@ pub(crate) fn names(cost: Option<&Cost>, figure: &str) -> bool {
     cost.is_some_and(|c| c.lines.iter().any(|l| !l.off && crate::formula::parse(&l.quantity).is_ok_and(|e| crate::formula::names(&e).iter().any(|n| n == figure))))
 }
 
-fn path_number(path: &str) -> u64 {
+pub(crate) fn path_number(path: &str) -> u64 {
     path.rsplit('-').next().and_then(|n| n.parse().ok()).unwrap_or(u64::MAX)
 }
 
 // ------------------------------------------------------------------------------------------ walls as drawn
 
-struct WallRec {
-    path: String,
-    storey: String,
+pub(crate) struct WallRec {
+    pub(crate) path: String,
+    pub(crate) storey: String,
     /// Its line, first end and second, in feet.
-    line: [P2; 2],
-    thick: f64,
+    pub(crate) line: [P2; 2],
+    pub(crate) thick: f64,
     /// Its faces: how far to its left its left face is, and its right face (the same number, less the thickness).
-    ext: f64,
-    int: f64,
-    top: f64,
-    base: f64,
+    pub(crate) ext: f64,
+    pub(crate) int: f64,
+    pub(crate) top: f64,
+    pub(crate) base: f64,
     /// As sure as its line and its section.
-    status: Status,
+    pub(crate) status: Status,
     /// Its height, or why it has none; as sure as that.
-    height: Result<f64, String>,
-    height_status: Status,
+    pub(crate) height: Result<f64, String>,
+    pub(crate) height_status: Status,
 }
 
 /// Every wall that can be placed, and why each that cannot be is not.
-fn walls_of(world: &mut World, tree: &Tree) -> (Vec<WallRec>, HashMap<String, String>) {
+pub(crate) fn walls_of(world: &mut World, tree: &Tree) -> (Vec<WallRec>, HashMap<String, String>) {
     let mut q = world.query::<(&Node, &Kind, &Wall)>();
     let mut all: Vec<(String, Wall)> = q.iter(world).filter(|(_, k, _)| **k == Kind::Wall).map(|(n, _, w)| (n.path.clone(), w.clone())).collect();
     all.sort_by_key(|(p, _)| path_number(p));
@@ -136,15 +136,26 @@ fn walls_of(world: &mut World, tree: &Tree) -> (Vec<WallRec>, HashMap<String, St
     (out, not)
 }
 
-fn body(w: &WallRec) -> Body {
+pub(crate) fn body(w: &WallRec) -> Body {
     Body { path: w.path.clone(), storey: w.storey.clone(), line: w.line, thick: w.thick, base: w.base, top: w.top }
 }
 
-fn feet_said(x: f64) -> String {
+pub(crate) fn feet_said(x: f64) -> String {
     crate::view::figure_shown(x, 2)
 }
 
 // ------------------------------------------------------------------------------------------ overhang
+
+/// Does this roof edge (of the roof whose footprint is `ring`) lie over this wall, by the plan alone (call 180, A2)? Along the edge
+/// within the wall's thickness, or outside it by no more than 4 ft with no other wall between. The one rule trim's overhangs and a
+/// gable's wall (call 192) both find the wall under an edge by.
+pub(crate) fn lies_over(w: &WallRec, bodies: &[Body], edge: [P2; 2], ring: &[P2]) -> Option<carries::EdgeOn> {
+    let b = body(w);
+    let others: Vec<&Body> = bodies.iter().filter(|o| o.path != w.path).collect();
+    let on = carries::edge_on(&b, edge, &others, ring)?;
+    (on.across <= w.thick + TOL || (on.across <= carries::ROOF_REACH_FT + TOL && on.outward)).then_some(on)
+}
+
 
 /// The overhang of each eave and rake that has a figure asked (`wanted`: their paths; None for every one), by path.
 pub(crate) fn overhangs(world: &mut World, wanted: Option<&HashSet<String>>) -> HashMap<String, Derived> {
@@ -184,12 +195,7 @@ pub(crate) fn overhangs(world: &mut World, wanted: Option<&HashSet<String>>) -> 
         // The walls under it: by the plan alone, with the length each shares with it.
         let mut under: Vec<(f64, &WallRec, f64)> = Vec::new();
         for w in &walls {
-            let b = body(w);
-            let others: Vec<&Body> = bodies.iter().filter(|o| o.path != w.path).collect();
-            let Some(on) = carries::edge_on(&b, line, &others, &ring) else { continue };
-            if !(on.across <= w.thick + TOL || (on.across <= carries::ROOF_REACH_FT + TOL && on.outward)) {
-                continue;
-            }
+            let Some(on) = lies_over(w, &bodies, line, &ring) else { continue };
             let (dx, dy) = (w.line[1][0] - w.line[0][0], w.line[1][1] - w.line[0][1]);
             let long = dx.hypot(dy);
             let s = |p: P2| ((p[0] - w.line[0][0]) * dx + (p[1] - w.line[0][1]) * dy) / long;

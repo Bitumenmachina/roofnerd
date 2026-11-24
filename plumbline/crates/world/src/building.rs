@@ -48,7 +48,7 @@
 //! above the base of the wall it is in. A riser is a run whose two ends are one point on
 //! the plan at two heights.
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 use bevy_ecs::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -1039,6 +1039,13 @@ pub fn measures(world: &mut World) -> HashMap<String, BTreeMap<String, Derived>>
         let wanted = crate::trim::naming(world, &[Kind::Wall], &[crate::trim::OUTSIDE_CORNERS, crate::trim::CORNER_BOARD_LENGTH]);
         if wanted.is_empty() { HashMap::new() } else { crate::trim::corners(world, Some(&wanted)) }
     };
+    // Each wall's gable (call 192), where a line of it names the area or where its frame is counted, so that the frame can say the
+    // gable's is not. The area is given on the wall only where a line names it.
+    let (gable_named, gable_framed) = crate::gable::asked_of(world);
+    let gable_figures = {
+        let wanted: HashSet<String> = gable_named.union(&gable_framed).cloned().collect();
+        if wanted.is_empty() { HashMap::new() } else { crate::gable::gables(world, Some(&wanted)) }
+    };
     let mut q = world.query::<(&Node, &Kind, Option<&Wall>, Option<&Floor>, Option<&Segment>, Option<&Cost>, Option<&MadeOf>, Option<&Condition>, Option<&Placed>, Option<&Stood>, Option<&JoistsSpan>)>();
     for (node, kind, wall, floor, segment, cost, made_of, condition, placed, column, joists_span) in q.iter(world) {
         let me = &node.path;
@@ -1231,6 +1238,12 @@ pub fn measures(world: &mut World) -> HashMap<String, BTreeMap<String, Derived>>
                     m.insert(crate::trim::OUTSIDE_CORNERS.into(), n.clone());
                     m.insert(crate::trim::CORNER_BOARD_LENGTH.into(), l.clone());
                 }
+                // Its gable, where a line of it names the area (call 192).
+                if gable_named.contains(me) {
+                    if let Some(g) = gable_figures.get(me) {
+                        m.insert(crate::gable::GABLE_AREA.into(), g.area.clone());
+                    }
+                }
                 // Its frame, counted, where what is priced on it names the lumber and the
                 // spacing it is framed with (call 137): the frame the window draws, laid out
                 // by the same rule (`framing::frame`), from the same line (`finish::framing_of`).
@@ -1274,7 +1287,12 @@ pub fn measures(world: &mut World) -> HashMap<String, BTreeMap<String, Derived>>
                                 if *name == "studs" {
                                     st.push(Status::Assumed);
                                 }
-                                m.insert(name.to_string(), Derived::new(Some(v), unit, &st, f, &f_inputs));
+                                let mut d = Derived::new(Some(v), unit, &st, f, &f_inputs);
+                                // A gable's frame is not counted, and the wall says so (call 192).
+                                if gable_figures.get(me).is_some_and(|g| g.area.value.is_some_and(|a| a > 0.0)) {
+                                    d.note = crate::gable::FRAME_NOT_COUNTED.to_string();
+                                }
+                                m.insert(name.to_string(), d);
                             }
                         }
                         (why, _, _) => {

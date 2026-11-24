@@ -29,6 +29,7 @@ pub mod export;
 pub mod file;
 pub mod finish;
 pub mod formula;
+pub mod gable;
 pub mod geom;
 pub mod hidden;
 pub mod job;

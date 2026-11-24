@@ -18,38 +18,38 @@ Framed floor,Floor,,,,Unknown,not coded,Frame the floor and lay the subfloor,Lab
 "Exterior wall, 2x6, lap siding",Wall,,,,Unknown,not coded,"Plates, 2x6",Material,plate_length,,,,10,Assumed,cuts and laps at the corners and joints,piece,16 LF/piece,yes,Assumed,a 16 ft plate: the lengths a yard stocks vary,$?/piece,Unknown,no price entered,,,6
 "Exterior wall, 2x6, lap siding",Wall,,,,Unknown,not coded,"Headers, two plies",Material,2 * header_length,,,,,,,,,,,,$?/LF,Unknown,no price entered,,,6
 "Exterior wall, 2x6, lap siding",Wall,,,,Unknown,not coded,"Rough sills, 2x6",Material,sill_length,,,,,,,,,,,,$?/LF,Unknown,no price entered,,,6
-"Exterior wall, 2x6, lap siding",Wall,,,,Unknown,not coded,Wall sheathing,Material,face_area,,,,,,,sheet,32 SF/sheet,yes,Known,a 4 ft by 8 ft sheet,$?/sheet,Unknown,no price entered,,,6
-"Exterior wall, 2x6, lap siding",Wall,,,,Unknown,not coded,Weather barrier,Material,net_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,7
+"Exterior wall, 2x6, lap siding",Wall,,,,Unknown,not coded,Wall sheathing,Material,face_area + gable_area,,,,,,,sheet,32 SF/sheet,yes,Known,a 4 ft by 8 ft sheet,$?/sheet,Unknown,no price entered,,,6
+"Exterior wall, 2x6, lap siding",Wall,,,,Unknown,not coded,Weather barrier,Material,net_area + gable_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,7
 "Exterior wall, 2x6, lap siding",Wall,,,,Unknown,not coded,Batt insulation,Material,net_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,7
-"Exterior wall, 2x6, lap siding",Wall,,,,Unknown,not coded,Lap siding,Material,net_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,7
+"Exterior wall, 2x6, lap siding",Wall,,,,Unknown,not coded,Lap siding,Material,net_area + gable_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,7
 "Exterior wall, 2x6, lap siding",Wall,,,,Unknown,not coded,Corner boards,Material,corner_board_length,,,,,,,,,,,,$?/LF,Unknown,no price entered,,,6
 "Exterior wall, 2x6, lap siding",Wall,,,,Unknown,not coded,"Gypsum board, hung and finished",Material,net_area,,,,10,Assumed,"cuts at openings, corners and ends: the estimator's allowance; no standard sets it",sheet,32 SF/sheet,yes,Known,a 4 ft by 8 ft sheet,$?/sheet,Unknown,no price entered,,,9
 "Exterior wall, 2x6, lap siding",Wall,,,,Unknown,not coded,"Paint, two coats",Material,net_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,9
 "Exterior wall, 2x6, lap siding",Wall,,,,Unknown,not coded,Frame and sheathe the wall,Labor,face_area,,,,,,,hr,unknown SF/hr,no,Unknown,no production rate entered,$?/hr,Unknown,no price entered,,,6
-"Exterior wall, 2x6, lap siding",Wall,,,,Unknown,not coded,Hang the siding,Labor,net_area,,,,,,,hr,unknown SF/hr,no,Unknown,no production rate entered,$?/hr,Unknown,no price entered,,,7
+"Exterior wall, 2x6, lap siding",Wall,,,,Unknown,not coded,Hang the siding,Labor,net_area + gable_area,,,,,,,hr,unknown SF/hr,no,Unknown,no production rate entered,$?/hr,Unknown,no price entered,,,7
 "Exterior wall, 2x6, lap siding over a stone wainscot",Wall,,,,Unknown,not coded,"Studs, 2x6 at 16 in",Material,studs,,,,10,Assumed,"culls, corners and blocking: the estimator's allowance",,,,,,$?/EA,Unknown,no price entered,,,6
 "Exterior wall, 2x6, lap siding over a stone wainscot",Wall,,,,Unknown,not coded,"Plates, 2x6",Material,plate_length,,,,10,Assumed,cuts and laps at the corners and joints,piece,16 LF/piece,yes,Assumed,a 16 ft plate: the lengths a yard stocks vary,$?/piece,Unknown,no price entered,,,6
 "Exterior wall, 2x6, lap siding over a stone wainscot",Wall,,,,Unknown,not coded,"Headers, two plies",Material,2 * header_length,,,,,,,,,,,,$?/LF,Unknown,no price entered,,,6
 "Exterior wall, 2x6, lap siding over a stone wainscot",Wall,,,,Unknown,not coded,"Rough sills, 2x6",Material,sill_length,,,,,,,,,,,,$?/LF,Unknown,no price entered,,,6
-"Exterior wall, 2x6, lap siding over a stone wainscot",Wall,,,,Unknown,not coded,Wall sheathing,Material,face_area,,,,,,,sheet,32 SF/sheet,yes,Known,a 4 ft by 8 ft sheet,$?/sheet,Unknown,no price entered,,,6
-"Exterior wall, 2x6, lap siding over a stone wainscot",Wall,,,,Unknown,not coded,Weather barrier,Material,net_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,7
+"Exterior wall, 2x6, lap siding over a stone wainscot",Wall,,,,Unknown,not coded,Wall sheathing,Material,face_area + gable_area,,,,,,,sheet,32 SF/sheet,yes,Known,a 4 ft by 8 ft sheet,$?/sheet,Unknown,no price entered,,,6
+"Exterior wall, 2x6, lap siding over a stone wainscot",Wall,,,,Unknown,not coded,Weather barrier,Material,net_area + gable_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,7
 "Exterior wall, 2x6, lap siding over a stone wainscot",Wall,,,,Unknown,not coded,Batt insulation,Material,net_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,7
-"Exterior wall, 2x6, lap siding over a stone wainscot",Wall,,,,Unknown,not coded,Lap siding,Material,net_area - net_area_below_wainscot,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,7,wainscot = 3 ft,Assumed,the 3 ft in the name of the stone line
+"Exterior wall, 2x6, lap siding over a stone wainscot",Wall,,,,Unknown,not coded,Lap siding,Material,net_area - net_area_below_wainscot + gable_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,7,wainscot = 3 ft,Assumed,the 3 ft in the name of the stone line
 "Exterior wall, 2x6, lap siding over a stone wainscot",Wall,,,,Unknown,not coded,Corner boards,Material,corner_board_length,,,,,,,,,,,,$?/LF,Unknown,no price entered,,,6
 "Exterior wall, 2x6, lap siding over a stone wainscot",Wall,,,,Unknown,not coded,"Stone veneer wainscot, 3 ft",Subcontract,net_length,,,,,,,,,,,,$?/LF,Unknown,no price entered,,,4
 "Exterior wall, 2x6, lap siding over a stone wainscot",Wall,,,,Unknown,not coded,"Gypsum board, hung and finished",Material,net_area,,,,10,Assumed,"cuts at openings, corners and ends: the estimator's allowance; no standard sets it",sheet,32 SF/sheet,yes,Known,a 4 ft by 8 ft sheet,$?/sheet,Unknown,no price entered,,,9
 "Exterior wall, 2x6, lap siding over a stone wainscot",Wall,,,,Unknown,not coded,"Paint, two coats",Material,net_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,9
 "Exterior wall, 2x6, lap siding over a stone wainscot",Wall,,,,Unknown,not coded,Frame and sheathe the wall,Labor,face_area,,,,,,,hr,unknown SF/hr,no,Unknown,no production rate entered,$?/hr,Unknown,no price entered,,,6
-"Exterior wall, 2x6, lap siding over a stone wainscot",Wall,,,,Unknown,not coded,Hang the siding,Labor,net_area - net_area_below_wainscot,,,,,,,hr,unknown SF/hr,no,Unknown,no production rate entered,$?/hr,Unknown,no price entered,,,7,wainscot = 3 ft,Assumed,the 3 ft in the name of the stone line
+"Exterior wall, 2x6, lap siding over a stone wainscot",Wall,,,,Unknown,not coded,Hang the siding,Labor,net_area - net_area_below_wainscot + gable_area,,,,,,,hr,unknown SF/hr,no,Unknown,no production rate entered,$?/hr,Unknown,no price entered,,,7,wainscot = 3 ft,Assumed,the 3 ft in the name of the stone line
 "Exterior wall, 2x6, brick veneer",Wall,,,,Unknown,not coded,"Studs, 2x6 at 16 in",Material,studs,,,,10,Assumed,"culls, corners and blocking: the estimator's allowance",,,,,,$?/EA,Unknown,no price entered,,,6
 "Exterior wall, 2x6, brick veneer",Wall,,,,Unknown,not coded,"Plates, 2x6",Material,plate_length,,,,10,Assumed,cuts and laps at the corners and joints,piece,16 LF/piece,yes,Assumed,a 16 ft plate: the lengths a yard stocks vary,$?/piece,Unknown,no price entered,,,6
 "Exterior wall, 2x6, brick veneer",Wall,,,,Unknown,not coded,"Headers, two plies",Material,2 * header_length,,,,,,,,,,,,$?/LF,Unknown,no price entered,,,6
 "Exterior wall, 2x6, brick veneer",Wall,,,,Unknown,not coded,"Rough sills, 2x6",Material,sill_length,,,,,,,,,,,,$?/LF,Unknown,no price entered,,,6
-"Exterior wall, 2x6, brick veneer",Wall,,,,Unknown,not coded,Wall sheathing,Material,face_area,,,,,,,sheet,32 SF/sheet,yes,Known,a 4 ft by 8 ft sheet,$?/sheet,Unknown,no price entered,,,6
-"Exterior wall, 2x6, brick veneer",Wall,,,,Unknown,not coded,Weather barrier,Material,net_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,7
+"Exterior wall, 2x6, brick veneer",Wall,,,,Unknown,not coded,Wall sheathing,Material,face_area + gable_area,,,,,,,sheet,32 SF/sheet,yes,Known,a 4 ft by 8 ft sheet,$?/sheet,Unknown,no price entered,,,6
+"Exterior wall, 2x6, brick veneer",Wall,,,,Unknown,not coded,Weather barrier,Material,net_area + gable_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,7
 "Exterior wall, 2x6, brick veneer",Wall,,,,Unknown,not coded,Batt insulation,Material,net_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,7
-"Exterior wall, 2x6, brick veneer",Wall,,,,Unknown,not coded,Brick veneer,Subcontract,net_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,4
-"Exterior wall, 2x6, brick veneer",Wall,,,,Unknown,not coded,Brick ties and flashing,Material,net_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,4
+"Exterior wall, 2x6, brick veneer",Wall,,,,Unknown,not coded,Brick veneer,Subcontract,net_area + gable_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,4
+"Exterior wall, 2x6, brick veneer",Wall,,,,Unknown,not coded,Brick ties and flashing,Material,net_area + gable_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,4
 "Exterior wall, 2x6, brick veneer",Wall,,,,Unknown,not coded,"Gypsum board, hung and finished",Material,net_area,,,,10,Assumed,"cuts at openings, corners and ends: the estimator's allowance; no standard sets it",sheet,32 SF/sheet,yes,Known,a 4 ft by 8 ft sheet,$?/sheet,Unknown,no price entered,,,9
 "Exterior wall, 2x6, brick veneer",Wall,,,,Unknown,not coded,"Paint, two coats",Material,net_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,9
 "Exterior wall, 2x6, brick veneer",Wall,,,,Unknown,not coded,Frame and sheathe the wall,Labor,face_area,,,,,,,hr,unknown SF/hr,no,Unknown,no production rate entered,$?/hr,Unknown,no price entered,,,6
@@ -57,10 +57,10 @@ Framed floor,Floor,,,,Unknown,not coded,Frame the floor and lay the subfloor,Lab
 "Exterior wall, 2x6, stucco",Wall,,,,Unknown,not coded,"Plates, 2x6",Material,plate_length,,,,10,Assumed,cuts and laps at the corners and joints,piece,16 LF/piece,yes,Assumed,a 16 ft plate: the lengths a yard stocks vary,$?/piece,Unknown,no price entered,,,6
 "Exterior wall, 2x6, stucco",Wall,,,,Unknown,not coded,"Headers, two plies",Material,2 * header_length,,,,,,,,,,,,$?/LF,Unknown,no price entered,,,6
 "Exterior wall, 2x6, stucco",Wall,,,,Unknown,not coded,"Rough sills, 2x6",Material,sill_length,,,,,,,,,,,,$?/LF,Unknown,no price entered,,,6
-"Exterior wall, 2x6, stucco",Wall,,,,Unknown,not coded,Wall sheathing,Material,face_area,,,,,,,sheet,32 SF/sheet,yes,Known,a 4 ft by 8 ft sheet,$?/sheet,Unknown,no price entered,,,6
-"Exterior wall, 2x6, stucco",Wall,,,,Unknown,not coded,Weather barrier,Material,net_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,7
+"Exterior wall, 2x6, stucco",Wall,,,,Unknown,not coded,Wall sheathing,Material,face_area + gable_area,,,,,,,sheet,32 SF/sheet,yes,Known,a 4 ft by 8 ft sheet,$?/sheet,Unknown,no price entered,,,6
+"Exterior wall, 2x6, stucco",Wall,,,,Unknown,not coded,Weather barrier,Material,net_area + gable_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,7
 "Exterior wall, 2x6, stucco",Wall,,,,Unknown,not coded,Batt insulation,Material,net_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,7
-"Exterior wall, 2x6, stucco",Wall,,,,Unknown,not coded,"Stucco, three coat",Subcontract,net_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,9
+"Exterior wall, 2x6, stucco",Wall,,,,Unknown,not coded,"Stucco, three coat",Subcontract,net_area + gable_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,9
 "Exterior wall, 2x6, stucco",Wall,,,,Unknown,not coded,"Gypsum board, hung and finished",Material,net_area,,,,10,Assumed,"cuts at openings, corners and ends: the estimator's allowance; no standard sets it",sheet,32 SF/sheet,yes,Known,a 4 ft by 8 ft sheet,$?/sheet,Unknown,no price entered,,,9
 "Exterior wall, 2x6, stucco",Wall,,,,Unknown,not coded,"Paint, two coats",Material,net_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,9
 "Exterior wall, 2x6, stucco",Wall,,,,Unknown,not coded,Frame and sheathe the wall,Labor,face_area,,,,,,,hr,unknown SF/hr,no,Unknown,no production rate entered,$?/hr,Unknown,no price entered,,,6

@@ -7502,3 +7502,27 @@ H. The Sun's hour stops at six in the morning and six at night and says so when
 Left as they are, and said in STATUS.md: the sky the same at every hour; the plan
 running under the right panel after a move; the roof's edges in their line colours
 in the 3D view; the open gable (call 192).
+
+**Call 192, the model's half, as built (2026-11-24).** `plumbline gable <job>` lists
+each wall's gable; a wall figure `gable_area` and the wall's top as a line of points
+(`crates/world/src/gable.rs`). The lead's rule could be told from what the model
+holds: a wall rises where the roof edge over it is a rake, a shed's high edge or a
+headwall, and not under an eave. Every hand figure held (40.00 SF an end on the
+demonstration's house; 72.00 and 204.00 SF under a shed roof), and **no existing
+test or demonstration moved**: no house in them had a gable end with the starter
+siding priced.
+
+The starter outside-wall assemblies (lap siding, lap siding over a stone wainscot,
+brick veneer, stucco) price on the gable as well: the weather barrier and the
+cladding on `net_area + gable_area`, the sheathing on `face_area + gable_area`.
+What is inside (batts, gypsum board, the paint that goes with it) stays on
+`net_area`. Taken from BIMCraft as a rule and said in the code: where two roof
+planes cover a point, the lower is the roof's surface.
+
+Ruled on reading the builder's report:
+- **"None" is not Known on a guess.** A wall under an eave has no gable because of
+  where the roof's edge lies and what kind it is: "none: an eave is over it" takes
+  the weakest status of the eave, the roof and the wall it rests on. "None: no roof
+  is over it" is Known: nothing is there.
+- Not counted, and said: the frame of a gable (its studs cut to the rake), and the
+  labor of sheathing it ("Frame and sheathe the wall" stays on the wall's face).
