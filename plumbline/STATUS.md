@@ -10685,6 +10685,36 @@ them, and the lead read them again from `takeoff` and `show`):
 
 Not built yet.
 
+## The window's six points of call 197: a demonstration, written before it is built (2026-11-24)
+
+`demos/fixes197w.sh`, in the window. By hand, from the judge's own runs:
+
+1. (10) An empty job, the starter tool chest, "Vanity, 36 in" set down twice on the
+   first level: the sheet window's Building list reads **2 furnishings** on that
+   level, and its estimate says **2 are set down and not priced**. The top bar's
+   count and `plumbline show` give the same 2.
+2. (11) A room 14 ft by 10 ft, the Cabinets tool in hand: a click on the south wall,
+   1 ft along, starts the run there (the window names that wall); on the map of
+   controls the card's box and the plan's four walls do not overlap; the picture is
+   looked at for words on words. `B18` typed before any click: the window says to
+   click the wall where the run starts, and the word "reading" is not in it.
+3. (11) After the click: `B18 SB36 B24` sets a run of 18 + 36 + 24 = 78 in,
+   **6.5 ft**, with a countertop of 6.5 x 2.125 = **13.81 SF**, as before.
+4. (12) A wall run with a corner refused (the new wall lying along another): the
+   message names where the run still starts, to the inch, as the tool writes a
+   place.
+5. (13) "To demolish" pressed on a door that carries cost lines, then another thing
+   clicked: the window says the door was not marked; the saved job has no mark.
+6. (14) The trim's house from the home view. A swing begun on the ground, clear of
+   the house, a quarter turn: the middle of the house stays in the **middle third**
+   of the window each way, and the east end of the house is in the picture (looked
+   at). A swing begun on a wall's corner: that corner stays within **6 dots** of the
+   pointer through the turn.
+7. (15) A maker's sheet with no trade in it made into an item: the message says its
+   trade is not said yet and where it is picked.
+
+Not built yet. It follows the bench (contract 195A).
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **As of 2026-11-24, 16:30 UTC (the lead). Read this block first; what is below it is
@@ -10758,8 +10788,8 @@ above):
 2. **The second window judge's findings** (call 197, `research/judgment-window-1124b.md`):
    a model brought in whole (`handoff/contracts/contract-197I.md`, command line,
    after call 194's worker); the two tool-chest points ride with the bench
-   (contract 195A); points 10 to 15 are a window fix job after the bench, its
-   contract not yet written (take `contract-193W.md` as the pattern).
+   (contract 195A); points 10 to 15 are a window fix job after the bench:
+   `handoff/contracts/contract-197W.md`, its demonstration above.
 3. **Corner boards that run up a rake wall** (the model's trim pieces); the roof with
    a thickness and no coloured edge lines in the 3D view; ground at the wall's foot.
 4. **The scan path finished**: call 190 point 3 (the by-ceiling finder's sure walls
