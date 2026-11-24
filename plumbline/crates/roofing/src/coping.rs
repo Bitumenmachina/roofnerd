@@ -279,7 +279,7 @@ mod tests {
         assert_eq!(gauge_of(8.0), Some(24));
         assert_eq!(gauge_of(8.01), Some(22));
         assert_eq!(gauge_of(10.0), Some(22));
-        assert_eq!(gauge_of((10.0 + 0.01)), None, "past 10 in the figure has no row, and none is invented");
+        assert_eq!(gauge_of(10.0 + 0.01), None, "past 10 in the figure has no row, and none is invented");
     }
 
     /// The demo's own cap: `W` untyped would derive to 8 + 2x3 = 14 in on the

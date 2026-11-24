@@ -88,7 +88,13 @@ const DOUBLE_MAX: f64 = 1.5 * INCH;
 pub const LIKE_SIZE: f64 = APART_SHARE;
 /// Walls whose centre lines come within this of one another, 15 ft, are one drawing; the plan and a roof plan beside it stand further apart
 /// (call 188 item 6, as sent back).
-const DRAWING_GAP: f64 = 15.0;
+/// What a share of the wall found may fall short of its limit by, in feet, and still be at it: a sheet turned does not lose a drawing to the
+/// last place of its arithmetic.
+const SHARE_EPS: f64 = 1e-6;
+const DRAWING_GAP: f64 = 8.0;
+/// A gap in both lines of a wall wider than this is an opening only where something is drawn in it (call 191 item 2): a leaf, a swing, a
+/// line across. A bare gap wider than this is two walls, with the gap said.
+const BARE_GAP_MOST: f64 = 8.0;
 /// A tag (a window's or a door's mark: a hexagon, a diamond) is a closed run of at least this many straight pieces, none longer than
 /// `TAG_PIECE` and the whole no more than `TAG_SPAN` across (call 188 item 8).
 const TAG_PIECES: usize = 5;
@@ -224,6 +230,15 @@ pub struct Drawn {
     pub chosen: Option<usize>,
     /// The box the person bounded the plan with, in feet on the plan (south-west, north-east corner), when they did.
     pub within: Option<[P2; 2]>,
+    /// Where much of the sheet is in doubt (call 191 item 4): the wall found outside the largest drawing is at least half of it, and
+    /// the drawings are not of like size to list as they were. (wall outside it, in feet; the largest drawing's, in feet.) Nothing is
+    /// laid unasked then.
+    pub unsettled: Option<(f64, f64)>,
+    /// When a drawing was taken (call 191 item 1): how many walls of the other drawings were left out, and how much wall in feet.
+    pub other_walls: (usize, f64),
+    /// Walls the person's box cuts across (call 191 item 5): each from and to, in feet on the plan. Lines that cross the box's edge are
+    /// left out whole, so each of these is not found, or found short.
+    pub cut_by_box: Vec<[P2; 2]>,
 }
 
 /// One drawing of a sheet that holds more than one: a group of walls that meet one another.
@@ -1058,68 +1073,61 @@ pub fn find_in(lines: &[[[f64; 2]; 2]], feet_per_unit: Option<f64>, page: [f64; 
     let Some(k) = feet_per_unit.filter(|k| k.is_finite() && *k > 0.0) else {
         return Ok(find_all(lines, feet_per_unit, page, origin, extra));
     };
+    let Some(bx) = pick.within else { return find_core(lines, feet_per_unit, page, origin, extra, pick.plan) };
     // Lines kept to a box, with the dashed marks and the cuts that go with them.
-    let kept_in = |bx: [P2; 2]| -> (Vec<[[f64; 2]; 2]>, Vec<usize>, Vec<P2>, usize) {
-        let (lo, hi) = ([bx[0][0].min(bx[1][0]), bx[0][1].min(bx[1][1])], [bx[0][0].max(bx[1][0]), bx[0][1].max(bx[1][1])]);
-        let slack = INCH / 12.0;
-        let inside = |p: P2| {
-            let (x, y) = (p[0] * k + origin[0], p[1] * k + origin[1]);
-            x >= lo[0] - slack && x <= hi[0] + slack && y >= lo[1] - slack && y <= hi[1] + slack
-        };
-        let dashed_at: std::collections::HashSet<usize> = extra.dashed.iter().copied().collect();
-        let (mut ls, mut ds) = (Vec::new(), Vec::new());
-        for (i, l) in lines.iter().enumerate() {
-            if inside(l[0]) && inside(l[1]) {
-                if dashed_at.contains(&i) {
-                    ds.push(*l);
-                } else {
-                    ls.push(*l);
-                }
+    let (lo, hi) = ([bx[0][0].min(bx[1][0]), bx[0][1].min(bx[1][1])], [bx[0][0].max(bx[1][0]), bx[0][1].max(bx[1][1])]);
+    let slack = INCH / 12.0;
+    let inside = |p: P2| {
+        let (x, y) = (p[0] * k + origin[0], p[1] * k + origin[1]);
+        x >= lo[0] - slack && x <= hi[0] + slack && y >= lo[1] - slack && y <= hi[1] + slack
+    };
+    let dashed_at: std::collections::HashSet<usize> = extra.dashed.iter().copied().collect();
+    let (mut ls, mut ds) = (Vec::new(), Vec::new());
+    let mut straddling = 0usize;
+    for (i, l) in lines.iter().enumerate() {
+        let (a, b) = (inside(l[0]), inside(l[1]));
+        if a && b {
+            if dashed_at.contains(&i) {
+                ds.push(*l);
+            } else {
+                ls.push(*l);
+            }
+        } else if a || b {
+            straddling += 1;
+        }
+    }
+    let outside = lines.len() - ls.len() - ds.len();
+    // The solid lines first, the dashed ones after them, marked.
+    let first_dashed = ls.len();
+    let marks: Vec<usize> = (first_dashed..first_dashed + ds.len()).collect();
+    ls.extend(ds);
+    let cuts: Vec<P2> = extra.cuts.iter().copied().filter(|p| inside(*p)).collect();
+    let mut d = find_core(&ls, feet_per_unit, page, origin, &Extra { dashed: &marks, cuts: &cuts }, pick.plan)?;
+    d.counts.outside = outside;
+    d.within = Some(bx);
+    // A line that crosses the box's edge is left out whole, and a wall drawn with it is not found, or is found short: the walls of the
+    // whole sheet that lie partly in the box and partly out of it are named (call 191 item 5).
+    if straddling > 0 {
+        let full = find_all(lines, feet_per_unit, page, origin, extra);
+        let at = |p: P2| p[0] >= lo[0] - slack && p[0] <= hi[0] + slack && p[1] >= lo[1] - slack && p[1] <= hi[1] + slack;
+        for w in &full.walls {
+            if at(w.from) != at(w.to) {
+                d.cut_by_box.push([w.from, w.to]);
             }
         }
-        let outside = lines.len() - ls.len() - ds.len();
-        // The solid lines first, the dashed ones after them, marked.
-        let first_dashed = ls.len();
-        let marks: Vec<usize> = (first_dashed..first_dashed + ds.len()).collect();
-        ls.extend(ds);
-        let cuts: Vec<P2> = extra.cuts.iter().copied().filter(|p| inside(*p)).collect();
-        (ls, marks, cuts, outside)
-    };
-    let mut first = if let Some(bx) = pick.within {
-        let (ls, marks, cuts, outside) = kept_in(bx);
-        let mut d = find_all(&ls, feet_per_unit, page, origin, &Extra { dashed: &marks, cuts: &cuts });
-        d.counts.outside = outside;
-        d.within = Some(bx);
-        d
-    } else {
-        find_all(lines, feet_per_unit, page, origin, extra)
-    };
-    let Some(n) = pick.plan else { return Ok(first) };
-    let have = first.drawings.len().max(1);
-    if n == 0 || n > have {
-        return Err(format!("--plan {n}: this sheet has {have} {}, numbered 1 to {have}", if have == 1 { "drawing" } else { "drawings" }));
     }
-    if first.drawings.is_empty() {
-        first.chosen = Some(1);
-        return Ok(first);
-    }
-    // The drawing's own box, a little wider than its walls' lines.
-    let [c0, c1] = first.drawings[n - 1].corners;
-    let margin = 1.0;
-    let (ls, marks, cuts, outside) = kept_in([[c0[0] - margin, c0[1] - margin], [c1[0] + margin, c1[1] + margin]]);
-    let mut d = find_all(&ls, feet_per_unit, page, origin, &Extra { dashed: &marks, cuts: &cuts });
-    d.counts.outside = outside + first.counts.outside;
-    d.within = first.within;
-    d.drawings = first.drawings.clone();
-    d.chosen = Some(n);
     Ok(d)
 }
 
 fn find_all(lines: &[[[f64; 2]; 2]], feet_per_unit: Option<f64>, page: [f64; 2], origin: P2, extra: &Extra) -> Drawn {
+    find_core(lines, feet_per_unit, page, origin, extra, None).unwrap_or_default()
+}
+
+fn find_core(lines: &[[[f64; 2]; 2]], feet_per_unit: Option<f64>, page: [f64; 2], origin: P2, extra: &Extra, plan: Option<usize>) -> Result<Drawn, String> {
     let mut out = Drawn::default();
     let Some(k) = feet_per_unit.filter(|k| k.is_finite() && *k > 0.0) else {
         out.no_scale = true;
-        return out;
+        return Ok(out);
     };
     let min_len = MIN_FACE.max(LETTER_PT * k);
     let dashed_at: std::collections::HashSet<usize> = extra.dashed.iter().copied().collect();
@@ -1509,6 +1517,22 @@ fn find_all(lines: &[[[f64; 2]; 2]], feet_per_unit: Option<f64>, page: [f64; 2],
         }
         crosses.sort_by(|x, y| x.total_cmp(y));
         crosses.dedup_by(|x, y| (*x - *y).abs() < CAP_TOL);
+        // Whether something is drawn in a gap of this wall between `g0` and `g1` along it: a line (a leaf, a piece of a swing, a line across)
+        // whose middle lies inside the gap and whose ends lie no further out than the gap and its width to either side. The jambs and
+        // the faces of the walls on either side stand at the gap's ends and are not inside it. A line of this pair's own faces is none.
+        let drawn_in_gap = |g0: f64, g1: f64| -> bool {
+            let width = g1 - g0;
+            alive.iter().any(|&i| {
+                let sg = &segs[i];
+                if why[i].is_some() || of.get(&i).is_some_and(|f| f == a || f == b) {
+                    return false;
+                }
+                let (t0, t1) = (dot(fa.u, sg.a), dot(fa.u, sg.b));
+                let mid = (t0 + t1) / 2.0;
+                let (o0, o1) = (dot(fa.n, sg.a) - cc, dot(fa.n, sg.b) - cc);
+                mid > g0 + CAP_TOL && mid < g1 - CAP_TOL && t0.min(t1) >= g0 - thick && t0.max(t1) <= g1 + thick && o0.abs() <= width && o1.abs() <= width
+            })
+        };
         // Groups of stretches: joints join, openings are kept, a long break in one line splits.
         let mut groups: Vec<(Iv, Vec<(f64, f64)>)> = Vec::new();
         let mut cur: (Iv, Vec<(f64, f64)>) = (vec![both[0]], Vec::new());
@@ -1529,6 +1553,10 @@ fn find_all(lines: &[[[f64; 2]; 2]], feet_per_unit: Option<f64>, page: [f64; 2],
             if none.1 - none.0 > OPENING_MOST {
                 groups.push(std::mem::replace(&mut cur, (vec![w[1]], Vec::new())));
                 out.notes.push(format!("both lines of a wall stop for {} at {}, wider than any opening: taken as one wall ending and another beginning", inch_said(none.1 - none.0), place_said(shift(at(fa.u, fa.n, none.0, cc), origin))));
+            } else if none.1 - none.0 > BARE_GAP_MOST && !drawn_in_gap(none.0, none.1) {
+                // Wider than a door and nothing drawn in it (call 191 item 2): bare paper. No wall is laid across it.
+                groups.push(std::mem::replace(&mut cur, (vec![w[1]], Vec::new())));
+                out.notes.push(format!("both lines of a wall stop for {} at {}, wider than 8 ft with nothing drawn in it (no leaf, no swing, no line across): taken as one wall ending and another beginning, and no door is found there", inch_said(none.1 - none.0), place_said(shift(at(fa.u, fa.n, none.0, cc), origin))));
             } else if none.1 - none.0 > JOINT_MOST {
                 cur.1.push(none);
                 cur.0.push(w[1]);
@@ -1689,8 +1717,86 @@ fn find_all(lines: &[[[f64; 2]; 2]], feet_per_unit: Option<f64>, page: [f64; 2],
             cands[i].doubt = Some(format!("two lines {} apart and {} long that meet no other wall at either end (a counter's edge, a beam shown, a stair's side)", inch_said(cands[i].thick).replace("0' ", ""), inch_said(len)));
         }
     }
-    // The plan is the largest group of walls that meet one another; a group far smaller than it, apart from it, is another
-    // plan, a detail or a section (call 186, item 3).
+    // The drawings of the sheet (call 188 item 6, call 191 items 1, 3 and 4), told from EVERY wall found, in doubt or not, so a plan whose
+    // walls are all in doubt is still a drawing. Walls lying within `DRAWING_GAP` (8 ft: what could be an opening) of one another, by
+    // the nearest points of their centre lines, are one drawing: a plan's pieces need not meet to belong together, and a roof plan stands
+    // apart from the floor plan. The size of a drawing is all the wall found in it (a loser, a line already a wall's face, is not wall).
+    fn root_c(g: &mut [usize], i: usize) -> usize {
+        let mut r = i;
+        while g[r] != r {
+            r = g[r];
+        }
+        r
+    }
+    let mut cl: Vec<usize> = (0..nw).collect();
+    {
+        let seg_gap = |i: usize, j: usize| -> f64 {
+            let (a, b, c, d) = (ends[i][0], ends[i][1], ends[j][0], ends[j][1]);
+            let to_seg = |p: P2, q0: P2, q1: P2| {
+                let v = sub(q1, q0);
+                let t = (dot(sub(p, q0), v) / dot(v, v).max(1e-300)).clamp(0.0, 1.0);
+                norm(sub(p, [q0[0] + v[0] * t, q0[1] + v[1] * t]))
+            };
+            let crossing = {
+                let (d1, d2) = (cross(sub(b, a), sub(c, a)), cross(sub(b, a), sub(d, a)));
+                let (d3, d4) = (cross(sub(d, c), sub(a, c)), cross(sub(d, c), sub(b, c)));
+                d1 * d2 < 0.0 && d3 * d4 < 0.0
+            };
+            if crossing {
+                0.0
+            } else {
+                to_seg(a, c, d).min(to_seg(b, c, d)).min(to_seg(c, a, b)).min(to_seg(d, a, b))
+            }
+        };
+        for i in 0..nw {
+            for j in (i + 1)..nw {
+                if seg_gap(i, j) <= DRAWING_GAP {
+                    let (ra, rb) = (root_c(&mut cl, i), root_c(&mut cl, j));
+                    cl[ra] = rb;
+                }
+            }
+        }
+    }
+    // Each drawing: how much wall it holds and where its west edge lies; largest first, ties the westmost first.
+    let mut by_size: Vec<(usize, f64, f64)> = {
+        let mut sizes: BTreeMap<usize, (f64, f64)> = BTreeMap::new();
+        for i in 0..nw {
+            let r = root_c(&mut cl, i);
+            let e = sizes.entry(r).or_insert((0.0, f64::MAX));
+            if !cands[i].loser {
+                e.0 += norm(sub(ends[i][1], ends[i][0]));
+            }
+            e.1 = e.1.min(ends[i][0][0]).min(ends[i][1][0]);
+        }
+        sizes.into_iter().filter(|(_, v)| v.0 > 0.0).map(|(r, v)| (r, v.0, v.1)).collect()
+    };
+    by_size.sort_by(|a, b| b.1.total_cmp(&a.1).then(a.2.total_cmp(&b.2)));
+    let largest = by_size.first().map_or(0.0, |v| v.1);
+    let like_n = by_size.iter().filter(|v| v.1 >= LIKE_SIZE * largest - SHARE_EPS).count();
+    // Wall found outside the largest drawing (set apart, or in other drawings), together at least half of it: nothing is laid unasked
+    // (call 191 item 4). Where drawings of like size are listed that is said already; here every drawing is listed so each can be named.
+    let outside_wall: f64 = by_size.iter().skip(1).map(|v| v.1).sum();
+    let unsettled = by_size.len() >= 2 && like_n < 2 && outside_wall >= APART_SHARE * largest - SHARE_EPS;
+    let listed: Vec<usize> = if like_n >= 2 { by_size.iter().take(like_n).map(|v| v.0).collect() } else if unsettled { by_size.iter().map(|v| v.0).collect() } else { Vec::new() };
+    if unsettled {
+        out.unsettled = Some((outside_wall, largest));
+    }
+    // The drawing the person took: the walls of that drawing and no others (call 191 item 1).
+    let chosen_root: Option<usize> = match plan {
+        None => None,
+        Some(n) => {
+            let have = listed.len().max(1);
+            if n == 0 || n > have {
+                return Err(format!("--plan {n}: this sheet has {have} {}, numbered 1 to {have}", if have == 1 { "drawing" } else { "drawings" }));
+            }
+            out.chosen = Some(n);
+            listed.get(n - 1).copied()
+        }
+    };
+    let scope: Vec<bool> = (0..nw).map(|i| chosen_root.is_none_or(|c| root_c(&mut cl, i) == c)).collect();
+    // The plan is the largest group of walls that meet one another; a group far smaller than it, apart from it, is another plan, a
+    // detail or a section (call 186, item 3). Where a drawing was taken, it is told within that drawing alone, and the rest by itself.
+    let spheres: Vec<Vec<usize>> = if chosen_root.is_some() { vec![(0..nw).filter(|&i| scope[i]).collect(), (0..nw).filter(|&i| !scope[i]).collect()] } else { vec![(0..nw).collect()] };
     let mut group: Vec<usize> = (0..nw).collect();
     fn root_g(g: &mut [usize], i: usize) -> usize {
         let mut r = i;
@@ -1703,31 +1809,34 @@ fn find_all(lines: &[[[f64; 2]; 2]], feet_per_unit: Option<f64>, page: [f64; 2],
         let (ra, rb) = (root_g(&mut group, a), root_g(&mut group, b));
         group[ra] = rb;
     }
-    let mut total: BTreeMap<usize, f64> = BTreeMap::new();
-    for i in 0..nw {
-        if !cands[i].loser {
-            *total.entry(root_g(&mut group, i)).or_default() += norm(sub(ends[i][1], ends[i][0]));
+    for members in &spheres {
+        let mut total: BTreeMap<usize, f64> = BTreeMap::new();
+        for &i in members {
+            if !cands[i].loser {
+                *total.entry(root_g(&mut group, i)).or_default() += norm(sub(ends[i][1], ends[i][0]));
+            }
         }
-    }
-    {
-        if let Some((&plan, &plan_len)) = total.iter().max_by(|a, b| a.1.total_cmp(b.1)) {
-            for i in 0..nw {
+        if let Some((&plan_root, &plan_len)) = total.iter().max_by(|a, b| a.1.total_cmp(b.1)) {
+            for &i in members {
                 let r = root_g(&mut group, i);
-                if r != plan && cands[i].doubt.is_none() && total[&r] < APART_SHARE * plan_len {
-                    cands[i].doubt = Some(format!("apart from the plan: it meets no wall of the largest group of walls on the sheet ({} of wall), and the group it is in is {} long: another plan, a detail or a section", inch_said(plan_len), inch_said(total[&r])));
+                let mine = total.get(&r).copied().unwrap_or(0.0);
+                if r != plan_root && cands[i].doubt.is_none() && mine < APART_SHARE * plan_len - SHARE_EPS {
+                    cands[i].doubt = Some(format!("apart from the plan: it meets no wall of the largest group of walls on the sheet ({} of wall), and the group it is in is {} long: another plan, a detail or a section", inch_said(plan_len), inch_said(mine)));
                 }
             }
         }
     }
     // A pair thicker than every other wall found, and alone at that thickness, is in doubt (call 186, narrowed): a closet
     // shelf, a bench, a ledge. A thin partition is not, nor two thick walls, nor a sheet of one wall.
-    for i in 0..nw {
-        if cands[i].doubt.is_some() || cands[i].loser {
-            continue;
-        }
-        let others: Vec<f64> = (0..nw).filter(|&j| j != i && !cands[j].loser).map(|j| cands[j].thick).collect();
-        if !others.is_empty() && others.iter().all(|&t| cands[i].thick >= t + THICK_MORE) {
-            cands[i].doubt = Some(format!("two lines {} apart, thicker than every other wall found on the sheet ({} at most) and the only one that thick (a closet shelf, a bench, a ledge)", inch_said(cands[i].thick).replace("0' ", ""), inch_said(others.iter().cloned().fold(0.0, f64::max)).replace("0' ", "")));
+    for members in &spheres {
+        for &i in members {
+            if cands[i].doubt.is_some() || cands[i].loser {
+                continue;
+            }
+            let others: Vec<f64> = members.iter().copied().filter(|&j| j != i && !cands[j].loser).map(|j| cands[j].thick).collect();
+            if !others.is_empty() && others.iter().all(|&t| cands[i].thick >= t + THICK_MORE) {
+                cands[i].doubt = Some(format!("two lines {} apart, thicker than every other wall found on the sheet ({} at most) and the only one that thick (a closet shelf, a bench, a ledge)", inch_said(cands[i].thick).replace("0' ", ""), inch_said(others.iter().cloned().fold(0.0, f64::max)).replace("0' ", "")));
+            }
         }
     }
 
@@ -1801,76 +1910,29 @@ fn find_all(lines: &[[[f64; 2]; 2]], feet_per_unit: Option<f64>, page: [f64; 2],
         ops.sort_by(|x, y| x.from.total_cmp(&y.from));
         out.walls.push(Wall { from: p, to: q, thickness: c.thick, openings: ops, doubt: c.doubt.clone(), lines: c.lines, joined: c.joined });
     }
-    // The drawings on the sheet (call 188 item 6, as sent back): told from EVERY wall found, in doubt or not, so a plan whose walls are
-    // all in doubt is still a drawing. Walls lying within `DRAWING_GAP` of one another (nearest points of their centre lines) are one
-    // drawing: a plan's pieces need not meet to belong together, and a roof plan stands far from the floor plan. The size of a drawing
-    // is all the wall found in it (a loser, a line already a wall's face, is not wall); two of like size are listed, largest first.
-    {
-        let mut cl: Vec<usize> = (0..nw).collect();
-        fn root_c(g: &mut [usize], i: usize) -> usize {
-            let mut r = i;
-            while g[r] != r {
-                r = g[r];
-            }
-            r
-        }
-        let seg_gap = |i: usize, j: usize| -> f64 {
-            let (a, b, c, d) = (ends[i][0], ends[i][1], ends[j][0], ends[j][1]);
-            let to_seg = |p: P2, q0: P2, q1: P2| {
-                let v = sub(q1, q0);
-                let t = (dot(sub(p, q0), v) / dot(v, v).max(1e-300)).clamp(0.0, 1.0);
-                norm(sub(p, [q0[0] + v[0] * t, q0[1] + v[1] * t]))
-            };
-            let crossing = {
-                let (d1, d2) = (cross(sub(b, a), sub(c, a)), cross(sub(b, a), sub(d, a)));
-                let (d3, d4) = (cross(sub(d, c), sub(a, c)), cross(sub(d, c), sub(b, c)));
-                d1 * d2 < 0.0 && d3 * d4 < 0.0
-            };
-            if crossing {
-                0.0
-            } else {
-                to_seg(a, c, d).min(to_seg(b, c, d)).min(to_seg(c, a, b)).min(to_seg(d, a, b))
-            }
-        };
-        for i in 0..nw {
-            for j in (i + 1)..nw {
-                if seg_gap(i, j) <= DRAWING_GAP {
-                    let (ra, rb) = (root_c(&mut cl, i), root_c(&mut cl, j));
-                    cl[ra] = rb;
-                }
-            }
-        }
-        let mut sizes: BTreeMap<usize, (f64, f64)> = BTreeMap::new();
-        for i in 0..nw {
-            let r = root_c(&mut cl, i);
-            let e = sizes.entry(r).or_default();
-            if !cands[i].loser {
-                let l = norm(sub(ends[i][1], ends[i][0]));
-                e.0 += l;
-                if cands[i].doubt.is_some() {
-                    e.1 += l;
-                }
-            }
-        }
-        let largest = sizes.values().map(|v| v.0).fold(0.0, f64::max);
-        let mut like: Vec<(usize, f64, f64)> = sizes.iter().filter(|(_, v)| v.0 >= LIKE_SIZE * largest && v.0 > 0.0).map(|(&r, v)| (r, v.0, v.1)).collect();
-        if like.len() >= 2 {
-            for (root, length, in_doubt) in like.drain(..) {
-                let mut members: Vec<usize> = (0..nw).filter(|&i| root_c(&mut cl, i) == root).collect();
-                members.sort_by_key(|&i| new_index[i]);
-                let (mut lo, mut hi) = ([f64::MAX; 2], [f64::MIN; 2]);
-                for &i in &members {
-                    for e in ends[i] {
-                        for d in 0..2 {
-                            lo[d] = lo[d].min(e[d]);
-                            hi[d] = hi[d].max(e[d]);
-                        }
+    // The drawings listed (the clusters above), each with its walls, its size and how much of it is in doubt.
+    if !listed.is_empty() {
+        for &root in &listed {
+            let mut members: Vec<usize> = (0..nw).filter(|&i| root_c(&mut cl, i) == root).collect();
+            members.sort_by_key(|&i| new_index[i]);
+            let (mut lo, mut hi) = ([f64::MAX; 2], [f64::MIN; 2]);
+            let (mut length, mut in_doubt) = (0.0, 0.0);
+            for &i in &members {
+                for e in ends[i] {
+                    for d in 0..2 {
+                        lo[d] = lo[d].min(e[d]);
+                        hi[d] = hi[d].max(e[d]);
                     }
                 }
-                out.drawings.push(Plan { walls: members.iter().map(|&i| new_index[i]).collect(), length, in_doubt, corners: [lo, hi] });
+                if !cands[i].loser {
+                    let l = norm(sub(ends[i][1], ends[i][0]));
+                    length += l;
+                    if cands[i].doubt.is_some() {
+                        in_doubt += l;
+                    }
+                }
             }
-            // Ties in size are told apart by where they lie: the westmost first.
-            out.drawings.sort_by(|a, b| b.length.partial_cmp(&a.length).unwrap_or(std::cmp::Ordering::Equal).then(a.corners[0][0].total_cmp(&b.corners[0][0])));
+            out.drawings.push(Plan { walls: members.iter().map(|&i| new_index[i]).collect(), length, in_doubt, corners: [lo, hi] });
         }
     }
     // An end that meets nothing is open, unless the page cut the lines off there: where a clip or the page's own edge ends
@@ -2036,6 +2098,27 @@ fn find_all(lines: &[[[f64; 2]; 2]], feet_per_unit: Option<f64>, page: [f64; 2],
             }
         }
     }
+    // A drawing taken: its walls and no others (call 191 item 1). The rest of the sheet was told as it was, so what is counted is the same;
+    // the walls of the other drawings go, and how many is said.
+    if chosen_root.is_some() {
+        let mut renum: Vec<Option<usize>> = vec![None; nw];
+        let mut kept: Vec<Wall> = Vec::new();
+        for (rank, w) in std::mem::take(&mut out.walls).into_iter().enumerate() {
+            if scope[order[rank]] {
+                renum[rank] = Some(kept.len());
+                kept.push(w);
+            } else {
+                out.other_walls.0 += 1;
+                out.other_walls.1 += w.length();
+            }
+        }
+        out.walls = kept;
+        for e in out.open_ends.iter_mut().chain(out.cut_ends.iter_mut()) {
+            e.0 = renum[e.0].unwrap_or(usize::MAX);
+        }
+        out.open_ends.retain(|e| e.0 != usize::MAX);
+        out.cut_ends.retain(|e| e.0 != usize::MAX);
+    }
     // Places on the plan.
     for w in out.walls.iter_mut() {
         w.from = shift(w.from, origin);
@@ -2053,7 +2136,7 @@ fn find_all(lines: &[[[f64; 2]; 2]], feet_per_unit: Option<f64>, page: [f64; 2],
     for b in out.boxes.iter_mut() {
         b.at = shift(b.at, origin);
     }
-    out
+    Ok(out)
 }
 
 // ---- the sheet's own dimension strings (call 188 item 9) ----
@@ -2083,12 +2166,41 @@ pub struct Dimensions {
     pub off: Vec<(usize, f64)>,
     /// Strings that read as a dimension and have no dimension line beside them.
     pub loose: Vec<(String, P2)>,
+    /// Strings written as a dimension that could not be used (call 191 item 9): a length of nothing, inches alone, metric. Each with
+    /// where it stands and why.
+    pub unread: Vec<(String, P2, &'static str)>,
+}
+
+/// Why a string that looks like a dimension was not read as one: it is written as a measure and not in feet and inches. None for words,
+/// sheet numbers and the like.
+fn dimension_like(text: &str) -> Option<&'static str> {
+    let t = text.trim().to_lowercase().replace(['\u{201D}', '\u{201C}', '\u{2033}'], "\"").replace(['\u{2019}', '\u{2018}', '\u{2032}'], "'");
+    if feet_written_raw(&t).is_some() {
+        return Some("no length: a dimension of nothing is no dimension");
+    }
+    let number = |x: &str| -> bool {
+        let x = x.trim().replace(',', ".");
+        !x.is_empty() && x.chars().all(|c| c.is_ascii_digit() || c == '.') && x.chars().filter(|c| *c == '.').count() <= 1 && x.chars().any(|c| c.is_ascii_digit())
+    };
+    for (suffix, why) in [("mm", "metric"), ("cm", "metric"), ("m", "metric"), ("inches", "inches alone"), ("inch", "inches alone"), ("in", "inches alone"), ("\"", "inches alone")] {
+        if let Some(n) = t.strip_suffix(suffix) {
+            if number(n) {
+                return Some(if why == "metric" { "metric: this reads dimensions in feet and inches only" } else { "inches alone: this reads dimensions written with feet" });
+            }
+        }
+    }
+    None
 }
 
 /// What a string of a plan says as a length in feet, where it is written as an architect's dimension: feet, a tick, and inches
 /// that may carry a fraction ("30'-0\"", "5'-8 1/2\"", "16' 5\"", "10'"). Anything else is None: a room's name, a sheet's number,
 /// inches alone (which has no feet to say it by).
 pub fn feet_written(text: &str) -> Option<f64> {
+    feet_written_raw(text).filter(|f| *f > 0.0)
+}
+
+/// `feet_written`, a length of nothing included.
+fn feet_written_raw(text: &str) -> Option<f64> {
     let norm: String = text
         .chars()
         .map(|c| match c {
@@ -2157,7 +2269,12 @@ pub fn dimension_strings(lines: &[[[f64; 2]; 2]], dashed: &[usize], texts: &[cra
     let dims = dimension_spans(&segs);
     let mut taken = vec![false; dims.len()];
     for t in texts {
-        let Some(feet) = feet_written(&t.text) else { continue };
+        let Some(feet) = feet_written(&t.text) else {
+            if let Some(why) = dimension_like(&t.text) {
+                out.unread.push((t.text.trim().to_string(), t.at, why));
+            }
+            continue;
+        };
         let u = unit(t.dir);
         let n = perp(u);
         let len = t.text.chars().count() as f64 * 0.5 * t.tall;

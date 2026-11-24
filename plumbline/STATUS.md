@@ -10049,6 +10049,195 @@ What is not right:
 - `roomlinew`'s colour check sits on its bound.
 - The look: the light is a little better and the house still reads as a model.
 
+## Where each piece of outside trim lies: a demonstration, written before it is built (call 184 step 1, the model's half; 2026-11-23)
+
+`demos/trim.sh`, new steps, on the house of "The outside trim priced" above (a box 24
+by 16 ft on the walls' lines, walls 6 in thick and 9 ft high, a gable roof 1 ft
+outside the lines all round with its ridge east-west at 6 in 12, a window 3 ft by
+5 ft and a door 3 ft by 6 ft 8 in in the south wall), with its starter lines given.
+`plumbline trim <job> --pieces` lists every piece; the window will draw what this
+lists and work nothing out.
+
+Worked by hand (the pieces of a kind add up to the priced quantity of the line):
+
+- **Fascia**: 2 pieces, one on each eave, each 26.00 ft long from (-1, -1) to (25, -1)
+  on the south and from (-1, 17) to (25, 17) on the north, looking out (south; north).
+  2 x 26 = 52.00 LF, the priced 52.00.
+- **Rake fascia**: 4 pieces, each 10.0623 ft up the slope from an eave's end to the
+  ridge's end (on plan from north -1 to north 8 at east -1 and at east 25, and from
+  17 to 8), rising 4.5 ft over the 9 ft run. 4 x 10.0623 = 40.25 LF, the priced 40.25.
+- **Soffit**: 2 pieces under the eaves, each 26.00 ft long and 0.75 ft wide (the
+  overhang), looking down: 2 x 26 x 0.75 = 39.00 SF, the priced 39.00. **Rake
+  soffit**: 4 pieces, each 10.0623 ft by 0.75 ft: 30.19 SF, the priced 30.19.
+- **Corner boards**: 8 pieces, 2 at each of the 4 outside corners (one on each face),
+  each 9.00 ft from the wall's foot to its top, at the corner of the outside faces
+  (the southwest at east -0.25, north -0.25). 8 x 9 = 72.00 LF, the priced 72.00.
+- **Casing**: the window 4 pieces (head 3 ft, sill 3 ft, two sides 5 ft: 16.00 LF);
+  the door 3 pieces (head 3 ft, two sides 6 ft 8 in: 16.33 LF, none across its
+  foot), each on the south wall's outside face (north -0.25).
+- 27 pieces in all (2 + 4 + 2 + 4 + 8 + 4 + 3; the lead first wrote 23, an adding
+  mistake the builder caught: the demonstration says 27). Each is Assumed (the house was drawn with Assumed values) and
+  says where its size came from; a size the line does not name is a drawing size
+  only, says so, and is in no quantity.
+- **The L-shaped house** (step 4 above): 10 corner boards, 90.00 LF; none at the
+  inside corner.
+- **An eave with no fascia line** has no fascia piece; **the roof drawn alone** (no
+  wall under an edge) has no soffit piece there and the list says why.
+- Without `--pieces` the verb prints what it printed, byte for byte.
+
+Not worked by hand, and to be said by the builder from what the model holds before
+anything is built: how high the roof's edge is, and so how high each fascia and
+soffit lies.
+
+## Where each piece of outside trim lies: built (call 184 step 1, the model's half; 2026-11-23)
+
+Built by a Sonnet worker in a second working copy, tests first; accepted by the lead
+on the integration copy (the runs are in the commit's message). `plumbline trim <job>
+--pieces` lists every piece of fascia, rake fascia, soffit, rake soffit, corner board
+and casing that a cost line prices, with where it lies, its size and where the size
+came from, and ends with each kind's total beside the priced quantity
+(`crates/world/src/trim/lay.rs`: `pieces`, `lay`). `demos/trim.sh` step 6 walks it: 27
+pieces on the demonstration's house; fascia 52.00 LF, rake fascia 40.25 LF, soffit
+39.00 SF, rake soffit 30.19 SF, corner boards 72.00 LF, casing 32.33 LF, each the
+priced quantity; the L-shaped house 10 corner boards, 90.00 LF, none at the inside
+corner; the roof drawn alone a fascia and no soffit, and it says why. Without
+`--pieces` the verb prints what it printed. The window does not draw them yet: that
+is the next window job.
+
+What the model holds, said by the builder before building: a roof has one eave
+height above the job's datum; an eave lies at it along its whole length and a rake
+climbs from it to the ridge. On the demonstration's house the roof's edge, 1 ft out,
+is at 9 ft, so the roof's surface is 4 1/2 in above the wall's top at the wall's
+outside face, and the soffit, level, meets the wall 5 1/2 in below its top. That is
+what the figures give; nothing was bent to hide it.
+
+Set right: the lead's "the corner board at the corner of the outside faces" is the
+board's outer edge; the piece is listed by the middle of its back, half a board in.
+
+What is not right (each is a drawing matter; no quantity or price rests on it):
+- No starter line names a board's size, so every piece is drawn at a common size
+  (fascia 5 1/2 in, corner board and casing 3 1/2 in, 3/4 in thick; soffit 1/2 in)
+  and says so. Where a line's words name a nominal size the piece takes it.
+- Ends are square: no mitre where a rake meets an eave, at a ridge, at a casing's
+  corner or where two soffits meet; two corner boards leave a 3/4 in notch at the
+  corner; a corner board runs to the wall's top, not to the soffit.
+- A priced line whose formula a person has changed so that the pieces no longer add
+  up to it is not drawn, and the list says so.
+- Hips and valleys have no trim piece; a rake between two planes uses the first.
+- A wall that is not on the outside of the level's outline gets no casing (said).
+- Not tested: a labor line left out; two lines pricing the same piece; walls that
+  meet off square.
+
+## The outside trim drawn: a demonstration, written before it is built (call 184 step 1, the window's half; 2026-11-23)
+
+`demos/trimw.sh`, in the window, on the house of "The outside trim priced" (24 by 16
+ft, 9 ft walls, a gable roof 1 ft out all round, a window and a door in the south
+wall), made at the command line with its trim lines given, then opened.
+
+Worked by hand (every figure is the model's; the window draws what it is handed):
+
+- **Opened**: the Show list has a switch "Trim" reading **27** (2 fascia, 4 rake
+  fascia, 2 soffits, 4 rake soffits, 8 corner boards, 7 pieces of casing).
+- **From the street corner**: each outside corner shows its two boards from the
+  ground to the wall's top, the eave has a fascia with a soffit behind it, the window
+  and the door are cased. The picture differs from the same view with the Trim switch
+  off at the eaves, the corners and round the two openings, and nowhere else on the
+  walls' faces (measured: of the dots that differ, at least nine in ten lie within
+  the strips where the model's pieces are).
+- **A piece casts a shadow**: with the sun high in the south (the Sun set to noon in
+  June), the south wall just under the soffit is darker than the same wall 3 ft
+  lower, and darker than it is there with the Trim switch off.
+- **Only what is priced**: the fascia line taken off the north eave at the command
+  line and the job opened again: the switch reads **26** and the north eave has no
+  fascia where the south still has.
+- **Switch off**: the house as it was drawn before this (the same picture as the job
+  with no trim lines, dot for dot but for the switch itself).
+- **A click on a corner board** selects its wall; on the window's casing, the window.
+
+## The judge's findings fixed: a demonstration, written before it is built (call 191; 2026-11-23)
+
+New steps in `demos/planwalls.sh` (A and B) and `demos/trim.sh` (C); made-up sheets at
+1/4 in to the foot; a wall's length counted as those demonstrations count it.
+
+Worked by hand:
+
+- **A1.** A sheet with a U-shaped plan, three walls of 80 ft (west, south and east
+  of an 80 by 80 ft square, open to the north): 80 + 80 + 80 = **240 LF**; and a 30 by
+  30 ft house (**120 LF**) standing inside the U, 25 ft clear of its walls. Listed as
+  2 drawings, 240 ft and 120 ft. `--plan 1 --lay`: the U's three walls only, takeoff
+  **240.00 LF** (it laid 360). `--plan 2 --lay` on a fresh job: **120.00 LF**.
+- **A2.** Two houses in line, a 30 ft south wall and a 28 ft south wall on one line
+  with 15 ft of bare paper between: two walls, **30 + 28 = 58 LF** on that line, the
+  15 ft gap said with where, no door found in it, and the two houses listed as two
+  drawings. The same two with a garage door drawn in a 16 ft gap of ONE house's wall
+  (a line across it): one wall, a 16 ft opening.
+- **A4.** A clean roof plan of 108 LF, and beside it three groups of wall that meet
+  nothing, 30, 30 and 20 LF, each more than 8 ft from the others: 80 ft found apart
+  from the largest drawing, over half of 108: nothing laid, and it says 80 ft is in
+  doubt. With one group of 20 LF alone beside it (under half): the 108 LF is laid,
+  the 20 set apart, as before.
+- **B6.** A sheet scaled by hand and marked Known at 1/4 in to the foot;
+  `--scale-by 1` with a string that would make it 1/8 in: refused, the Known scale
+  named; with `--anyway`: taken, Assumed, and it says 1/4 in was replaced by 1/8 in.
+- **B7.** A sheet with one string: listed with "nothing else on the sheet to check it
+  against"; the scale taken from it says so again.
+- **B8.** The 30 by 20 ft house laid from its sheet (100.00 LF), then the sheet's
+  scale changed: the 4 laid walls are each named as where the old scale put them.
+- **C10.** The trim house with the north eave's fascia priced on `plan_length`
+  instead of its true length: that line is in "Left out" with why; the totals read
+  1 piece, 26.00 LF drawn, 52.00 LF priced, and say 26.00 LF is priced and not drawn.
+- **C11.** The roof drawn alone with a soffit line: "no figure", and no "0 SF".
+- **C12.** A hip roof 26 by 18 ft on plan with a 9 in overhang and soffit on all four
+  eaves: 2 x (26 + 18) x 0.75 = **66.00 SF** priced, as it is today, and the figure
+  says 4 corners, 4 x 0.75 x 0.75 = **2.25 SF**, are in two runs each.
+
+## Call 191 built: the judge's findings fixed (2026-11-24)
+
+A cold judge (Sonnet) tried three things built on 2026-11-23 from empty jobs and
+sheets and houses of its own (`research/judgment-scale-plan-trim.md`); the lead
+decided each finding (DECISIONS.md, call 191); a Sonnet worker fixed them in a
+second working copy, each reproduced first, then a test red for that reason, then
+the fix, then a step of the demonstration; the lead ran the tests, every
+command-line demonstration and the gates on the result (the runs are in the
+commit's message). `demos/planwalls.sh` section 10 and `demos/trim.sh` section 8
+walk them, to the figures of the section before this one.
+
+Changed, and named:
+- **`find-walls --plan <n>` takes that drawing's walls and no others.** A U-shaped
+  plan of 240 LF with a 120 LF house inside the box round it was laid as 360 LF; it
+  is 240.00.
+- **A bare gap wider than 8 ft is not an opening.** Two houses in line were joined
+  into one wall 73 LF long with a "door" 14 ft 6 in wide; they are two walls, 30
+  and 28 LF, and the gap is said. A gap with something drawn in it (a garage door)
+  is still an opening up to 16 ft.
+- **Walls that do not meet are one drawing within 8 ft**, not 15.
+- **Nothing is laid unasked while much of the sheet is in doubt** (the wall found
+  outside the largest drawing at least half of it).
+- **A Known scale is not replaced by a string read off the sheet** without
+  `--anyway`; a string alone on its sheet says so; walls laid from a sheet are named
+  when its scale changes, and **ride on its scale in the verify-in-field list**
+  ($2,700.00 on the demonstration's house, where the list had nothing).
+- **Every priced line of trim is drawn or said**; a soffit with no overhang reads
+  "no figure"; the corners of a soffit counted in two runs are said (2.25 SF on the
+  hip roof of the demonstration; the formula and the 66.00 SF are as they were);
+  totals print to two places (the eight expectations of `demos/trim.sh` step 6 that
+  read "52 LF" read "52.00 LF", the reason beside them).
+- A second and third line pricing the same piece are now counted in what the kind
+  prices, so "priced" can read higher than the pieces drawn, and says so.
+
+The three real city sheets (not in the repository) read as before: the two clean
+sheets lay what they laid; the sheet with a floor plan and a roof plan still lays
+nothing unasked.
+
+What is not right:
+- A window's casing priced by the each (the starter "Casing and trim at the window")
+  is listed as priced and not drawn: true, and a line more in the list.
+- Soffit at an inside corner leaves a square of overhang uncounted by length times
+  overhang; only corners counted twice are said.
+- A `--within` box names a wall it cuts only where one end of the wall is inside it.
+- A door's casing at a wall's end overlaps the corner board (a drawing matter).
+- The judge read the main checkout, which was commits behind: the STATUS sections
+  its brief named were not there, and it worked its own hand figures (they agreed).
 ## A wall traced over a scan is set by its face: built in the window (call 190; 2026-11-24)
 
 Built by the window builder (Sonnet) on the tree merged at 579afa3; accepted by the

@@ -211,7 +211,7 @@ fn a_thing_set_down_is_turned_a_quarter_at_a_time_and_a_fitting_is_not() {
     let item = Item { category: Kind::Equipment, maker: unknown(), model: unknown(), width: inches(15.0), depth: inches(4.0), height: inches(30.0), weight: None, sheet: String::new(), division: None, form: None };
     let panel = ed::item(&mut job, "Panelboard", item).unwrap();
     let placed = ed::place_item(&mut job, &level, &panel, [10.0, 6.0], "0 ft", KNOWN).unwrap();
-    let mut turned = |job: &mut Job| placements(job).0.into_iter().find(|p| p.path == placed).map(|p| match p.shape { Shape::Box { at, size, angle } => (at, size, angle), _ => panic!("not a box") }).unwrap();
+    let turned = |job: &mut Job| placements(job).0.into_iter().find(|p| p.path == placed).map(|p| match p.shape { Shape::Box { at, size, angle } => (at, size, angle), _ => panic!("not a box") }).unwrap();
     let (at, size, angle) = turned(&mut job);
     assert_eq!((angle, size[0], size[1]), (0.0, 1.25, 4.0 / 12.0));
     let by_hand = || ed::Entered { status: Status::Assumed, source: "turned by hand" };
@@ -260,7 +260,7 @@ fn an_item_is_renamed_with_what_stands_and_is_not_deleted_from_under_it() {
     let level = ed::storey(&mut job, "ground", "0 ft", "8 ft", KNOWN).unwrap();
     let inches = |x: f64| Val { value: Some(Len::One(x)), unit: "in".to_string(), status: Status::Assumed, source: "a made-up catalog".to_string() };
     let unknown = || Val::<String>::unknown("", "not chosen");
-    let mut make = |job: &mut Job, name: &str| {
+    let make = |job: &mut Job, name: &str| {
         let item = Item { category: Kind::Equipment, maker: unknown(), model: unknown(), width: inches(27.0), depth: inches(24.0), height: inches(29.0), weight: None, sheet: String::new(), division: None, form: None };
         ed::item(job, name, item).unwrap()
     };

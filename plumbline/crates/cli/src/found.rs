@@ -497,9 +497,17 @@ pub fn sheet_said(d: &Drawn, sheet: &str, scale: &str, lost: &[String], pictures
     if let Some([a, b]) = d.within {
         let _ = writeln!(out, "  looked at inside the box from {} to {} only: {} outside it {} left out", at([a[0].min(b[0]), a[1].min(b[1])]), at([a[0].max(b[0]), a[1].max(b[1])]), count_said(d.counts.outside, "line", "lines"), if d.counts.outside == 1 { "is" } else { "are" });
     }
+    if !d.cut_by_box.is_empty() {
+        let cut: Vec<String> = d.cut_by_box.iter().map(|w| format!("the wall from {} to {}", at(w[0]), at(w[1]))).collect();
+        let _ = writeln!(out, "  the box cuts {}: {}. A line that crosses the box's edge is left out whole, so {} not found, or {} found short: widen the box to take {} in", count_said(d.cut_by_box.len(), "wall", "walls"), cut.join("; "), if d.cut_by_box.len() == 1 { "it is" } else { "they are" }, if d.cut_by_box.len() == 1 { "it is" } else { "they are" }, if d.cut_by_box.len() == 1 { "it" } else { "them" });
+    }
     if let Some(n) = d.chosen {
         let all = d.drawings.len().max(1);
-        let _ = writeln!(out, "  taking drawing {n} of the sheet's {all}{}", if d.within.is_none() && !d.drawings.is_empty() { format!(": {} outside it {} left out", count_said(d.counts.outside, "line", "lines"), if d.counts.outside == 1 { "is" } else { "are" }) } else { String::new() });
+        let left = if d.within.is_none() && !d.drawings.is_empty() { format!(": {} of the sheet's other drawings ({} of wall) {} left out", count_said(d.other_walls.0, "wall", "walls"), feet_word(d.other_walls.1), if d.other_walls.0 == 1 { "is" } else { "are" }) } else { String::new() };
+        let _ = writeln!(out, "  taking drawing {n} of the sheet's {all}{left}");
+    }
+    if let (Some((outside, largest)), None) = (d.unsettled, d.chosen) {
+        let _ = writeln!(out, "  much of this sheet is in doubt: {} of wall lies outside its largest drawing ({}), at least half of it, and which is the plan is not told", feet_word(outside), feet_word(largest));
     }
     if d.drawings.len() >= 2 {
         let sizes: Vec<String> = d.drawings.iter().map(|p| if p.in_doubt > 0.5 { format!("about {} ({} of it in doubt)", feet_word(p.length), feet_word(p.in_doubt)) } else { format!("about {}", feet_word(p.length)) }).collect();
@@ -694,16 +702,19 @@ fn dimension_order(dims: &drawn::Dimensions) -> Vec<usize> {
     order
 }
 
+/// A scale in words for any feet-to-the-point, whether or not the drawing has one yet.
+fn scale_in_words(d: &plans::Drawing, k: f64) -> String {
+    let mut d2 = d.clone();
+    d2.scale = Some(plans::Scale { from: [0.0, 0.0], to: [1.0, 0.0], distance: plumbline_world::Val { value: Some(units::Len::One(k)), unit: units::FT.into(), status: plumbline_world::Status::Assumed, source: String::new() } });
+    super::scale_words(&d2, k)
+}
+
 /// What the sheet's dimension strings say, in a builder's words: each with where it is and the line it stands by, the scale they
 /// give, and which do not agree with it.
 fn dimensions_said(dims: &drawn::Dimensions, order: &[usize], words: usize, scaled: Option<f64>, d: &plans::Drawing) -> String {
     let mut out = String::new();
     // A scale in words for any feet-to-the-point, whether or not the drawing has one yet.
-    let scale_of = |k: f64| {
-        let mut d2 = d.clone();
-        d2.scale = Some(plans::Scale { from: [0.0, 0.0], to: [1.0, 0.0], distance: plumbline_world::Val { value: Some(units::Len::One(k)), unit: units::FT.into(), status: plumbline_world::Status::Assumed, source: String::new() } });
-        super::scale_words(&d2, k)
-    };
+    let scale_of = |k: f64| scale_in_words(d, k);
     let at_said = |p: [f64; 2]| format!("{:.0} across and {:.0} up the sheet, in points from its lower left corner", p[0], p[1]);
     if order.is_empty() {
         let _ = writeln!(out, "no dimension string on this sheet: it holds {} as words and none is a dimension written in feet and inches with a dimension line beside it, so its dimensions may be drawn as shapes and not words: a dimension is then typed by whoever reads it (plumbline calibrate)", count_said(words, "string", "strings"));
@@ -720,7 +731,7 @@ fn dimensions_said(dims: &drawn::Dimensions, order: &[usize], words: usize, scal
                 let _ = writeln!(out, "  {} of the {} agree: {}; say --scale-by <n> to scale the sheet by one of them (Assumed, its source the string)", dims.agree.len(), order.len(), scale_of(k));
             }
             Some(k) => {
-                let _ = writeln!(out, "  only one string: it gives {}; say --scale-by 1 to scale the sheet by it (Assumed, its source the string), and check it against the sheet", scale_of(k));
+                let _ = writeln!(out, "  1 dimension string: nothing else on the sheet to check it against. It gives {}; say --scale-by 1 to scale the sheet by it (Assumed, its source the string), and check it against the sheet", scale_of(k));
             }
             None => {
                 let _ = writeln!(out, "  the strings do not agree with one another and nothing says which is right, so no scale is offered (a string is never used unasked); check each against the sheet");
@@ -741,6 +752,10 @@ fn dimensions_said(dims: &drawn::Dimensions, order: &[usize], words: usize, scal
     for (text, p) in &dims.loose {
         let _ = writeln!(out, "  {text} at {} reads as a dimension and has no dimension line beside it: not used", at_said(*p));
     }
+    if !dims.unread.is_empty() {
+        let said: Vec<String> = dims.unread.iter().map(|(text, p, why)| format!("{text} at {} ({why})", at_said(*p))).collect();
+        let _ = writeln!(out, "  {} written as a dimension and not read: {}", count_said(dims.unread.len(), "string is", "strings are"), said.join("; "));
+    }
     out
 }
 
@@ -756,12 +771,14 @@ fn crate_num(v: f64) -> String {
 fn sheet_run(path: &str, mut job: plumbline_world::job::Job, drawing: &str, rest: &[String]) -> Result<(), String> {
     let (mut lay, mut take, mut doors, mut windows): (bool, Vec<usize>, Option<f64>, Option<(f64, f64)>) = (false, Vec::new(), None, None);
     let (mut plan, mut within, mut dimensions, mut scale_by): (Option<usize>, Option<[[f64; 2]; 2]>, bool, Option<usize>) = (None, None, false, None);
+    let mut anyway = false;
     let mut i = 0;
     let mut take_given = false;
     while i < rest.len() {
         match rest[i].as_str() {
             "--lay" => lay = true,
             "--dimensions" => dimensions = true,
+            "--anyway" => anyway = true,
             "--plan" => {
                 if plan.is_some() {
                     return Err("--plan is given twice".into());
@@ -825,6 +842,9 @@ fn sheet_run(path: &str, mut job: plumbline_world::job::Job, drawing: &str, rest
         }
         i += 1;
     }
+    if anyway && scale_by.is_none() {
+        return Err("--anyway says a scale that is Known may be replaced by the string: it goes with --scale-by".into());
+    }
     if (take_given || doors.is_some() || windows.is_some()) && !lay {
         return Err("--take, --doors and --windows say what is laid: they go with --lay".into());
     }
@@ -862,6 +882,14 @@ fn sheet_run(path: &str, mut job: plumbline_world::job::Job, drawing: &str, rest
             }
             let idx = order[n - 1];
             let st = &dims.strings[idx];
+            // A scale that is Known is not replaced by a string read off the sheet without the person's word (call 191 item 6).
+            let had = d.scale.as_ref().and_then(|sc| d.feet_per_unit().map(|k| (super::scale_words(&d, k), sc.distance.status, sc.distance.source.clone())));
+            if let Some((words, status, source)) = had.as_ref().filter(|h| h.1 == plumbline_world::Status::Known) {
+                if !anyway {
+                    let _ = std::io::stdout().write_all(said.as_bytes());
+                    return Err(format!("the scale of {name} is {words}, {status:?}, from {source}: string {n}, {}, would make it {}. A Known scale is not replaced by a string read off the sheet unless you say so: add --anyway to take the string (it is then Assumed)", st.text, scale_in_words(&d, st.feet / st.paper)));
+                }
+            }
             let source = format!("the sheet's own dimension {} (string {n} of the {} read on it), by the line it stands by", st.text, order.len());
             let how = plumbline_world::editing::Entered { status: plumbline_world::Status::Assumed, source: &source };
             let done = plans::calibrate(&mut job, drawing, st.from, st.to, &format!("{} ft", st.feet), how)?;
@@ -869,6 +897,12 @@ fn sheet_run(path: &str, mut job: plumbline_world::job::Job, drawing: &str, rest
             d = job.find(drawing).and_then(|e| job.world.get::<plans::Drawing>(e)).cloned().ok_or_else(|| format!("no element {drawing}"))?;
             let scale_now = super::scale_words(&d, done.feet_per_unit);
             let _ = writeln!(said, "  scaled by string {n}, {}: {scale_now}, Assumed, its source the string; the job was written with it (nothing else is changed)", st.text);
+            if let Some((words, status, source)) = &had {
+                let _ = writeln!(said, "  it replaces the scale the sheet had, {words} ({status:?}, from {source}): the scale now is {scale_now}, Assumed");
+            }
+            if order.len() == 1 {
+                let _ = writeln!(said, "  caution: 1 dimension string: nothing else on the sheet to check it against");
+            }
             if !dims.agree.contains(&idx) && dims.scale.is_some() {
                 let _ = writeln!(said, "  caution: string {n} does not agree with the others, and they give a different scale: check it on the sheet before the walls are trusted");
             }
@@ -876,7 +910,7 @@ fn sheet_run(path: &str, mut job: plumbline_world::job::Job, drawing: &str, rest
                 let _ = writeln!(said, "  caution: {caution}");
             }
             if !done.left_at_earlier_scale.is_empty() {
-                let _ = writeln!(said, "  NOT MOVED: {} traced over it at the scale it had before: {}. Each is where that scale put it: check it against the sheet, or remove it and trace it again", count_said(done.left_at_earlier_scale.len(), "thing was", "things were"), done.left_at_earlier_scale.join(", "));
+                let _ = writeln!(said, "  NOT MOVED: {} traced over it or laid from its sheet at the scale it had before: {}. Each is where that scale put it: check it against the sheet, or remove it and trace or lay it again", count_said(done.left_at_earlier_scale.len(), "thing was", "things were"), done.left_at_earlier_scale.join(", "));
             }
         }
         if scale_by.is_none() {

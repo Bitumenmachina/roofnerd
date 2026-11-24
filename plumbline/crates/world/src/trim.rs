@@ -31,6 +31,9 @@
 
 use std::collections::{HashMap, HashSet};
 
+pub mod lay;
+pub use lay::{lay, pieces, Kind as PieceKind, Laid, Piece};
+
 use bevy_ecs::prelude::*;
 
 use crate::building::{self, plan_wall, wall_heights, Tree, Wall};
@@ -216,6 +219,138 @@ pub(crate) fn overhangs(world: &mut World, wanted: Option<&HashSet<String>>) -> 
                 Derived::new(Some(over.max(0.0)), "ft", &[run.ends.status, w.status], formula, &inputs)
             },
         );
+    }
+    out
+}
+
+// ------------------------------------------------------------------------------------------ soffit at a corner
+
+/// A corner where two roof edges (eaves or rakes) of one roof meet and their soffits overlap (call 191 item 12): the soffit taken off as
+/// the total length of the edges times the overhang counts the square at the corner in both runs. That is how soffit is taken off
+/// (BYU-Idaho's construction estimating text, books.byui.edu/construction_estimat/exterior_finishes_es; Angi's and Hunker's soffit
+/// guides), with waste added on top: the formula stays, and the figure says how much of it is corner counted twice.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Corner {
+    pub a: String,
+    pub b: String,
+    /// Where the two edges meet, in feet.
+    pub at: P2,
+    /// The area both runs count, in SF.
+    pub area: f64,
+}
+
+/// The intersection of two convex polygons (Sutherland-Hodgman), as a polygon.
+fn clip(subject: Vec<P2>, clipper: &[P2]) -> Vec<P2> {
+    let mut out = subject;
+    for k in 0..clipper.len() {
+        let (a, b) = (clipper[k], clipper[(k + 1) % clipper.len()]);
+        let side = |p: P2| (b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0]);
+        let input = std::mem::take(&mut out);
+        for i in 0..input.len() {
+            let (p, q) = (input[i], input[(i + 1) % input.len()]);
+            let (sp, sq) = (side(p), side(q));
+            if sp >= 0.0 {
+                out.push(p);
+            }
+            if (sp >= 0.0) != (sq >= 0.0) {
+                let t = sp / (sp - sq);
+                out.push([p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t]);
+            }
+        }
+        if out.is_empty() {
+            break;
+        }
+    }
+    out
+}
+
+fn area_of(poly: &[P2]) -> f64 {
+    (0..poly.len()).map(|k| poly[k][0] * poly[(k + 1) % poly.len()][1] - poly[(k + 1) % poly.len()][0] * poly[k][1]).sum::<f64>().abs() / 2.0
+}
+
+/// Every corner where the soffits of two edges of one roof lie over one another, worked from the overhangs and the plan alone.
+pub fn soffit_corners(world: &mut World) -> Vec<Corner> {
+    let overhang = overhangs(world, None);
+    let mut edges: Vec<(String, [P2; 2], Option<String>, f64)> = Vec::new();
+    {
+        let parents: HashMap<String, Option<String>> = {
+            let mut q = world.query::<&Node>();
+            q.iter(world).map(|n| (n.path.clone(), n.parent.clone())).collect()
+        };
+        let rings: HashMap<String, Option<Vec<P2>>> = {
+            let mut q = world.query::<(&Node, &Footprint)>();
+            q.iter(world).map(|(n, f)| (n.path.clone(), f.points_ft())).collect()
+        };
+        let mut q = world.query::<(&Node, &Kind, &Run)>();
+        let mut all: Vec<(String, Run)> = q.iter(world).filter(|(_, k, _)| matches!(**k, Kind::Eave | Kind::Rake)).map(|(n, _, r)| (n.path.clone(), r.clone())).collect();
+        all.sort_by_key(|(p, _)| path_number(p));
+        for (path, run) in all {
+            let (Some(line), Some(d)) = (run.ends_ft(), overhang.get(&path).and_then(|o| o.worked())) else { continue };
+            if d <= TOL {
+                continue;
+            }
+            let roof = run.planes.first().and_then(|p| parents.get(p)).cloned().flatten();
+            let ring = roof.as_ref().and_then(|r| rings.get(r)).cloned().flatten();
+            // Which side of the edge is the roof: the side a short step in from its middle lies inside the footprint.
+            let Some(ring) = ring else { continue };
+            let (dx, dy) = (line[1][0] - line[0][0], line[1][1] - line[0][1]);
+            let long = dx.hypot(dy);
+            if long < TOL {
+                continue;
+            }
+            let n = [-dy / long, dx / long];
+            let mid = [(line[0][0] + line[1][0]) / 2.0, (line[0][1] + line[1][1]) / 2.0];
+            let step = 0.02_f64.min(long / 4.0);
+            let inward = if crate::vif::inside(&ring, [mid[0] + n[0] * step, mid[1] + n[1] * step]) { n } else { [-n[0], -n[1]] };
+            edges.push((path, line, roof, d));
+            let last = edges.len() - 1;
+            // Keep the inward side with the edge by turning the line's ends so that (end 1 - end 0) rotated left is inward.
+            if inward != n {
+                edges[last].1 = [line[1], line[0]];
+            }
+        }
+    }
+    let mut out = Vec::new();
+    for i in 0..edges.len() {
+        for j in (i + 1)..edges.len() {
+            if edges[i].2 != edges[j].2 || edges[i].2.is_none() {
+                continue;
+            }
+            for ea in 0..2 {
+                for eb in 0..2 {
+                    let (p, q) = (edges[i].1[ea], edges[j].1[eb]);
+                    if (p[0] - q[0]).hypot(p[1] - q[1]) > 0.05 {
+                        continue;
+                    }
+                    // The soffit of an edge from the corner: along it to its far end, and in from it by its overhang.
+                    let rect = |k: usize, e: usize| -> Vec<P2> {
+                        let (line, d) = (edges[k].1, edges[k].3);
+                        let (near, far) = (line[e], line[1 - e]);
+                        let (dx, dy) = (far[0] - near[0], far[1] - near[1]);
+                        let long = dx.hypot(dy);
+                        // Left of the edge's own direction (end 0 to end 1) is in; going from end 1, in is to the right.
+                        let left = [-dy / long, dx / long];
+                        let n = if e == 0 { left } else { [-left[0], -left[1]] };
+                        vec![near, far, [far[0] + n[0] * d, far[1] + n[1] * d], [near[0] + n[0] * d, near[1] + n[1] * d]]
+                    };
+                    let (ra, rb) = (rect(i, ea), rect(j, eb));
+                    // Both rectangles are wound the same way for the clip: make each counter-clockwise.
+                    let ccw = |mut r: Vec<P2>| {
+                        let signed: f64 = (0..4).map(|k| r[k][0] * r[(k + 1) % 4][1] - r[(k + 1) % 4][0] * r[k][1]).sum();
+                        if signed < 0.0 {
+                            r.reverse();
+                        }
+                        r
+                    };
+                    let (ra, rb) = (ccw(ra), ccw(rb));
+                    let both = clip(ra, &rb);
+                    let area = if both.len() >= 3 { area_of(&both) } else { 0.0 };
+                    if area > 1e-6 {
+                        out.push(Corner { a: edges[i].0.clone(), b: edges[j].0.clone(), at: p, area });
+                    }
+                }
+            }
+        }
     }
     out
 }

@@ -382,6 +382,28 @@ pub fn traced_over(job: &mut Job, drawing: &str) -> Result<Vec<String>, String> 
     Ok(crate::view::elements(job).into_iter().filter(|e| e.rows.iter().any(|r| !r.derived && r.basis.starts_with(&text))).map(|e| e.path).collect())
 }
 
+/// Every wall laid from this drawing's sheet by `find-walls --lay` (its source says "found on sheet <name>"), by path, in the job's order
+/// (call 191 item 8). A wall found on a sheet is where the sheet's scale and place put it, as a traced one is.
+pub fn laid_from(job: &mut Job, drawing: &str) -> Result<Vec<String>, String> {
+    drawing_of(job, drawing)?;
+    let name = job.find(drawing).and_then(|e| job.world.get::<Node>(e).map(|n| n.name.clone())).unwrap_or_default();
+    let source = format!("found on sheet {name}");
+    let placed: Vec<String> = crate::view::elements(job).into_iter().filter(|e| e.rows.iter().any(|r| !r.derived && r.basis == source)).map(|e| e.path).collect();
+    // What stands in a place the sheet gave: a wall, a door, a window. (The wall type made for them is a size, not a place.)
+    Ok(placed.into_iter().filter(|p| job.find(p).and_then(|e| job.world.get::<Kind>(e)).is_some_and(|k| matches!(k, Kind::Wall | Kind::Door | Kind::Window))).collect())
+}
+
+/// What stands where a drawing's scale or place put it: what was traced over it and what was laid from its sheet.
+fn standing_on(job: &mut Job, drawing: &str) -> Result<Vec<String>, String> {
+    let mut all = traced_over(job, drawing)?;
+    for p in laid_from(job, drawing)? {
+        if !all.contains(&p) {
+            all.push(p);
+        }
+    }
+    Ok(all)
+}
+
 /// Give a drawing its scale: two points on the page (in its own units, from its
 /// lower-left corner) and the distance between them.
 ///
@@ -401,7 +423,7 @@ pub fn calibrate(job: &mut Job, drawing: &str, from: P2, to: P2, distance: &str,
         if let Some(was) = was.filter(|was| (was / k - 1.0).abs() > 1.0e-9) {
             // What is traced now and is not already down as traced at a scale before that.
             let already: Vec<&String> = d.earlier.iter().flat_map(|e| &e.traced).collect();
-            left = traced_over(job, drawing)?.into_iter().filter(|p| !already.contains(&p)).collect();
+            left = standing_on(job, drawing)?.into_iter().filter(|p| !already.contains(&p)).collect();
             if !left.is_empty() {
                 d.earlier.push(Earlier { feet_per_unit: was, at: corner_was, traced: left.clone() });
             }
@@ -442,7 +464,7 @@ pub fn line_up(job: &mut Job, drawing: &str, on_page: P2, on_plan: P2, how: Ente
         let mut left = Vec::new();
         if corner_was.is_some_and(|was| (was[0] - corner[0]).abs() > 1.0e-6 || (was[1] - corner[1]).abs() > 1.0e-6) {
             let already: Vec<&String> = d.earlier.iter().flat_map(|e| &e.traced).collect();
-            left = traced_over(job, drawing)?.into_iter().filter(|p| !already.contains(&p)).collect();
+            left = standing_on(job, drawing)?.into_iter().filter(|p| !already.contains(&p)).collect();
             if !left.is_empty() {
                 d.earlier.push(Earlier { feet_per_unit: k, at: corner_was, traced: left.clone() });
             }
@@ -563,7 +585,8 @@ pub fn lay_found_as(job: &mut Job, level: &str, source: &str, opening_source: Op
         let mut q = job.world.query::<(&crate::Node, &crate::Wall)>();
         let already = q.iter(&job.world).filter(|(n, w)| n.parent.as_deref() == Some(level) && w.line.source == source).count();
         if already > 0 {
-            return Err(format!("{level} already has {already} wall{} {source}: laying it again would make two of each. Take those away first if it is to be laid again", if already == 1 { "" } else { "s" }));
+            let other = if source.starts_with("found on sheet ") { "; if what is to be laid is another drawing of the sheet, lay it on a level of its own (plumbline level), or take these walls away first (plumbline remove <file> <wall>, one wall at a time) to lay this one in their place" } else { "" };
+            return Err(format!("{level} already has {already} wall{} {source}: laying it again would make two of each. Take those away first if it is to be laid again{other}", if already == 1 { "" } else { "s" }));
         }
         let had: std::collections::BTreeSet<String> = {
             let mut t = job.world.query::<(&crate::Node, &crate::components::Kind)>();

@@ -457,6 +457,31 @@ elif name == "doubtful":   # four separate pairs of lines for a house (24, 24, 1
     s.line((3, -0.25), (27, -0.25)); s.line((3, 0.25), (27, 0.25)); s.line((3, 19.75), (27, 19.75)); s.line((3, 20.25), (27, 20.25))
     s.line((-0.25, 3), (-0.25, 17)); s.line((0.25, 3), (0.25, 17)); s.line((29.75, 3), (29.75, 17)); s.line((30.25, 3), (30.25, 17))
     s.ring(80, 0, 112, 22, 0.5)
+elif name == "uhouse":   # call 191: three walls of 80 ft (west, south, east of an 80 ft square, open to the north: 240 LF) and inside it, 25 ft clear of it all round, a house 30 x 30 ft (120 LF)
+    page = (1800, 1700)
+    def wall(a, b, t=0.5):
+        L = math.hypot(b[0] - a[0], b[1] - a[1]); n = (-(b[1] - a[1]) / L, (b[0] - a[0]) / L)
+        for h in (t / 2, -t / 2): s.line((a[0] + n[0] * h, a[1] + n[1] * h), (b[0] + n[0] * h, b[1] + n[1] * h))
+    wall((0, 80), (0, 0)); wall((0, 0), (80, 0)); wall((80, 0), (80, 80))
+    s.ring(25, 25, 55, 55, 0.5)
+elif name == "inline":   # call 191: two houses in line, their south walls on one line with 15 ft of bare paper between: 30 x 20 ft (100 LF) and 28 x 18 ft (92 LF)
+    page = (3600, 792)
+    s.ring(0, 0, 30, 20, 0.5); s.ring(45, 0, 73, 18, 0.5)
+elif name == "garage":   # call 191: 50 x 20 ft, 6 in walls, a garage door 16 ft wide in the south wall (17 to 33 ft) with its leaf drawn across it
+    s.ring(0, 0, 50, 20, 0.5); s.opening((0, 0), (50, 0), 0.5, 17, 33, "door")
+elif name in ("loose", "oneloose"):   # call 191: a clean roof plan, an eave 32 x 22 ft (108 LF), and beside it groups of wall that meet nothing: 30, 30 and 20 ft ("loose") or 20 ft alone ("oneloose"), each more than 8 ft from the others
+    page = (2600, 792)
+    s.ring(0, 0, 32, 22, 0.5)
+    for x, ln in ((60, 30), (80, 30), (100, 20)) if name == "loose" else ((60, 20),):
+        for h in (0.25, -0.25): s.line((x + h, 0), (x + h, ln))
+elif name == "wrongone":   # call 191: the house 30 x 20 ft with ONE dimension string, "30'-0\"" drawn by a line 270 points long (15 ft at 1/4 in to the foot: the string would make the sheet 1/8 in to the foot)
+    s.ring(0, 0, 30, 20, 0.5)
+    s.tick_dim((O, O), (O + 270, O), -50, "30'-0\"")
+elif name == "badstrings":   # call 191: the house with one good string, "30'-0\"", and four written as dimensions that cannot be used: a length of nothing, inches alone, metres and millimetres
+    s.ring(0, 0, 30, 20, 0.5)
+    s.tick_dim((O, O), (O + 540, O), -50, "30'-0\"")
+    s.tick_dim((O, O + 100), (O + 200, O + 100), -50, "0'-0\"")
+    for i, t in enumerate(("240 in", "9.144 m", "2744 mm")): s.t.append((t, 9, O + 700, O + 40 * i, (1.0, 0.0)))
 elif name == "picture":   # the west 15 ft as lines (south, north, west, and a partition at 15 ft), the east half a picture
     for y in (0.25, -0.25): s.line((-0.25, y), (15.1875, y))
     for y in (15.75, 16.25): s.line((-0.25, y), (15.1875, y))
@@ -776,5 +801,154 @@ says "none of the doubtful laid" "nothing is laid" "$LAID"
 says "and it says so" "not laid: wall 1 of what was found, in doubt" "$LAID"
 lacks "no wall laid" "laid on ground" "$LAID"
 cmp -s "$J5" "$T/t5-before.json" || { echo "FAIL: laying the doubtful drawing changed the job"; exit 1; }
+echo
+echo "== 10. What the judge of call 191 found: one drawing is its own walls, a bare gap is two walls, a lot in doubt lays nothing, a Known scale is kept =="
+
+echo
+echo "-- 10.1 --plan takes the walls of that drawing and no others (A1) --"
+# By hand: a U of three walls, 80 + 80 + 80 = 240 LF, and a house 30 x 30 ft (120 LF) standing inside the box round it. Two drawings, 240 ft and 120 ft.
+# --plan 1 --lay: the U's three walls, takeoff 240.00 LF (it laid 360). --plan 2 --lay on a fresh job: the house's four walls, 120.00 LF.
+sheet_of uhouse
+JU="$T/c191-u.json"; DU="$(new_job "$JU" "$T/uhouse.pdf" 1)"; scale_wide "$JU" "$DU" 121.5 1570.5 "80 ft 6 in"
+OUT="$("$P" find-walls "$JU" "$DU")"
+says "2 drawings, 240 ft and 120 ft" "2 drawings on this sheet: about 240 ft and about 120 ft of wall" "$OUT"
+cp "$JU" "$T/c191-u-before.json"
+OUT="$("$P" find-walls "$JU" "$DU" --plan 1)"
+echo "$OUT" | sed 's/^/    | /' | grep -E "taking|walls found" | cut -c1-200
+says "the U's 3 walls" "walls found: 3 (everything found is Assumed" "$OUT"
+says "and the other drawing's walls said to be left out" "taking drawing 1 of the sheet's 2: 4 walls of the sheet's other drawings (120 ft of wall) are left out" "$OUT"
+LAID="$("$P" find-walls "$JU" "$DU" --plan 1 --lay)"
+says "laid: 3 walls" "laid on ground: 3 walls" "$LAID"
+TAKE="$("$P" takeoff "$JU")"
+grep -E "walls +[0-9]+ +240\.00 LF" <<<"$TAKE" >/dev/null && echo "    takeoff: walls 240.00 LF (by hand 80 + 80 + 80; it laid 360)" || { echo "FAIL: the walls are not 240.00 LF"; echo "$TAKE" | head; exit 1; }
+cp "$T/c191-u-before.json" "$JU"
+LAID="$("$P" find-walls "$JU" "$DU" --plan 2 --lay)"
+says "laid: the house's 4 walls" "laid on ground: 4 walls" "$LAID"
+TAKE="$("$P" takeoff "$JU")"
+grep -E "walls +[0-9]+ +120\.00 LF" <<<"$TAKE" >/dev/null && echo "    takeoff: walls 120.00 LF" || { echo "FAIL: the walls are not 120.00 LF"; echo "$TAKE" | head; exit 1; }
+echo "  (A5) laying a second drawing onto the level that holds the first says what to do:"
+cp "$T/c191-u-before.json" "$JU"
+"$P" find-walls "$JU" "$DU" --plan 1 --lay >/dev/null
+refused "a second drawing onto the same level" "already has 3 walls found on sheet A-103: laying it again would make two of each" "$P" find-walls "$JU" "$DU" --plan 2 --lay
+refused "and what to do" "lay it on a level of its own (plumbline level)" "$P" find-walls "$JU" "$DU" --plan 2 --lay
+
+echo
+echo "-- 10.2 A gap wider than 8 ft is an opening only where something is drawn in it; the drawings are told at 8 ft (A2, A3) --"
+# By hand: two houses in line, a south wall of 30 ft and one of 28 ft on one line with 15 ft of bare paper (14 ft 6 in between the faces): two walls, 30 + 28 = 58 LF
+# on that line, no door, the gap said with where; two drawings, 100 ft and 92 ft. A garage door 16 ft wide with its leaf across it is one wall with a 16 ft opening.
+sheet_of inline
+JI="$T/c191-i.json"; DI="$(new_job "$JI" "$T/inline.pdf" 1)"; scale_wide "$JI" "$DI" 121.5 670.5 "30 ft 6 in"
+OUT="$("$P" find-walls "$JI" "$DI")"
+echo "$OUT" | sed 's/^/    | /' | grep -E "drawing|long|gap|stop for" | cut -c1-230 | head -14
+says "2 drawings, 100 ft and 92 ft" "2 drawings on this sheet: about 100 ft and about 92 ft of wall" "$OUT"
+lacks "no door of 14 ft 6 in" "door or open doorway" "$OUT"
+says "a wall of 30 ft" "30' 0\" long" "$OUT"
+says "a wall of 28 ft" "28' 0\" long" "$OUT"
+lacks "no wall of 73 ft" "73' 0\" long" "$OUT"
+says "the gap is said with where" "both lines of a wall stop for 14' 6\" at" "$OUT"
+says "and why" "wider than 8 ft with nothing drawn in it (no leaf, no swing, no line across)" "$OUT"
+LAID="$("$P" find-walls "$JI" "$DI" --plan 1 --lay)"
+TAKE="$("$P" takeoff "$JI")"
+grep -E "walls +[0-9]+ +100\.00 LF" <<<"$TAKE" >/dev/null && echo "    takeoff: walls 100.00 LF (drawing 1 alone)" || { echo "FAIL: the walls are not 100.00 LF"; echo "$TAKE" | head; exit 1; }
+sheet_of garage
+JK="$T/c191-k.json"; DK="$(new_job "$JK" "$T/garage.pdf" 1)"; scale_wide "$JK" "$DK" 121.5 1030.5 "50 ft 6 in"
+OUT="$("$P" find-walls "$JK" "$DK")"
+says "4 walls" "walls found: 4 (everything found is Assumed" "$OUT"
+says "a 16 ft opening, a door" "door or open doorway: 17' 0\" to 33' 0\" from its west end, 16' 0\" wide" "$OUT"
+lacks "not split" "stop for" "$OUT"
+echo "  (A5) a box that cuts walls says which:"
+OUT="$("$P" find-walls "$JI" "$DI" --within "-1,-1" "15,21")"
+echo "$OUT" | sed 's/^/    | /' | grep -E "the box cuts" | cut -c1-300
+says "the box cuts 2 walls" "the box cuts 2 walls: " "$OUT"
+says "the wall named, with where" "the wall from 0' 0\" east, 0' 0\" north to 30' 0\" east, 0' 0\" north" "$OUT"
+
+echo
+echo "-- 10.3 Where the wall found outside the largest drawing is half of it or more, nothing is laid unasked (A4) --"
+# By hand: a clean roof plan of 108 LF and three groups of wall that meet nothing, 30, 30 and 20 LF (each more than 8 ft from the others): 80 ft outside it,
+# over half of 108 (54): nothing laid, and 80 ft said to be in doubt. One group of 20 LF alone (under half): the 108 LF is laid, the 20 set apart, as before.
+sheet_of loose
+JO="$T/c191-o.json"; DO="$(new_job "$JO" "$T/loose.pdf" 1)"; scale_wide "$JO" "$DO" 121.5 706.5 "32 ft 6 in"
+OUT="$("$P" find-walls "$JO" "$DO")"
+echo "$OUT" | sed 's/^/    | /' | grep -E "much of|drawings on|nothing is laid" | cut -c1-260
+says "80 ft in doubt" "much of this sheet is in doubt: 80 ft of wall lies outside its largest drawing (108 ft), at least half of it" "$OUT"
+says "and what to say" "nothing is laid until you say which is the plan (--plan <1 to 4>)" "$OUT"
+cp "$JO" "$T/c191-o-before.json"
+refused "laying with no word on which" "nothing is laid: 4 drawings on this sheet" "$P" find-walls "$JO" "$DO" --lay
+cmp -s "$JO" "$T/c191-o-before.json" || { echo "FAIL: a refused laying changed the job's file"; exit 1; }
+LAID="$("$P" find-walls "$JO" "$DO" --plan 1 --lay)"
+says "the roof plan laid on the word" "laid on ground: 4 walls" "$LAID"
+TAKE="$("$P" takeoff "$JO")"
+grep -E "walls +[0-9]+ +108\.00 LF" <<<"$TAKE" >/dev/null && echo "    takeoff: walls 108.00 LF" || { echo "FAIL: the walls are not 108.00 LF"; echo "$TAKE" | head; exit 1; }
+sheet_of oneloose
+J1="$T/c191-o1.json"; D1="$(new_job "$J1" "$T/oneloose.pdf" 1)"; scale_wide "$J1" "$D1" 121.5 706.5 "32 ft 6 in"
+OUT="$("$P" find-walls "$J1" "$D1")"
+lacks "one small group is not in doubt as a sheet" "much of this sheet is in doubt" "$OUT"
+LAID="$("$P" find-walls "$J1" "$D1" --lay)"
+says "the 108 LF laid, the 20 set apart" "laid on ground: 4 walls" "$LAID"
+says "and the 20 said" "not laid: wall " "$LAID"
+TAKE="$("$P" takeoff "$J1")"
+grep -E "walls +[0-9]+ +108\.00 LF" <<<"$TAKE" >/dev/null && echo "    takeoff: walls 108.00 LF" || { echo "FAIL: the walls are not 108.00 LF"; echo "$TAKE" | head; exit 1; }
+
+echo
+echo "-- 10.4 The sheet's scale: a Known one is kept, a lone string is said to be alone, laid walls are named when it changes, strings that cannot be read are counted (B6 to B9) --"
+# By hand: the house 30 x 20 ft with one string "30'-0\"" drawn 270 points long (15 ft at 1/4 in to the foot): by the string the sheet is 1/8 in to the foot, and the
+# house reads 60 x 40 ft. The scale is set by hand and marked Known at 1/4 in to the foot (540 points are 30 ft).
+sheet_of wrongone
+JW="$T/c191-w.json"; DW="$(new_job "$JW" "$T/wrongone.pdf" 1)"
+"$P" calibrate "$JW" "$DW" --from "126,126" --to "666,126" --distance "30 ft" --status Known --source "tape, measured" >/dev/null
+"$P" lineup "$JW" "$DW" --page-point "126,126" --plan-point "0,0" --status Assumed --source "the house's corner" >/dev/null
+OUT="$("$P" find-walls "$JW" "$DW" --dimensions)"
+says "a lone string is said to be alone" "1 dimension string: nothing else on the sheet to check it against" "$OUT"
+cp "$JW" "$T/c191-w-before.json"
+refused "a Known scale is kept" "A Known scale is not replaced by a string read off the sheet unless you say so" "$P" find-walls "$JW" "$DW" --scale-by 1
+refused "and it says what it was and what it would be" "is 1/4\" = 1'-0\", Known, from tape, measured: string 1, 30'-0\", would make it 1/8\" = 1'-0\"" "$P" find-walls "$JW" "$DW" --scale-by 1
+cmp -s "$JW" "$T/c191-w-before.json" || { echo "FAIL: a refused --scale-by changed the job's file"; exit 1; }
+echo "    the job's file is byte for byte the same"
+OUT="$("$P" find-walls "$JW" "$DW" --scale-by 1 --anyway)"
+echo "$OUT" | sed 's/^/    | /' | grep -E "scaled by|replaces|caution" | cut -c1-240
+says "taken, Assumed" "scaled by string 1, 30'-0\": 1/8\" = 1'-0\", Assumed, its source the string" "$OUT"
+says "what it was and what it is now" "it replaces the scale the sheet had, 1/4\" = 1'-0\" (Known, from tape, measured): the scale now is 1/8\" = 1'-0\", Assumed" "$OUT"
+says "the lone string carries its caution" "caution: 1 dimension string: nothing else on the sheet to check it against" "$OUT"
+python3 - "$JW" <<'PY'
+import json, sys
+d = json.load(open(sys.argv[1]))["data"]
+sc = [e["attributes"]["pl::drawing"]["scale"]["distance"] for e in d if "pl::drawing" in e["attributes"]][0]
+assert sc["status"] == "Assumed", sc
+print("    the scale in the job is Assumed, source: " + sc["source"])
+PY
+echo "  (B8) walls laid from the sheet are named when its scale changes: the 30 x 20 ft house laid at 1/4 in (4 walls, 100.00 LF), then the scale changed:"
+JV="$T/c191-v.json"; DV="$(new_job "$JV" "$T/wrongone.pdf" 1)"; scale_wide "$JV" "$DV" 121.5 670.5 "30 ft 6 in"
+"$P" find-walls "$JV" "$DV" --lay >/dev/null
+TAKE="$("$P" takeoff "$JV")"
+grep -E "walls +[0-9]+ +100\.00 LF" <<<"$TAKE" >/dev/null && echo "    takeoff: walls 100.00 LF" || { echo "FAIL: the walls are not 100.00 LF"; echo "$TAKE" | head; exit 1; }
+OUT="$("$P" find-walls "$JV" "$DV" --scale-by 1)"
+echo "$OUT" | sed 's/^/    | /' | grep -E "NOT MOVED" | cut -c1-300
+says "the 4 laid walls named" "NOT MOVED: 4 things were traced over it or laid from its sheet at the scale it had before: " "$OUT"
+SHOWN="$("$P" show "$JV" "$DV")"
+says "and the drawing says so" "traced before it was rescaled or moved" "$SHOWN"
+echo "  (call 191 item 14) walls laid from the sheet ride on its scale in the verify-in-field list. By hand: the house laid whole, 100 LF of wall 9 ft high, gypsum board on each wall's face at a made-up \$3.00/SF: 900 SF, \$2,700.00 riding on the scale of its sheet (the list had none of it):"
+JR="$T/c191-r.json"; DR="$(new_job "$JR" "$T/wrongone.pdf" 1)"; scale_wide "$JR" "$DR" 121.5 670.5 "30 ft 6 in"
+"$P" find-walls "$JR" "$DR" --lay >/dev/null
+"$P" vif "$JR" > "$T/c191-vif0.txt" || true
+for w in $(grep -oE ' wall-[0-9]+' <<<"$("$P" show "$JR")" | sort -u); do
+  "$P" line "$JR" "$w" "Gypsum board" face_area --division 9 >/dev/null
+  "$P" set "$JR" "$w" unit_cost '$3.00/SF' --line "Gypsum board" --status Known --source "made-up price" >/dev/null
+done
+"$P" vif "$JR" > "$T/c191-vif1.txt"
+sed 's/^/    | /' "$T/c191-vif1.txt" | grep -E "$DR|scale" | head -4
+grep -F "$DR" "$T/c191-vif1.txt" | grep -qF '$2,700.00' && echo "    the sheet's scale: \$2,700.00 riding (by hand 900 SF x \$3.00)" || { echo "FAIL: \$2,700.00 is not riding on the scale"; cat "$T/c191-vif1.txt"; exit 1; }
+echo "  (B9) strings that cannot be used are counted: \"0'-0\\\"\" has no length, \"240 in\" is inches alone, \"9.144 m\" and \"2744 mm\" are metric:"
+sheet_of badstrings
+JS="$T/c191-s.json"; DS="$(new_job "$JS" "$T/badstrings.pdf" 1)"
+OUT="$("$P" find-walls "$JS" "$DS" --dimensions)"
+echo "$OUT" | sed 's/^/    | /' | cut -c1-260 | head -8
+says "1 string read" "the sheet's own dimension strings, 1 read from its words" "$OUT"
+says "4 not read, each said" "4 strings are written as a dimension and not read: " "$OUT"
+says "the zero string" "0'-0\" at " "$OUT"
+says "inches alone" "240 in at " "$OUT"
+says "metric" "9.144 m at " "$OUT"
+says "and the millimetres" "2744 mm at " "$OUT"
+lacks "no 'inf to the foot'" "inf to the foot" "$OUT"
+
 echo
 echo "PASS: the walls, doors and windows of a drawn plan were found as worked by hand, said in full, laid only on the word, all Assumed and sourced to the sheet, and what is not a wall was left out and counted"
