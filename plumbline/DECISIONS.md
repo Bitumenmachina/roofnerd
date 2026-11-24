@@ -7445,3 +7445,60 @@ walls' lines and 13 ft 6 in at the ridge, 8 ft in from either):
   **72.00 SF** each; the north wall, under the high edge, rises 8.5 ft along its
   whole 24 ft: **204.00 SF**; the south, under the eave: none.
 - Under a hip roof: none on any wall, and the estimate is byte for byte what it was.
+
+### Call 193. What the judge who drove the window found, and what is decided (2026-11-24)
+
+A cold judge (Sonnet) drove the window on the program as committed at 51cf498, alone
+on the machine, thirteen runs of its own making (`research/judgment-window-1124.md`):
+a wall traced over a scan, a wall moved, the outside trim, the sun. **It found no
+wrong money, quantity or place**: every figure it worked by hand matched (a traced
+ring 93.99 LF against 94.00; rooms to a tenth of a square foot through a turned
+house and a rough scan with cabinets; a moved wall's saved job byte for byte the
+command line's; the trim count the model's on three houses; the sun's height at
+five dates and hours). What it found is in what the window draws and says. Decided:
+
+A. **The house is dressed in what the estimate prices: trim too.** The window still
+   draws corner boards on a sided wall and a casing, head cap and sill round every
+   opening where no line prices them (the judge's house with one soffit line read
+   "Trim 1" and showed trim on every edge). From this call:
+   - a wall's corner boards are drawn only where a line prices them (the model's
+     pieces);
+   - an opening's outside casing is drawn where a line prices it: by its length,
+     the model's pieces; by the each (the starter "Casing and trim at the window"),
+     the window's own standard casing, which is a drawing and in no quantity;
+     priced by neither, the opening is drawn as the unit alone, its frame, sash and
+     glass;
+   - a roof keeps an edge of its own thickness (a roof is not a sheet of paper):
+     that is the roof, drawn as the roof, and is not fascia. A fascia board and a
+     soffit are drawn only where priced.
+   This changes the picture of every house that has openings or siding and no trim
+   priced. The builder lists each demonstration whose check moves, with what it
+   measured before and after, and the lead rules on each before it is touched.
+B. **A run of walls is laid one way.** Changing "Centerline | Face" in the middle of
+   a run changes the whole run (its walls are laid again, as "Other side" does) and
+   says how many moved and how far; corners of one run always meet.
+C. **A length typed while tracing by the face is the length along the face**, and
+   the card says both where they differ: "10' 0" along the scan's face; the wall is
+   10' 3" to its corner".
+D. **"Other side" stays with the run it turns**: on the card of the run last laid,
+   after the tool is put down, until those walls are changed or another run is laid;
+   an Undo of a turn leaves it able to turn again; where it cannot, it says what to
+   do instead.
+E. **A wall can be moved by pressing on it and dragging**, as well as by a click, a
+   glide and a click (the judge's drag moved nothing and said nothing of why).
+F. **Words**: the floor's line in the Job panel says which line a floor goes to
+   beside a figure that differs from the rooms'; a wall laid across a stretch where
+   the scan shows no face says how long that stretch is ("the scan shows no face
+   along 3' 0" of it: a doorway, or what the scanner did not see"); a wall's card
+   that gave its length before the next wall joined its corner is followed by the
+   length it then has; "the new wall: lies along" loses its stray colon; "no face
+   here" is not said of a face that a laid wall already stands on.
+G. **The scan under the tracing can be seen through**: its cut is drawn lighter than
+   a traced wall, and the faces a click will land on are drawn as fine lines while
+   the Wall tool is up.
+H. The Sun's hour stops at six in the morning and six at night and says so when
+   pressed further.
+
+Left as they are, and said in STATUS.md: the sky the same at every hour; the plan
+running under the right panel after a move; the roof's edges in their line colours
+in the 3D view; the open gable (call 192).

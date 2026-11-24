@@ -10384,6 +10384,37 @@ If the model's own rule gives another figure (the roof's height over a wall's li
 above all), the builder says which and why before anything is built, and these are
 set right here with the reason.
 
+## The window judged (2026-11-24), and its findings fixed: a demonstration, written before it is built (call 193)
+
+A judge drove the window cold for thirteen runs (`research/judgment-window-1124.md`):
+**no wrong money, quantity or place**; what it found is in what the window draws and
+says (DECISIONS.md, call 193, A to H). The steps the fixes come to, new ones in
+`demos/tracew.sh`, `demos/movew.sh`, `demos/trimw.sh` and `demos/lightw.sh`:
+
+- **A.** Three houses, each 24 by 16 ft with lap siding, a window and a door: (1) no
+  trim line: no corner board and no outside casing is drawn, the openings are their
+  units alone, the roof has its own edge; the Show list has no Trim switch. (2) The
+  starter window's "Casing and trim at the window" priced by the each: the window
+  is cased, the door (no such line) is not. (3) Casing and corner boards priced by
+  their lengths: the model's 7 + 8 = 15 pieces, and the switch reads 15.
+- **B.** Tracing the made-up house: two walls laid by the face, then Centerline
+  chosen: both walls of the run lie on the faces' own lines (north 0 ft where it was
+  3 in south of it), the card says 2 walls moved 3 in, and the first wall's end is
+  the second's start to the hundredth of a foot.
+- **C.** By the face, from the southwest corner, 10 ft typed going east: the wall's
+  face runs 10.00 ft, the wall is 10.25 LF, and the card says both.
+- **D.** A ring laid by the face (94.00 LF), Esc twice, "Other side" on the card:
+  90.00 LF; Undo: 94.00; "Other side" again: 90.00.
+- **E.** The east wall of `movew`'s house pressed on and dragged 4 ft east: the saved
+  job is byte for byte the command line's `move`, $7,600.00 to $8,616.00.
+- **F.** A wall traced across a 3 ft doorway in a scanned partition says the scan
+  shows no face along 3 ft of it; the Job panel's floor line says the floor goes to
+  the walls' center lines.
+- **G.** With the Wall tool up over a scan, the faces are drawn as fine lines and the
+  cut is lighter than a traced wall (measured: a place on a traced wall over the
+  cut is darker than the cut beside it).
+- **H.** The Sun at 6:00 pm, "Later" pressed: it says it goes no later.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **As of 2026-11-24 (the lead). Read this block first; what is below it is older and is
