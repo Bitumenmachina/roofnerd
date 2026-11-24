@@ -167,7 +167,7 @@ fn the_starter_library_comes_in_whole_goes_out_as_it_was_and_has_no_price_in_it(
     let dir = folder("starter");
     assert!(run(&dir, &["new", "j.json", "Starter (not a real job)"]).0);
     let (ok, said) = run(&dir, &["import", "assemblies", "j.json", "starter"]);
-    assert!(ok && said.contains("set: 41") && said.contains("not used: 0"), "{said}");
+    assert!(ok && said.contains("set: 42") && said.contains("not used: 0"), "{said}");
     assert!(run(&dir, &["export", "assemblies", "j.json", "out.csv"]).0);
     let out = std::fs::read_to_string(dir.join("out.csv")).unwrap();
     let shipped = include_str!("../../../library/sixteen-divisions.csv");
@@ -192,6 +192,13 @@ fn the_starter_library_comes_in_whole_goes_out_as_it_was_and_has_no_price_in_it(
     };
     let mut divisions = std::collections::BTreeSet::new();
     for line in shipped.lines().skip(1) {
+        // Call 196: a line made of the element's material (its "Made of the element's material" cell, the 25th, is set) has no
+        // price of its own and, on a thing set down, takes its item's trade as its division. Every other line is checked as before.
+        let made = !cells(line)[24].is_empty();
+        if made {
+            assert!(cells(line)[21].is_empty() && cells(line)[26].is_empty(), "a line made of the material has a price or a division of its own: {line}");
+            continue;
+        }
         divisions.insert(cells(line)[26].parse::<u8>().unwrap());
         assert!(line.contains(",$?/") && line.contains(",Unknown,no price entered,"), "{line}");
         assert!(!line.chars().zip(line.chars().skip(1)).any(|(a, b)| a == '$' && b.is_ascii_digit()), "a price in the library: {line}");
@@ -199,7 +206,7 @@ fn the_starter_library_comes_in_whole_goes_out_as_it_was_and_has_no_price_in_it(
     assert_eq!(divisions.into_iter().collect::<Vec<_>>(), (1..=16).collect::<Vec<u8>>());
     // Brought in a second time, it is the same as the job already has.
     let (ok, said) = run(&dir, &["import", "assemblies", "j.json", "starter"]);
-    assert!(ok && said.contains("set: 0") && said.contains("the same as the job already has: 200"), "{said}");
+    assert!(ok && said.contains("set: 0") && said.contains("the same as the job already has: 202"), "{said}");
     std::fs::remove_dir_all(&dir).unwrap();
 }
 

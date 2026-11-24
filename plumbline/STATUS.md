@@ -10683,7 +10683,21 @@ the starter assemblies and the starter tool chest brought in. Every price is mad
 7. A job saved before this change opens, and its estimate's price is the figure it
    was.
 
-Not built, and not contracted until the bench as a place (step A) and call 194 are in.
+**Built (2026-11-24), the command line's half, with the design corrected at one point
+(call 201).** `research/worker-report-call196.md`. Run by the lead in the worker's
+copy: the six command-line crates' tests pass (world 536, 18 new in
+`tests/call196.rs`); all 51 command-line demonstrations pass and none says FAILED;
+`demos/itemcost.sh` holds the seven steps ($3,700.00 and $3,580.00 side by side;
+$4,380.00 with the hours; the chest written out and back to the byte; a job saved
+before opens as it was); the three gates, `portmap.sh` and `licenses.sh` pass.
+**The heater is in the price list under its own name** (step 3 as written), not
+under a made-up one. **Changed figures and words**: the starter library is 42
+assemblies and 202 lines (41 and 200); `estimate` on a job with nothing priced
+says so; the chest's table has four more columns. **Not run when this was
+written**: the window against it (one line of the window names the new entry so
+that it builds; the lead's, at the merge). **Not built**: "Priced as" on the item's
+panel and on the bench (the window's half); a later change of an item's trade
+moving the lines already on what is set down.
 
 ## The second window judgment (2026-11-24): what it found, and a model brought in whole: a demonstration, written before it is built (call 197)
 

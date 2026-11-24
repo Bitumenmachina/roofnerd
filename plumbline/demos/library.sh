@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# The starter library of assemblies (library/sixteen-divisions.csv): 41 assemblies with a
+# The starter library of assemblies (library/sixteen-divisions.csv): 42 assemblies (call 196: Bought and set) with a
 # line in every one of the sixteen divisions, labor lines among them, and no price and
 # no production rate in it. It is brought into an
 # empty job, its assemblies are applied to a small made-up house, the takeoff comes out
@@ -27,16 +27,20 @@ python3 - "$LIB" <<'PY'
 import csv, re, sys
 rows = list(csv.reader(open(sys.argv[1])))
 head, lines = rows[0], rows[1:]
-cost, division, ctype = head.index("Unit cost"), head.index("Division"), head.index("Cost type")
-assert all(re.fullmatch(r"\$\?/[A-Za-z]+", r[cost]) for r in lines), "a unit cost that is not $?/unit"
+cost, division, ctype, made = head.index("Unit cost"), head.index("Division"), head.index("Cost type"), head.index("Made of the element's material")
+# Call 196: a line made of the element's material has no price of its own (its price is the material's, or the item's) and, on a thing set
+# down, takes its item's trade as its division. Only a line whose "Made of the element's material" cell is set is excused; every other line is checked.
+own = [r for r in lines if not r[made]]
+assert all(re.fullmatch(r"\$\?/[A-Za-z]+", r[cost]) for r in own), "a unit cost that is not $?/unit"
+assert all(not r[cost] and not r[division] for r in lines if r[made]), "a line made of the material with a price or a division of its own"
 assert not any(re.search(r"\$\s*\d", cell) for r in lines for cell in r), "a dollar figure in the library"
-assert all(r[ctype] for r in lines) and all(r[division] for r in lines), "a line with no cost type or no division"
+assert all(r[ctype] for r in lines) and all(r[division] for r in own), "a line with no cost type or no division"
 labor = [r for r in lines if r[ctype] == "Labor"]
-assert len(labor) == 28 and all(r[head.index("Ordered by")] == "hr" and r[head.index("Ordered at")].startswith("unknown ") for r in labor), "a labor line with a production rate in it"
+assert len(labor) == 29 and all(r[head.index("Ordered by")] == "hr" and r[head.index("Ordered at")].startswith("unknown ") for r in labor), "a labor line with a production rate in it"
 print("    %d labor lines, each in hours with no production rate and no wage: how fast a crew goes is the estimator's own" % len(labor))
 print("    %d assemblies, %d lines, a line in each of divisions %s; every unit cost is $?, and no dollar figure is in the file"
-      % (len({r[0] for r in lines}), len(lines), ", ".join(str(d) for d in sorted({int(r[division]) for r in lines}))))
-assert sorted({int(r[division]) for r in lines}) == list(range(1, 17)) and len({r[0] for r in lines}) == 41 and len(lines) == 200
+      % (len({r[0] for r in lines}), len(lines), ", ".join(str(d) for d in sorted({int(r[division]) for r in own}))))
+assert sorted({int(r[division]) for r in own}) == list(range(1, 17)) and len({r[0] for r in lines}) == 42 and len(lines) == 202
 PY
 
 echo
@@ -66,9 +70,9 @@ ALL="$("$P" show "$J")"
 of() { grep -oE "$1-[0-9]+" <<<"$ALL" | sort -u; }
 
 echo
-echo "== The library comes in: 41 assemblies, none refused =="
+echo "== The library comes in: 42 assemblies, none refused =="
 OUT="$("$P" import assemblies "$J" "$LIB")"; echo "$OUT" | grep -E "rows|set:|same|not used" | sed 's/^/  /'
-says "all of them" "set: 41"
+says "all of them" "set: 42"
 says "none refused" "not used: 0"
 
 echo

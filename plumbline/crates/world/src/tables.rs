@@ -270,6 +270,11 @@ pub fn prices_in(job: &mut Job, rows: &[Vec<String>], numbers: Option<&[usize]>,
             for (n, _) in q.iter(&job.world).filter(|(_, k)| **k == Kind::Material) {
                 found.entry(check::plain_name(&n.name)).or_insert_with(|| n.path.clone());
             }
+            // An item is its own entry in the price list (call 196).
+            let mut items = job.world.query::<(&Node, &crate::Item)>();
+            for (n, _) in items.iter(&job.world) {
+                found.entry(check::plain_name(&n.name)).or_insert_with(|| n.path.clone());
+            }
             found
         };
         let mut suppliers: Vec<String> = {
@@ -373,6 +378,10 @@ pub fn prices_in(job: &mut Job, rows: &[Vec<String>], numbers: Option<&[usize]>,
             };
             let e = job.find(&path).ok_or_else(|| format!("no element {path}"))?;
             let known = job.world.get::<Node>(e).map(|n| n.name.clone()).unwrap_or_default();
+            // An item with no price yet takes its first: it is its own entry in the price list (call 196).
+            if job.world.get::<Supply>(e).is_none() && job.world.get::<crate::Item>(e).is_some() {
+                job.world.entity_mut(e).insert(Supply { order: None, price: Val::unknown(&format!("$/{unit}"), "no price entered"), quotes: Default::default() });
+            }
             let mut supply = job.world.get::<Supply>(e).cloned().ok_or_else(|| format!("{path} has no price to set"))?;
             let by = supply.price.unit.trim_start_matches("$/").to_string();
             if !unit.eq_ignore_ascii_case(&by) {
@@ -542,7 +551,15 @@ pub fn prices_in(job: &mut Job, rows: &[Vec<String>], numbers: Option<&[usize]>,
                 named.extend(cost.lines.iter().map(|l| check::plain_name(&l.description)));
             }
             let mut q = job.world.query::<&crate::MadeOf>();
-            let made: std::collections::HashSet<String> = q.iter(&job.world).filter_map(|m| m.0.value.as_deref().map(check::plain_name)).collect();
+            let mut made: std::collections::HashSet<String> = q.iter(&job.world).filter_map(|m| m.0.value.as_deref().map(check::plain_name)).collect();
+            // What things set down from an item are priced from, by its line made of the item (call 196).
+            let mut things = job.world.query::<(&crate::Placed, &crate::Cost)>();
+            let made_of_item: Vec<String> = things.iter(&job.world).filter(|(_, c)| c.lines.iter().any(|l| l.of_material)).filter_map(|(p, _)| p.item.clone()).collect();
+            for item in made_of_item {
+                if let Some(name) = job.find(&item).and_then(|e| job.world.get::<Node>(e)).map(|n| n.name.clone()) {
+                    made.insert(check::plain_name(&crate::editing::item_material_name(&name)));
+                }
+            }
             let mut idle: Vec<(usize, String)> = by_plain
                 .iter()
                 .filter(|(plain, _)| !named.contains(*plain) && !made.contains(*plain))
@@ -585,16 +602,17 @@ pub fn prices_in(job: &mut Job, rows: &[Vec<String>], numbers: Option<&[usize]>,
 /// is, what kind of thing it is, what it is drawn as, its sizes, who makes it. It is
 /// kept in a file a person can open, change and bring back in (Patrick, 2026-11-16:
 /// "a workbench for items for trade that can be modified like a database of items").
-pub const ITEM_HEADINGS: [&str; 22] = [
+pub const ITEM_HEADINGS: [&str; 26] = [
     "Item", "Trade", "Kind", "Drawn as", "Width", "Width: how sure", "Width: where from", "Depth", "Depth: how sure", "Depth: where from", "Height", "Height: how sure", "Height: where from", "Maker",
-    "Maker: how sure", "Maker: where from", "Model", "Model: how sure", "Model: where from", "Weight", "Weight: how sure", "Weight: where from",
+    "Maker: how sure", "Maker: where from", "Model", "Model: how sure", "Model: where from", "Weight", "Weight: how sure", "Weight: where from", "Priced as", "Unit cost", "Unit cost: how sure",
+    "Unit cost: where from",
 ];
 
 /// The item library the program ships with: a few things of each trade that has any,
 /// at typical sizes, every size Assumed and saying so, no maker and no model.
 pub const STARTER_ITEMS: &str = include_str!("../../../library/items.csv");
 
-const ITEM_COLUMNS: [(&str, &[&str]); 24] = [
+const ITEM_COLUMNS: [(&str, &[&str]); 28] = [
     ("item", &["item", "name", "description"]),
     ("trade", &["trade", "division", "div"]),
     ("kind", &["kind", "category", "what it is"]),
@@ -617,6 +635,10 @@ const ITEM_COLUMNS: [(&str, &[&str]); 24] = [
     ("weight", &["weight"]),
     ("weight status", &["weight: how sure"]),
     ("weight source", &["weight: where from"]),
+    ("priced as", &["priced as"]),
+    ("unit cost", &["unit cost"]),
+    ("unit cost status", &["unit cost: how sure"]),
+    ("unit cost source", &["unit cost: where from"]),
     ("status", &["how sure", "status"]),
     ("source", &["where from", "source"]),
 ];
@@ -629,8 +651,32 @@ fn item_kind_said(kind: Kind) -> &'static str {
     }
 }
 
+/// The price an item row gives: the figure, what it is bought by (the each unless the cell says), how sure it is and where
+/// it is from. None where the cell is blank (nothing is said of a price). A figure has to say how sure it is and where
+/// it is from, in its own two columns or the row's one pair, and is not Unknown.
+fn unit_cost_of(cols: &Columns, row: &[String]) -> Result<Option<(String, String, Status, String)>, String> {
+    let cell = cols.cell(row, "unit cost");
+    if cell.is_empty() {
+        return Ok(None);
+    }
+    let (x, unit) = price_cell(cell).map_err(|why| format!("its unit cost: {}", why.trim_start_matches("its price: ")))?;
+    let own = (cols.cell(row, "unit cost status"), cols.cell(row, "unit cost source"));
+    let (status, source) = if own.0.is_empty() && own.1.is_empty() { (cols.cell(row, "status"), cols.cell(row, "source")) } else { own };
+    let status = status_read(status).ok_or_else(|| format!("how sure its unit cost is reads {status:?}, which is not Known, Assumed or Unknown"))?;
+    if source.is_empty() {
+        return Err("it does not say where its unit cost came from".into());
+    }
+    if status == Status::Unknown {
+        return Err("its unit cost is given and is said to be Unknown".into());
+    }
+    Ok(Some((exact(x), unit.map(|u| unit_as_written(&u)).unwrap_or_else(|| "EA".to_string()), status, source.to_string())))
+}
+
 /// What an item with no weight says of it when the library is written out.
 const WEIGHT_NOT_SAID: &str = "not said";
+
+/// What an item with no price in the price list says of it when the library is written out.
+const PRICE_NOT_SAID: &str = "not said";
 
 /// The job's items as a table: the headings, then a row for each item in the order
 /// they were made. Brought back in, it gives the same items, value for value.
@@ -659,6 +705,13 @@ pub fn items_out(job: &mut Job) -> Vec<Vec<String>> {
             // three blanks (a blank "how sure" is none of the three: J25A-7).
             None => row.extend([String::new(), status_said(Status::Unknown).to_string(), WEIGHT_NOT_SAID.to_string()]),
         }
+        row.push(it.priced_as.clone().unwrap_or_default());
+        // Its price: the item's own entry in the price list (a Supply on the item), one home (call 196).
+        match job.world.get::<Supply>(e).map(|s| s.price.clone()) {
+            Some(p) if p.value.is_some() => row.extend([dollars(p.value.unwrap_or_default(), p.unit.trim_start_matches("$/")), status_said(p.status).to_string(), p.source.clone()]),
+            Some(p) => row.extend([String::new(), status_said(Status::Unknown).to_string(), p.source.clone()]),
+            None => row.extend([String::new(), status_said(Status::Unknown).to_string(), PRICE_NOT_SAID.to_string()]),
+        }
         rows.push(row);
     }
     rows
@@ -683,6 +736,8 @@ pub fn items_in(job: &mut Job, rows: &[Vec<String>], numbers: Option<&[usize]>) 
             q.iter(&job.world).map(|(n, _)| (check::plain_name(&n.name), n.path.clone())).collect()
         };
         let mut seen: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
+        // Each price the table gave: the row's number, the item, and the figure, its unit, how sure it is and where from.
+        let mut prices: Vec<(usize, String, (String, String, Status, String))> = Vec::new();
         for (i, row) in rows.iter().enumerate().skip(cols.row + 1) {
             let number = row_number(numbers, i);
             if row.iter().all(|c| c.trim().is_empty()) {
@@ -763,15 +818,38 @@ pub fn items_in(job: &mut Job, rows: &[Vec<String>], numbers: Option<&[usize]>) 
                         Some(Val { value, unit: "lb".into(), status, source })
                     }
                 };
-                Ok(Item { category, maker: text("maker")?, model: text("model")?, width: length("width")?, depth: length("depth")?, height: length("height")?, weight, sheet: String::new(), division, form })
+                Ok(Item { category, maker: text("maker")?, model: text("model")?, width: length("width")?, depth: length("depth")?, height: length("height")?, weight, sheet: String::new(), division, form, priced_as: None })
             };
             let plain = check::plain_name(name);
-            let item = match read() {
+            let mut item = match read() {
                 Ok(item) => item,
                 Err(why) => {
                     out.not_used.push((number, if name.is_empty() { why } else { format!("{name}: {why}") }));
                     continue;
                 }
+            };
+            // Its price: one home, the price list. A cell of figures sets it there (below, once the rows are read).
+            let price = match unit_cost_of(&cols, row) {
+                Ok(p) => p,
+                Err(why) => {
+                    out.not_used.push((number, format!("{name}: {why}")));
+                    continue;
+                }
+            };
+            // What it is priced as: said by a column of its own. A table without the column leaves it as the job has it.
+            let said_priced_as: Option<Option<String>> = if cols.has("priced as") {
+                match cols.cell(row, "priced as") {
+                    "" => Some(None),
+                    typed => match crate::editing::assembly_named(job, typed, item.category) {
+                        Ok((assembly, _)) => Some(Some(assembly)),
+                        Err(why) => {
+                            out.not_used.push((number, format!("{name}: priced as: {why}")));
+                            continue;
+                        }
+                    },
+                }
+            } else {
+                None
             };
             if let Some(first) = seen.get(&plain) {
                 out.not_used.push((number, format!("{name}: row {first} of this library is the same item, and was used")));
@@ -784,8 +862,13 @@ pub fn items_in(job: &mut Job, rows: &[Vec<String>], numbers: Option<&[usize]>) 
                     let was = job.world.get::<Item>(e).cloned().ok_or_else(|| format!("{path} is not an item"))?;
                     // The sheet an item was made from is the job's to remember: a
                     // library has no column for it and does not take it away.
-                    let item = Item { sheet: was.sheet.clone(), ..item };
-                    if was == item {
+                    // Priced as: its own, unless the table says. It follows below, as sizes do.
+                    let item = Item { sheet: was.sheet.clone(), priced_as: was.priced_as.clone(), ..item };
+                    let priced_as = said_priced_as.clone().unwrap_or_else(|| was.priced_as.clone());
+                    if was == item && priced_as == was.priced_as {
+                        if let Some(p) = price {
+                            prices.push((number, name.to_string(), p));
+                        }
                         out.same += 1;
                         continue;
                     }
@@ -794,7 +877,7 @@ pub fn items_in(job: &mut Job, rows: &[Vec<String>], numbers: Option<&[usize]>) 
                         continue;
                     }
                     let mut changed: Vec<&str> = Vec::new();
-                    for (what, differs) in [("its trade", was.division != item.division), ("its kind", was.category != item.category), ("what it is drawn as", was.form != item.form), ("its width", was.width != item.width), ("its depth", was.depth != item.depth), ("its height", was.height != item.height), ("its maker", was.maker != item.maker), ("its model", was.model != item.model), ("its weight", was.weight != item.weight)] {
+                    for (what, differs) in [("its trade", was.division != item.division), ("its kind", was.category != item.category), ("what it is drawn as", was.form != item.form), ("its width", was.width != item.width), ("its depth", was.depth != item.depth), ("its height", was.height != item.height), ("its maker", was.maker != item.maker), ("its model", was.model != item.model), ("its weight", was.weight != item.weight), ("what it is priced as", priced_as != was.priced_as)] {
                         if differs {
                             changed.push(what);
                         }
@@ -805,20 +888,57 @@ pub fn items_in(job: &mut Job, rows: &[Vec<String>], numbers: Option<&[usize]>) 
                     // library left the range standing in the room at its old size, with
                     // the screen saying "changed: its width").
                     let followed = crate::editing::placed_follow(job, &path, name, &item)?;
-                    let also = match followed.len() {
+                    let mut also = match followed.len() {
                         0 => String::new(),
                         1 => "; the one set down is now that size".to_string(),
                         n => format!("; the {n} set down are now that size"),
                     };
+                    // What it is priced as: each set down follows (call 196).
+                    if priced_as != was.priced_as {
+                        let said = crate::editing::item_priced_as(job, &path, priced_as.as_deref())?;
+                        let n = said.followed.len();
+                        if said.set_down > 0 {
+                            also.push_str(&format!("; {} set down {} priced as {}", n, if n == 1 { "is now" } else { "are now" }, priced_as.as_deref().map(|a| format!("{a:?}")).unwrap_or_else(|| "nothing".to_string())));
+                        }
+                        for line in said.said().into_iter().skip(1) {
+                            out.notes.push(format!("{name}: {}", line.trim()));
+                        }
+                    }
+                    if let Some(p) = price {
+                        prices.push((number, name.to_string(), p));
+                    }
                     out.done.push(format!("{name}: changed: {}{also}", changed.join(", ")));
                 }
-                None => match crate::editing::item(job, name, item) {
-                    Ok(path) => {
-                        have.insert(plain, path);
-                        out.done.push(format!("{name}: added"));
+                None => {
+                    item.priced_as = said_priced_as.clone().flatten();
+                    match crate::editing::item(job, name, item) {
+                        Ok(path) => {
+                            have.insert(plain, path);
+                            out.done.push(format!("{name}: added"));
+                            if let Some(p) = price {
+                                prices.push((number, name.to_string(), p));
+                            }
+                        }
+                        Err(why) => out.not_used.push((number, format!("{name}: {why}"))),
                     }
-                    Err(why) => out.not_used.push((number, format!("{name}: {why}"))),
-                },
+                }
+            }
+        }
+        // The prices the table gave, set in the price list (one home, two doors).
+        if !prices.is_empty() {
+            let mut list: Vec<Vec<String>> = vec![["Material", "Unit", "Price", "How sure", "Where from"].iter().map(|s| s.to_string()).collect()];
+            let mut numbers: Vec<usize> = vec![0];
+            for (number, name, (figure, unit, status, source)) in &prices {
+                list.push(vec![crate::editing::item_material_name(name), unit.clone(), figure.clone(), status_said(*status).to_string(), source.clone()]);
+                numbers.push(*number);
+            }
+            let set = prices_in(job, &list, Some(&numbers), None, true, None)?;
+            let n = list.len() - 1 - set.same - set.not_used.len();
+            if n > 0 {
+                out.done.push(format!("{} in the price list", if n == 1 { "1 price was set".to_string() } else { format!("{n} prices were set") }));
+            }
+            for (number, why) in set.not_used {
+                out.not_used.push((number, format!("its price: {why}")));
             }
         }
         Ok(out)

@@ -767,6 +767,11 @@ pub struct Item {
     /// what its name says, and a box if its name says nothing.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub form: Option<String>,
+    /// "Priced as": the name of an assembly that goes on its kind (equipment, fixture, furnishing), which
+    /// each of it set down takes (call 196). None: not priced, and what is set down from it is said to be
+    /// set down and not priced. A price has one home, the price list; this names no price.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub priced_as: Option<String>,
 }
 
 impl Item {
@@ -796,6 +801,9 @@ pub fn check_item(path: &str, kind: Kind, t: &Item) -> Result<(), String> {
     let what = format!("{path} item");
     if let Some(form) = &t.form {
         super::forms::drawn_as(form).map_err(|why| format!("{what}: drawn as: {why}"))?;
+    }
+    if t.priced_as.as_deref().is_some_and(|a| a.trim().is_empty() || a.trim() != a) {
+        return Err(format!("{what}: priced as: has to name an assembly, or be left out"));
     }
     t.maker.check_basics(&format!("{what} maker"))?;
     t.model.check_basics(&format!("{what} model"))?;

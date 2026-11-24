@@ -245,7 +245,7 @@ mod tests {
             Val { value: Some(len), unit: unit.to_string(), status: Status::Assumed, source: "a typical size; the product is not chosen".to_string() }
         };
         let not_chosen = || Val::<String>::unknown("", "not chosen");
-        let item = |kind, w: &str, d: &str, h: &str| Item { category: kind, maker: not_chosen(), model: not_chosen(), width: size(w), depth: size(d), height: size(h), weight: None, sheet: String::new(), division: None, form: None };
+        let item = |kind, w: &str, d: &str, h: &str| Item { category: kind, maker: not_chosen(), model: not_chosen(), width: size(w), depth: size(d), height: size(h), weight: None, sheet: String::new(), division: None, form: None, priced_as: None };
         let vanity = ed::item(&mut doc.job, "Vanity, 36 in", item(plumbline_world::Kind::Furnishing, "36 in", "21 in", "34 1/2 in")).expect("the vanity");
         let heater = ed::item(&mut doc.job, "Water heater, 50 gal", item(plumbline_world::Kind::Equipment, "22 in", "22 in", "60 in")).expect("the heater");
         for at in [[5.0, 5.0], [9.0, 5.0]] {

@@ -658,11 +658,310 @@ pub fn item_trade(job: &mut Job, item: &str, division: Option<crate::components:
 /// `offset` above the floor. It is as big as its item says and as sure as that; where
 /// the item's size is not all known it is placed with no size, has no shape, and says
 /// which of its sizes is missing. Where it stands is as sure as `how`.
+///
+/// Where the item is "priced as" an assembly the job has, the thing takes that assembly, its lines saying
+/// they came by the item; where it is priced as nothing, the thing has no line (call 196).
 pub fn place_item(job: &mut Job, storey: &str, item: &str, at: P2, offset: &str, how: Entered) -> Result<String, String> {
+    place_item_said(job, storey, item, at, offset, how).map(|(path, _)| path)
+}
+
+/// As `place_item`, and saying what is not as the item says: its assembly is not in the job, so the thing is
+/// set down and not priced (call 196).
+pub fn place_item_said(job: &mut Job, storey: &str, item: &str, at: P2, offset: &str, how: Entered) -> Result<(String, Vec<String>), String> {
     all_or_nothing(job, |job| {
         let offset = how.length(offset)?;
         let item = item_by_name(job, item)?;
-        place_item_in(job, storey, &item, at, offset, how)
+        let path = place_item_in(job, storey, &item, at, offset, how)?;
+        let notes = price_as_its_item(job, &path, &item)?.into_iter().collect();
+        Ok((path, notes))
+    })
+}
+
+/// What an item is called in the price list (call 196): its own name. An item that is priced as something is its own entry
+/// in the price list, holding what a material holds for it (a `Supply`: the estimator's price and each supplier's), so a
+/// price is worked one way whether what is bought is a stud or a heater. No material is made for it. This is the one place
+/// that says the entry's name.
+pub fn item_material_name(item: &str) -> String {
+    item.trim().to_string()
+}
+
+/// The assembly the job has by this name (its path or its name, then any capitals and spacing), as the job names
+/// it, if it goes on `kind`.
+pub(crate) fn assembly_named(job: &mut Job, typed: &str, kind: Kind) -> Result<(String, Recipe), String> {
+    let mut q = job.world.query::<(&Node, &Recipe)>();
+    let all: Vec<(String, String, Recipe)> = q.iter(&job.world).map(|(n, r)| (n.path.clone(), n.name.clone(), r.clone())).collect();
+    let exact: Vec<&(String, String, Recipe)> = all.iter().filter(|a| a.0 == typed || a.1 == typed).collect();
+    let found: Vec<&(String, String, Recipe)> = if exact.is_empty() { all.iter().filter(|a| check::same_name(&a.1, typed)).collect() } else { exact };
+    match found.as_slice() {
+        [] => Err(format!("no assembly {typed:?} in this job")),
+        [one] => {
+            if !one.2.applies_to.contains(&kind) {
+                return Err(format!("{:?} goes on {}, and an item of this kind is {}", one.1, one.2.applies_to.iter().map(|k| format!("a {}", k.said())).collect::<Vec<_>>().join(" or "), kind.said()));
+            }
+            Ok((one.1.clone(), one.2.clone()))
+        }
+        many => Err(format!("{typed:?} names {} assemblies ({}); use the path", many.len(), many.iter().map(|f| f.0.clone()).collect::<Vec<_>>().join(", "))),
+    }
+}
+
+/// The one line of an assembly that is made of the element's material, by its word on the assembly: the line a thing
+/// set down from an item names for the item. None where the assembly has none or more than one.
+fn item_line_of(recipe: &Recipe) -> Option<String> {
+    let mut made: Vec<&crate::components::CostLine> = recipe.cost.lines.iter().filter(|l| l.of_material).collect();
+    (made.len() == 1).then(|| made.remove(0).description.clone())
+}
+
+/// A thing set down from an item, its assembly's item line named for the item and its lines in the item's trade
+/// where they say none. `from` is the word the assembly gives the item line.
+fn name_item_lines(job: &mut Job, thing: &str, recipe: &Recipe, item_name: &str, division: Option<Division>) -> Result<(), String> {
+    let e = job.find(thing).ok_or_else(|| format!("no element {thing}"))?;
+    let kind = *job.world.get::<Kind>(e).ok_or_else(|| format!("{thing} has no kind"))?;
+    let Some(mut cost) = job.world.get::<Cost>(e).cloned() else { return Ok(()) };
+    let theirs: Vec<String> = recipe.cost.lines.iter().map(|l| l.description.clone()).collect();
+    if let Some(word) = item_line_of(recipe) {
+        let taken = cost.lines.iter().any(|l| l.description != word && check::same_name(&l.description, item_name));
+        if !taken {
+            if let Some(l) = cost.lines.iter_mut().find(|l| l.of_material && l.description == word) {
+                l.description = item_name.to_string();
+            }
+        }
+    }
+    if let Some(d) = division {
+        // A line the assembly brought onto a thing set down from an item is in the item's trade: a heater's labor is
+        // Mechanical and a vanity's is Furnishings, whatever trade the assembly's own line says (call 196).
+        for l in cost.lines.iter_mut() {
+            if theirs.contains(&l.description) || (l.of_material && check::same_name(&l.description, item_name)) {
+                l.division = Some(d);
+            }
+        }
+    }
+    check::cost(thing, kind, &cost)?;
+    job.world.entity_mut(e).insert(cost);
+    Ok(())
+}
+
+/// A thing just set down, given the assembly its item is priced as. Says (and does nothing more) where the item's
+/// assembly is not in the job.
+fn price_as_its_item(job: &mut Job, thing: &str, item_path: &str) -> Result<Option<String>, String> {
+    let e = job.find(item_path).ok_or_else(|| format!("no element {item_path}"))?;
+    let (Some(node), Some(it)) = (job.world.get::<Node>(e), job.world.get::<Item>(e)) else { return Ok(None) };
+    let (name, it) = (node.name.clone(), it.clone());
+    let Some(typed) = it.priced_as.clone() else { return Ok(None) };
+    let (assembly, recipe) = match assembly_named(job, &typed, it.category) {
+        Ok(found) => found,
+        Err(_) => return Ok(Some(format!("{name} is priced as {typed:?}, and this job has no such assembly that goes on it: the {} is set down and not priced", it.category.said()))),
+    };
+    job.apply_as(thing, &assembly, Status::Known, &format!("the item {name}: priced as {assembly}"))?;
+    name_item_lines(job, thing, &recipe, &name, it.division)?;
+    Ok(None)
+}
+
+/// What an item's "priced as" came to for what is set down from it (call 196).
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct ItemFollowed {
+    /// The item's name.
+    pub item: String,
+    /// What it was priced as, and is.
+    pub was: Option<String>,
+    pub now: Option<String>,
+    /// Each thing set down from it that now has what the item says.
+    pub followed: Vec<String>,
+    /// How many are set down from it in all.
+    pub set_down: usize,
+    /// Each line that came off, on which thing, and what had been entered on it.
+    pub took: Vec<(String, String, String)>,
+    /// Things left as they were, each with its reason.
+    pub left: Vec<(String, String)>,
+    /// Lines a person entered on a thing itself, which stay: the thing and each line.
+    pub own_lines: Vec<(String, Vec<String>)>,
+}
+
+impl ItemFollowed {
+    /// The sentences that say it, in a builder's words.
+    pub fn said(&self) -> Vec<String> {
+        let mut out = Vec::new();
+        let by = match &self.now {
+            Some(a) => format!("{} is now priced as {a:?}", self.item),
+            None => format!("{} is now priced as nothing", self.item),
+        };
+        let n = self.followed.len();
+        out.push(match (self.set_down, n) {
+            (0, _) => format!("{by}; none is set down yet, and each set down after takes it"),
+            (_, 0) => format!("{by}; none of the {} set down from it changed", self.set_down),
+            (_, 1) => format!("{by}; 1 set down from it follows ({})", self.followed[0]),
+            _ => format!("{by}; {n} set down from it follow"),
+        });
+        for (thing, line, entered) in &self.took {
+            out.push(format!("  {line:?} came off {thing}{}", if entered.is_empty() { String::new() } else { format!(", with {entered} entered on it") }));
+        }
+        for (thing, why) in &self.left {
+            out.push(format!("  {thing} is left as it was: {why}"));
+        }
+        for (thing, lines) in &self.own_lines {
+            out.push(format!("  {thing} keeps {} entered on it: {}", if lines.len() == 1 { "a line" } else { "lines" }, lines.iter().map(|l| format!("{l:?}")).collect::<Vec<_>>().join(", ")));
+        }
+        out
+    }
+}
+
+/// What is entered on a cost line, in the words a line is entered in: "4 hr/EA and $85.00/hr".
+fn entered_on(l: &crate::components::CostLine) -> String {
+    let mut parts = Vec::new();
+    if let Some(o) = &l.order {
+        if let Some(x) = o.factor.value {
+            parts.push(format!("{} {}", crate::view::num(x), o.factor.unit));
+        }
+    }
+    if !crate::components::CostLine::is_no_price_of_its_own(&l.unit_cost) {
+        if let Some(x) = l.unit_cost.value {
+            parts.push(format!("${}/{}", crate::view::rate(x), l.unit_cost.unit.trim_start_matches("$/")));
+        }
+    }
+    if let Some(w) = &l.waste {
+        if let Some(x) = w.value {
+            parts.push(format!("{} % waste", crate::view::num(x)));
+        }
+    }
+    parts.join(" and ")
+}
+
+/// Say what an item is priced as, or that it is priced as nothing (`None`), and let each thing already set down from
+/// it follow, as it follows its sizes: it changes assembly the way one assembly is changed for another, so a line the
+/// two share keeps what was entered on it. A line that came off says what had been entered on it. A thing a person
+/// gave another assembly, a thing set in a run (it carries its own line named for the item) and a line entered on a
+/// thing itself are left, and named. The assembly has to be one the job has that goes on the item's kind.
+pub fn item_priced_as(job: &mut Job, item: &str, assembly: Option<&str>) -> Result<ItemFollowed, String> {
+    all_or_nothing(job, |job| {
+        let path = item_by_name(job, item)?;
+        let e = job.find(&path).ok_or_else(|| format!("{item} is not in the job"))?;
+        let (name, mut it) = match (job.world.get::<Node>(e), job.world.get::<Item>(e)) {
+            (Some(n), Some(it)) => (n.name.clone(), it.clone()),
+            _ => return Err(format!("{item} is not an item")),
+        };
+        let was = it.priced_as.clone();
+        let new = match assembly {
+            Some(typed) => Some(assembly_named(job, typed, it.category)?),
+            None => None,
+        };
+        let now_name = new.as_ref().map(|n| n.0.clone());
+        let mut out = ItemFollowed { item: name.clone(), was: was.clone(), now: now_name.clone(), ..ItemFollowed::default() };
+        if was == now_name {
+            return Ok(out);
+        }
+        it.priced_as = now_name.clone();
+        building::check_item(&path, Kind::Type, &it)?;
+        job.put(&path, it.clone())?;
+        let old = match &was {
+            Some(w) => assembly_named(job, w, it.category).ok(),
+            None => None,
+        };
+        let mut things: Vec<(u64, String)> = {
+            let mut q = job.world.query::<(&Node, &Placed)>();
+            q.iter(&job.world).filter(|(_, p)| p.item.as_deref() == Some(path.as_str())).map(|(n, _)| (n.path.rsplit('-').next().and_then(|x| x.parse().ok()).unwrap_or(u64::MAX), n.path.clone())).collect()
+        };
+        things.sort();
+        out.set_down = things.len();
+        for (_, thing) in things {
+            let te = job.find(&thing).ok_or_else(|| format!("no element {thing}"))?;
+            let cond = job.world.get::<Condition>(te).and_then(|c| c.0.value.clone());
+            let had: Vec<crate::components::CostLine> = job.world.get::<Cost>(te).map(|c| c.lines.clone()).unwrap_or_default();
+            // Set in a run: it carries its own line named for the item, and is priced by it.
+            if cond.is_none() && had.iter().any(|l| !l.of_material && check::same_name(&l.description, &name)) {
+                out.left.push((thing.clone(), "it was set in a run and carries its own line named for the item".to_string()));
+                continue;
+            }
+            // Another assembly, chosen on the thing itself.
+            let own = cond.as_ref().filter(|c| !was.as_deref().is_some_and(|w| check::same_name(c, w)) && !now_name.as_deref().is_some_and(|n| check::same_name(c, n)));
+            if let Some(c) = own {
+                out.left.push((thing.clone(), format!("it has an assembly of its own, {c:?}")));
+                continue;
+            }
+            // Its lines as the old assembly wrote them, for the change to compare by.
+            let before_cost = job.world.get::<Cost>(te).cloned();
+            let before_cond = job.world.get::<Condition>(te).cloned();
+            let restore = |job: &mut Job| {
+                let mut ent = job.world.entity_mut(te);
+                match &before_cost {
+                    Some(c) => {
+                        ent.insert(c.clone());
+                    }
+                    None => {
+                        ent.remove::<Cost>();
+                    }
+                }
+                match &before_cond {
+                    Some(c) => {
+                        ent.insert(c.clone());
+                    }
+                    None => {
+                        ent.remove::<Condition>();
+                    }
+                }
+            };
+            let mut step = || -> Result<Vec<String>, String> {
+                // Back to the word the old assembly gave the item line, so that the lines it shares are found.
+                if let Some(word) = old.as_ref().and_then(|(_, r)| item_line_of(r)) {
+                    if let Some(mut cost) = job.world.get::<Cost>(te).cloned() {
+                        if !cost.lines.iter().any(|l| l.description == word) {
+                            if let Some(l) = cost.lines.iter_mut().find(|l| l.of_material && check::same_name(&l.description, &name)) {
+                                l.description = word;
+                                job.world.entity_mut(te).insert(cost);
+                            }
+                        }
+                    }
+                }
+                let source = format!("the item {name}: priced as {}", now_name.as_deref().unwrap_or("nothing"));
+                let taken: Vec<String> = match &new {
+                    // It has the assembly already, by hand: only the item's line is named.
+                    Some((assembly, _)) if cond.as_deref() == Some(assembly.as_str()) => Vec::new(),
+                    Some((assembly, _)) => job.change_assembly_said(&thing, assembly, Status::Known, &source)?.taken,
+                    None => {
+                        // Priced as nothing: what the old assembly brought comes off, and nothing else.
+                        let Some((_, r)) = &old else { return Ok(Vec::new()) };
+                        let theirs: Vec<String> = r.cost.lines.iter().map(|l| l.description.clone()).collect();
+                        let mut cost = job.world.get::<Cost>(te).cloned().unwrap_or(Cost { code: r.cost.code.clone(), lines: Vec::new() });
+                        let gone: Vec<String> = cost.lines.iter().filter(|l| theirs.contains(&l.description) || (l.of_material && check::same_name(&l.description, &name))).map(|l| l.description.clone()).collect();
+                        cost.lines.retain(|l| !gone.contains(&l.description));
+                        let mut ent = job.world.entity_mut(te);
+                        if cost.lines.is_empty() {
+                            ent.remove::<Cost>();
+                        } else {
+                            ent.insert(cost);
+                        }
+                        ent.remove::<Condition>();
+                        gone
+                    }
+                };
+                if let Some((_, recipe)) = &new {
+                    name_item_lines(job, &thing, recipe, &name, it.division)?;
+                }
+                Ok(taken)
+            };
+            match step() {
+                Ok(taken) => {
+                    let word = old.as_ref().and_then(|(_, r)| item_line_of(r));
+                    for line in taken {
+                        // What was on it, by the line as it was before; the item line is called by the item's name.
+                        let is_item_line = word.as_deref() == Some(line.as_str()) || (name == line);
+                        let was_line = if is_item_line { had.iter().find(|l| l.of_material && (l.description == line || check::same_name(&l.description, &name))) } else { had.iter().find(|l| l.description == line) };
+                        out.took.push((thing.clone(), if is_item_line { name.clone() } else { line }, was_line.map(entered_on).unwrap_or_default()));
+                    }
+                    out.followed.push(thing.clone());
+                }
+                Err(why) => {
+                    restore(job);
+                    out.left.push((thing.clone(), why));
+                    continue;
+                }
+            }
+            // Lines entered on the thing itself stay: named.
+            let theirs: Vec<String> = [old.as_ref(), new.as_ref()].into_iter().flatten().flat_map(|(_, r)| r.cost.lines.iter().map(|l| l.description.clone())).collect();
+            let own_lines: Vec<String> = job.world.get::<Cost>(te).map(|c| c.lines.iter().filter(|l| !theirs.contains(&l.description) && !(l.of_material && check::same_name(&l.description, &name))).map(|l| l.description.clone()).collect()).unwrap_or_default();
+            if !own_lines.is_empty() {
+                out.own_lines.push((thing.clone(), own_lines));
+            }
+        }
+        Ok(out)
     })
 }
 
@@ -1250,6 +1549,18 @@ pub fn rename_item(job: &mut Job, path: &str, name: &str) -> Result<usize, Strin
                     node.name = name.to_string();
                 }
             }
+            // Its line made of the item is called by the item's new name (call 196).
+            if let Some(te) = job.find(&at) {
+                if let Some(mut cost) = job.world.get::<Cost>(te).cloned() {
+                    let free = !cost.lines.iter().any(|l| !(l.of_material && check::same_name(&l.description, &was)) && check::same_name(&l.description, name));
+                    if free {
+                        if let Some(l) = cost.lines.iter_mut().find(|l| l.of_material && check::same_name(&l.description, &was)) {
+                            l.description = name.to_string();
+                            job.world.entity_mut(te).insert(cost);
+                        }
+                    }
+                }
+            }
         }
         Ok(count)
     })
@@ -1450,6 +1761,15 @@ pub fn remove(job: &mut Job, path: &str) -> Result<Vec<String>, String> {
             by.sort();
             if !by.is_empty() {
                 return Err(format!("{path} is what {} {} made of: give {} another material first", listed(&by), if by.len() == 1 { "is" } else { "are" }, if by.len() == 1 { "it" } else { "them" }));
+            }
+        }
+        // An assembly an item is priced as is not taken from under it (call 196).
+        if kind == Kind::Condition {
+            let mut q = job.world.query::<(&Node, &Item)>();
+            let mut by: Vec<String> = q.iter(&job.world).filter(|(_, it)| it.priced_as.as_ref().is_some_and(|a| a == &name || a == path || crate::check::same_name(a, &name))).map(|(n, _)| n.name.clone()).collect();
+            by.sort();
+            if !by.is_empty() {
+                return Err(format!("{path} is what {} {} priced as: price {} as something else first", listed(&by), if by.len() == 1 { "is" } else { "are" }, if by.len() == 1 { "it" } else { "them" }));
             }
         }
         if kind == Kind::Condition {

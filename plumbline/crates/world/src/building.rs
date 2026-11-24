@@ -2927,6 +2927,9 @@ pub fn rows(w: &World, e: Entity, path: &str, names: &HashMap<String, String>) -
             None => forms::form_of(w.get::<Node>(e).map(|n| n.name.as_str()).unwrap_or("")).map(|f| format!("{}, by its name", f.name())).unwrap_or_else(|| format!("{}, its name saying nothing else", forms::BOX)),
         };
         rows.push(plain("drawn as", drawn, "what one of it is drawn as, inside the box of its sizes"));
+        if let Some(a) = &c.priced_as {
+            rows.push(plain("priced as", a.clone(), "the assembly each of it set down takes"));
+        }
         rows.push(view::entered(path, "maker", &c.maker, |s| s.clone()));
         rows.push(view::entered(path, "model", &c.model, |s| s.clone()));
         rows.push(view::length(path, "width", &c.width));

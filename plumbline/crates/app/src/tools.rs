@@ -515,7 +515,7 @@ pub fn new_item(doc: &mut Doc, values: &[String]) {
             Ok(Val { value: Some(len), unit: unit.to_string(), status: Status::Assumed, source: TYPED.to_string() })
         };
         let not_chosen = || Val::<String>::unknown("", "not chosen");
-        let item = plumbline_world::Item { category, maker: not_chosen(), model: not_chosen(), width: size("width", width)?, depth: size("depth", depth)?, height: size("height", height)?, weight: None, sheet: String::new(), division: None, form: None };
+        let item = plumbline_world::Item { category, maker: not_chosen(), model: not_chosen(), width: size("width", width)?, depth: size("depth", depth)?, height: size("height", height)?, weight: None, sheet: String::new(), division: None, form: None, priced_as: None };
         let path = ed::item(&mut doc.job, name, item)?;
         Ok((path, name.to_string()))
     })();

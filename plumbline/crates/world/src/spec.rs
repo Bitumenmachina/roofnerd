@@ -494,7 +494,7 @@ pub fn item_of(sheet: &Sheet, called: &str, page: usize, category: crate::Kind) 
         }
     };
     let name = sheet.name.as_ref().map(|f| f.value.clone()).unwrap_or_else(|| called.to_string());
-    Made { name, item: crate::Item { category, maker, model, width, depth, height, weight, sheet: format!("{called}, page {page}"), division: None, form: None }, read, missing }
+    Made { name, item: crate::Item { category, maker, model, width, depth, height, weight, sheet: format!("{called}, page {page}"), division: None, form: None, priced_as: None }, read, missing }
 }
 
 #[cfg(test)]

@@ -199,3 +199,5 @@ Post,Post,,,,Unknown,not coded,Set the post,Labor,1,,,,,,,hr,unknown EA/hr,no,Un
 "Pad footing, formed",PadFooting,,,,Unknown,not coded,Pad concrete,Material,volume,,,,,,,,,,,,$?/CY,Unknown,no price entered,,,3
 "Pad footing, formed",PadFooting,,,,Unknown,not coded,Pad forms,Subcontract,form_area,,,,,,,,,,,,$?/SF,Unknown,no price entered,,,3
 "Pad footing, formed",PadFooting,,,,Unknown,not coded,"Form, place and strip",Labor,volume,,,,,,,hr,unknown CY/hr,no,Unknown,no production rate entered,$?/hr,Unknown,no price entered,,,3
+Bought and set,"Equipment, Fixture, Furnishing",,,,Unknown,not coded,The item itself,Material,1,,,,,,,,,,,,,,,yes,,
+Bought and set,"Equipment, Fixture, Furnishing",,,,Unknown,not coded,Set in place,Labor,1,,,,,,,hr,unknown hr/EA,no,Unknown,no production rate entered,$?/hr,Unknown,no price entered,,,11

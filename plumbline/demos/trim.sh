@@ -99,7 +99,7 @@ lacks "$T/show-eave.txt" "overhang"
 echo
 echo "== 2. The starter lines come in and are given to the eaves, the rakes, the walls, the window and the door: no price on any =="
 "$P" import assemblies "$J" starter > "$T/imp.txt"
-says "$T/imp.txt" "set: 41"
+says "$T/imp.txt" "set: 42"
 says "$T/imp.txt" "not used: 0"
 L="the starter library"
 for e in $EAVES; do "$P" apply "$J" "$e" "Gutter" --source "$L" > /dev/null; done
@@ -285,7 +285,14 @@ for v in sample house sixteen priced; do
     "$P" "$v" "$T/$v.json" >/dev/null
     "$P" estimate "$T/$v.json" > "$T/$v.estimate.txt" 2>&1
 done
-( cd "$T" && sha256sum -c --quiet "$OLDPWD/demos/trim-before.sha256" ) && echo "    (the four sample houses' files and estimates: every checksum as it was before call 185)"
+# Call 201: this check printed FAILED and went on (the form "( ... ) && echo" does not stop a script), from the day it was
+# written until call 196's worker saw it. It stops the script now. Its baseline was retaken for three of the eight, each by
+# a written decision and each read line by line by the lead against the file as it was: sixteen.json and
+# sixteen.estimate.txt (call 194: the 33 lines of outside trim and the totals they move, nothing else) and
+# house.estimate.txt (call 196: one sentence more, saying that nothing is priced on its 239 things). The other five are
+# the checksums of before call 185.
+( cd "$T" && sha256sum -c --quiet "$OLDPWD/demos/trim-before.sha256" ) || { echo "FAIL: a sample house's file or estimate is not what it was (demos/trim-before.sha256)"; exit 1; }
+echo "    (the four sample houses' files and estimates: every checksum as it was, but for what calls 194 and 196 moved and say)"
 
 echo
 echo "== 8. What the judge of call 191 found: every priced line is drawn or said, no figure is not nothing, the corners of the soffit are said =="
