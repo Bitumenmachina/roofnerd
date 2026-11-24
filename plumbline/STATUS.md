@@ -10935,6 +10935,32 @@ house takes to come in is printed before and after.
 
 Not built yet.
 
+## A shape changed by hand: a demonstration, written before it is built (call 205; 2026-11-24)
+
+`demos/shapes.sh` extended, at the command line (the model's half). The starter chest;
+"Vanity, 36 in" (36 in wide, 21 in deep, 34 1/2 in high, drawn as base cabinet) set
+down twice; "Base cabinet, 36 in" beside it in the chest. By hand:
+
+1. The vanity's shape kept as "vanity with a panel": the job has one shape of its
+   own, three rows, word for word the base cabinet's; the vanity is drawn as it;
+   "Base cabinet, 36 in" is still drawn as base cabinet. The reply says 1 item is
+   drawn as it and 2 set down follow.
+2. A block added and its figures set: timber, a box, across `-width / 2 + 2 in` to
+   `width / 2 - 2 in`, back `depth - 1 in` to `depth`, up `4 in` to
+   `height - 6 in`. The vanity's blocks are **4**; the new one reads across
+   **-16 in to 16 in**, back **20 in to 21 in**, up **4 in to 28 1/2 in**.
+3. Its "Up to" set as `height + 1 in`: refused, naming the block, the size it was
+   tried at and that it reaches 1 in above the item's box; the shape is as it was.
+4. A block added to "base cabinet": refused: a starter shape is not changed; keep
+   it as a new shape first.
+5. A table of shapes brought in with a shape called "base cabinet": refused: the
+   name is a starter shape's.
+6. The fourth block taken away: 3 blocks, the figures of step 1.
+7. The job saved after step 2, opened and saved again: the same to the byte; the
+   shapes written out as a table have the four rows.
+
+Not built yet. Its window half is call 205 point 6.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **As of 2026-11-24, 22:10 UTC (the lead). Read this block first; what is below it is

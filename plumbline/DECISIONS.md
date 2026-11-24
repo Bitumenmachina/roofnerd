@@ -8200,3 +8200,37 @@ in a picture):
 7. **A model that the program wrote comes in in seconds, not twenty**: find where
    the time goes before changing anything, say it in the report, and change only
    what the measurement names. No figure moves.
+
+### Call 205. A shape changed by hand: the model's changes, and what the bench will show (2026-11-24; the lead's design, not built)
+
+Call 203 left an item's shape as rows that can only be written in a table and
+brought in. For the bench (call 198 point 6) a shape must be changed where it is
+looked at. The window works nothing out, so the changes are the model's first.
+
+1. **A starter shape is not changed.** Thirteen shapes are in the program and every
+   job's items may be drawn as them; changing one in a job would change what an
+   old job means without a word. A shape is changed only as the job's own.
+2. **"Keep as a new shape"**: the shape an item is drawn as is copied into the job
+   under a new name and the item is drawn as the copy. The name may not be one the
+   job or the starter library already has.
+3. **A job's own shape may not take a starter shape's name**, on the way in from a
+   table as well (today the model lets it and the starter's is hidden in the model
+   and not in the window: two meanings for one name). Refused, naming it.
+4. **A block added, changed, taken away** on a job's own shape: a block added is a
+   box the whole size of the item, of the shape's first material, until its
+   figures are typed; any of its six figures, its form (box or round), what it is
+   made of and when it is there may be set; a block is taken away by its number.
+   After each, the shape is checked as it is on the way in (every figure a formula
+   in width, depth and height; inside the box at the three sizes) and a change
+   that fails is refused, with the row, the size and the reason, the shape left as
+   it was.
+5. **Each change says what follows**: how many items are drawn as the shape and how
+   many things are set down from them.
+6. **On the bench** (the window's half, after the model's): under the item's sizes,
+   "Shape" lists the blocks of what it is drawn as, each by its material and form;
+   a click on a row picks the block and marks it on the bench; its six figures are
+   rows that are typed as any value is; "Add block", "Take block away"; on a
+   starter shape those are not offered and "Keep as a new shape" is, with why. The
+   list "Drawn as" on an item's panel is the job's shapes and the starter ones,
+   not a fixed thirteen, and an item drawn as the job's own shape is drawn from
+   its rows. Pulling a face by hand comes after typing works.
