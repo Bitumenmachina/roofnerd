@@ -7771,3 +7771,90 @@ the two disagree.
 8. **Not in B**: labor that differs item by item within one assembly (a production
    rate on the item); an item's price by its size. They are said here so they are
    not built round.
+
+### Call 197. What the second judge who drove the window found, and what is decided (2026-11-24)
+
+`research/judgment-window-1124b.md` (a Sonnet judge, cold, on the build of a0d8477:
+the tool chest, a designer's model in and the BIM model out, the gable, the trim,
+some of call 193's fixes). **No wrong money and no wrong quantity**: every figure it
+worked by hand matched, the window and the saved job said the same, nothing was
+Known on a guess. What it found is what is dropped, what is said wrongly, and what
+cannot be reached. Decided, point by point:
+
+**A model brought in (command line; contract 197I).**
+1. **Fixtures, equipment and furnishings come in** as things set down, each a box
+   the size of its body in the file, Assumed, sourced to the file and its number
+   there; its kind by what the file calls it (a sanitary terminal, a flow terminal,
+   an outlet, a grille: a fixture; furniture: a furnishing; other distribution
+   elements: equipment). Today all are left out with "nothing here to bring it in
+   as", which is not true: the program has all three kinds.
+2. **Fittings come in** on the runs they join, so a run that was closed in the file
+   reads closed here. After `sixteen` is written out and brought back, each system
+   has the open ends it had (air 4, cold water 1, sanitary 1, power 1, refrigerant
+   none), where the judge counted 15, 9, 8, 6 and 2.
+3. **Footings come in** as footings (strip and pad) where the body in the file is a
+   straight box, as the program writes them; any other is left out and said, with
+   the reason that is true.
+4. **A roof the program wrote comes back as the roof it was.** The writer adds to
+   the roof what the reader needs to make it again (its outline, each edge an eave
+   at its pitch or a gable, the eave height, the overhang) as a property set of its
+   own name (never `Pset_`, which is buildingSMART's); the reader makes the roof by
+   the same change the Roof tool makes, then sets its planes' areas beside the roof
+   slabs in the file and says so if they differ. A roof from another program is
+   still left out, and said as now. The file stays valid IFC4 by IfcOpenShell.
+5. **Names are kept**: a door or window is called what the file calls it ("front
+   door", not "door 1"); a system keeps its capitals.
+6. **What is still left out says what follows from it**: where a run's end stood on
+   something not brought in, the message says how many runs will read open.
+7. `plumbline gable` marks "none: an eave is over it" with ~ where it is Assumed, as
+   `show` does. "a outdoor unit" is "an outdoor unit".
+
+**The tool chest in the window (with the bench, contract 195A).**
+8. **A size typed on an item's panel is the item changed, not a measurement**: it
+   is Assumed, "typed in the window; not yet checked against its maker's sheet",
+   the words New item uses (call 111). Typing the size it already has is the check,
+   as everywhere: Known, "checked on site". The message says which happened and how
+   to check it. (It was Known, "measured on site", on any typing: a product not yet
+   chosen was shown as measured.) On the building a value picked and typed is
+   still a field measurement.
+9. When an item's name carries the size that was just changed ("Vanity, 36 in" now
+   40 in wide), the message says its name still reads the old size and that Rename
+   item changes it. The program does not rename it.
+
+**The window (a fix job after the bench; contract 197W, to be written).**
+10. **Things set down are listed in the sheet window**: on its Building list by
+    level, by kind and count, and the estimate says how many are set down and not
+    priced. (They get lines of their own with call 196.)
+11. **The Cabinets tool's card does not lie over the plan**, and its columns do not
+    run into one another. Boxes typed before a run is started say what to do in a
+    cabinetmaker's words (click the wall where the run starts), not that "a reading
+    came in".
+12. **A corner refused while a run is being drawn** says where the run still
+    stands, so the next click is not a surprise.
+13. **A mark that is asked for and then left** (To demolish, with its question
+    unanswered) says nothing was marked.
+14. **The view can be swung round the house.** Two judges could not bring the east
+    end into view: a swing started off the model turns about a far point of the
+    ground and the house leaves the window. A swing started on the model turns
+    about that point, which stays under the pointer; started off it, about the
+    middle of what is drawn. Demonstrated by a quarter turn from the home view with
+    the house still in the middle third of the window.
+15. A maker's sheet made into an item says its trade is not said yet, as New item
+    does.
+
+**Held as built, with its words set right.**
+16. **Trim is drawn where a line of the estimate names it, priced or not.** The
+    judge read "only where priced" as "only where a price is entered", and a house
+    with every line unpriced showed full trim beside "no figure". The line is what
+    puts the trim in the job; a line without a price is in the estimate and is
+    counted there as unpriced. It stays. The rule's words, here and in call 193, are
+    "where a line names it".
+
+**Not built, and said.**
+17. **A shed roof cannot be made in the window**: the Roof tool makes a hip, and an
+    edge is made a gable. A shed is made at the command line. It joins what is owed
+    (the window's half of what exists only at the command line). The review page
+    said a shed could be drawn; that was wrong and is corrected.
+18. Not tried by this judge: three wordings of call 193 (B, D and F in part), and
+    the written file through IfcOpenShell from the window (the same writer is
+    checked at the command line by `demos/export.sh`).

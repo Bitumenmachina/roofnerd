@@ -10656,6 +10656,35 @@ the starter assemblies and the starter tool chest brought in. Every price is mad
 
 Not built, and not contracted until the bench as a place (step A) and call 194 are in.
 
+## The second window judgment (2026-11-24): what it found, and a model brought in whole: a demonstration, written before it is built (call 197)
+
+`research/judgment-window-1124b.md`. No wrong money or quantity. Eighteen points are
+decided in call 197: seven on a model brought in, two on the tool chest (they ride
+with the bench), six on the window, one held, two said and not built.
+
+`demos/ifc-whole.sh`, at the command line: `plumbline sixteen`, written out as a BIM
+model, brought into an empty job. By the first job's own figures (the judge read
+them, and the lead read them again from `takeoff` and `show`):
+
+1. The second job has **22 fixtures, 5 pieces of equipment and 39 fittings**, each
+   where it stood (a named few checked to a hundredth of a foot), each size Assumed
+   and sourced to the file.
+2. Open ends by system are what they were: **air 4, cold water 1, sanitary 1,
+   power 1, refrigerant none**.
+3. **4 footings, 136 LF, 10.07 CY** of concrete.
+4. **The roof: 4 planes, 1,408.72 SF; eaves 144 LF**; hips and ridge as the first
+   job's `takeoff` gives them; `plumbline trim` on the second job gives the first
+   job's eaves (42, 30, 42, 30 LF at 0.75 ft).
+5. The front door is called "front door" and the nine windows of the upper level
+   keep their names; "Supply air" keeps its capitals.
+6. `takeoff` of the two jobs, set side by side, differs in no figure. What is still
+   not brought in is listed with a reason that is true, and the list no longer has
+   a fixture, a fitting, a footing or this roof in it.
+7. The file passes IfcOpenShell as IFC4 with the roof's new property set in it, and
+   a roof slab from a file that has no such set is left out and said, as before.
+
+Not built yet.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **As of 2026-11-24, 16:30 UTC (the lead). Read this block first; what is below it is
@@ -10726,11 +10755,11 @@ above):
    is in the tree when you read this, it did not land: start it again from the
    contract. Its window half (boards from the top of the stone, pictures retaken)
    follows.
-2. **A second window judge** was started at 16:31 UTC on the build of a0d8477: the
-   tool chest, a designer's model in and the BIM model out through the window, the
-   gable, trim only where priced, the eight fixes. If `research/` has no
-   `judgment-window-1124b.md`, it did not finish: run it again from
-   `handoff/judge-brief-window.md`. Its findings want a call and a fix job.
+2. **The second window judge's findings** (call 197, `research/judgment-window-1124b.md`):
+   a model brought in whole (`handoff/contracts/contract-197I.md`, command line,
+   after call 194's worker); the two tool-chest points ride with the bench
+   (contract 195A); points 10 to 15 are a window fix job after the bench, its
+   contract not yet written (take `contract-193W.md` as the pattern).
 3. **Corner boards that run up a rake wall** (the model's trim pieces); the roof with
    a thickness and no coloured edge lines in the 3D view; ground at the wall's foot.
 4. **The scan path finished**: call 190 point 3 (the by-ceiling finder's sure walls

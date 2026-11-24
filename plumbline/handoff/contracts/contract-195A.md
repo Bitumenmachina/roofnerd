@@ -52,7 +52,18 @@ Notes as you go to SCRATCH/review/W-195A-report.md. Commit nothing, push nothing
 8. Every message is a builder's words (`tools/gate-language.sh` passes). The new
    controls are on the map by name ("Bench", "Back to the house"); every existing
    control keeps its name.
-9. `demos/benchw.sh` (new) to the eight points in STATUS.md, with its pictures in
+9. **Call 197, points 8 and 9** (read them): a size typed on an item's panel that
+   differs from the size it has is Assumed, "typed in the window; not yet checked
+   against its maker's sheet" (the words `tools.rs` already has for New item);
+   the same size typed again is the check and is Known, "checked on site", as
+   today. The message says which happened, and, the first time, how it is checked.
+   On anything that is not an item a value picked and typed is a field
+   measurement, exactly as now. When the item's name carries the old size, the
+   message says so and names Rename item. **List every existing expectation this
+   moves before changing one** (`grep -n "measured" demos/item*.sh demos/*.sh`,
+   the tests of `crates/app`): each moves only from Known "measured on site" to
+   Assumed with those words, on an item's size; anything else is handed back.
+10. `demos/benchw.sh` (new) to the eight points in STATUS.md, with its pictures in
    `demos/captured/benchw/`, and its row in `plumbline/README.md`. The pictures a
    person will look at: the vanity on the bench at 36 in and at 48 in; the water
    heater on the bench; the house before and after.
@@ -63,7 +74,8 @@ Notes as you go to SCRATCH/review/W-195A-report.md. Commit nothing, push nothing
   `plumbline/README.md` (a row). Nothing in `crates/world`, `crates/plans` or any
   other crate: if the model does not give something the bench needs (how many
   follow, a size's words), say what is needed and stop on that point.
-- No number, meaning, file format or existing expectation changes. Tests first,
+- No number, meaning or file format changes, and no existing expectation except under
+  clause 9. Tests first,
   where a thing can be tested without a screen (the bench's state, what is drawn),
   run red, quoted.
 - Freeze a copy of the two programs before window runs (`PLUMBLINE_BIN`); delete old
