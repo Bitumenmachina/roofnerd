@@ -243,12 +243,14 @@ check("every piece is Assumed (the tracing is)", "~ on all 27", "%d with ~" % su
 check("a size no line names is said to be drawn only", "'the line names no size'", "%d say so" % sum(1 for r in rows if "the line names no size" in r["said"]), all("the line names no size" in r["said"] for r in rows))
 PY
 echo "  each kind's pieces beside what its lines price, as the verb ends:"
-says "$T/pieces.txt" "  fascia: 2 pieces come to 52 LF; the lines price 52 LF"
-says "$T/pieces.txt" "  rake fascia: 4 pieces come to 40.2492 LF; the lines price 40.2492 LF"
-says "$T/pieces.txt" "  soffit: 2 pieces come to 39 SF; the lines price 39 SF"
-says "$T/pieces.txt" "  rake soffit: 4 pieces come to 30.1869 SF; the lines price 30.1869 SF"
-says "$T/pieces.txt" "  corner boards: 8 pieces come to 72 LF; the lines price 72 LF"
-says "$T/pieces.txt" "  casing: 7 pieces come to 32.3333 LF; the lines price 32.3333 LF"
+# Call 191 point 13 (ruled 2026-11-23): a quantity is printed as the estimate prints it, to 2 places. These eight lines read "52 LF", "40.2492 LF", "39 SF",
+# "30.1869 SF", "72 LF", "32.3333 LF", "26 LF" and "90 LF" before; the figures are the same, now written 52.00, 40.25, 39.00, 30.19, 72.00, 32.33, 26.00, 90.00.
+says "$T/pieces.txt" "  fascia: 2 pieces come to 52.00 LF; the lines price 52.00 LF"
+says "$T/pieces.txt" "  rake fascia: 4 pieces come to 40.25 LF; the lines price 40.25 LF"
+says "$T/pieces.txt" "  soffit: 2 pieces come to 39.00 SF; the lines price 39.00 SF"
+says "$T/pieces.txt" "  rake soffit: 4 pieces come to 30.19 SF; the lines price 30.19 SF"
+says "$T/pieces.txt" "  corner boards: 8 pieces come to 72.00 LF; the lines price 72.00 LF"
+says "$T/pieces.txt" "  casing: 7 pieces come to 32.33 LF; the lines price 32.33 LF"
 echo "  an eave with no fascia line has no fascia: the job before its lines were given has no piece at all, and says so:"
 "$P" trim "$T/job-before-lines.json" --pieces > "$T/pieces0.txt"
 says "$T/pieces0.txt" "No cost line prices any outside trim here, so no piece is drawn."
@@ -256,11 +258,11 @@ echo "  only the south eave given a fascia line: one piece, on it:"
 cp "$T/job-before-lines.json" "$T/one.json"
 "$P" line "$T/one.json" "$EAVE_S" "Fascia" true_length --division 6 >/dev/null
 "$P" trim "$T/one.json" --pieces > "$T/pieces1.txt"
-says "$T/pieces1.txt" "  fascia: 1 piece comes to 26 LF; the lines price 26 LF"
+says "$T/pieces1.txt" "  fascia: 1 piece comes to 26.00 LF; the lines price 26.00 LF"
 lacks "$T/pieces1.txt" "[$EAVE_N]"
 echo "  the L-shaped house of step 4: ten corner boards, none at the inside corner (12,16):"
 "$P" trim "$L_" --pieces > "$T/lpieces.txt"
-says "$T/lpieces.txt" "  corner boards: 10 pieces come to 90 LF; the lines price 90 LF"
+says "$T/lpieces.txt" "  corner boards: 10 pieces come to 90.00 LF; the lines price 90.00 LF"
 python3 - "$T/lpieces.txt" <<'PY'
 import re, sys
 pts = [tuple(float(x) for x in m.group(1).split(",")[:2]) for m in re.finditer(r"LF from \(([^)]*)\) to", open(sys.argv[1]).read())]
@@ -275,7 +277,7 @@ echo "  the roof alone, a soffit line and no wall under the edge: no soffit piec
 says "$T/rpieces.txt" "Left out:"
 says "$T/rpieces.txt" "no wall is found under this edge"
 lacks "$T/rpieces.txt" "Soffit:"
-says "$T/rpieces.txt" "  fascia: 1 piece comes to 26 LF; the lines price 26 LF"
+says "$T/rpieces.txt" "  fascia: 1 piece comes to 26.00 LF; the lines price 26.00 LF"
 
 echo
 echo "== 7. The sample houses: nothing moves. Each job file and each estimate is the same, byte for byte, as before this call =="
@@ -284,6 +286,37 @@ for v in sample house sixteen priced; do
     "$P" estimate "$T/$v.json" > "$T/$v.estimate.txt" 2>&1
 done
 ( cd "$T" && sha256sum -c --quiet "$OLDPWD/demos/trim-before.sha256" ) && echo "    (the four sample houses' files and estimates: every checksum as it was before call 185)"
+
+echo
+echo "== 8. What the judge of call 191 found: every priced line is drawn or said, no figure is not nothing, the corners of the soffit are said =="
+echo "  C10. The north eave's fascia priced on its plan length (26 LF) and not its true length: by hand the two eaves price 26 + 26 = 52 LF, one piece (the south eave's, 26 LF) is drawn, and 26 LF is priced and not drawn:"
+cp "$J" "$T/c10.json"
+"$P" set "$T/c10.json" "$EAVE_N" quantity plan_length --line "Fascia" "${A[@]}" >/dev/null
+"$P" trim "$T/c10.json" --pieces > "$T/c10.txt"
+says "$T/c10.txt" "  fascia: 1 piece comes to 26.00 LF; the lines price 52.00 LF (they differ: see what is left out): 26.00 LF of what the lines price is not drawn"
+says "$T/c10.txt" "Left out:"
+says "$T/c10.txt" "[$EAVE_N]: \"Fascia\" prices 26.00 LF by \"plan_length\", which is not its true length: no piece of its fascia is drawn from it, and 26.00 LF of what it prices is not drawn"
+echo "  C11. The roof drawn alone, a soffit line on its eave and no wall under it: the overhang is not known, so the soffit's total is no figure, never 0 SF:"
+"$P" trim "$R_" --pieces > "$T/c11.txt"
+says "$T/c11.txt" "  soffit: 0 pieces come to 0.00 SF; the lines price no figure: 1 of its lines has no figure (see what is left out)"
+lacks "$T/c11.txt" "the lines price 0 SF"
+lacks "$T/c11.txt" "the lines price 0.00 SF"
+echo "  C12. A hip roof 26 ft by 18 ft on plan over a box of 6 in walls (an overhang of 9 in), a soffit line on each eave: by hand 2 x (26 + 18) x 0.75 = 66.00 SF is priced, as it always was, and each of the 4 corners is a 0.75 by 0.75 ft square counted in two runs: 4 x 0.5625 = 2.25 SF:"
+H="$T/hip.json"
+"$P" new "$H" "Hip (not a real job)" >/dev/null
+HS="$(made "$("$P" level "$H" ground --elevation "0 ft" --height "9 ft" "${A[@]}")")"
+HW="$(made "$("$P" type "$H" wall "wall 6 in" --thickness "6 in" "${A[@]}")")"
+"$P" wall "$H" "$HS" "$HW" --points "0,0 24,0 24,16 0,16" --closed --height "9 ft" "${A[@]}" >/dev/null
+"$P" roof "$H" "Hip roof" --points "-1,-1 25,-1 25,17 -1,17" --pitch 6:12 --eave-height "9 ft" "${A[@]}" >/dev/null
+for e in $(grep -oE 'eave-[0-9]+' <<<"$("$P" show "$H")" | sort -u); do "$P" line "$H" "$e" "Soffit" "true_length * overhang" --division 6 >/dev/null; done
+"$P" trim "$H" --pieces > "$T/c12.txt"
+says "$T/c12.txt" "  soffit: 4 pieces come to 66.00 SF; the lines price 66.00 SF"
+says "$T/c12.txt" "2.25 SF is corner counted in two runs (4 corners)"
+"$P" trim "$H" > "$T/c12t.txt"
+says "$T/c12t.txt" "counts each corner where two runs meet in both: 4 corners, 2.25 SF in all"
+says "$T/c12t.txt" "0.5625 SF is in both runs"
+echo "  C13. A quantity is said as the estimate says it, to 2 places: the rake fascia of the gable house, by hand 4 x 10.0623 = 40.2492, said 40.25 and not 40.2492:"
+lacks "$T/pieces.txt" "40.2492 LF; the lines price"
 
 echo
 echo "PASS"

@@ -1331,3 +1331,191 @@ fn a_house_all_in_doubt_beside_a_clean_roof_plan_of_like_size_is_two_drawings_ea
         assert!(near(b.length, 76.0, 1.0 / 6.0) && near(b.in_doubt, 76.0, 1.0 / 6.0) && b.walls.len() == 4, "{b:?}");
     }
 }
+
+// ---- call 191: the judge's findings on a sheet of more than one drawing ----
+
+/// A wall as a pair of lines, `t` thick, along the centre line a to b, each line ending where the wall does.
+fn pair(s: &mut Sheet, a: P, b: P, t: f64) {
+    let len = ((b[0] - a[0]).powi(2) + (b[1] - a[1]).powi(2)).sqrt();
+    let n = [-(b[1] - a[1]) / len, (b[0] - a[0]) / len];
+    for h in [t / 2.0, -t / 2.0] {
+        s.line([a[0] + n[0] * h, a[1] + n[1] * h], [b[0] + n[0] * h, b[1] + n[1] * h]);
+    }
+}
+
+/// Three walls of 80 ft (west, south and east of an 80 ft square, open to the north: 240 LF) and inside the square, 25 ft clear of
+/// it all round, a house 30 by 30 ft (120 LF).
+fn u_with_a_house_inside() -> Sheet {
+    let mut s = Sheet::default();
+    pair(&mut s, [0.0, 80.0], [0.0, 0.0], 0.5);
+    pair(&mut s, [0.0, 0.0], [80.0, 0.0], 0.5);
+    pair(&mut s, [80.0, 0.0], [80.0, 80.0], 0.5);
+    s.ring(25.0, 25.0, 55.0, 55.0, 0.5);
+    s
+}
+
+fn picked(s: &Sheet, k: f64, pick: Pick) -> Result<Drawn, String> {
+    find_in(&s.page(k), Some(k), [3000.0, 2400.0], [0.0, 0.0], &Extra::default(), &pick)
+}
+
+#[test]
+fn a_plan_taken_by_its_number_is_the_walls_of_that_drawing_and_no_others_though_another_stands_inside_its_box() {
+    // J191-1 (call 191 item 1). By hand: the U is 80 + 80 + 80 = 240 LF in 3 walls; the house 30 x 4 = 120 LF in 4 walls, standing inside
+    // the box round the U. Two drawings, 240 and 120. Drawing 1 is the U's three walls and 240 LF; drawing 2 the house's four and 120 LF.
+    for turn in [0.0, 33.0] {
+        let s = u_with_a_house_inside().turned(turn);
+        let all = s.found(Q4);
+        assert_eq!(all.drawings.len(), 2, "turned {turn}: {all:#?}");
+        assert!(near(all.drawings[0].length, 240.0, 0.2) && near(all.drawings[1].length, 120.0, 0.2), "{:?}", all.drawings);
+        let one = picked(&s, Q4, Pick { plan: Some(1), ..Pick::default() }).unwrap();
+        assert_eq!(one.walls.len(), 3, "turned {turn}: {one:#?}");
+        assert!(near(feet_of_walls(&one), 240.0, 0.2), "{}", feet_of_walls(&one));
+        assert_eq!(one.other_walls.0, 4, "{one:#?}");
+        assert!(near(one.other_walls.1, 120.0, 0.2));
+        let two = picked(&s, Q4, Pick { plan: Some(2), ..Pick::default() }).unwrap();
+        assert_eq!(two.walls.len(), 4, "turned {turn}: {two:#?}");
+        assert!(near(feet_of_walls(&two), 120.0, 0.2));
+        assert_eq!(two.other_walls.0, 3);
+        // The house alone is closed, and none of its walls is said to be apart from the plan because the U is larger.
+        assert!(two.walls.iter().all(|w| w.doubt.is_none()), "{two:#?}");
+        assert!(two.open_ends.is_empty(), "{two:#?}");
+    }
+}
+
+#[test]
+fn two_houses_in_line_fifteen_feet_apart_are_two_walls_and_the_bare_gap_is_said_not_a_door() {
+    // J191-2 (call 191 item 2). By hand: a south wall of 30 ft (0 to 30) and one of 28 ft (45 to 73) on one line; between their outer
+    // faces 14 ft 6 in of bare paper, wider than 8 ft with nothing drawn in it: two walls, 30 + 28 LF, and no opening.
+    for turn in [0.0, 33.0] {
+        let mut s = Sheet::default();
+        s.ring(0.0, 0.0, 30.0, 20.0, 0.5);
+        s.ring(45.0, 0.0, 73.0, 18.0, 0.5);
+        let d = s.turned(turn).found(Q4);
+        let souths: Vec<f64> = d.walls.iter().filter(|w| (w.length() - 30.0).abs() < 0.1 || (w.length() - 28.0).abs() < 0.1).map(|w| w.length()).collect();
+        assert!(souths.iter().any(|l| near(*l, 30.0, 0.1)) && souths.iter().any(|l| near(*l, 28.0, 0.1)), "turned {turn}: {souths:?}\n{d:#?}");
+        assert!(d.walls.iter().all(|w| w.length() < 40.0), "no wall runs across the gap, turned {turn}: {d:#?}");
+        assert!(d.walls.iter().all(|w| w.openings.is_empty()), "turned {turn}: {d:#?}");
+        assert!(d.notes.iter().any(|n| n.contains("nothing drawn in it")), "{:?}", d.notes);
+        assert_eq!(d.drawings.len(), 2, "two houses, 15 ft apart: {d:#?}");
+    }
+}
+
+#[test]
+fn a_gap_wider_than_eight_feet_with_a_leaf_or_a_line_across_it_is_still_an_opening() {
+    // J191-2: a garage door is drawn. A ring 50 by 20 ft, the south wall open for 16 ft (17 to 33) with a leaf line down it and jambs:
+    // one wall of 50 ft with an opening 16 ft wide. The same gap with nothing drawn in it, jambs alone (a 12 ft gap, 20 to 32): two walls.
+    let mut s = Sheet::default();
+    s.ring(0.0, 0.0, 50.0, 20.0, 0.5);
+    s.opening([0.0, 0.0], [50.0, 0.0], 0.5, 17.0, 33.0, false);
+    let d = s.found(Q4);
+    let w = south(&d);
+    assert!(near(w.length(), 50.0, 0.1), "{d:#?}");
+    assert_eq!(w.openings.len(), 1, "{d:#?}");
+    assert!(near(w.openings[0].to - w.openings[0].from, 16.0, 0.1), "{:?}", w.openings);
+    // A door's width of 3 ft stays a door with nothing but its jambs drawn.
+    let mut s = Sheet::default();
+    s.ring(0.0, 0.0, 50.0, 20.0, 0.5);
+    s.cut([0.0, 0.25], [50.0, 0.25], 20.0, 23.0).cut([0.0, -0.25], [50.0, -0.25], 20.0, 23.0);
+    let d = s.found(Q4);
+    assert_eq!(south(&d).openings.len(), 1, "{d:#?}");
+    // A 12 ft gap in the faces with the jambs only: wider than 8 ft and nothing in it: two walls.
+    let mut s = Sheet::default();
+    s.ring(0.0, 0.0, 50.0, 20.0, 0.5);
+    s.cut([0.0, 0.25], [50.0, 0.25], 20.0, 32.0).cut([0.0, -0.25], [50.0, -0.25], 20.0, 32.0);
+    let d = s.found(Q4);
+    let low = d.walls.iter().map(|w| w.from[1].min(w.to[1])).fold(f64::MAX, f64::min);
+    let south_walls: Vec<f64> = d.walls.iter().filter(|w| (w.to[1] - w.from[1]).abs() < 1e-6 && (w.from[1] - low).abs() < 0.1).map(|w| w.length()).collect();
+    assert!(south_walls.len() == 2 && south_walls.iter().all(|l| *l < 25.0), "no wall across the bare gap, two walls on the line: {south_walls:?}\n{d:#?}");
+}
+
+#[test]
+fn walls_that_do_not_meet_are_of_one_drawing_within_eight_feet_and_of_two_beyond_it() {
+    // J191-3. Two houses of like size, the east wall of the first and the west wall of the second 7 ft apart: one drawing (the listing
+    // is empty); 9 ft apart: two.
+    for (gap, drawings) in [(7.0, 0usize), (9.0, 2usize)] {
+        let mut s = Sheet::default();
+        s.ring(0.0, 0.0, 30.0, 20.0, 0.5);
+        s.ring(30.0 + gap, 0.0, 60.0 + gap, 20.0, 0.5);
+        assert_eq!(s.found(Q4).drawings.len(), drawings, "gap {gap}");
+    }
+}
+
+/// A clean roof plan (an eave 32 by 22 ft, 108 LF) and, beside it, groups of wall that meet nothing, each a long pair of lines, each
+/// more than 8 ft from the others.
+fn roof_with_loose_groups(groups: &[f64]) -> Sheet {
+    let mut s = Sheet::default();
+    s.ring(0.0, 0.0, 32.0, 22.0, 0.5);
+    for (i, len) in groups.iter().enumerate() {
+        let x = 60.0 + 20.0 * i as f64;
+        pair(&mut s, [x, 0.0], [x, *len], 0.5);
+    }
+    s
+}
+
+#[test]
+fn where_the_wall_found_outside_the_largest_drawing_is_half_of_it_nothing_is_laid_unasked() {
+    // J191-4 (call 191 item 4). By hand: 108 LF of roof plan, and three groups of 30, 30 and 20 LF: 80 LF outside it, over half of 108
+    // (54). Each group alone is under half. The sheet is unsettled: 80 ft in doubt of the 108; every drawing is listed so each can be named.
+    for turn in [0.0, 33.0] {
+        let d = roof_with_loose_groups(&[30.0, 30.0, 20.0]).turned(turn).found(Q4);
+        let (outside, largest) = d.unsettled.unwrap_or_else(|| panic!("turned {turn}: not unsettled: {d:#?}"));
+        assert!(near(outside, 80.0, 0.3) && near(largest, 108.0, 0.3), "{outside} {largest}");
+        assert_eq!(d.drawings.len(), 4, "{d:#?}");
+        assert!(near(d.drawings[0].length, 108.0, 0.3), "{:?}", d.drawings);
+    }
+    // With one group of 20 LF alone beside it (under half): the plan is laid and the 20 set apart, as before (call 186).
+    let d = roof_with_loose_groups(&[20.0]).found(Q4);
+    assert!(d.unsettled.is_none() && d.drawings.is_empty(), "{d:#?}");
+    assert!(d.walls.iter().any(|w| w.doubt.is_some()), "{d:#?}");
+    assert_eq!(d.walls.iter().filter(|w| w.doubt.is_none()).count(), 4, "the roof plan's four walls are found");
+    // Two groups of 20 and 20 (40 of 108: under half) are set apart too.
+    assert!(roof_with_loose_groups(&[20.0, 20.0]).found(Q4).unsettled.is_none());
+    // A drawing named settles it: the roof alone is its four walls, none in doubt.
+    let r = picked(&roof_with_loose_groups(&[30.0, 30.0, 20.0]), Q4, Pick { plan: Some(1), ..Pick::default() }).unwrap();
+    assert_eq!(r.walls.len(), 4, "{r:#?}");
+    assert!(r.walls.iter().all(|w| w.doubt.is_none()));
+}
+
+#[test]
+fn a_box_that_cuts_a_wall_says_which_walls_it_cut() {
+    // J191-5. A 30 by 20 ft house and a box round its west half (0 to 15 ft): the south and north walls (30 ft) straddle its edge.
+    let mut s = Sheet::default();
+    s.ring(0.0, 0.0, 30.0, 20.0, 0.5);
+    // The page's corner is the plan's (0, 0) and the sheet's lowest line stands 126 points in: 7 ft at 1/18 ft to the point.
+    let o = 126.0 * Q4;
+    let bx = [[o - 1.0, o - 1.0], [o + 15.0, o + 21.0]];
+    let d = picked(&s, Q4, Pick { within: Some(bx), ..Pick::default() }).unwrap();
+    assert!(d.walls.iter().all(|w| w.length() < 25.0), "{d:#?}");
+    assert_eq!(d.cut_by_box.len(), 2, "the south and the north wall are cut: {:?}", d.cut_by_box);
+    for w in &d.cut_by_box {
+        assert!(near((w[1][0] - w[0][0]).abs(), 30.0, 0.1), "{w:?}");
+    }
+    // A box round the whole house cuts none.
+    let all = [[o - 1.0, o - 1.0], [o + 31.0, o + 21.0]];
+    assert!(picked(&s, Q4, Pick { within: Some(all), ..Pick::default() }).unwrap().cut_by_box.is_empty());
+}
+
+#[test]
+fn a_string_of_no_length_is_no_dimension_and_those_that_could_not_be_read_are_counted() {
+    // J191-9. "0'-0\"" has no length; "240 in" and "9.144 m" are written as dimensions and are not in feet and inches.
+    let mut lines: Vec<[[f64; 2]; 2]> = Vec::new();
+    dim_line(&mut lines, [126.0, 600.0], [666.0, 600.0]);
+    dim_line(&mut lines, [126.0, 700.0], [666.0, 700.0]);
+    let texts = vec![
+        text("30'-0\"", [370.0, 604.0], 9.0, [1.0, 0.0]),
+        text("0'-0\"", [370.0, 704.0], 9.0, [1.0, 0.0]),
+        text("240 in", [500.0, 300.0], 9.0, [1.0, 0.0]),
+        text("9.144 m", [500.0, 340.0], 9.0, [1.0, 0.0]),
+        text("2744 mm", [500.0, 380.0], 9.0, [1.0, 0.0]),
+        text("A101", [500.0, 500.0], 9.0, [1.0, 0.0]),
+        text("KITCHEN", [500.0, 540.0], 9.0, [1.0, 0.0]),
+    ];
+    let d = dimension_strings(&lines, &[], &texts);
+    assert_eq!(d.strings.len(), 1, "{d:#?}");
+    assert_eq!(d.unread.len(), 4, "the zero string, inches alone and the two metric ones: {:?}", d.unread);
+    assert!(d.unread.iter().any(|u| u.0 == "0'-0\"" && u.2.contains("no length")), "{:?}", d.unread);
+    assert!(d.unread.iter().any(|u| u.0 == "240 in" && u.2.contains("inches")), "{:?}", d.unread);
+    assert!(d.unread.iter().any(|u| u.0 == "9.144 m" && u.2.contains("metric")), "{:?}", d.unread);
+    assert_eq!(feet_written("0'-0\""), None);
+    assert_eq!(feet_written("0'"), None);
+}

@@ -10191,6 +10191,54 @@ Worked by hand:
   eaves: 2 x (26 + 18) x 0.75 = **66.00 SF** priced, as it is today, and the figure
   says 4 corners, 4 x 0.75 x 0.75 = **2.25 SF**, are in two runs each.
 
+## Call 191 built: the judge's findings fixed (2026-11-24)
+
+A cold judge (Sonnet) tried three things built on 2026-11-23 from empty jobs and
+sheets and houses of its own (`research/judgment-scale-plan-trim.md`); the lead
+decided each finding (DECISIONS.md, call 191); a Sonnet worker fixed them in a
+second working copy, each reproduced first, then a test red for that reason, then
+the fix, then a step of the demonstration; the lead ran the tests, every
+command-line demonstration and the gates on the result (the runs are in the
+commit's message). `demos/planwalls.sh` section 10 and `demos/trim.sh` section 8
+walk them, to the figures of the section before this one.
+
+Changed, and named:
+- **`find-walls --plan <n>` takes that drawing's walls and no others.** A U-shaped
+  plan of 240 LF with a 120 LF house inside the box round it was laid as 360 LF; it
+  is 240.00.
+- **A bare gap wider than 8 ft is not an opening.** Two houses in line were joined
+  into one wall 73 LF long with a "door" 14 ft 6 in wide; they are two walls, 30
+  and 28 LF, and the gap is said. A gap with something drawn in it (a garage door)
+  is still an opening up to 16 ft.
+- **Walls that do not meet are one drawing within 8 ft**, not 15.
+- **Nothing is laid unasked while much of the sheet is in doubt** (the wall found
+  outside the largest drawing at least half of it).
+- **A Known scale is not replaced by a string read off the sheet** without
+  `--anyway`; a string alone on its sheet says so; walls laid from a sheet are named
+  when its scale changes, and **ride on its scale in the verify-in-field list**
+  ($2,700.00 on the demonstration's house, where the list had nothing).
+- **Every priced line of trim is drawn or said**; a soffit with no overhang reads
+  "no figure"; the corners of a soffit counted in two runs are said (2.25 SF on the
+  hip roof of the demonstration; the formula and the 66.00 SF are as they were);
+  totals print to two places (the eight expectations of `demos/trim.sh` step 6 that
+  read "52 LF" read "52.00 LF", the reason beside them).
+- A second and third line pricing the same piece are now counted in what the kind
+  prices, so "priced" can read higher than the pieces drawn, and says so.
+
+The three real city sheets (not in the repository) read as before: the two clean
+sheets lay what they laid; the sheet with a floor plan and a roof plan still lays
+nothing unasked.
+
+What is not right:
+- A window's casing priced by the each (the starter "Casing and trim at the window")
+  is listed as priced and not drawn: true, and a line more in the list.
+- Soffit at an inside corner leaves a square of overhang uncounted by length times
+  overhang; only corners counted twice are said.
+- A `--within` box names a wall it cuts only where one end of the wall is inside it.
+- A door's casing at a wall's end overlaps the corner board (a drawing matter).
+- The judge read the main checkout, which was commits behind: the STATUS sections
+  its brief named were not there, and it worked its own hand figures (they agreed).
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **As of 2026-11-23 (the lead, after the merge of that day). Read this block first; what

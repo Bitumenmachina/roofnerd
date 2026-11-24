@@ -156,7 +156,10 @@ pub fn vif(job: &mut Job) -> Vif {
         let drawings: Vec<String> = elements.iter().filter(|e| e.kind == Kind::Drawing).map(|e| e.path.clone()).collect();
         let mut over = BTreeMap::new();
         for drawing in drawings {
-            for thing in crate::plans::traced_over(job, &drawing).unwrap_or_default() {
+            // What was traced over it, and what was laid from its sheet by `find-walls --lay`: walls, doors and windows (call 191 item 14).
+            let mut standing = crate::plans::traced_over(job, &drawing).unwrap_or_default();
+            standing.extend(crate::plans::laid_from(job, &drawing).unwrap_or_default());
+            for thing in standing {
                 over.insert(thing, drawing.clone());
             }
         }

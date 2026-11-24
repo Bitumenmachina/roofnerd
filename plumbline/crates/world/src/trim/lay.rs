@@ -117,11 +117,17 @@ pub struct Laid {
     /// For each kind, the sum of the quantities of the lines that price it (only the lines that have a figure), or None where no line
     /// prices that kind.
     pub priced: Vec<(Kind, Option<f64>)>,
+    /// For each kind, how many of the lines that price it have no figure (call 191 item 11): its total is then no figure, not nothing.
+    pub no_figure: Vec<(Kind, usize)>,
 }
 
 impl Laid {
     pub fn priced_of(&self, kind: Kind) -> Option<f64> {
         self.priced.iter().find(|(k, _)| *k == kind).and_then(|(_, q)| *q)
+    }
+    /// How many of the lines that price this kind have no figure.
+    pub fn no_figure_of(&self, kind: Kind) -> usize {
+        self.no_figure.iter().find(|(k, _)| *k == kind).map_or(0, |(_, n)| *n)
     }
 }
 
@@ -249,6 +255,24 @@ fn priced_lines(job: &mut Job, path: &str, figure: &str, word: Option<&str>) -> 
         .collect()
 }
 
+/// The cost lines on a thing whose description says this kind of trim and whose quantity does NOT name its figure (a plan length, a
+/// typed number): they price the trim and no piece is drawn from them (call 191 item 10). Never labor, never switched off.
+fn other_lines(job: &mut Job, path: &str, figure: &str, word: &str) -> Vec<(String, String, Derived)> {
+    let Some(e) = job.find(path) else { return Vec::new() };
+    let Some(cost) = job.world.get::<Cost>(e) else { return Vec::new() };
+    let quantities = job.world.get::<LineQuantities>(e);
+    cost.lines
+        .iter()
+        .filter(|l| !l.off && l.class != Some(Class::Labor))
+        .filter(|l| l.description.to_lowercase().contains(word))
+        .filter(|l| !crate::formula::parse(&l.quantity).is_ok_and(|x| crate::formula::names(&x).iter().any(|n| n == figure)))
+        .map(|l| {
+            let q = quantities.and_then(|q| q.0.get(&l.description)).map(|f| f.quantity.clone()).unwrap_or_else(|| Derived::refused("", "", &[], "its quantity is not worked out yet"));
+            (l.description.clone(), l.quantity.clone(), q)
+        })
+        .collect()
+}
+
 fn unit_vec(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
     let d = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
     let n = (d[0] * d[0] + d[1] * d[1] + d[2] * d[2]).sqrt().max(1e-12);
@@ -263,9 +287,37 @@ fn dist3(a: [f64; 3], b: [f64; 3]) -> f64 {
 
 // ------------------------------------------------------------------------------------------------ the whole
 
+/// A line's quantity set against the kind's total, or counted as having no figure.
+fn price_in(totals: &mut [Option<f64>; 6], no_fig: &mut [usize; 6], kind: Kind, q: &Derived) {
+    match q.worked() {
+        Some(v) => *totals[kind.index()].get_or_insert(0.0) += v,
+        None => no_fig[kind.index()] += 1,
+    }
+}
+
+/// The lines that price a kind of trim on a figure that is not the piece's length: said, and their quantity set against the kind's total
+/// where it is a length (or an area, for a soffit) of the kind's own unit (call 191 item 10).
+#[allow(clippy::too_many_arguments)]
+fn say_other(out: &mut Laid, totals: &mut [Option<f64>; 6], no_fig: &mut [usize; 6], called: &str, kind: Kind, figure: &str, lines: &[(String, String, Derived)]) {
+    for (desc, quantity, q) in lines {
+        match q.worked() {
+            Some(v) if q.unit == kind.unit() => {
+                *totals[kind.index()].get_or_insert(0.0) += v;
+                out.left_out.push(format!("{called}: \"{desc}\" prices {} {} by \"{quantity}\", which is not {figure}: no piece of its {} is drawn from it, and {} {} of what it prices is not drawn", crate::view::figure(v, 2), kind.unit(), kind.words(), crate::view::figure(v, 2), kind.unit()));
+            }
+            Some(v) => out.left_out.push(format!("{called}: \"{desc}\" prices {} {} by \"{quantity}\", which is not {figure} and not a figure in {}: no piece of its {} is drawn from it and it is set against no total", crate::view::figure(v, 2), if q.unit.is_empty() { "of something" } else { q.unit.as_str() }, kind.unit(), kind.words())),
+            None => {
+                no_fig[kind.index()] += 1;
+                out.left_out.push(format!("{called}: \"{desc}\" has no figure (\"{quantity}\", which is not {figure}), so its {} is not drawn", kind.words()));
+            }
+        }
+    }
+}
+
 pub fn lay(job: &mut Job) -> Laid {
     let mut out = Laid::default();
     let mut totals: [Option<f64>; 6] = [None; 6];
+    let mut no_fig = [0usize; 6];
     let mut things: Vec<(String, String, Thing)> = {
         let mut q = job.world.query::<(&Node, &Thing)>();
         q.iter(&job.world).filter(|(_, k)| matches!(**k, Thing::Eave | Thing::Rake | Thing::Wall | Thing::Window | Thing::Door)).map(|(n, k)| (n.path.clone(), n.name.clone(), *k)).collect()
@@ -287,9 +339,13 @@ pub fn lay(job: &mut Job) -> Laid {
                 let (fascia, soffit) = if thing == Thing::Eave { (Kind::Fascia, Kind::Soffit) } else { (Kind::RakeFascia, Kind::RakeSoffit) };
                 let fascia_line = priced_lines(job, &path, "true_length", Some("fascia"));
                 let soffit_line = priced_lines(job, &path, "overhang", Some("soffit"));
-                if fascia_line.is_empty() && soffit_line.is_empty() {
+                let fascia_other = other_lines(job, &path, "true_length", "fascia");
+                let soffit_other = other_lines(job, &path, "overhang", "soffit");
+                if fascia_line.is_empty() && soffit_line.is_empty() && fascia_other.is_empty() && soffit_other.is_empty() {
                     continue;
                 }
+                say_other(&mut out, &mut totals, &mut no_fig, &called, fascia, "its true length", &fascia_other);
+                say_other(&mut out, &mut totals, &mut no_fig, &called, soffit, "its overhang", &soffit_other);
                 let edge = edge_of(job, &path, &planes);
                 // How deep the fascia hangs: the soffit's face is flush with its lower edge.
                 let fascia_width = size_for(fascia, fascia_line.first().map(|l| l.0.as_str()), None).width;
@@ -298,10 +354,9 @@ pub fn lay(job: &mut Job) -> Laid {
                     if lines.len() > 1 {
                         out.left_out.push(format!("{called}: {} lines price its {} ({}); it is drawn once, from \"{desc}\"", lines.len(), kind.words(), lines.iter().map(|l| format!("\"{}\"", l.0)).collect::<Vec<_>>().join(", ")));
                     }
-                    if let Some(v) = q.worked() {
-                        *totals[kind.index()].get_or_insert(0.0) += v;
-                    } else {
-                        totals[kind.index()].get_or_insert(0.0);
+                    price_in(&mut totals, &mut no_fig, kind, q);
+                    for (_, extra) in lines.iter().skip(1) {
+                        price_in(&mut totals, &mut no_fig, kind, extra);
                     }
                     let Some(want) = q.worked() else {
                         let why = if !q.note.is_empty() { q.note.as_str() } else { over.get(&path).filter(|_| kind == soffit).map(|o| o.note.as_str()).filter(|n| !n.is_empty()).unwrap_or("a value it is worked out from is not known") };
@@ -369,13 +424,14 @@ pub fn lay(job: &mut Job) -> Laid {
             }
             Thing::Wall => {
                 let lines = priced_lines(job, &path, "corner_board_length", None);
+                let other = other_lines(job, &path, "corner_board_length", "corner board");
+                say_other(&mut out, &mut totals, &mut no_fig, &called, Kind::CornerBoard, "its corner board length", &other);
                 let Some((desc, q)) = lines.first() else { continue };
                 if lines.len() > 1 {
                     out.left_out.push(format!("{called}: {} lines price its corner boards; they are drawn once, from \"{desc}\"", lines.len()));
                 }
-                let t = totals[Kind::CornerBoard.index()].get_or_insert(0.0);
-                if let Some(v) = q.worked() {
-                    *t += v;
+                for (_, l) in &lines {
+                    price_in(&mut totals, &mut no_fig, Kind::CornerBoard, l);
                 }
                 let Some(want) = q.worked() else {
                     out.left_out.push(format!("{called}: \"{desc}\" has no figure, so its corner boards are not drawn ({})", if q.note.is_empty() { "a value it is worked out from is not known" } else { q.note.as_str() }));
@@ -447,13 +503,14 @@ pub fn lay(job: &mut Job) -> Laid {
             }
             Thing::Window | Thing::Door => {
                 let lines = priced_lines(job, &path, "casing_length", None);
+                let other = other_lines(job, &path, "casing_length", "casing");
+                say_other(&mut out, &mut totals, &mut no_fig, &called, Kind::Casing, "its casing length", &other);
                 let Some((desc, q)) = lines.first() else { continue };
                 if lines.len() > 1 {
                     out.left_out.push(format!("{called}: {} lines price its casing; it is drawn once, from \"{desc}\"", lines.len()));
                 }
-                let t = totals[Kind::Casing.index()].get_or_insert(0.0);
-                if let Some(v) = q.worked() {
-                    *t += v;
+                for (_, l) in &lines {
+                    price_in(&mut totals, &mut no_fig, Kind::Casing, l);
                 }
                 let Some(want) = q.worked() else {
                     out.left_out.push(format!("{called}: \"{desc}\" has no figure, so its casing is not drawn ({})", if q.note.is_empty() { "a value it is worked out from is not known" } else { q.note.as_str() }));
@@ -544,6 +601,7 @@ pub fn lay(job: &mut Job) -> Laid {
     }
     out.pieces.sort_by_key(|p| (p.kind.index(), path_number(&p.of)));
     out.priced = Kind::ALL.iter().map(|k| (*k, totals[k.index()])).collect();
+    out.no_figure = Kind::ALL.iter().map(|k| (*k, no_fig[k.index()])).collect();
     out
 }
 
