@@ -24,6 +24,7 @@ use bevy::prelude::*;
 use bevy::ui::{ComputedUiTargetCamera, UiGlobalTransform};
 use bevy::window::PrimaryWindow;
 
+use plumbline_world::building::Shape;
 use crate::model::{to_view, Doc, Snapshot};
 use crate::panels::Cameras;
 use crate::scene::{MainCamera, STATUS_H, TOP_H};
@@ -184,6 +185,33 @@ pub fn write(
             if let (Some(a), Some(b)) = (a, b) {
                 out.push_str(&format!("trim\t{}\t{}\t{:.0}\t{:.0}\t{:.0}\t{:.0}\t{:.1}\n", p.kind.words(), p.of, a.x + model.0.x as f32, a.y + model.0.y as f32, b.x + model.0.x as f32, b.y + model.0.y as f32, wide));
             }
+        }
+    }
+    // Where a place in the middle of each wall's gable is on screen, in 3D (call 192): halfway up between the wall's top and the roof's
+    // surface over the middle of the wall (the model's top line), and the apex of that line:
+    // `gable<TAB>the wall<TAB>x<TAB>y<TAB>apex x<TAB>apex y<TAB>feet along<TAB>feet up<TAB>wall x<TAB>wall y` (the last two: the wall's own face, halfway up). A demonstration reads the picture there.
+    if let (false, Ok((camera, eye, _))) = (doc.plan, camera.single()) {
+        for p in &snap.drawn {
+            let (Shape::Wall { a, b, base, height, .. }, Some(g)) = (&p.shape, snap.gables.get(&p.path)) else { continue };
+            if g.top.len() < 2 {
+                continue;
+            }
+            let long = (b[0] - a[0]).hypot(b[1] - a[1]).max(1e-9);
+            let (s0, s1) = (g.top[0].0, g.top[g.top.len() - 1].0);
+            let mid = (s0 + s1) / 2.0;
+            let roof = g.top.windows(2).find(|w| mid >= w[0].0 && mid <= w[1].0).map(|w| w[0].1 + (w[1].1 - w[0].1) * (mid - w[0].0) / (w[1].0 - w[0].0).max(1e-9)).unwrap_or(g.top[0].1);
+            let up = base + height + (roof - (base + height)) / 2.0;
+            let apex = g.top.iter().copied().fold(g.top[0], |m, q| if q.1 > m.1 { q } else { m });
+            let place = |s: f64, z: f64| camera.world_to_viewport(eye, to_view(doc.origin, [a[0] + (b[0] - a[0]) * s / long, a[1] + (b[1] - a[1]) * s / long, z])).ok();
+            if let (Some(m), Some(t), Some(w)) = (place(mid, up), place(apex.0, apex.1), place(mid, base + height / 2.0)) {
+                out.push_str(&format!("gable\t{}\t{:.0}\t{:.0}\t{:.0}\t{:.0}\t{:.2}\t{:.2}\t{:.0}\t{:.0}\n", p.path, m.x + model.0.x as f32, m.y + model.0.y as f32, t.x + model.0.x as f32, t.y + model.0.y as f32, mid, up, w.x + model.0.x as f32, w.y + model.0.y as f32));
+            }
+        }
+    }
+    // What the selected wall's panel says of its gable (call 192): `gable_panel<TAB>the wall<TAB>40.00 SF<TAB>Assumed`.
+    if let Some(el) = &snap.selected {
+        if let Some((value, unit, status)) = crate::panels::gable_stat(&snap, el) {
+            out.push_str(&format!("gable_panel\t{}\t{} {}\t{:?}\n", el.path, value, unit, status));
         }
     }
     if out != *last {

@@ -573,6 +573,9 @@ fn panels_show(show: &crate::model::Show, p: &plumbline_world::building::Placeme
 
 /// Draw the building again from the snapshot whenever what is drawn has changed.
 #[allow(clippy::too_many_arguments)]
+/// How far under the roof's surface the top of a gable's wall is drawn, in feet (a half inch).
+const GABLE_UNDER_ROOF: f32 = 0.04;
+
 pub fn rebuild(
     mut commands: Commands,
     mut doc: ResMut<Doc>,
@@ -945,6 +948,71 @@ pub fn rebuild(
                     }
                 }
                 build.on_plan = None;
+                // The gable (call 192): where a rake or the high edge of a shed roof lies over the wall, the wall is carried up
+                // from its top to the line the model gives (`gable::figures`: feet along the wall, feet above the datum), and
+                // what the wall is dressed in on its outside is carried up with it. The window works out no height and no area;
+                // inside finishes stop at the wall's own top, and the gable's frame is not drawn. A wall with no gable is
+                // drawn as it was. On a plan the wall is its outline: nothing rises.
+                if let (false, Some(g)) = (on_plan_view, snap.gables.get(&p.path).filter(|g| g.top.len() >= 2)) {
+                    let mut top: Vec<(f32, f32)> = g.top.iter().map(|&(s, z)| (s as f32, (z - *base) as f32)).collect();
+                    // Run past a corner as the wall below does, along the slope of the first or the last stretch.
+                    let (lo, hi) = (top[0], top[top.len() - 1]);
+                    if lo.0 <= 1e-4 && past[0] > 1e-4 {
+                        let slope = (top[1].1 - lo.1) / (top[1].0 - lo.0).max(1e-6);
+                        top.insert(0, (-past[0], (lo.1 - slope * past[0]).max(h)));
+                    }
+                    if hi.0 >= length - 1e-4 && past[1] > 1e-4 {
+                        let before = top[top.len() - 2];
+                        let slope = (hi.1 - before.1) / (hi.0 - before.0).max(1e-6);
+                        top.push((length + past[1], (hi.1 + slope * past[1]).max(h)));
+                    }
+                    let (mut plain, mut bare, mut over) = (dress::Skin::default(), dress::Skin::default(), dress::Skin::default());
+                    let p4 = |x: f32, y: f32, z: f32| part.at(x, y, z);
+                    let lay = Some(dress::Lay { across: along, up: Vec3::Y, tile: upper.as_ref().map(|u| u.tile).unwrap_or([1.0, 1.0]) });
+                    let tris = [[0u32, 1, 2], [0, 2, 3]];
+                    for pair in top.windows(2) {
+                        let ((xa, za), (xb, zb)) = (pair[0], pair[1]);
+                        if xb - xa < 1e-4 {
+                            continue;
+                        }
+                        // The outside face, in whatever skin the wall's own outside is in below it; the inside face plain.
+                        let strip = |z: f32| [p4(xa, h, z), p4(xb, h, z), p4(xb, zb, z), p4(xa, za, z)];
+                        if has_out || both {
+                            if upper.is_some() { over.add(&strip(half_t), &tris, out, lay) } else { bare.add(&strip(half_t), &tris, out, None) }
+                        } else {
+                            plain.add(&strip(half_t), &tris, out, None);
+                        }
+                        if both && upper.is_some() {
+                            over.add(&strip(-half_t), &tris, -out, lay);
+                        } else {
+                            plain.add(&strip(-half_t), &tris, -out, None);
+                        }
+                        // The top, under the roof.
+                        // A hair under the roof's surface: the roof is that very plane, and a face on it fights the roof's own (a strip of
+                        // sparkle along the rake in the first picture taken).
+                        let (za, zb) = (za - GABLE_UNDER_ROOF, zb - GABLE_UNDER_ROOF);
+                        plain.add(&[p4(xa, za, -half_t), p4(xb, zb, -half_t), p4(xb, zb, half_t), p4(xa, za, half_t)], &tris, Vec3::Y, None);
+                    }
+                    // The two ends, above the top of what is beside them.
+                    let (first, last) = (top[0], top[top.len() - 1]);
+                    if !(first.0 < -1e-4 && past[0] > 1e-4) {
+                        plain.add(&[p4(first.0, h, -half_t), p4(first.0, h, half_t), p4(first.0, first.1, half_t), p4(first.0, first.1, -half_t)], &tris, -along, None);
+                    }
+                    if !(last.0 > length + 1e-4 && past[1] > 1e-4) {
+                        plain.add(&[p4(last.0, h, -half_t), p4(last.0, h, half_t), p4(last.0, last.1, half_t), p4(last.0, last.1, -half_t)], &tris, along, None);
+                    }
+                    let stays = under_solid && below_ground;
+                    build.on_plan = None;
+                    build.pattern = None;
+                    build.piece(&p.path, None, meshes.add(plain.mesh()), Transform::IDENTITY, theme::wall_inside(), 0.92, 0.0, !stays);
+                    if !bare.is_empty() {
+                        build.piece(&p.path, None, meshes.add(bare.mesh()), Transform::IDENTITY, if wrapped { theme::barrier() } else { theme::wall_outside() }, if wrapped { 0.55 } else { 0.92 }, 0.0, !stays);
+                    }
+                    if let (false, Some(pattern)) = (over.is_empty(), &upper) {
+                        build.pattern = Some(pattern.clone());
+                        build.piece(&p.path, None, meshes.add(over.mesh()), Transform::IDENTITY, theme::dressed(), pattern.rough, pattern.metal, true);
+                    }
+                }
                 for (hole_path, kind, [from, to, sill, head]) in holes {
                     let (from, to, sill, head) = (*from as f32, *to as f32, *sill as f32, *head as f32);
                     // What fills the opening: a window or a door, built of its parts.
@@ -1000,7 +1068,18 @@ pub fn rebuild(
                 }
                 let half = turn * Vec3::Z * (t / 2.0);
                 let up = Vec3::Y * h;
-                let edges = box_edges([va - half, vb - half, vb + half, va + half, va - half + up, vb - half + up, vb + half + up, va + half + up]);
+                let mut edges = box_edges([va - half, vb - half, vb + half, va + half, va - half + up, vb - half + up, vb + half + up, va + half + up]);
+                // A wall that rises to a roof's rake is outlined up to its top as well (call 192).
+                if let (false, Some(g)) = (on_plan_view, snap.gables.get(&p.path).filter(|g| g.top.len() >= 2)) {
+                    let top: Vec<Vec3> = g.top.iter().map(|&(s, z)| va + along * s as f32 + Vec3::Y * (z - *base) as f32).collect();
+                    for side in [-half, half] {
+                        edges.extend(top.windows(2).map(|w| (w[0] + side, w[1] + side)));
+                        for q in [top[0], top[top.len() - 1]] {
+                            edges.push((q + side, q.with_y(va.y + h) + side));
+                        }
+                    }
+                    edges.extend(top.windows(2).flat_map(|w| [(w[0] - half, w[0] + half), (w[1] - half, w[1] + half)]).collect::<Vec<_>>());
+                }
                 build.drawing.frames.push((p.path.clone(), edges.clone()));
                 // On plan a wall is its two faces and its ends, in ink: a wall traced over
                 // a drawing has to read against the sheet.

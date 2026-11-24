@@ -756,6 +756,9 @@ pub struct Snapshot {
     pub trim: plumbline_world::trim::Laid,
     /// The level each thing a piece of trim is on stands on, by the thing's path (an eave is on none).
     pub trim_on: std::collections::HashMap<String, String>,
+    /// Each wall's gable, by its path: the wall's top as points (feet along its line, feet above the datum) and the area
+    /// (`gable::figures`, call 192). The window draws the wall to the top and works nothing out.
+    pub gables: std::collections::HashMap<String, plumbline_world::gable::Gable>,
     /// The levels whose floors were laid out to the walls' center lines (the Floor tool's way): their
     /// floor area is not the rooms' (call 193, F).
     pub floors_to_centres: std::collections::HashSet<String>,
@@ -957,6 +960,7 @@ pub fn refresh(mut doc: ResMut<Doc>, mut snap: ResMut<Snapshot>) {
     s.frames = plumbline_world::building::frames::frames(&mut doc.job);
     s.trim = plumbline_world::trim::lay(&mut doc.job);
     s.cased = casing_by_the_each(&mut doc.job);
+    s.gables = plumbline_world::gable::figures(&mut doc.job).into_iter().filter(|g| !g.top.is_empty() || g.area.value.is_none()).map(|g| (g.path.clone(), g)).collect();
     s.trim_on = s.trim.pieces.iter().filter_map(|p| on.get(&p.of).map(|st| (p.of.clone(), st.clone()))).collect();
     s.work = {
         let mut q = doc.job.world.query::<(&plumbline_world::Node, &plumbline_world::Work)>();

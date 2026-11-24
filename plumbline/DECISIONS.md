@@ -7577,3 +7577,27 @@ no surer than the roof over it**, and the verify-in-field list will ask for the
 roof before it calls that siding Known. The builder of the model's half reported
 that no command-line test or demonstration moved, which was so; the window's
 demonstrations were not in its list, and this one was found at the merge.
+
+**Call 192, the window's half, as built (2026-11-24).** A wall with a gable is drawn
+up to the top line the model gives, and its outside is dressed to that line as the
+wall under it is (the cladding running on, bare, or the weather barrier with
+Finishes off). Inside finishes stop at the wall's own top. The wall's panel shows
+"Gable" and its area in the status's colour. A wall with no gable goes through none
+of this. The gable's top is drawn a half inch under the roof's surface, because the
+two lie in one plane and the renderer cannot say which is in front (it showed as a
+sparkling strip along the rake, found by an existing demonstration and fixed).
+The window works nothing out: the line and the area are the model's.
+
+**A check's wait, not its bound (2026-11-24).** `demos/glassw.sh` measures how far the
+wheel dives at a door (the door's width before and after, held between 1.74 and
+2.02 times). With the gable work in, it read 2.04 on a house with no gable. The
+lead ruled that the bound stays and the cause be found: with the view given 16
+seconds to come to rest, the build before and the new build read the same 109 dots.
+The picture had been taken 4 seconds after the wheel, before the dive had finished
+easing, and each redraw now does a little more. The wait is 16 seconds, the reason
+beside it; the bound is untouched. **The check still sits on its edge** (109 over 54
+is 2.0185 against 2.02; one run in three read 110 and failed): it wants a step that
+waits until two pictures agree, and until it has one a single failure of it is run
+again before it is believed. Working out the gables costs 1.7 thousandths of a
+second a redraw on the sample house, beside 3.2 for the trim: nothing is kept
+between redraws.

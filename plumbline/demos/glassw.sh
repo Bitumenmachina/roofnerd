@@ -53,7 +53,9 @@ export APP="$APP" T="$T" OUT="$OUT" ICD="$ICD"
 . "$PWD/demos/window.sh"
 # A wheel notch, held as long as a frame; and a drag with a button, in steps a frame
 # can see, held still at its end for \$6 seconds before it is let go (0: let go moving).
-wheel() { local i; for i in \$(seq 1 "\$2"); do xdotool click "\$1"; sleep 2; done; sleep 4; }
+# Lead's ruling, 2026-11-24: the wheel's ease was not finished when the picture was taken (4 s, then 110 dots on a build that settles at
+# 109); it waits 16 s. The bound below is unchanged.
+wheel() { local i; for i in \$(seq 1 "\$2"); do xdotool click "\$1"; sleep 2; done; sleep 16; }
 drag() {
   xdotool mousemove "\$2" "\$3"; sleep 1.5; xdotool mousedown "\$1"; sleep 1.5
   local i

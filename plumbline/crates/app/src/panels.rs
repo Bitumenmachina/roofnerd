@@ -2342,6 +2342,15 @@ pub fn message_card_up(doc: &Doc) -> bool {
     !doc.card_away && (doc.tone != Tone::Done || doc.message.chars().count() > BAR_HOLDS || doc.message.lines().count() > 1 || doc.scan_side.is_some())
 }
 
+/// What a wall's panel says of its gable, where the model gives it one: the figure as written, its unit and its status (call 192).
+pub fn gable_stat<'a>(snap: &'a Snapshot, el: &view::ElementRows) -> Option<(String, &'a str, Status)> {
+    let g = snap.gables.get(&el.path).filter(|_| el.kind == Kind::Wall)?;
+    Some(match g.area.value {
+        Some(x) => (view::figure_shown(x, 2), g.area.unit.as_str(), g.area.status),
+        None => ("unknown".into(), "", Status::Unknown),
+    })
+}
+
 pub fn stat(p: &mut ChildSpawnerCommands, fonts: &Fonts, label: &str, value: String, unit: &str, status: Status) {
     p.spawn(Node { flex_direction: FlexDirection::Column, row_gap: px(2.0), flex_grow: 1.0, flex_basis: px(0.0), ..default() }).with_children(|s| {
         s.spawn(text(fonts, label.to_uppercase(), 11.0, Weight::Semibold, theme::ink_faint()));
@@ -3060,6 +3069,11 @@ fn selection(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snap
                     Some(row) => stat(r, fonts, label, row.number.map(|x| view::figure_shown(x, if row.unit == "EA" { 0 } else { 2 })).unwrap_or("unknown".into()), if row.number.is_some() { &row.unit } else { "" }, row.status),
                     None => stat(r, fonts, label, "unknown".into(), "", Status::Unknown),
                 }
+            }
+            // A wall that rises to a roof's rake or high edge says how much of it there is above its top (call 192): the model's
+            // figure, as sure as what it rests on. A wall with none shows nothing new.
+            if let Some((value, unit, status)) = gable_stat(snap, el) {
+                stat(r, fonts, "Gable", value, unit, status);
             }
             if el.kind.is_area() {
                 match find("pitch") {

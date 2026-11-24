@@ -44,6 +44,7 @@ such reading, and STATUS.md says where each thing it found stands).
 | `scanw` (`01` to `15`) | `demos/scanw.sh` |
 | `tracew` (`01` to `08`) | `demos/tracew.sh` |
 | `trimw` (`01` to `10`) | `demos/trimw.sh` |
+| `gableendw` (`01` to `08`, and the build before) | `demos/gableendw.sh` |
 | `tools` | `demos/toolsw.sh` |
 | `turnw` | `demos/turnw.sh` |
 

@@ -10510,73 +10510,111 @@ What is not right:
 - The sentence said when a drag ends over a panel has not been run by a demonstration.
 - `trimw`'s new checks on the casing are loose (pale casing on pale siding).
 
+## The gable drawn in the window (call 192; 2026-11-24)
+
+Built by the window builder (Sonnet) on the tree merged at 2a05f51; accepted by the
+lead by its diff, its pictures (`demos/captured/gableendw/`: 01 beside before-01 read
+by the lead) and the runs named here and in the commit.
+
+- **`demos/gableendw.sh`** (new), on the house of the demonstration above: from the
+  street corner and from the west end the gable is the wall, sided like the wall
+  under it, to the ridge; a place in its middle reads the siding's colour and shows
+  lap courses, where on the build before it read sky or ground. The west wall's
+  panel reads "Gable 40.00 SF", Assumed; the south wall's has none; the sheet's lap
+  siding for the west wall is 184.00 SF. With Finishes off the weather barrier runs
+  up the gable. Under a shed roof the north wall stands 17 ft 6 in along its whole
+  length and its panel reads 204.00 SF. Under a hip roof the picture is the build
+  before's to within what the renderer itself moves between two runs of one build
+  (109 dots by more than 6 levels, none by more than 12). The check was shown to
+  fail by handing it the before pictures.
+- On the builder's frozen build: `gableendw`, `trimw`, `tradesw`, `dressw`, `roofw`
+  and `house` pass; `cargo test --workspace` 878 passed. `glassw` passes with its wait
+  lengthened and its bound untouched (DECISIONS.md, "A check's wait, not its bound"):
+  it failed first, one dot over, because its picture was taken before the wheel's
+  dive had come to rest; it still sits on its edge and failed one run in three.
+
+**The lead's reading.** From the gable end the house now reads as a house: a sided
+wall under a pitched roof, where there was a hole.
+
+What is not right:
+- The corner boards stop at the wall's old top and do not run up a rake wall (the
+  model's trim pieces: its half).
+- An opening that reaches into a gable, and a wall of two stretches under one rake,
+  are not tested.
+- The panel tells the gable's status by colour alone, as its other figures do.
+- The roof is still a sheet with coloured edge lines; there is no ground at the
+  foot of the wall; the sample whole house prices no outside trim and looks bare.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
-**As of 2026-11-24 (the lead). Read this block first; what is below it is older and is
-kept for what it says of the window's history.**
+**As of 2026-11-24, 16:30 UTC (the lead). Read this block first; what is below it is
+older and is kept for what it says of the window's history. `handoff/README.md` is how
+the work is run, with the judges' briefs and five real contracts as patterns.**
 
 **Where the work is.** Branch `claude/hopeful-cannon-kng8eo` (pushed; the same commits
-are pushed to `claude/nifty-tesla-qmn44n`). Head: the merge b207e7b and what follows
-it. On that merge, run by the lead: the whole workspace builds; every crate's tests,
-the window's included, 853 passed and none failed; `tools/committed.sh` passes; the
-three gates, `portmap.sh` and `licenses.sh` pass. The 46 command-line demonstrations
-passed on the same command-line code the commit before. **The window demonstrations
-have not been run on this merge** (the builder working from it runs the key ones
-first); all 34 passed on the merge before it (579afa3: 27 on the builder's build of
-its source, the 7 key ones again on the merged build). It is not a release candidate
-and is not tagged.
+are pushed to `claude/nifty-tesla-qmn44n`). On the last merge, 2a05f51, run by the
+lead: every crate's tests, the window's included, 878 passed; `tools/committed.sh`
+passes; the gates, `portmap.sh` and `licenses.sh` pass; 47 command-line
+demonstrations pass on the same command-line code; of the window's demonstrations
+`pricew`, `trimw`, `moneyw`, `tracew` and `gablew` were run on the merged build and
+pass. The commit after it (the gable drawn) says in its message what was run on it.
+**Not every window demonstration has been run since the merge 579afa3** (34 passed
+then); the ones whose houses the later work touched have. It is not a release
+candidate and is not tagged.
 
 **What Patrick ruled** (DECISIONS.md, his words in each): call 172, the purpose (the
 first 3D-first, renovation-first platform, taking in a PDF, a model or a LiDAR scan,
 free, for every person); call 174 (the builder runs on its own and asks him nothing;
-this machine's pictures are the proof for now; a sweep by every person who looks at
-the building; one name, BuildOS); call 184's question (the plan for a house that
-looks real); and call 187, after he asked whether the work was drifting: **the window
-first**; command-line work only fixes what real files or a judge show wrong, or
-works out a figure the next window job needs; at most two agents at a time; what he
-is sent is a picture of something he can now do in the window, or a figure from a
-real file. He reads pictures.
+this machine's pictures are the proof for now; one name, BuildOS); call 187 (**the
+window first**; command-line work only fixes what real files or a judge show wrong,
+or works out a figure the next window job needs; at most two agents at a time; what
+he is sent is a picture of something he can now do, or a figure from a real file).
+On 2026-11-24 he asked for a full review page with pictures, and that it say what
+can be designed, the tool chest, and everything brought in and written out, so that
+another agent or Opus 5.5 can carry on: the page is kept up to date by the lead
+(an artifact on his account, "BuildOS Branch Review"), and `handoff/` is its
+counterpart in the repository.
 
-**What was built since the last block, and where each stands** (each has a section
+**What was built in the last two days, and where each stands** (each has a section
 above):
-- In the window: a wall moved says what followed it, and the saved job is the
-  command line's (call 171 item 1); the sun set by time of day and month (call 184
-  step 2; soft shadows, contact shadows and glow tried and left out); a wall traced
-  over a scan lands on the scan's face and is laid by it (call 190 point 2). None
-  has been tried by a judge who drives the window.
-- At the command line: the outside trim priced (185) and where each piece lies
-  (184 step 1, the model's half); both wall-finders run on real files for the first
-  time, and fixed for what those showed (188); the scan's finder also built the
-  published way, as an option (189); the sheet's own dimensions used for its scale;
-  a judge's fifteen findings on all of that fixed (191), and those fixes with a
-  second judge now.
-- **What real files showed, plainly.** Neither finder turns a real phone scan into a
-  room's walls by itself, after four rounds; the published method lays no wall that
-  is not there and misses some. So the person traces and the scan helps (call 190).
-  A clean single plan on a sheet is found mostly right; a floor plan crowded with
-  hatching and cabinet lines is not found, and nothing is laid from it unasked.
+- In the window: a moved wall says what followed (171); the sun (184 step 2); a wall
+  traced over a scan set by the scan's face (190); the outside trim drawn from the
+  lines that price it (184 step 1); the gable drawn (192). **Judged once by a judge
+  who drove the window** (no wrong money, quantity or place; eight findings in what
+  it draws and says, all fixed: call 193). The trim-only-where-priced change and
+  the gable have not been judged since.
+- At the command line, judged twice and fixed (call 191): the sheet's own dimensions
+  for its scale; two drawings on a sheet; where each piece of trim lies. Built and
+  not yet judged: the gable's figures (192).
+- **What real files showed.** Neither finder turns a real phone scan into a room's
+  walls by itself, after four rounds; the person traces and the scan helps. A clean
+  single plan on a sheet is found mostly right; a hatched, crowded one is not.
 
 **What is owed, in order.**
-1. The outside trim drawn in the window from the model's pieces, each casting its
-   shadow (call 184 step 1; contract and demonstration written; a builder has it).
-   This, not the light, is what changes whether it looks like a house.
-2. A judge who drives the window: the moved wall, the sun, the scan traced by its
-   face, and the trim when it is drawn. Then its findings fixed.
-3. Call 190 point 3 (the walls the by-ceiling finder is sure of, shown to take); the
-   other two real scans traced through the window; the scan's cut drawn lighter so a
-   traced wall does not cover it.
-4. The window's half of what exists only at the command line: walls found on a
-   drawn plan offered when a sheet is brought in, with `--plan`, the sheet's
-   dimension strings for its scale; beam, post and pad footing tools; the plan set
-   under Write out; the bearing tint (call 176); Move's "Alone" switch.
-5. What the last window pictures showed wrong: the plan running under the right
-   panel; the sky the same colour at every hour; the Sun card buttons only; the
-   click that accepts a tool's sizes lost once under load (watched: J18's path).
-6. Call 184 steps 3 to 6 (materials, the inside, the scan as the real house, the
-   place); call 178 item 12; the sweep's list from item 4 on (the renovation seen
-   in 3D before and after, the owner's view, sections and elevations, each trade's
-   depth as tables); a pocket door found as a door; a hatched floor plan.
-7. One name through the code (call 174 item 4); a download for each kind of machine;
+1. **The sample whole house prices its outside trim** (fascia, soffit, corner boards,
+   casing by length). Since call 193 it shows bare windows and corners because
+   nothing in it prices them. This moves its price and every figure resting on it:
+   a command-line worker reports the model's figures and lists every expectation
+   that would move; the lead works the arithmetic and rules before anything changes.
+2. **A second window judge**: trim only where priced, the gable, and the eight fixes.
+3. **Corner boards that run up a rake wall** (the model's trim pieces); the roof with
+   a thickness and no coloured edge lines in the 3D view; ground at the wall's foot.
+4. **The scan path finished**: call 190 point 3 (the by-ceiling finder's sure walls
+   shown to take); the other two real scans traced through the window; Patrick's
+   own Scaniverse file when he brings one.
+5. **The window's half of what exists only at the command line**: walls found on a
+   drawn plan offered when a sheet is brought in (`--plan`, the sheet's dimension
+   strings); beam, post and pad footing tools; the plan set under Write out; the
+   bearing tint (176); Move's "Alone" switch.
+6. `glassw`'s wheel check made solid (wait until two pictures agree); `roomlinew`'s
+   colour check off its bound; the plan running under the right panel; the sky the
+   same at every hour.
+7. Call 184 steps 3 to 6 (materials, the inside, the scan as the real house, the
+   place); the sweep's list from item 4 on (the renovation seen in 3D before and
+   after, the owner's view, sections and elevations, each trade's depth as tables);
+   a pocket door found as a door; a hatched floor plan.
+8. **One real job priced** against a hand estimate (deliverable item 13: never done).
+9. One name through the code (call 174 item 4); a download for each kind of machine;
    `TRY-IT.md` reissued; the thirteen items of CLAUDE.md's release candidate.
 
 **How the week was run, so it is not learned again.**
