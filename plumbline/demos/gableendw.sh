@@ -85,11 +85,13 @@ house "$JS" "P G G G"
 house "$JH" "P P P P"
 G="$("$P" gable "$JG")"
 says "the west wall's gable" "[$WEST]: gable ~40 SF; top (0, 9.5) (8, 13.5) (16, 9.5) ft" "$G"
-says "the south wall, under an eave" "[$SOUTH]: none: an eave is over it" "$G"
+# Call 197, point 7: "none" is marked ~ where it is Assumed (every house here is traced). The two checks of "none"
+# below moved from "none: ..." to "~ none: ..." by that decision, and by nothing else.
+says "the south wall, under an eave" "[$SOUTH]: ~ none: an eave is over it" "$G"
 GS="$("$P" gable "$JS")"
 says "the shed's north wall" "[$NORTH]: gable ~204 SF; top (0, 17.5) (24, 17.5) ft" "$GS"
 GH="$("$P" gable "$JH")"
-for w in $SOUTH $EAST $NORTH $WEST; do says "the hip's wall $w" "[$w]: none: an eave is over it" "$GH"; done
+for w in $SOUTH $EAST $NORTH $WEST; do says "the hip's wall $w" "[$w]: ~ none: an eave is over it" "$GH"; done
 "$P" export estimate "$JG" "$T/est.csv" >/dev/null
 python3 - "$T/est.csv" <<'PY'
 import csv, sys
