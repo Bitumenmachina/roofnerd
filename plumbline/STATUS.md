@@ -11470,8 +11470,11 @@ suggests are PROPOSALS.md 34 to 40.
 - Stopped part-way and NOT on the branch: the worker of call 214 (scratch copy
   only). Not started: call 215; the window jobs 207W, 211W, 210W.
 - Put right regardless of his answers (each a fault against a fixed rule or a
-  crash, DECISIONS.md call 216 at its end): the egress gate reads the wrong
-  program; a typed shape name can crash the item's panel.
+  crash, DECISIONS.md call 216 at its end): **the egress gate now reads this
+  program** (done the same day, proved red two ways: "Call 216, the gate put
+  right"); a typed shape name can crash the item's panel (read in the code at
+  `crates/app/src/panels.rs:2819` and three like it; not yet reproduced, not yet
+  fixed).
 
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 

@@ -9128,3 +9128,20 @@ the review suggests are in `PROPOSALS.md` 34 to 40. Until he rules, nothing new
 is built. Two things are put right regardless, because each is a fault against a
 fixed rule or a crash and neither is a choice: the gate of point 4, and the
 panic on a typed shape name.
+
+### Call 216, the gate put right (2026-11-25)
+
+`tools/gate-egress.sh` now reads this program as well as the earlier one: its own
+source may name no socket and nothing of `std::net`, and nothing it links may be
+a crate whose job is the network (an HTTP client, a TLS stack, a websocket, a
+message bus; the list is in the script). It was proved red both ways before it
+was trusted: with a socket planted in `crates/world/src` it fails naming the
+file and line, and with a network crate fed to it as linked (`--self-test`) it
+fails naming the crate; on the tree as it is it passes, having read 413 linked
+crates. Where it cannot read what is linked it fails and says "NOT checked";
+it does not pass in silence. Nothing was loosened: the old checks are untouched.
+
+What it does not do, and says in its own comment: it reads what is linked on the
+machine it runs on. A build for Windows or a Mac links other crates (the lock
+file names some this build never compiles) and has to be run through the gate on
+that system before it ships.
