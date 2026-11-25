@@ -1663,6 +1663,12 @@ const SHAPE_COLUMNS: [(&str, &[&str]); 10] = [
 /// a row that cannot be read is not used at all (half a shape is a wrong drawing), and each
 /// of its rows says so. Err only where the table is not a shape table.
 pub fn shapes_from_rows(rows: &[Vec<String>], numbers: Option<&[usize]>) -> Result<(Vec<crate::building::shape::Shape>, Vec<(usize, String)>), String> {
+    read_shapes(rows, numbers, false)
+}
+
+/// `shapes_from_rows`, and, where `a_job_brings_them`, a shape called as one of the program's starter shapes is not used unless its
+/// blocks are the starter's word for word (call 205, point 3): a job's own shape may not take a starter's name.
+fn read_shapes(rows: &[Vec<String>], numbers: Option<&[usize]>, a_job_brings_them: bool) -> Result<(Vec<crate::building::shape::Shape>, Vec<(usize, String)>), String> {
     use crate::building::forms::Made;
     use crate::building::shape::{Piece, Shape};
     let cols = columns(rows, &SHAPE_COLUMNS, &["shape", "made", "across from", "across to", "back from", "back to", "up from", "up to"]).ok_or_else(|| {
@@ -1709,6 +1715,16 @@ pub fn shapes_from_rows(rows: &[Vec<String>], numbers: Option<&[usize]>) -> Resu
         let (name, pieces) = by.remove(&key).unwrap_or_default();
         let unread: Vec<(usize, String)> = pieces.iter().filter_map(|(n, p)| p.as_ref().err().map(|why| (*n, why.clone()))).collect();
         let shape = Shape { name: name.clone(), blocks: pieces.iter().filter_map(|(_, p)| p.as_ref().ok().cloned()).collect() };
+        if a_job_brings_them {
+            if let Some(starter) = crate::building::shape::starter_named(&name) {
+                if !(unread.is_empty() && shape.blocks == starter.blocks) {
+                    for (n, _) in &pieces {
+                        not_used.push((*n, format!("{name}: {name:?} is a starter shape's name: a job's own shape may not take it; call the shape something else (a starter shape is not changed: keep it as a new shape under a name of its own)")));
+                    }
+                    continue;
+                }
+            }
+        }
         // What each block of a shape that was read whole cannot be (its figure, its condition, the box):
         // said of the row it is in.
         let numbers: Vec<usize> = pieces.iter().map(|(n, _)| *n).collect();
@@ -1765,7 +1781,7 @@ pub fn shapes_out(job: &mut Job) -> Vec<Vec<String>> {
 /// each of its rows says why; the others still are.
 pub fn shapes_in(job: &mut Job, rows: &[Vec<String>], numbers: Option<&[usize]>) -> Result<Brought, String> {
     use crate::building::shape;
-    let (shapes, not_used) = shapes_from_rows(rows, numbers)?;
+    let (shapes, not_used) = read_shapes(rows, numbers, true)?;
     let cols = columns(rows, &SHAPE_COLUMNS, &["shape", "made", "across from", "across to", "back from", "back to", "up from", "up to"]);
     all_or_nothing(job, |job| {
         let mut out = Brought { rows: rows.len().saturating_sub(cols.as_ref().map(|c| c.row + 1).unwrap_or(0)), columns_not_used: cols.as_ref().map(|c| c.not_used.clone()).unwrap_or_default(), above: cols.as_ref().map(|c| c.row).unwrap_or(0), not_used, ..Brought::default() };

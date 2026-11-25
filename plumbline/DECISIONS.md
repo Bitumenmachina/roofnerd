@@ -8262,3 +8262,29 @@ looked at. The window works nothing out, so the changes are the model's first.
    list "Drawn as" on an item's panel is the job's shapes and the starter ones,
    not a fixed thirteen, and an item drawn as the job's own shape is drawn from
    its rows. Pulling a face by hand comes after typing works.
+
+**Call 205, the model's half, as built (2026-11-25, by a Sonnet worker under
+`handoff/contracts/contract-205M.md`; `research/worker-report-call205M.md`; accepted by
+the lead's own run in the worker's copy).** Four changes in `editing::shapes`
+(`keep_shape_as`, `shape_block_add`, `shape_block_set`, `shape_block_take`), each
+all or nothing, each one step for Undo, each giving back what was done and what
+follows in words the window and the command line both say; a verb `plumbline shape`
+calls them. The demonstration's fourth block reads across -16 in to 16 in, back
+20 in to 21 in, up 4 in to 28 1/2 in, the lead's figures. A starter shape is not
+changed, and a table that gives a starter's name other blocks is refused.
+BIMCraft changes a copy of a family, checks the whole and refuses leaving the
+stored one alone: that is the pattern taken; nothing of it is ported. Ruled:
+- **A saved job that already holds a shape under a starter's name still opens**
+  (a saved job always opens). No program before this one could have written such
+  a job but in the hours between two commits of 2026-11-24; `plumbline check` is
+  owed a sentence for it, and it is on the list.
+- **Not right**: the rule for "priced on nothing" is written twice (`view::pricing`
+  and the new count), held together by a test; it is owed one copy.
+
+**What is set down on a level is the model's count** (call 197 point 10): a level's
+totals hold, by kind, how many things are set down on it, their names, how many
+are priced on nothing and how many cannot be drawn for want of a size; `takeoff`
+prints it under each level in the sheet window's words. Ruled: **fittings are not
+things set down** (they are counted with their runs); the window's own grouping
+counted them and dropped a thing with no size, and gives way to this at its next
+job.

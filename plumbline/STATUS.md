@@ -10967,7 +10967,51 @@ down twice; "Base cabinet, 36 in" beside it in the chest. By hand:
 7. The job saved after step 2, opened and saved again: the same to the byte; the
    shapes written out as a table have the four rows.
 
-Not built yet. Its window half is call 205 point 6.
+**Built (2026-11-25), the model's half.** `research/worker-report-call205M.md`;
+DECISIONS.md, "Call 205, the model's half, as built". Run by the lead in the worker's
+copy: the six command-line crates' tests pass (958: world 589); all 52 command-line
+demonstrations pass with no FAIL in their words, `demos/shapes.sh` holding the seven
+steps; the three gates, `portmap.sh` and `licenses.sh` pass. With it, **what is set
+down on a level is the model's count**, printed by `takeoff` under each level
+(`demos/lists.sh` step 4 gained its two lines: the one expectation that moved).
+**Not run**: the window. Its window half is call 205 point 6, contracted
+(`handoff/contracts/contract-205W.md`), its demonstration below.
+
+## A shape on the bench: a demonstration, written before it is built (call 205, point 6; 2026-11-25)
+
+`demos/shapebenchw.sh`, in the window, on the house `demos/benchw.sh` uses, with the
+starter tool chest and "Vanity, 36 in" (36 in, 21 in, 34 1/2 in; drawn as base
+cabinet) set down twice. By hand:
+
+1. The vanity on the bench. Under its sizes, **Shape** lists **3** blocks: timber,
+   timber, worktop. No "Add block" is offered; "Keep as a new shape" is, with its
+   line of why.
+2. A click on the third row: the top is outlined on the bench; its rows read up
+   from `height - min(40 mm, 0.06 * height)` to `height`, across `-width / 2` to
+   `width / 2`. Typing on one of them is refused in words: a starter shape is kept
+   as the job's own first.
+3. **Keep as a new shape**, named `vanity with a panel`: the message says 1 item is
+   drawn as it and 2 set down follow; the item's "Drawn as" reads that name, marked
+   the job's own; the picture is the vanity as it was (looked at beside step 1's).
+4. **Add block**: a fourth row, picked. Its figures typed: across `-width / 2 + 2 in`
+   to `width / 2 - 2 in`, back `depth - 1 in` to `depth`, up `4 in` to
+   `height - 6 in`. On the bench a panel stands on the vanity's front, 2 in in from
+   each side: measured in the picture, its width is 32 / 36 = **0.889** of the
+   vanity's (held between 0.86 and 0.92).
+5. Its "Up to" typed as `height + 1 in`: refused, in the model's words, that it
+   reaches 1 in above the box; the row still reads `height - 6 in`.
+6. **Take block away** with the fourth picked: 3 rows, and the picture is step 3's.
+   **Undo**: 4 rows again.
+7. **Back to the house**: both vanities set down show the panel (looked at in a
+   close picture of one). "Base cabinet, 36 in" on the bench still has 3 blocks and
+   no panel.
+8. Saved with F2: `plumbline shape` lists `vanity with a panel` with its four rows,
+   the fourth across **-16 in to 16 in**, back **20 in to 21 in**, up **4 in to
+   28 1/2 in** at the vanity's sizes; and the same steps made with the command
+   line's `shape` verb on a copy of the starting job give the same file, to the
+   byte.
+
+Not built yet.
 
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
@@ -11039,11 +11083,18 @@ above):
      command line's half is **built** and in the pushed head. **Owed: its window
      half**, "Priced as" on the item's panel and on the bench: contract 197W,
      point 18.
-   - Step C (an item's shape as data, calls 198 and 203): the model's and the
-     command line's half is **built**. **Owed: its window half** (an item drawn as
-     a shape the job brought in; the blocks of a shape listed, typed and added on
-     the bench; "Keep as a new shape"): not contracted. It is the next window job
-     after 197W and wants a contract and a demonstration.
+   - Step C (an item's shape as data, calls 198, 203 and 205): the model's and the
+     command line's half is **built**, the changes a bench needs among them (a
+     shape kept as the job's own; a block added, set, taken away). **Owed: its
+     window half**: `handoff/contracts/contract-205W.md`, its demonstration above
+     ("A shape on the bench"). It is the next window job after 197W.
+   - **A price typed in the window.** The window has no way to type a material's
+     price, or an item's: both come only from a price list brought in (found by
+     197W's builder, 2026-11-25). An estimator who sets a water heater down and
+     prices it as "Bought and set" cannot say what it costs without a file. It
+     wants a call (where the price list is seen and typed in the window: a tab of
+     the sheet beside Estimate is the lead's working answer), a demonstration and
+     a window job. Not designed.
    - D (where an item connects: the model now holds connections and the BIM file
      writes them, call 202, so this is a window job and a column of the chest), E
      (a maker's BIM object brought in as an item), F (a cabinet by rule): not

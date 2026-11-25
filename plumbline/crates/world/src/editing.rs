@@ -29,10 +29,12 @@ pub mod carry;
 pub mod history;
 pub mod join;
 pub mod measure;
+pub mod shapes;
 pub mod snap;
 pub mod stretch;
 
 pub use history::{History, UNDO_LIMIT};
+pub use shapes::{keep_shape_as, shape_block_add, shape_block_set, shape_block_take, BlockSet, ShapeChanged};
 pub use stretch::{move_wall, read_move, way_said, Followed, Moved, Resized, RoofMoved};
 pub use join::{connect, connect_at, connect_port, fit_all, fitting, split, Fitted, PassedOver, PortSaid};
 pub(crate) use measure::takes_among;

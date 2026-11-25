@@ -921,6 +921,14 @@ fn finish_total(mut t: MoneyTotal) -> MoneyTotal {
     t
 }
 
+/// Whether nothing is priced on a thing that could be: no cost line, no allowance, and not existing to remain (which is
+/// not bought: nothing is owed on it, call 148). The one rule `pricing` counts what is "not priced at all" by, and a level's
+/// set-down count by (contract 205M).
+pub(crate) fn nothing_priced_on(w: &bevy_ecs::world::World, e: bevy_ecs::entity::Entity) -> bool {
+    let has_lines = w.get::<Cost>(e).is_some_and(|c| !c.lines.is_empty());
+    w.get::<Allowance>(e).is_none() && !has_lines && !w.get::<Work>(e).is_some_and(|x| x.status.value == Some(WorkStatus::Existing))
+}
+
 /// The job priced from its allowances and from its cost lines, and the two reconciled.
 /// Nothing here is arithmetic of its own beyond adding up: each element's figures are
 /// its `pl::priced`, worked out in `derive`.

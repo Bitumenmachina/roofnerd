@@ -55,6 +55,11 @@ impl Piece {
     pub fn figures(&self) -> [&str; 6] {
         [&self.across[0], &self.across[1], &self.back[0], &self.back[1], &self.up[0], &self.up[1]]
     }
+
+    /// A box the whole size of the item, of that material, always there: what a block added starts as (call 205).
+    pub fn whole(made: Made) -> Piece {
+        Piece { made, round: false, across: ["-width / 2".into(), "width / 2".into()], back: ["0".into(), "depth".into()], up: ["0".into(), "height".into()], when: None }
+    }
 }
 
 /// A named list of blocks.
@@ -202,7 +207,12 @@ impl Shape {
                 let (lo, hi) = if i == 2 { (0.0, size[2]) } else { (-size[i] / 2.0, size[i] / 2.0) };
                 let out = (lo - b.lo[i]).max(b.hi[i] - hi);
                 if out > REACH {
-                    return Err(format!("shape {:?}, block {}: at the {word} size ({} x {} x {} ft) it reaches {out:.4} ft outside the box of the item's sizes, {axis}; a shape is drawn inside its box", self.name, n + 1, size[0], size[1], size[2]));
+                    // Which way, so a person knows which figure to pull in (call 205).
+                    let (low, high) = [("to the left", "to the right"), ("in front", "behind"), ("below", "above")][i];
+                    let way = if lo - b.lo[i] >= b.hi[i] - hi { low } else { high };
+                    let inches = format!("{:.3}", out * 12.0);
+                    let inches = inches.trim_end_matches('0').trim_end_matches('.');
+                    return Err(format!("shape {:?}, block {}: at the {word} size ({} x {} x {} ft) it reaches {out:.4} ft outside the box of the item's sizes, {axis} ({inches} in {way} the box); a shape is drawn inside its box", self.name, n + 1, size[0], size[1], size[2]));
                 }
             }
         }
@@ -230,6 +240,13 @@ impl Shape {
     pub fn worked(&self, size: P3) -> Result<Vec<Block>, String> {
         let compiled = self.compile()?;
         run(&self.name, &compiled, size)
+    }
+
+    /// One block (by its place from 0) worked for a size: None where its "There when" does not hold at it.
+    pub fn worked_block(&self, n: usize, size: P3) -> Result<Option<Block>, String> {
+        let compiled = self.compile()?;
+        let c = compiled.get(n).ok_or_else(|| format!("shape {:?} has no block {}", self.name, n + 1))?;
+        run_one(&self.name, n, c, size)
     }
 
     /// Refuse what cannot be drawn.

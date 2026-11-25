@@ -3686,6 +3686,67 @@ pub struct StoreyTotals {
     /// What of the above is not new work, given three ways (call 158): to build,
     /// existing to remain, to demolish. Empty where nothing on the level is marked.
     pub by_work: StoreyByWork,
+    /// What is set down on it: equipment, fixtures and furnishings, by kind, counted here (call 197 point 10).
+    pub set_down: SetDown,
+}
+
+/// What is set down on one level: equipment, fixtures and furnishings, by kind in the order each kind first
+/// appears on it, counted here and nowhere else (call 197 point 10; contract 205M part 2). A fitting is joined to a
+/// run, not set down, and is in its system's list.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct SetDown {
+    pub kinds: Vec<SetDownKind>,
+}
+
+/// One kind of thing set down on one level.
+#[derive(Clone, Debug, PartialEq)]
+pub struct SetDownKind {
+    pub kind: Kind,
+    pub count: usize,
+    /// Each thing's name, in the order they stand in the job.
+    pub names: Vec<String>,
+    pub paths: Vec<String>,
+    /// As sure as the worst of them: what each is drawn from (`Placement::status`); a thing with no size is Unknown.
+    pub status: Status,
+    /// How many of them have nothing priced on them (the rule `view::pricing` counts by).
+    pub not_priced: usize,
+    /// How many have no shape, so are not drawn: their size is not known.
+    pub not_drawn: usize,
+}
+
+impl SetDown {
+    /// How many things are set down on the level.
+    pub fn count(&self) -> usize {
+        self.kinds.iter().map(|k| k.count).sum()
+    }
+    /// How many of them have nothing priced on them.
+    pub fn not_priced(&self) -> usize {
+        self.kinds.iter().map(|k| k.not_priced).sum()
+    }
+    /// How many of them cannot be drawn.
+    pub fn not_drawn(&self) -> usize {
+        self.kinds.iter().map(|k| k.not_drawn).sum()
+    }
+    /// What the sheet window says under "Set down on this level", line by line: each kind with its names, then what is
+    /// not priced, then what cannot be drawn. A level with nothing set down says so.
+    pub fn said(&self) -> Vec<String> {
+        if self.kinds.is_empty() {
+            return vec!["Nothing is set down on this level.".to_string()];
+        }
+        let mut out: Vec<String> = self.kinds.iter().map(|k| format!("{}: {}", k.kind.so_many(k.count), k.names.join(", "))).collect();
+        let bare: Vec<&SetDownKind> = self.kinds.iter().filter(|k| k.not_priced > 0).collect();
+        if !bare.is_empty() {
+            let n = self.not_priced();
+            let kinds: Vec<String> = bare.iter().map(|k| k.kind.so_many(k.not_priced)).collect();
+            out.push(format!("{} {} set down and not priced.", kinds.join(", "), if n == 1 { "is" } else { "are" }));
+        }
+        let undrawn: Vec<&SetDownKind> = self.kinds.iter().filter(|k| k.not_drawn > 0).collect();
+        if !undrawn.is_empty() {
+            let kinds: Vec<String> = undrawn.iter().map(|k| k.kind.so_many(k.not_drawn)).collect();
+            out.push(format!("{} cannot be drawn: its size is not known.", kinds.join(", ")));
+        }
+        out
+    }
 }
 
 /// A level's counts given three ways where something on that line is not new work (call
@@ -3717,6 +3778,8 @@ pub struct WallsOfType {
 
 pub fn storey_totals(job: &mut Job) -> Vec<StoreyTotals> {
     let order = job.order.clone();
+    // What is drawn, and how sure each is: a thing set down with no shape is not in this list.
+    let drawn_status: HashMap<String, Status> = placements(job).0.into_iter().map(|p| (p.path, p.status)).collect();
     let w = &job.world;
     let parents: HashMap<String, Option<String>> = order.iter().filter_map(|e| w.get::<Node>(*e)).map(|n| (n.path.clone(), n.parent.clone())).collect();
     let storeys: Vec<String> = order.iter().filter(|e| w.get::<Kind>(**e) == Some(&Kind::Storey)).filter_map(|e| w.get::<Node>(*e)).map(|n| n.path.clone()).collect();
@@ -3795,6 +3858,29 @@ pub fn storey_totals(job: &mut Job) -> Vec<StoreyTotals> {
                 _ => {}
             }
         }
+        let mut set_down = SetDown::default();
+        for &e in &order {
+            let (Some(n), Some(kind)) = (w.get::<Node>(e), w.get::<Kind>(e).copied()) else { continue };
+            if !matches!(kind, Kind::Equipment | Kind::Fixture | Kind::Furnishing) || !under(&n.path, &sn.path) {
+                continue;
+            }
+            let status = drawn_status.get(&n.path).copied();
+            let bare = view::nothing_priced_on(w, e);
+            let at = match set_down.kinds.iter().position(|k| k.kind == kind) {
+                Some(at) => at,
+                None => {
+                    set_down.kinds.push(SetDownKind { kind, count: 0, names: Vec::new(), paths: Vec::new(), status: Status::Known, not_priced: 0, not_drawn: 0 });
+                    set_down.kinds.len() - 1
+                }
+            };
+            let k = &mut set_down.kinds[at];
+            k.count += 1;
+            k.names.push(n.name.clone());
+            k.paths.push(n.path.clone());
+            k.status = k.status.max(status.unwrap_or(Status::Unknown));
+            k.not_priced += usize::from(bare);
+            k.not_drawn += usize::from(status.is_none());
+        }
         out.push(StoreyTotals {
             path: sn.path.clone(),
             name: sn.name.clone(),
@@ -3808,6 +3894,7 @@ pub fn storey_totals(job: &mut Job) -> Vec<StoreyTotals> {
             windows,
             footings: view::sum_of_what_is_there("LF", &figures[5]),
             footing_volume: view::sum_of_what_is_there("CY", &figures[6]),
+            set_down,
             by_work: StoreyByWork {
                 walls: view::split_by_work("LF", &figures[0], &places[0]),
                 wall_face: view::split_by_work("SF", &figures[1], &places[1]),

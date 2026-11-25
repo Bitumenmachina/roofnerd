@@ -2,7 +2,9 @@
 # An item's shape as data (call 198, the bench's step C). At the command line, from an empty job: the starter tool chest, the 36 in vanity's shape
 # printed as the blocks its rows give; the thirteen starter shapes held to the code they replaced; a shape of the user's own brought in with the chest,
 # an item drawn as it, its blocks worked by hand below; the two tables written out, brought into a second job and written again, the same to the byte,
-# and an item naming a shape that is not there refused; a job saved before opens as it did; and a cost line's quantity written min(net_area, 100 SF).
+# and an item naming a shape that is not there refused; a job saved before opens as it did; a cost line's quantity written min(net_area, 100 SF); and (call 205)
+# a shape changed by hand: kept as a new shape, a block added and its figures set, a figure that leaves the box refused, a starter shape not changed, a
+# starter's name refused on the way in, a block taken away, and the job saved, opened and saved again the same to the byte.
 # The figures are worked by hand below and in STATUS.md ("The bench, step C: an item's shape as data. A demonstration").
 # Run from the repository root:  demos/shapes.sh
 # The job and every figure are made up (no real job data) and live in a temporary folder. Every step fails the script if the program does not say
@@ -135,6 +137,87 @@ J4="$T/walls.json"
 "$P" estimate "$J4" | tr -s ' ' > "$T/walls.txt"
 says "$T/walls.txt" "Siding cap 100.00 SF"
 says "$T/walls.txt" "Siding cap 80.00 SF"
+echo
+echo "== 7. A shape changed by hand (call 205): the 36 in vanity (36 x 21 x 34 1/2 in), set down twice, beside the base cabinet (36 x 24 x 34 1/2 in) =="
+J5="$T/hand.json"
+"$P" new "$J5" "By hand (not a real job)" >/dev/null
+"$P" level "$J5" ground --elevation "0 ft" --height "9 ft" "${K[@]}" >/dev/null
+"$P" import items "$J5" starter >/dev/null
+"$P" place "$J5" level-0002 "Vanity, 36 in" --at "5,5" "${K[@]}" >/dev/null
+"$P" place "$J5" level-0002 "Vanity, 36 in" --at "9,5" "${K[@]}" >/dev/null
+echo "-- 7.1 the vanity's shape kept as a new shape: the job has one of its own, three blocks, word for word the base cabinet's; the vanity is drawn as it, the base cabinet still as base cabinet; 1 item and 2 set down follow --"
+"$P" shape "$J5" keep "Vanity, 36 in" "vanity with a panel" > "$T/keep.txt"
+sed 's/^/    | /' "$T/keep.txt"
+says "$T/keep.txt" "kept as a new shape from base cabinet"
+says "$T/keep.txt" "1 item is drawn as it, and 2 things set down from it follow."
+"$P" shape "$J5" > "$T/own.txt"
+says "$T/own.txt" "vanity with a panel: 3 blocks; 1 item drawn as it, 2 things set down from them"
+"$P" shape "$J5" "vanity with a panel" > "$T/panel.txt"
+says "$T/panel.txt" "block 3, worktop: across -width / 2 to width / 2; back 0 to depth; up height - min(40 mm, 0.06 * height) to height"
+"$P" items "$J5" "Vanity, 36 in" | grep -qF "drawn as a vanity with a panel" && echo "    the vanity is drawn as a vanity with a panel"
+"$P" items "$J5" "Base cabinet, 36 in" | grep -qF "drawn as a base cabinet" && echo "    the base cabinet is still drawn as a base cabinet"
+echo "-- 7.2 a block added and its six figures typed: across -width / 2 + 2 in to width / 2 - 2 in = -16 to 16 in; back depth - 1 in to depth = 20 to 21 in; up 4 in to height - 6 in = 28 1/2 in. Four blocks --"
+"$P" shape "$J5" add "vanity with a panel" --made timber > "$T/add.txt"
+says "$T/add.txt" "block 4 added, the whole size of the item"
+says "$T/add.txt" "it has 4 blocks now"
+"$P" shape "$J5" set "vanity with a panel" 4 "across from" "-width / 2 + 2 in" >/dev/null
+"$P" shape "$J5" set "vanity with a panel" 4 "across to" "width / 2 - 2 in" >/dev/null
+"$P" shape "$J5" set "vanity with a panel" 4 "back from" "depth - 1 in" >/dev/null
+"$P" shape "$J5" set "vanity with a panel" 4 "back to" "depth" >/dev/null
+"$P" shape "$J5" set "vanity with a panel" 4 "up from" "4 in" >/dev/null
+"$P" shape "$J5" set "vanity with a panel" 4 "up to" "height - 6 in" > "$T/figures.txt"
+sed 's/^/    | /' "$T/figures.txt"
+says "$T/figures.txt" "Block 4 reads, at Vanity, 36 in's sizes (36 in x 21 in x 34.5 in): timber: across -16 in to 16 in; back 20 in to 21 in; up 4 in to 28.5 in."
+"$P" items "$J5" "Vanity, 36 in" > "$T/vanity4.txt"
+says "$T/vanity4.txt" "its shape is 4 blocks"
+says "$T/vanity4.txt" "block 4, timber: across -16 in to 16 in; back 20 in to 21 in; up 4 in to 28.5 in"
+cp "$J5" "$T/hand-two.json"
+echo "-- 7.3 its Up to set as height + 1 in: refused, naming the block, the size it was tried at and that it reaches 1 in above the box; the job as it was --"
+cp "$J5" "$T/hand-before.json"
+"$P" shape "$J5" set "vanity with a panel" 4 "up to" "height + 1 in" > "$T/over.txt" 2>&1 || true
+sed 's/^/    | /' "$T/over.txt"
+says "$T/over.txt" "block 4"
+says "$T/over.txt" "small size (0.4 x 0.3 x 0.5 ft)"
+says "$T/over.txt" "1 in above the box"
+cmp "$J5" "$T/hand-before.json" && echo "    the job is the same to the byte"
+echo "-- 7.4 a block added to base cabinet: refused, a starter shape is not changed --"
+"$P" shape "$J5" add "base cabinet" > "$T/starter.txt" 2>&1 || true
+sed 's/^/    | /' "$T/starter.txt"
+says "$T/starter.txt" "a starter shape is not changed"
+says "$T/starter.txt" "keep it as a new shape first"
+cmp "$J5" "$T/hand-before.json" && echo "    the job is the same to the byte"
+echo "-- 7.5 a table of shapes with one called base cabinet: refused, naming it (the others still come in) --"
+cat > "$T/starter-name.csv" <<'ROWS'
+Shape,Made of,Form,Across from,Across to,Back from,Back to,Up from,Up to
+base cabinet,timber,box,-width / 2,width / 2,0,depth,0,height
+plain box shape,timber,box,-width / 2,width / 2,0,depth,0,height
+ROWS
+"$P" import shapes "$J5" "$T/starter-name.csv" > "$T/name-in.txt"
+sed 's/^/    | /' "$T/name-in.txt"
+says "$T/name-in.txt" "\"base cabinet\" is a starter shape's name"
+says "$T/name-in.txt" "plain box shape: added: 1 blocks"
+echo "-- 7.6 the fourth block taken away: 3 blocks, the figures of 7.1 --"
+cp "$T/hand-two.json" "$J5"
+"$P" shape "$J5" take "vanity with a panel" 4 > "$T/take.txt"
+sed 's/^/    | /' "$T/take.txt"
+says "$T/take.txt" "vanity with a panel: block 4 taken away"
+says "$T/take.txt" "it has 3 blocks now"
+"$P" items "$J5" "Vanity, 36 in" > "$T/vanity3.txt"
+says "$T/vanity3.txt" "block 1, timber: across -18 in to 18 in; back 0 in to 18.638 in; up 0 in to 3.937 in"
+says "$T/vanity3.txt" "block 3, worktop: across -18 in to 18 in; back 0 in to 21 in; up 32.925 in to 34.5 in"
+lacks "$T/vanity3.txt" "block 4"
+echo "-- 7.7 the job saved after 7.2, opened and saved again: the same to the byte; written out as a table the shape has its four rows --"
+"$P" check "$T/hand-two.json" >/dev/null && echo "    the job with the fourth block opens and checks"
+"$P" shape "$T/hand-two.json" "vanity with a panel" > "$T/hand-list.txt"
+says "$T/hand-list.txt" "vanity with a panel (the job's own): 4 blocks"
+"$P" export shapes "$T/hand-two.json" "$T/hand-shapes.csv" >/dev/null
+test "$(grep -c '^vanity with a panel,' "$T/hand-shapes.csv")" = 4 && echo "    the shapes table has the four rows"
+cp "$T/hand-two.json" "$T/hand-two-saved.json"
+"$P" import shapes "$T/hand-two.json" "$T/hand-shapes.csv" > "$T/again.txt"
+says "$T/again.txt" "the same as the job already has: 1"
+cmp "$T/hand-two.json" "$T/hand-two-saved.json" && echo "    opened, the same table brought in, saved again: the job is the same to the byte"
+"$P" export shapes "$T/hand-two.json" "$T/hand-shapes2.csv" >/dev/null
+cmp "$T/hand-shapes.csv" "$T/hand-shapes2.csv" && echo "    written out again: the same to the byte"
 
 echo
 echo "shapes: every step passed"
