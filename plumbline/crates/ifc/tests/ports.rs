@@ -90,7 +90,7 @@ fn small(second_run_off_by: f64, connected: bool) -> (Job, String) {
 #[test]
 fn w1_each_connection_and_each_end_of_a_run_is_a_port_nested_in_what_it_is_on() {
     let (mut job, text) = written();
-    // (Two elbows of the house have no size, so no shape, and are not written: their two connections each are not.)
+    // (Two elbows of the house have no size, so no body: they are written with their place alone (call 204) and their two connections each are not.)
     let on_things = connections(&mut job, &[Kind::Fixture, Kind::Equipment, Kind::Fitting]).len() - 4;
     let runs: usize = [Kind::Duct, Kind::Pipe, Kind::Conduit, Kind::Cable].iter().map(|k| count(&mut job, *k)).sum();
     let ports = lines_of(&text, "IFCDISTRIBUTIONPORT");

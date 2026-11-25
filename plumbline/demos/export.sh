@@ -157,8 +157,10 @@ says "$T/ifc.txt" "2 floors"
 says "$T/ifc.txt" "10 rooms"
 says "$T/ifc.txt" "4 roof planes"
 # What a model has no place for, or what has no shape, is counted and said. (The three hot-water runs with no size are
-# written, as lines with no body, since call 200; the two elbows between them have no shape and are said.)
-says "$T/ifc.txt" "it has no shape: its size is not known"
+# written, as lines with no body, since call 200; the two elbows between them are written with their place and no body, since
+# call 204 point 6: all 41 fittings are in the file, and none is said to have no shape.)
+says "$T/ifc.txt" "41 fittings"
+! grep -qF "it has no shape: its size is not known" "$T/ifc.txt" || { echo "FAIL: a fitting with no size is still said to have no shape"; exit 1; }
 ! grep -qF "its size is not known, so it has no shape to write" "$T/ifc.txt" || { echo "FAIL: a run with no size is still said to have no shape"; exit 1; }
 says "$T/ifc.txt" "x type: each thing is written with its own size"
 if python3 -c "import ifcopenshell" 2>/dev/null; then
@@ -176,11 +178,11 @@ says "$T/in.txt" "16 walls"
 says "$T/in.txt" "10 rooms"
 # Call 197: the fixtures (of the 22, the six that IFC has a plumber's word for are written as sanitary
 # terminals, call 65, and the other 16 as flow terminals), the 5 pieces of equipment and the fittings come
-# in where they stood; of the 39 fittings written, 37 come in (two are refused where a third run ends at the
-# joint, said by name). What is left out says why, and nothing goes missing.
+# in where they stood; of the 41 fittings written (call 204: the two with no size are written with their place alone), 39 come
+# in (two are refused where a third run ends at the joint, said by name). What is left out says why, and nothing goes missing.
 says "$T/in.txt" "22 fixtures"
 says "$T/in.txt" "5 pieces of equipment"
-says "$T/in.txt" "37 fittings"
+says "$T/in.txt" "39 fittings"
 says "$T/in.txt" "1 pipe fitting: this program would not take it: "
 # (Its walls by type are left out of the comparison: a building model is written with
 # each wall's own thickness and not its type, which the export says, so the types a

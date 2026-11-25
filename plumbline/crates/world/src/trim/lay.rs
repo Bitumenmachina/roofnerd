@@ -32,7 +32,7 @@
 
 use std::collections::HashMap;
 
-use super::{direction_out, end_of, overhangs, path_number, walls_of, Ends, WallRec};
+use super::{direction_out, end_of, height_at_end, naming, overhangs, path_number, walls_of, Ends, WallRec, CORNER_BOARD_LENGTH};
 use crate::building::{self, Opening, Tree};
 use crate::components::{Class, Cost, Kind as Thing, LineQuantities, Measure, Node, Run, P2};
 use crate::job::Job;
@@ -340,6 +340,12 @@ pub fn lay(job: &mut Job) -> Laid {
     let storeys: std::collections::BTreeSet<String> = walls.iter().map(|w| w.storey.clone()).collect();
     let levels: HashMap<String, Vec<&WallRec>> = storeys.iter().map(|s| (s.clone(), walls.iter().filter(|w| &w.storey == s).collect())).collect();
     let ends: HashMap<String, Ends> = levels.iter().map(|(s, l)| (s.clone(), Ends::of(l))).collect();
+    // Each wall's gable, where a corner-board line is on it: a board is as tall as the wall is at its corner (call 204), by the
+    // line the figure uses.
+    let gables = {
+        let wanted = naming(&mut job.world, &[Thing::Wall], &[CORNER_BOARD_LENGTH]);
+        if wanted.is_empty() { HashMap::new() } else { crate::gable::gables(&mut job.world, Some(&wanted)) }
+    };
     let mut enclosed: HashMap<String, Result<building::Enclosed, String>> = HashMap::new();
 
     for (path, name, thing) in things {
@@ -452,19 +458,16 @@ pub fn lay(job: &mut Job) -> Laid {
                     continue;
                 };
                 let w = &walls[i];
-                let height = match &w.height {
-                    Ok(h) => *h,
-                    Err(why) => {
-                        out.left_out.push(format!("{called}: \"{desc}\": its corner boards are not drawn ({why})"));
-                        continue;
-                    }
-                };
+                if let Err(why) = &w.height {
+                    out.left_out.push(format!("{called}: \"{desc}\": its corner boards are not drawn ({why})"));
+                    continue;
+                }
                 let level = &levels[&w.storey];
                 let at = level.iter().position(|x| x.path == w.path).unwrap_or(0);
                 let size = size_for(Kind::CornerBoard, Some(desc), None);
                 // Where the boards start: the wall's foot, or (call 194) the height the line enters where it is priced by the
                 // corner boards above that height (a stone wainscot that turns the corner), never above the wall's top.
-                let start = height_entered(job, &path, desc).map_or(0.0, |e| e.clamp(0.0, height));
+                let entered = height_entered(job, &path, desc);
                 let mut mine = Vec::new();
                 for e in 0..2 {
                     match end_of(&ends[&w.storey], level, at, e) {
@@ -481,6 +484,15 @@ pub fn lay(job: &mut Job) -> Laid {
                                     left
                                 }
                             };
+                            // As tall as the wall is at this end (call 204): the same arithmetic as the figure's.
+                            let (up, roof) = match height_at_end(w, gables.get(&w.path), e) {
+                                Ok(x) => x,
+                                Err(why) => {
+                                    out.left_out.push(format!("{called}: \"{desc}\": a corner board is not drawn ({why})"));
+                                    continue;
+                                }
+                            };
+                            let start = entered.map_or(0.0, |x| x.clamp(0.0, up));
                             let (nw, nj) = (outward(u, v), outward(v, u));
                             let (pw, pj) = (outside_point(w, nw), outside_point(other, nj));
                             let denom = u[0] * v[1] - u[1] * v[0];
@@ -495,12 +507,12 @@ pub fn lay(job: &mut Job) -> Laid {
                                 of: path.clone(),
                                 line: desc.clone(),
                                 from: [back[0], back[1], w.base + start],
-                                to: [back[0], back[1], w.base + height],
+                                to: [back[0], back[1], w.base + up],
                                 face: [nw[0], nw[1], 0.0],
                                 width: size.width,
                                 thickness: size.thickness,
                                 sized_from: size.said.clone(),
-                                status: q.status.max(w.status).max(w.height_status).max(other.status),
+                                status: q.status.max(w.status).max(w.height_status).max(other.status).max(roof.unwrap_or(Status::Known)),
                             });
                         }
                         Ok(_) => {}

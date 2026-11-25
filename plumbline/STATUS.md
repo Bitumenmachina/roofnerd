@@ -10933,7 +10933,15 @@ elbows with no size in it and they come back, size Unknown, so the second job ha
 the first job's fittings but for the two the tool refuses; and the time the sample
 house takes to come in is printed before and after.
 
-Not built yet.
+**Built (2026-11-24/25).** `research/worker-report-call204.md`; DECISIONS.md, "Call 204,
+as built". Run by the lead in the worker's copy: the six command-line crates' tests
+pass (936: world 567, ifc 47); all 52 command-line demonstrations pass with no FAIL
+in their words; the three gates, `portmap.sh` and `licenses.sh` pass. **Changed
+figures**: corner boards on a house with a gable or a shed roof (74.00 and 107.00 LF
+on the demonstration's houses, 72.00 before); a made-up model's ridge beam now comes
+in. The sample whole house did not move. **Not run**: the window; the pictures of
+`trimw`, `gablew` and `gableendw` at a gable's corners are stale until they are run
+on a build that has this.
 
 ## A shape changed by hand: a demonstration, written before it is built (call 205; 2026-11-24)
 

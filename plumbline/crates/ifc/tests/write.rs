@@ -19,9 +19,11 @@ fn the_house_is_written_whole_and_what_has_no_place_in_a_model_is_counted() {
     let made = |what: &str| written.made.get(what).copied().unwrap_or(0);
     assert_eq!((made("levels"), made("walls"), made("doors"), made("windows"), made("floors"), made("rooms"), made("roofs"), made("roof planes")), (2, 16, 9, 17, 2, 10, 1, 4));
     // The kitchen's hot branch has no size: its three pieces are written as the runs they are, their line and
-    // no body (call 200); its two elbows have no shape, and each is said.
+    // no body (call 200); its two elbows are written with their place and no body (call 204, point 6), so none is said
+    // to have no shape, and all 41 fittings are in the file.
     let no_shape: Vec<&(String, usize, String)> = written.not_written.iter().filter(|n| n.2.contains("size is not known")).collect();
-    assert_eq!(no_shape.len(), 2, "{:#?}", written.not_written);
+    assert_eq!(no_shape.len(), 0, "{:#?}", written.not_written);
+    assert_eq!(made("fittings"), 41);
     assert_eq!(written.text.matches("'hot to the kitchen sink, piece ").count(), 3);
     assert!(written.text.starts_with("ISO-10303-21;\nHEADER;\n"));
     assert!(written.text.contains("FILE_SCHEMA(('IFC4'));"));

@@ -21,8 +21,8 @@
 use plumbline_world::building::forms::Form;
 use std::collections::{BTreeMap, HashMap};
 
-use plumbline_world::building::{self, ConnectorKind, Connectors, Domain, Flow, FittingKind, Shape, SystemInfo};
-use plumbline_world::{roof, view, Cost, Discipline, Fitting, Footprint, Job, JobInfo, Kind, Level, Node, Rise};
+use plumbline_world::building::{self, ConnectorKind, Connectors, Domain, Flow, FittingKind, InSystem, Shape, SystemInfo};
+use plumbline_world::{roof, view, Cost, Discipline, Fitting, Footprint, Job, JobInfo, Kind, Level, Node, Placed, Rise};
 
 type P3 = [f64; 3];
 
@@ -249,6 +249,27 @@ fn along(a: P3, b: P3) -> Option<(P3, P3, f64)> {
     // Across, and level: square to the run on plan; for a riser, east.
     let across = if flat < 1.0e-9 { [1.0, 0.0, 0.0] } else { [-way[1] / flat, way[0] / flat, 0.0] };
     Some((way, across, length))
+}
+
+/// What IFC calls a fitting, by what it joins and what it is (call 204 point 6 writes one with no size by the same words).
+fn fitting_class(discipline: Discipline, kind: Option<FittingKind>) -> (&'static str, &'static str) {
+    match (discipline, kind) {
+        (Discipline::Electrical, Some(FittingKind::Bend)) => ("IFCCABLECARRIERFITTING", "BEND"),
+        (Discipline::Electrical, Some(FittingKind::Tee)) => ("IFCCABLECARRIERFITTING", "TEE"),
+        (Discipline::Electrical, Some(FittingKind::Cross)) => ("IFCCABLECARRIERFITTING", "CROSS"),
+        (Discipline::Electrical, Some(FittingKind::Transition)) => ("IFCCABLECARRIERFITTING", "REDUCER"),
+        (Discipline::Electrical, _) => ("IFCCABLECARRIERFITTING", "NOTDEFINED"),
+        (d, kind) => (
+            if d == Discipline::Plumbing { "IFCPIPEFITTING" } else { "IFCDUCTFITTING" },
+            match kind {
+                Some(FittingKind::Bend) => "BEND",
+                Some(FittingKind::Tee | FittingKind::Cross) => "JUNCTION",
+                Some(FittingKind::Transition) => "TRANSITION",
+                Some(FittingKind::Coupling) => "CONNECTOR",
+                None => "NOTDEFINED",
+            },
+        ),
+    }
 }
 
 /// IFC4's word for the system a classification names (`IfcDistributionSystemEnum`), where it has one.
@@ -513,23 +534,7 @@ pub fn export(job: &mut Job, file: &str, when: &str) -> Result<Written, String> 
                     Kind::Fitting => {
                         let kind = job.find(&p.path).and_then(|e| job.world.get::<Fitting>(e)).map(|f| f.kind);
                         // What a fitting is called depends on what it joins.
-                        let (class, sort) = match (p.discipline, kind) {
-                            (Discipline::Electrical, Some(FittingKind::Bend)) => ("IFCCABLECARRIERFITTING", "BEND"),
-                            (Discipline::Electrical, Some(FittingKind::Tee)) => ("IFCCABLECARRIERFITTING", "TEE"),
-                            (Discipline::Electrical, Some(FittingKind::Cross)) => ("IFCCABLECARRIERFITTING", "CROSS"),
-                            (Discipline::Electrical, Some(FittingKind::Transition)) => ("IFCCABLECARRIERFITTING", "REDUCER"),
-                            (Discipline::Electrical, _) => ("IFCCABLECARRIERFITTING", "NOTDEFINED"),
-                            (d, kind) => (
-                                if d == Discipline::Plumbing { "IFCPIPEFITTING" } else { "IFCDUCTFITTING" },
-                                match kind {
-                                    Some(FittingKind::Bend) => "BEND",
-                                    Some(FittingKind::Tee | FittingKind::Cross) => "JUNCTION",
-                                    Some(FittingKind::Transition) => "TRANSITION",
-                                    Some(FittingKind::Coupling) => "CONNECTOR",
-                                    None => "NOTDEFINED",
-                                },
-                            ),
-                        };
+                        let (class, sort) = fitting_class(p.discipline, kind);
                         count("fittings");
                         o.add(format!("{class}({},$,{name},$,$,#{placed_at},#{body},$,.{sort}.)", o.id(&p.path)))
                     }
@@ -573,6 +578,38 @@ pub fn export(job: &mut Job, file: &str, when: &str) -> Result<Written, String> 
             on_system.entry(system.clone()).or_default().push(id);
         }
         written.push((p.path.clone(), id));
+    }
+
+    // ---- A fitting with no size (call 204, point 6). Where the runs it joins are drawn with no size, nothing says how big it is and
+    // it has no body to write; it is still where it is, and the runs that meet there are written. It is written with its place and no
+    // body, and read back with its size Unknown, so the second job has the first job's fittings and does not lose these two without a
+    // word. Its connection points are not written: they are placed on a body.
+    let mut written_without_size: std::collections::HashSet<&str> = std::collections::HashSet::new();
+    for (path, _) in &not_drawn {
+        let Some(e) = job.find(path) else { continue };
+        if job.world.get::<Kind>(e) != Some(&Kind::Fitting) {
+            continue;
+        }
+        let (Some(c), Some(fitting)) = (job.world.get::<Placed>(e).cloned(), job.world.get::<Fitting>(e).map(|f| f.kind)) else { continue };
+        let (Some(at), Some(off)) = (c.at_ft(), c.offset.feet()) else { continue };
+        if c.size_ft().is_some() {
+            continue;
+        }
+        let Some((level, within, _)) = job.world.get::<Node>(e).and_then(|n| n.parent.clone()).and_then(|s| level_of.get(&s).copied()) else { continue };
+        let system = job.world.get::<InSystem>(e).and_then(|s| s.0.value.clone());
+        let discipline = system.as_ref().and_then(|p| job.find(p)).and_then(|s| job.world.get::<SystemInfo>(s)).map(|s| s.discipline).unwrap_or(Kind::Fitting.discipline());
+        let turn = c.angle_deg().unwrap_or(0.0).to_radians();
+        let placed_at = o.placed(Some(within), [at[0], at[1], off], up, [turn.cos(), turn.sin(), 0.0]);
+        let (class, sort) = fitting_class(discipline, Some(fitting));
+        let called = name_or_none(names.get(path).map(String::as_str).unwrap_or(""));
+        count("fittings");
+        let id = o.add(format!("{class}({},$,{called},$,$,#{placed_at},$,$,.{sort}.)", o.id(path)));
+        on_level.entry(level).or_default().push(id);
+        if let Some(system) = system {
+            on_system.entry(system).or_default().push(id);
+        }
+        written.push((path.clone(), id));
+        written_without_size.insert(path.as_str());
     }
 
     // ---- Ports (call 200). What is connected is said the way IFC says it: each connection of a thing set
@@ -909,6 +946,9 @@ pub fn export(job: &mut Job, file: &str, when: &str) -> Result<Written, String> 
     }
     // ---- What a model has no place for, counted.
     for (path, why) in &not_drawn {
+        if written_without_size.contains(path.as_str()) {
+            continue;
+        }
         let called = names.get(path).cloned().unwrap_or_else(|| path.clone());
         not_written.push((called, 1, format!("it has no shape: {why}")));
     }

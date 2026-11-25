@@ -29,11 +29,12 @@ fn a_model_comes_in_as_storeys_walls_openings_a_floor_a_room_and_runs_and_the_re
     assert!((b.feet_per_unit - 1.0 / 0.3048).abs() < 1.0e-12);
     let made: Vec<(&str, usize)> = b.made.iter().map(|(k, n)| (k.as_str(), *n)).collect();
     // Call 197, point 1: the chair is a furnishing and is set down where it stood.
-    assert_eq!(made, [("doors", 1), ("ducts", 1), ("floors", 1), ("furnishings", 1), ("levels", 2), ("pipes", 1), ("rooms", 1), ("walls", 4), ("windows", 1)]);
-    // The beam and the stair: each listed, none dropped.
+    // Call 204, point 5: the ridge beam is a straight box (0.1 m by 0.3 m, 9.144 m level), so it comes in as a beam.
+    assert_eq!(made, [("beams", 1), ("doors", 1), ("ducts", 1), ("floors", 1), ("furnishings", 1), ("levels", 2), ("pipes", 1), ("rooms", 1), ("walls", 4), ("windows", 1)]);
+    // The stair: listed, none dropped.
     let left: Vec<(&str, usize)> = b.left_out.iter().map(|(c, n, _)| (c.as_str(), *n)).collect();
     // Call 50: what the model calls a kind of thing is said in words.
-    assert_eq!(left, [("beam", 1), ("stair", 1)]);
+    assert_eq!(left, [("stair", 1)]);
     assert!(b.left_out.iter().all(|(_, _, why)| why == "nothing here to bring it in as"));
     assert!(b.notes.iter().any(|n| n.contains("the model is in meters")));
     job.derive();
@@ -62,6 +63,20 @@ fn a_model_comes_in_as_storeys_walls_openings_a_floor_a_room_and_runs_and_the_re
     assert_eq!((door.offset.feet(), door.sill.feet()), (Some(10.0), Some(0.0)));
     assert_eq!((window.offset.feet(), window.sill.feet()), (Some(10.0), Some(3.0)));
     assert_eq!(door.offset.source, "the designer's model (made up): made-up-house.ifc, \"Front door\", door #113 in the file");
+    // The beam: 9.144 m is 30 ft along the east-west line at 3.048 m (10 ft); its section 0.1 m by 0.3 m is 3.937 in by 11.811 in (0.328084 ft
+    // by 0.984252 ft); its middle is 2.3 m up and its top 2.45 m, 8.038 ft above the floor. As sure as the model was said to be.
+    let beam = of(Kind::Beam);
+    assert_eq!(beam.len(), 1);
+    assert!((measure(&mut job, &beam[0], "length").0.unwrap() - 30.0).abs() < 1.0e-3);
+    let (line, top, type_path, status) = {
+        let e = job.find(&beam[0]).unwrap();
+        let s = job.world.get::<building::Segment>(e).unwrap();
+        (s.line_ft().unwrap(), s.offset.feet().unwrap(), s.type_name.value.clone().unwrap(), s.offset.status)
+    };
+    assert!((line[0][1] - 10.0).abs() < 1.0e-3 && (line[1][1] - 10.0).abs() < 1.0e-3 && (line[1][0] - line[0][0] - 30.0).abs() < 1.0e-3, "{line:?}");
+    assert!((top - 2.45 / 0.3048).abs() < 1.0e-3 && status == Status::Assumed, "{top} {status:?}");
+    let section = job.find(&type_path).and_then(|e| job.world.get::<building::SegmentType>(e).cloned()).unwrap().rect_ft().unwrap();
+    assert!((section.0 - 0.328_084).abs() < 1.0e-4 && (section.1 - 0.984_252).abs() < 1.0e-4, "{section:?}");
     // The slab: 30 ft by 20 ft is 600 SF. The room inside 6 in walls drawn on their
     // centre lines: 29.5 by 19.5 is 575.25 SF.
     assert_eq!(measure(&mut job, &of(Kind::Floor)[0], "plan_area").0, Some(600.0));
@@ -72,9 +87,14 @@ fn a_model_comes_in_as_storeys_walls_openings_a_floor_a_room_and_runs_and_the_re
     assert_eq!(measure(&mut job, &of(Kind::Duct)[0], "true_length").0, Some(20.0));
     assert_eq!(measure(&mut job, &of(Kind::Pipe)[0], "true_length").0, Some(10.0));
     let found = clash::clashes(&mut job, None).unwrap();
-    assert_eq!(found.found.len(), 1);
+    // Call 204, point 5: the ridge beam is in the job now and the duct runs along it (both on the line y = 10 ft): the beam's bottom is
+    // 2.15 m, 7.0538 ft, up and the duct's top 7.25 ft, so the duct is in the beam by 7.25 - 7.0538 = 0.1962 ft, 2.35 in, where they
+    // overlap along the middle of the duct, (15, 10, 7.15 ft). A second question for the field, as the model is Assumed.
+    assert_eq!(found.found.len(), 2, "{:?}", found.found);
     let c = &found.found[0];
     assert!((c.by.unwrap() - 3.5 / 12.0).abs() < 1.0e-6 && c.at == [10.0, 10.0, 7.0] && c.status == Status::Assumed, "{c:?}");
+    let beam_clash = &found.found[1];
+    assert!((beam_clash.by.unwrap() - (7.25 - 2.15 / 0.3048)).abs() < 1.0e-3 && (beam_clash.at[0] - 15.0).abs() < 1.0e-3 && (beam_clash.at[1] - 10.0).abs() < 1.0e-3 && beam_clash.status == Status::Assumed, "{beam_clash:?}");
     // The top storey's height is in nothing the model says: Unknown, not a guess.
     let levels: Vec<building::Level> = of(Kind::Storey).iter().map(|s| job.find(s).and_then(|e| job.world.get::<building::Level>(e).cloned()).unwrap()).collect();
     assert_eq!((levels[0].height.feet(), levels[1].elevation.feet(), levels[1].height.status), (Some(8.0), Some(8.0), Status::Unknown));

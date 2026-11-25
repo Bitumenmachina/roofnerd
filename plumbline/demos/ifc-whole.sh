@@ -7,8 +7,9 @@
 # Run from the repository root:  demos/ifc-whole.sh
 # The job and every figure are made up (no real job data) and live in a temporary folder. Every step fails the script if the program
 # does not say what the step expects. The figures are worked in STATUS.md ("a model brought in whole: a demonstration") and by hand
-# in the comments here. NOT BUILT, held for a ruling (said by this script, not asserted): the first job's 39 written fittings come
-# in as 37 (two refused by the change that puts a fitting where runs meet), three of them as tees where the file says bend.
+# in the comments here. NOT BUILT, held for a ruling (said by this script, not asserted): the first job's 41 written fittings come
+# in as 39 (two refused by the change that puts a fitting where runs meet; since call 204 the two with no size are written and come back
+# with their size Unknown), three of them as tees where the file says bend.
 # What is connected (call 200, contract 200P): each connection of a thing and each end of a run is written as a connection point
 # (IFC's IfcDistributionPort, nested by IfcRelNests), each two the model holds as joined tied (IfcRelConnectsPorts); the reader
 # joins what the file's ties say and nothing else, so the second job's open ends by system are the first job's: supply air 4,
@@ -29,7 +30,7 @@ echo "== The first job: the made-up whole house, written out as a model, brought
 "$P" sixteen "$T/first.json" >/dev/null
 "$P" export ifc "$T/first.json" "$T/first.ifc" > "$T/export.txt"
 says "$T/export.txt" "22 fixtures"
-says "$T/export.txt" "39 fittings"
+says "$T/export.txt" "41 fittings"
 says "$T/export.txt" "332 connection points"
 says "$T/export.txt" "147 connection point ties"
 lacks "$T/export.txt" "hot to the kitchen sink, piece"
@@ -39,9 +40,10 @@ lacks "$T/export.txt" "hot to the kitchen sink, piece"
 echo "-- Point 1: fixtures and equipment come in --"
 says "$T/in.txt" "22 fixtures"
 says "$T/in.txt" "5 pieces of equipment"
-# 2. Fittings: 41 in the first job, 39 written (2 have no size), 37 brought in (held: two refused where a third end meets).
-echo "-- Point 2: fittings come in on their runs (HELD for a ruling: 37 of the 39, and the open ends at fixtures) --"
-says "$T/in.txt" "37 fittings"
+# 2. Fittings: 41 in the first job, 41 written (call 204 point 6: the 2 with no size are written with their place and no body), 39 brought in
+#    (held: two refused where a third end meets), the 2 with no size among them, each with its size Unknown.
+echo "-- Point 2: fittings come in on their runs (HELD for a ruling: 39 of the 41, two refused where a third end meets) --"
+says "$T/in.txt" "39 fittings"
 says "$T/in.txt" "1 pipe fitting: this program would not take it: "
 says "$T/in.txt" "leave (16.3, 22.7) the same way, one over the other"
 # 46 connections of the 22 fixtures and 5 pieces of equipment (the first job's own), each tied to the end of a run that stands at it.
@@ -187,10 +189,63 @@ says "$T/items.txt" "drawn as an outdoor unit"
 lacks "$T/items.txt" "a outdoor"
 
 echo
+echo "== Call 204, point 6: a fitting with no size is written with its place and no body, and comes back with its size Unknown =="
+# The two elbows between the kitchen's three hot-water pieces with no size: 41 written (the export said so above), not 39 and two said to
+# have no shape; both come back, by the name the file gives them, at their place, and say their size is unknown.
+lacks "$T/export.txt" "it has no shape: its size is not known"
+for elbow in "hot to the kitchen sink, elbow 1" "hot to the kitchen sink, elbow 2"; do
+    path="$(grep -oE "fitting-[0-9]+  $elbow  \[fitting\]" "$T/second.show" | grep -oE 'fitting-[0-9]+' | head -1)"
+    [ -n "$path" ] || { echo "FAIL: the second job has no fitting called \"$elbow\""; exit 1; }
+    "$P" show "$T/second.json" "$path" > "$T/elbow.txt"
+    grep -qE "^ +\? size +unknown" "$T/elbow.txt" || { echo "FAIL: $elbow does not say its size is unknown"; cat "$T/elbow.txt"; exit 1; }
+    printf '    %s [%s]: back, its size unknown\n' "$elbow" "$path"
+done
+grep -c "IFCPIPEFITTING" "$T/first.ifc" | { read -r n; [ "$n" -ge 2 ] || { echo "FAIL: no pipe fittings in the file"; exit 1; }; }
+grep -E "=IFCPIPEFITTING\(.*'hot to the kitchen sink, elbow [12]'.*,\\$,\\$,\.BEND\.\)" "$T/first.ifc" | wc -l | { read -r n; [ "$n" = 2 ] || { echo "FAIL: the two elbows are not written with no body ($n)"; exit 1; }; }
+printf '    in the file: two pipe fittings (.BEND.) with a place and no body ($ for the shape)\n'
+
+echo
+echo "== Call 204, point 5: a beam and a column come in as a beam and a post =="
+# A made-up file with a beam 12 ft long, 3 1/2 in by 9 1/4 in, its top 8 ft up, and a post 8 ft high, 3 1/2 in square.
+F="$T/framing.json"
+"$P" new "$F" "Framing (not a real job)" >/dev/null
+FL="$(grep -oE 'level-[0-9]+' <("$P" level "$F" ground --elevation "0 ft" --height "9 ft" "${A[@]}") | head -1)"
+BT="$(grep -oE 'type-[0-9]+' <("$P" type "$F" beam "beam 3 1/2 by 9 1/4" --width "3 1/2 in" --depth "9 1/4 in" "${A[@]}") | head -1)"
+PT="$(grep -oE 'type-[0-9]+' <("$P" type "$F" post "post 3 1/2 square" --width "3 1/2 in" --depth "3 1/2 in" "${A[@]}") | head -1)"
+"$P" beam "$F" "$FL" "$BT" --points "2,3 14,3" --top "8 ft" "${A[@]}" >/dev/null
+"$P" post "$F" "$FL" "$PT" --at "5,7" --height "8 ft" "${A[@]}" >/dev/null
+"$P" export ifc "$F" "$T/framing.ifc" > "$T/framing-export.txt"
+says "$T/framing-export.txt" "1 beam, 1 level, 1 post"
+"$P" new "$T/framing2.json" "Second framing (not a real job)" >/dev/null
+"$P" import ifc "$T/framing2.json" "$T/framing.ifc" --status Known --source "made-up model" > "$T/framing-in.txt"
+says "$T/framing-in.txt" "1 beam"
+says "$T/framing-in.txt" "1 post"
+says "$T/framing-in.txt" "not brought in: 0 things"
+"$P" structure "$T/framing2.json" > "$T/framing-structure.txt"
+says "$T/framing-structure.txt" "12 LF, top 8 ft above the floor"
+says "$T/framing-structure.txt" "size 3 1/2 in × 9 1/4 in (Assumed: made-up model: framing.ifc"
+says "$T/framing-structure.txt" "8 LF tall, its base on the floor"
+says "$T/framing-structure.txt" "size 3 1/2 in × 3 1/2 in (Assumed: made-up model: framing.ifc"
+printf '    the beam: 12 LF, 3 1/2 in by 9 1/4 in, its top 8 ft up; the post: 8 ft tall, 3 1/2 in square; every size Assumed, sourced to the file (said Known: not taken as Known)\n'
+# The same file again counts neither twice: refused, and says why.
+if "$P" import ifc "$T/framing2.json" "$T/framing.ifc" --status Known --source "made-up model" > "$T/framing-again.txt" 2>&1; then echo "FAIL: the same beam and post came in twice"; cat "$T/framing-again.txt"; exit 1; fi
+says "$T/framing-again.txt" "already on this level"
+# A beam that slopes is left out, and says why.
+"$P" new "$T/slope.json" "Slope (not a real job)" >/dev/null
+SL="$(grep -oE 'level-[0-9]+' <("$P" level "$T/slope.json" ground --elevation "0 ft" --height "9 ft" "${A[@]}") | head -1)"
+ST="$(grep -oE 'type-[0-9]+' <("$P" type "$T/slope.json" beam "pole 8 in" --round "8 in" "${A[@]}") | head -1)"
+"$P" beam "$T/slope.json" "$SL" "$ST" --points "0,0 10,0" --top "8 ft" "${A[@]}" >/dev/null
+"$P" export ifc "$T/slope.json" "$T/round.ifc" >/dev/null
+"$P" new "$T/round.json" "Round (not a real job)" >/dev/null
+if "$P" import ifc "$T/round.json" "$T/round.ifc" --status Assumed --source "made-up model" > "$T/round-in.txt" 2>&1; then echo "FAIL: a round beam came in as a rectangle"; cat "$T/round-in.txt"; exit 1; fi
+says "$T/round-in.txt" "1 beam (its section is round, not a rectangle: only a rectangular section is read)"
+
+echo
 echo "== The model passes IfcOpenShell (an outside checker, never linked) =="
 if python3 -c "import ifcopenshell" 2>/dev/null; then
     python3 tools/ifc-check.py "$T/first.ifc" > "$T/checked.txt" || { echo "FAIL: IfcOpenShell finds a fault in the house"; cat "$T/checked.txt"; exit 1; }
     python3 tools/ifc-check.py "$T/gable.ifc" > "$T/checked-gable.txt" || { echo "FAIL: IfcOpenShell finds a fault in the gable roof"; cat "$T/checked-gable.txt"; exit 1; }
+    python3 tools/ifc-check.py "$T/framing.ifc" > "$T/checked-framing.txt" || { echo "FAIL: IfcOpenShell finds a fault in the beam and the post"; cat "$T/checked-framing.txt"; exit 1; }
     # And the ties, by an outside check of its own: the two ports of each IfcRelConnectsPorts are at one place in space.
     python3 - "$T/first.ifc" <<'PY' || { echo "FAIL: a tie joins two points that are not at one place"; exit 1; }
 import sys, ifcopenshell, ifcopenshell.util.placement as pl

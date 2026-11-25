@@ -8201,6 +8201,34 @@ in a picture):
    the time goes before changing anything, say it in the report, and change only
    what the measurement names. No figure moves.
 
+**Call 204, as built (2026-11-24, by a Sonnet worker under `handoff/contracts/contract-204.md`;
+`research/worker-report-call204.md`; accepted by the lead's own run in the worker's copy).**
+The program gave the lead's top line at every corner before any code, and gives the
+hand figures after it: the gable house 18, 19, 18, 19, **74.00 LF** (was 72.00);
+the shed 18, 27, 35, 27, **107.00 LF** (was 72.00), its east wall's north board
+17.5 ft; the hip house 72.00, unchanged; with the 3 ft wainscot on the shed's east
+wall 21.00 LF. The figure, the figure above a wainscot and the pieces laid use one
+reading of the wall's top (`trim::height_at_end` over `gable::top_over`). Ruled on
+what the worker decided: **a wall whose roof cannot be worked has no corner-board
+figure and says why** (right: not the old top, silently); the line's old formula
+text stays on a wall with no gable, because the saved job holds that text. Boards
+under an Assumed roof read Assumed. **A beam and a column come in as a beam and a
+post**; a fitting with no size is written and comes back, so the sample house comes
+back with all 39 of its fittings' places (37 made, the two the tool refuses still
+named). **A model comes in in about 6 seconds where it took 18**: three quarters of
+the time was the same ten rooms worked out 211 times over; the rooms are now kept
+by exactly what they are worked from, and nothing they give moves (the job file, the
+reply and the takeoff are the same to the byte). Expectations moved, each listed
+with its arithmetic in the report: two tests and one of call 185's on corner
+boards, `demos/trim.sh` steps 1, 2, 3 and 6; on a model `ifc.rs`, `whole.rs`,
+`write.rs`, `demos/export.sh`, `ifc-whole.sh`, `model.sh`, `structure.sh` (the made-up
+file's ridge beam now comes in, and with it a second clash with the duct).
+`demos/trim.sh` step 7, the sample houses, did not move. **Not run**: the window;
+`trimw`, `gablew` and `gableendw` hold no figure that moves, and their pictures at
+a gable's corners are stale until they are run again. Not right: a fitting's own
+connection points are still not read back, and a fitting with no size has none
+written.
+
 ### Call 205. A shape changed by hand: the model's changes, and what the bench will show (2026-11-24; the lead's design, not built)
 
 Call 203 left an item's shape as rows that can only be written in a table and

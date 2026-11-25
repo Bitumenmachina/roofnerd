@@ -382,6 +382,18 @@ impl<'a> Reader<'a> {
     }
 }
 
+/// A beam's body read as a level straight box (call 204, point 5): the middle of its first end, where it runs to on the plan,
+/// its section as wide as it is across and as deep as it is up, and how high its top is, all in the file's unit.
+struct BeamBody {
+    a: [f64; 2],
+    b: [f64; 2],
+    width: f64,
+    depth: f64,
+    /// The height of the beam's middle (a level beam is at one height all along), and of its lowest face.
+    middle_z: f64,
+    bottom: f64,
+}
+
 /// A body read as a box: where its middle is (in the file's unit), its bottom, its three
 /// sizes (along, across, up) and how far it is turned on plan, in degrees.
 struct Boxed {
@@ -421,6 +433,42 @@ impl<'a> Reader<'a> {
                 Some(Boxed { middle: [mid[0], mid[1]], bottom: low(mid[2]), size: [hi[0] - lo[0], hi[1] - lo[1], body.depth], angle: way[1].atan2(way[0]).to_degrees(), round: false })
             }
         }
+    }
+    /// A beam's body: a rectangle pushed straight along a level line, its sides level and plumb. Why not, where it is not (call 204,
+    /// point 5): a beam here is one rectangular section, level, square to its length and not turned about it.
+    fn beam(&self, e: &'a Entity) -> Result<BeamBody, &'static str> {
+        if self.pieces(e) > 1 {
+            return Err("its body is made of more than one piece: only a body of one piece is read");
+        }
+        let Some(body) = self.pushed(e) else {
+            return Err("its body is not a plain shape pushed straight, as far as this can read it: it may be curved, cut to a roof, a mesh, or name a part that is not in the file");
+        };
+        let (x, y, at, along) = match &body.profile {
+            Profile::Rect { x, y, at, along } => (*x, *y, *at, *along),
+            Profile::Circle { .. } => return Err("its section is round, not a rectangle: only a rectangular section is read"),
+            Profile::Outline(_) => return Err("its section is not a rectangle: only a rectangular section is read"),
+        };
+        let frame = self.placed(self.arg(e, 5)).then(&body.frame);
+        let d = frame.turn(body.way);
+        let (ax, ay) = (frame.turn([along[0], along[1], 0.0]), frame.turn([-along[1], along[0], 0.0]));
+        let dot = |p: P3, q: P3| p[0] * q[0] + p[1] * q[1] + p[2] * q[2];
+        if dot(ax, d).abs() > 1.0e-4 || dot(ay, d).abs() > 1.0e-4 {
+            return Err("its section is not square to its length");
+        }
+        if d[2].abs() > 0.0015 {
+            return Err("it slopes: a beam here is level");
+        }
+        // One side of the section plumb and the other level: the plumb one is its depth.
+        let (depth, width) = if ax[2].abs() > UPRIGHT {
+            (x, y)
+        } else if ay[2].abs() > UPRIGHT {
+            (y, x)
+        } else {
+            return Err("its section is turned about its length: a beam here has one side level and one plumb");
+        };
+        let start = frame.place([at[0], at[1], 0.0]);
+        let end = [start[0] + d[0] * body.depth, start[1] + d[1] * body.depth, start[2] + d[2] * body.depth];
+        Ok(BeamBody { a: [start[0], start[1]], b: [end[0], end[1]], width, depth, middle_z: start[2], bottom: start[2] - depth / 2.0 })
     }
     /// Where a thing stood, as the least and the greatest of each coordinate its body reaches (the
     /// file's unit), or its place alone where its body is not one this reads.
@@ -1696,6 +1744,116 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
             }
         }
     }
+    // ---- Beams and columns (call 204, point 5). A beam is a rectangle pushed level along its line, a column one pushed upright:
+    // each comes in by the change that makes one (a beam along its line with its top, a post at its place, standing so tall), its
+    // section as a type of its kind, sized from the body, Assumed and sourced to the file. A body that is not a straight box is
+    // left out with the reason that is true of it.
+    for (id, e) in of(&["IFCBEAM", "IFCCOLUMN"]) {
+        if !has_place(e) {
+            continue;
+        }
+        done.insert(id);
+        let is_beam = e.name == "IFCBEAM";
+        let source = from(e, id);
+        let entered = Entered { status: how.status, source: &source };
+        let outcome: Result<String, String> = (|| {
+            let kept = said_of.get(&id).and_then(|it| it.type_name.clone());
+            let root = job.world.get::<plumbline_world::Node>(job.root()).map(|n| n.path.clone()).ok_or("the job has no root")?;
+            let ft = |typed: &str| -> Result<f64, String> {
+                let (len, unit) = units::parse_length(typed)?;
+                len.feet(unit)
+            };
+            if is_beam {
+                let b = r.beam(e).map_err(|why| why.to_string())?;
+                let (storey, floor) = storey_of(id, b.bottom * k);
+                let (across, deep) = (format!("{} in", tidy(b.width * k * 12.0)), format!("{} in", tidy(b.depth * k * 12.0)));
+                let wanted = (ft(&across)?, ft(&deep)?);
+                let existing: Option<String> = {
+                    let mut q = job.world.query::<(&plumbline_world::Node, &plumbline_world::SegmentType)>();
+                    let mut all: Vec<String> = q
+                        .iter(&job.world)
+                        .filter(|(_, t)| t.category == Kind::Beam && !t.round && t.width.feet().is_some_and(|x| (x - wanted.0).abs() < 1e-9) && t.depth.as_ref().and_then(|d| d.feet()).is_some_and(|x| (x - wanted.1).abs() < 1e-9))
+                        .map(|(n, _)| n.path.clone())
+                        .collect();
+                    all.sort();
+                    all.into_iter().next()
+                };
+                let type_path = match existing {
+                    Some(path) => path,
+                    None => {
+                        let wanted_name = kept.clone().unwrap_or_else(|| format!("beam {across} by {deep}"));
+                        let name = if job.children().get(&root).is_some_and(|c| c.contains_key(wanted_name.as_str())) { format!("{wanted_name} {id}") } else { wanted_name };
+                        ed::framing_type(job, &name, Kind::Beam, &across, Some(deep.as_str()), None, entered)?
+                    }
+                };
+                let line = [[tidy(b.a[0] * k), tidy(b.a[1] * k)], [tidy(b.b[0] * k), tidy(b.b[1] * k)]];
+                // A beam along this very line already on the level (the model brought in a second time) would be counted twice.
+                let near = |p: [f64; 2], q: [f64; 2]| (p[0] - q[0]).abs() < 0.001 && (p[1] - q[1]).abs() < 0.001;
+                let there = {
+                    let mut q = job.world.query::<(&plumbline_world::Node, &Kind, &Segment)>();
+                    q.iter(&job.world).any(|(n, kind, s)| *kind == Kind::Beam && n.parent.as_deref() == Some(storey.as_str()) && s.line_ft().is_some_and(|l| (near(l[0], line[0]) && near(l[1], line[1])) || (near(l[0], line[1]) && near(l[1], line[0]))))
+                };
+                if there {
+                    return Err("it is already on this level: a beam along this very line would be counted twice".to_string());
+                }
+                // Held to its top, as a beam here is: its middle and half its depth, above the floor.
+                let top = (b.middle_z + b.depth / 2.0) * k - floor;
+                let made = ed::beams(job, &storey, &type_path, &line, &feet(top), entered)?;
+                made.into_iter().next().ok_or_else(|| "no beam was made".to_string())
+            } else {
+                let b = r.boxed(e).ok_or("its body is not a straight box, standing upright, as far as this can read it")?;
+                if b.angle.abs() > 1.0e-6 {
+                    return Err("it is turned on the plan: a post here stands square to it".to_string());
+                }
+                let (storey, floor) = storey_of(id, b.bottom * k);
+                let (across, deep) = (format!("{} in", tidy(b.size[0] * k * 12.0)), format!("{} in", tidy(b.size[1] * k * 12.0)));
+                let wanted = (ft(&across)?, ft(&deep)?);
+                let existing: Option<String> = {
+                    let mut q = job.world.query::<(&plumbline_world::Node, &plumbline_world::SegmentType)>();
+                    let mut all: Vec<String> = q
+                        .iter(&job.world)
+                        .filter(|(_, t)| t.category == Kind::Post && t.round == b.round && t.width.feet().is_some_and(|x| (x - wanted.0).abs() < 1e-9) && (b.round || t.depth.as_ref().and_then(|d| d.feet()).is_some_and(|x| (x - wanted.1).abs() < 1e-9)))
+                        .map(|(n, _)| n.path.clone())
+                        .collect();
+                    all.sort();
+                    all.into_iter().next()
+                };
+                let type_path = match existing {
+                    Some(path) => path,
+                    None => {
+                        let wanted_name = kept.clone().unwrap_or_else(|| if b.round { format!("post {across} round") } else { format!("post {across} by {deep}") });
+                        let name = if job.children().get(&root).is_some_and(|c| c.contains_key(wanted_name.as_str())) { format!("{wanted_name} {id}") } else { wanted_name };
+                        ed::framing_type(job, &name, Kind::Post, &across, if b.round { None } else { Some(deep.as_str()) }, None, entered)?
+                    }
+                };
+                let at = [tidy(b.middle[0] * k), tidy(b.middle[1] * k)];
+                let there = {
+                    let mut q = job.world.query::<(&plumbline_world::Node, &Kind, &plumbline_world::Stood)>();
+                    q.iter(&job.world).any(|(n, kind, c)| *kind == Kind::Post && n.parent.as_deref() == Some(storey.as_str()) && c.at_ft().is_some_and(|p| (p[0] - at[0]).abs() < 0.001 && (p[1] - at[1]).abs() < 0.001) && c.base_offset.feet().is_some_and(|x| (x - ((b.bottom * k) - floor)).abs() < 0.001))
+                };
+                if there {
+                    return Err("it is already on this level: a post at this very place would be counted twice".to_string());
+                }
+                ed::post(job, &storey, &type_path, at, Some(&feet(b.size[2] * k)), Some(&feet(b.bottom * k - floor)), entered)
+            }
+        })();
+        match outcome {
+            Ok(path) => {
+                keep_name(job, &path, &r.name(e), id);
+                if let Err(why) = marks(job, &path, id, &source, if is_beam { Kind::Beam } else { Kind::Post }) {
+                    out.notes.push(format!("a mark on {path} was not put on it: {why}"));
+                }
+                made(if is_beam { "beams" } else { "posts" });
+            }
+            Err(why) => {
+                if let Some(reach) = reach_of(e) {
+                    stood_on.push((said(&e.name), reach.0, reach.1));
+                }
+                let plain = why.starts_with("its ") || why.starts_with("the model") || why.starts_with("it ");
+                leave(&e.name, &if plain { why } else { format!("this program would not take it: {why}") });
+            }
+        }
+    }
     // ---- Things set down: fixtures, equipment and furnishings (call 197, point 1). Each is a box the
     // size of its body in the file, set down by the change that sets one down, Assumed, and called what
     // the file calls it. A body this does not read leaves its size unknown, and says so.
@@ -1795,16 +1953,25 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
         done.insert(id);
         let source = from(e, id);
         let entered = Entered { status: how.status, source: &source };
-        let Some(b) = r.boxed(e) else {
-            if let Some(reach) = reach_of(e) {
-                stood_on.push((said(&e.name), reach.0, reach.1));
+        // A fitting with no body at all (call 204, point 6: one the runs it joins give no size) is where its place is: the joint of the runs
+        // there, and it comes in with its size Unknown, as the runs there are.
+        let (middle, bottom, centre) = match r.boxed(e) {
+            Some(b) => ([b.middle[0], b.middle[1]], b.bottom, b.bottom + b.size[2] / 2.0),
+            None if r.pushed(e).is_none() && r.pieces(e) == 0 => {
+                let o = r.placed(r.arg(e, 5)).o;
+                ([o[0], o[1]], o[2], o[2])
             }
-            leave(&e.name, "its body is not a box this reads, so where the runs it joins meet cannot be told");
-            continue;
+            None => {
+                if let Some(reach) = reach_of(e) {
+                    stood_on.push((said(&e.name), reach.0, reach.1));
+                }
+                leave(&e.name, "its body is not a box this reads, so where the runs it joins meet cannot be told");
+                continue;
+            }
         };
-        let (storey, floor) = storey_of(id, b.bottom * k);
-        let middle_z = (b.bottom + b.size[2] / 2.0) * k - floor;
-        let outcome = ed::fitting(job, &storey, [tidy(b.middle[0] * k), tidy(b.middle[1] * k)], Some(&feet(middle_z)), None, entered);
+        let (storey, floor) = storey_of(id, bottom * k);
+        let middle_z = centre * k - floor;
+        let outcome = ed::fitting(job, &storey, [tidy(middle[0] * k), tidy(middle[1] * k)], Some(&feet(middle_z)), None, entered);
         match outcome {
             Ok(fitted) => {
                 keep_name(job, &fitted.path, &r.name(e), id);
@@ -1831,8 +1998,8 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
                     };
                     out.notes.push(format!(
                         "the fitting at ({}, {}, {}) is not what the file calls it: the file calls it a {word}, the runs there make a {made_kind}, and it is brought in as a {made_kind}",
-                        tidy(b.middle[0] * k),
-                        tidy(b.middle[1] * k),
+                        tidy(middle[0] * k),
+                        tidy(middle[1] * k),
                         tidy(middle_z)
                     ));
                 }

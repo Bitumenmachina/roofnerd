@@ -210,11 +210,13 @@ grep -q "Qto_BeamBaseQuantities" "$T/out.ifc" && grep -q "Qto_ColumnBaseQuantiti
 # The beam's Length is 16 ft (4.8768 m), written in the model's unit, the foot, with how sure.
 grep -qE "IFCQUANTITYLENGTH\('Length','Known',\\\$,16\.,'length of its line on the plan'\)" "$T/out.ifc" || { echo "FAIL: the beam's Length is not 16 ft"; grep IFCQUANTITYLENGTH "$T/out.ifc" | head; exit 1; }
 echo "    the beam's Length: 16 ft (4.8768 m), Known (its line is; its section is Assumed)"
-# They are not read back in from another program's file yet, and import says so by name.
+# Read back in (call 204, point 5): the beam and the two posts are straight boxes, so they come in as a beam and two posts, sized from their
+# bodies; nothing is left out. (Before call 204 import said "beam" and "column" by name as not read.)
 "$P" new "$T/brought.json" "Brought in (not a real job)" >/dev/null
 "$P" import ifc "$T/brought.json" "$T/out.ifc" --status Assumed --source "made-up model" > "$T/import.txt" 2>&1 || true
-says "$T/import.txt" "beam"
-says "$T/import.txt" "column"
+says "$T/import.txt" "1 beam"
+says "$T/import.txt" "2 posts"
+says "$T/import.txt" "not brought in: 0 things"
 if python3 -c "import ifcopenshell" 2>/dev/null; then
     python3 tools/ifc-check.py "$T/out.ifc" > "$T/check-ifc.txt" 2>&1 || { echo "FAIL: the outside checker did not pass the BIM file"; cat "$T/check-ifc.txt"; exit 1; }
     sed 's/^/    | /' "$T/check-ifc.txt" | head -12

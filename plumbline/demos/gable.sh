@@ -4,6 +4,8 @@
 # round, 6 in 12). The gable ends of a gable roof, a shed roof and a hip roof, and a house with no roof: each wall's gable area
 # and its top as points, said by the program and set beside the figure worked by hand; the starter outside wall priced on
 # net_area + gable_area, the inside of it not; the frame of a gable said not to be counted.
+# Call 204 (step 6): the corner boards of a wall under a rake or the high edge of a shed roof are as tall as the wall is at each corner
+# (STATUS.md, "A corner board as tall as its wall at that corner: a demonstration", points 1 to 7).
 # Run from the repository root:  demos/gable.sh
 # The job and every price are made up (no real job data) and live in a temporary folder.
 # Every step fails the script if the program does not say what the step expects. The figures are worked by hand in STATUS.md
@@ -140,6 +142,79 @@ J5="$T/noroof.json"
 house "$J5" none
 "$P" gable "$J5" > "$T/g5.txt"
 for w in $SOUTH $EAST $NORTH $WEST; do says "$T/g5.txt" "[$w]: none: no roof is drawn over it"; done
+
+echo
+echo "== 6. A corner board is as tall as its wall is at that corner (call 204): the same three houses, a corner-board line on every wall, priced at a made-up \$3.50 a foot =="
+# boards <file>: a corner-board line on each of the four walls of the house just made, priced
+boards() {
+    local J="$1" w
+    for w in $SOUTH $EAST $NORTH $WEST; do
+        "$P" line "$J" "$w" "Corner boards" corner_board_length --division 6 >/dev/null
+        "$P" set "$J" "$w" unit_cost '$3.50/LF' --line "Corner boards" "${A[@]}" >/dev/null
+    done
+}
+# board_of <trim said> <wall> <by hand: LF>: the wall's own corner-board figure, as the trim verb says it
+board_of() { hand "$1" "$2, corner boards" "$3 LF" "[$2]: outside corners ~2 EA; corner board ~$3 LF"; }
+echo "  6.1 The gable roof. South and north under the eaves: 2 x 9 = 18.00 LF each. East and west under the rake, their top at each end 9.5 ft: 2 x 9.5 = 19.00 LF each (it was 18.00)."
+echo "      The house: 18 + 19 + 18 + 19 = 74.00 LF, 74 x 3.50 = \$259.00 (72.00 LF and \$252.00 before):"
+K1="$T/boards-gable.json"; house "$K1" "P G P G"; boards "$K1"
+"$P" trim "$K1" > "$T/t1.txt"
+board_of "$T/t1.txt" "$SOUTH" 18; board_of "$T/t1.txt" "$EAST" 19; board_of "$T/t1.txt" "$NORTH" 18; board_of "$T/t1.txt" "$WEST" 19
+"$P" export estimate "$K1" "$T/est6a.csv" >/dev/null
+sum "$T/est6a.csv" "Corner boards" "74.00" "259.00"
+echo "  6.2 The shed roof. South 2 x 9 = 18; east 9.5 + 17.5 = 27; north 2 x 17.5 = 35; west 17.5 + 9.5 = 27: 107.00 LF, \$374.50 (72.00 LF before):"
+K2="$T/boards-shed.json"; house "$K2" "P G G G"; boards "$K2"
+"$P" trim "$K2" > "$T/t3.txt"
+board_of "$T/t3.txt" "$SOUTH" 18; board_of "$T/t3.txt" "$EAST" 27; board_of "$T/t3.txt" "$NORTH" 35; board_of "$T/t3.txt" "$WEST" 27
+"$P" export estimate "$K2" "$T/est6b.csv" >/dev/null
+sum "$T/est6b.csv" "Corner boards" "107.00" "374.50"
+echo "  6.3 The hip roof, eaves all round: every wall 18.00 LF, the house 72.00 LF; nothing moves:"
+K3="$T/boards-hip.json"; house "$K3" "P P P P"; boards "$K3"
+"$P" trim "$K3" > "$T/t4.txt"
+for w in $SOUTH $EAST $NORTH $WEST; do board_of "$T/t4.txt" "$w" 18; done
+"$P" export estimate "$K3" "$T/est6c.csv" >/dev/null
+sum "$T/est6c.csv" "Corner boards" "72.00" "252.00"
+echo "  6.4 The pieces laid are those lengths (trim --pieces): on the shed, the east wall's board at its north corner is 17.5 ft, at its south corner 9.5 ft, each from the foot:"
+"$P" trim "$K2" --pieces > "$T/p3.txt"
+python3 - "$T/p3.txt" "$EAST" <<'PY'
+import re, sys
+text, east = open(sys.argv[1]).read(), sys.argv[2]
+pat = re.compile(r'^  .* \[(wall-\d+)\], priced by "Corner boards": [~?]?([\d.]+) LF from \(([^)]*)\) to \(([^)]*)\);')
+rows = []
+for line in text.splitlines():
+    m = pat.match(line)
+    if m: rows.append((m.group(1), float(m.group(2)), [float(x) for x in m.group(3).split(",")], [float(x) for x in m.group(4).split(",")]))
+total = sum(r[1] for r in rows)
+print("    the shed's boards: by hand 8 pieces, 107.00 LF; said %d pieces, %.2f LF" % (len(rows), total))
+mine = sorted((r for r in rows if r[0] == east), key=lambda r: r[2][1])
+print("    the east wall's two boards, south then north: by hand 9.5 and 17.5 ft; said %s" % [(r[1], r[3][2]) for r in mine])
+ok = len(rows) == 8 and abs(total - 107.0) < 0.01 and len(mine) == 2 and abs(mine[0][1] - 9.5) < 0.01 and abs(mine[1][1] - 17.5) < 0.01 and abs(mine[1][3][2] - 17.5) < 0.01 and mine[1][2][2] == 0.0
+if not ok:
+    print("FAIL: the pieces are not the figures' lengths"); print(text); sys.exit(1)
+PY
+says "$T/p3.txt" "corner boards: 8 pieces come to 107.00 LF; the lines price 107.00 LF"
+echo "  6.5 The boards read ~ where the roof is traced (Assumed), as the gable's area does: every line above says \"corner board ~\" and every piece is flagged ~:"
+grep -E '^  wall .*priced by "Corner boards"' "$T/p3.txt" | grep -vqE 'priced by "Corner boards": ~' && { echo "FAIL: a board is not marked ~"; exit 1; }
+echo "      (all eight pieces of the shed read ~; the Known case, a Known wall under a Known roof, is held by crates/world/tests/call204.rs)"
+echo "  6.6 The sample whole house, a hip roof: its corner boards are the 128 LF they were and its price the \$468,050.22 it was:"
+"$P" sixteen "$T/sixteen.json" >/dev/null
+"$P" export estimate "$T/sixteen.json" "$T/est6s.csv" >/dev/null
+"$P" estimate "$T/sixteen.json" > "$T/est6s.txt"
+python3 - "$T/est6s.csv" <<'PY'
+import csv, sys
+rows = [r for r in csv.DictReader(open(sys.argv[1])) if r["Line"].startswith("Corner boards, 5/4 x 6 cedar")]
+q = sum(float(r["Quantity"]) for r in rows)
+print("    by hand 128.00 LF; said %.2f LF on %d walls" % (q, len(rows)))
+if abs(q - 128.0) > 0.005:
+    print("FAIL: the sample's corner boards moved"); sys.exit(1)
+PY
+hand "$T/est6s.txt" "the sample's price" '$468,050.22' '$468,050.22'
+echo "  6.7 The shed's east wall over a stone wainscot (the starter wall with its stone line, wainscot 3 ft): the boards start at the top of the stone, each at its own corner's height: (9.5 - 3) + (17.5 - 3) = 21.00 LF:"
+K4="$T/boards-shed-stone.json"; house "$K4" "P G G G"
+"$P" import assemblies "$K4" starter >/dev/null
+"$P" apply "$K4" "$EAST" "Exterior wall, 2x6, lap siding over a stone wainscot" --source "the starter library" >/dev/null
+"$P" show "$K4" "$EAST" > "$T/show-stone.txt"
+hand "$T/show-stone.txt" "$EAST, its boards above the stone" "21 LF" "corner board length above wainscot"
 
 echo
 echo "== all of it as the hand figures say =="

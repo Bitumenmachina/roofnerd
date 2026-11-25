@@ -1219,16 +1219,17 @@ pub fn measures(world: &mut World) -> HashMap<String, BTreeMap<String, Derived>>
                             (None, _) => Derived::refused("LF", f_above, &inputs, &format!("{:?} is not a height entered on the line", crate::view::words(input_name))),
                             _ if unit_fault => Derived::refused("LF", f_above, &inputs, &format!("the wall line {NOT_CONVERTED}")),
                             (Some(_), None) => Derived::refused("LF", f_above, &inputs, "the wall's outside corners are not worked"),
-                            (Some(hv), Some([n, board])) => match (hv.feet(), n.worked(), board.worked()) {
+                            (Some(hv), Some(corner)) => match (hv.feet(), corner.count.worked(), corner.board.worked()) {
                                 (None, _, _) => Derived::refused("LF", f_above, &inputs, &format!("the height {:?} is not known", crate::view::words(input_name))),
-                                (_, None, _) => Derived::refused("LF", f_above, &inputs, if n.note.is_empty() { "the wall's outside corners are not worked" } else { &n.note }),
-                                (_, _, None) => Derived::refused("LF", f_above, &inputs, if board.note.is_empty() { "the wall's corner boards are not worked" } else { &board.note }),
-                                (Some(h_ft), Some(count), Some(boards)) => {
+                                (_, None, _) => Derived::refused("LF", f_above, &inputs, if corner.count.note.is_empty() { "the wall's outside corners are not worked" } else { &corner.count.note }),
+                                (_, _, None) => Derived::refused("LF", f_above, &inputs, if corner.board.note.is_empty() { "the wall's corner boards are not worked" } else { &corner.board.note }),
+                                (Some(h_ft), Some(_), Some(_)) => {
                                     let mut rests = inputs.clone();
-                                    rests.extend(board.inputs.iter().filter(|i| !inputs.contains(i)).cloned());
-                                    // Each corner's board is the wall's height; the entry is held between nothing and that height.
-                                    let up = if count > 0.0 { count * (boards / count - h_ft.clamp(0.0, boards / count)) } else { 0.0 };
-                                    Derived::new(Some(up), "LF", &[board.status, hv.status], f_above, &rests)
+                                    rests.extend(corner.board.inputs.iter().filter(|i| !inputs.contains(i)).cloned());
+                                    // Each corner's board is as tall as the wall is there (call 204); the entry is held between nothing and
+                                    // that height, corner by corner.
+                                    let up: f64 = corner.up.iter().map(|(_, h)| h - h_ft.clamp(0.0, *h)).sum();
+                                    Derived::new(Some(up), "LF", &[corner.board.status, hv.status], f_above, &rests)
                                 }
                             },
                         };
@@ -1275,9 +1276,9 @@ pub fn measures(world: &mut World) -> HashMap<String, BTreeMap<String, Derived>>
                 };
                 m.insert("thickness".into(), thick);
                 // Its outside corners and the corner board they take, where a line of it names them (call 185).
-                if let Some([n, l]) = corner_figures.get(me) {
-                    m.insert(crate::trim::OUTSIDE_CORNERS.into(), n.clone());
-                    m.insert(crate::trim::CORNER_BOARD_LENGTH.into(), l.clone());
+                if let Some(c) = corner_figures.get(me) {
+                    m.insert(crate::trim::OUTSIDE_CORNERS.into(), c.count.clone());
+                    m.insert(crate::trim::CORNER_BOARD_LENGTH.into(), c.board.clone());
                 }
                 // Its gable, where a line of it names the area (call 192).
                 if gable_named.contains(me) {
@@ -2147,6 +2148,28 @@ struct RoomFigures {
 /// `rooms.rs:62` and `walls.rs:238`: a bounding wall's outline is cut against every wall
 /// it meets, bounding or not).
 fn rooms_among(walls: &[walls::PlanWall], bounding: &[usize], room_lines: &[(crate::skeleton::P2, crate::skeleton::P2)], points: &[crate::skeleton::P2], tol: f64) -> Vec<RoomFigures> {
+    // The rooms of a set of walls are a function of the walls, the room lines and the points alone, and the same set is asked for again
+    // by every figure worked out after an edit that moved none of them: a model brought in whole made two hundred edits and worked
+    // its ten rooms out two hundred times, three quarters of the twenty seconds it took (call 204, point 7). So what was worked out
+    // is kept, by what it was worked out from (every number as it is written, so equal only where identical), and handed back as it
+    // was. Nothing is kept past the run of the program, and nothing about the answer changes.
+    thread_local! { static KEPT: std::cell::RefCell<HashMap<String, Vec<RoomFigures>>> = std::cell::RefCell::new(HashMap::new()); }
+    let key = format!("{walls:?}|{bounding:?}|{room_lines:?}|{points:?}|{tol:?}");
+    if let Some(found) = KEPT.with(|k| k.borrow().get(&key).cloned()) {
+        return found;
+    }
+    let worked = rooms_among_worked(walls, bounding, room_lines, points, tol);
+    KEPT.with(|k| {
+        let mut k = k.borrow_mut();
+        if k.len() >= 256 {
+            k.clear();
+        }
+        k.insert(key, worked.clone());
+    });
+    worked
+}
+
+fn rooms_among_worked(walls: &[walls::PlanWall], bounding: &[usize], room_lines: &[(crate::skeleton::P2, crate::skeleton::P2)], points: &[crate::skeleton::P2], tol: f64) -> Vec<RoomFigures> {
     use crate::skeleton::P2 as V;
     use rooms::{Plan, RoomArea};
     let (centre, finish) = (Plan::of_walls(walls, bounding, room_lines, RoomArea::Centre, tol), Plan::of_walls(walls, bounding, room_lines, RoomArea::Finish, tol));

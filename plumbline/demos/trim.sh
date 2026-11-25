@@ -84,8 +84,10 @@ for r in $RAKES; do hand "$T/trim.txt" "rake $r, length and overhang" "10.0623 L
 echo "  each overhang rests on a wall, and says which (the roof's edge is 1 ft out; the wall's outside face is 3 in out: 12 - 3 = 9 in):"
 says "$T/trim.txt" "[$EAVE_S]: ~26 LF long; overhang ~0.75 ft, the outside face of $SOUTH"
 says "$T/trim.txt" "[$EAVE_N]: ~26 LF long; overhang ~0.75 ft, the outside face of $NORTH"
-echo "  the walls: two outside corners each, a board up each, 9 ft (18 LF a wall):"
-for w in $SOUTH $EAST $NORTH $WEST; do hand "$T/trim.txt" "$w, corners and board" "2, 18 LF" "[$w]: outside corners ~2 EA; corner board ~18 LF"; done
+echo "  the walls: two outside corners each, a board up each, as tall as the wall is at that corner (call 204): the south and the north wall are under an eave, 9 ft (18 LF a wall);"
+echo "  the east and the west are under a rake and rise to the roof, 9.5 ft at each end of the wall's line (the roof is 9 ft at its eave 1 ft out and half a foot higher for each foot in): 19 LF a wall:"
+for w in $SOUTH $NORTH; do hand "$T/trim.txt" "$w, corners and board" "2, 18 LF" "[$w]: outside corners ~2 EA; corner board ~18 LF"; done
+for w in $EAST $WEST; do hand "$T/trim.txt" "$w, corners and board" "2, 19 LF" "[$w]: outside corners ~2 EA; corner board ~19 LF"; done
 echo "  the window, 2 x (3 + 5) = 16 LF; the door, 3 + 2 x 6.6667 = 16.33 LF:"
 hand "$T/trim.txt" "$WIN, casing" "16 LF" "[$WIN]: casing ~16 LF"
 hand "$T/trim.txt" "$DOOR, casing" "16.33 LF" "[$DOOR]: casing ~16.3333 LF"
@@ -109,13 +111,13 @@ for w in $SOUTH $EAST $NORTH $WEST; do "$P" apply "$J" "$w" "Exterior wall, 2x6,
 "$P" apply "$J" "$DOOR" "Entry door" --source "$L" > /dev/null
 estimate
 echo "  what each line's quantity comes to, summed over the things it is on (by hand: fascia 2 x 26 = 52; rake fascia 4 x 10.0623 = 40.25;"
-echo "  soffit 2 x 26 x 0.75 = 39; rake soffit 40.2492 x 0.75 = 30.19; gutter 52; corner boards 4 x 18 = 72; casing 16 + 16.33 = 32.33); no price, so no dollars:"
+echo "  soffit 2 x 26 x 0.75 = 39; rake soffit 40.2492 x 0.75 = 30.19; gutter 52; corner boards 18 + 19 + 18 + 19 = 74 (72 before call 204); casing 16 + 16.33 = 32.33); no price, so no dollars:"
 sum "Fascia" "52.00" none
 sum "Rake fascia" "40.25" none
 sum "Soffit" "39.00" none
 sum "Rake soffit" "30.19" none
 sum "Gutter" "52.00" none
-sum "Corner boards" "72.00" none
+sum "Corner boards" "74.00" none
 sum "Exterior casing" "32.33" none
 echo "  \"Downspouts\" has no quantity until a person says how many (a figure that is not known is no figure, never zero):"
 handre "$T/est.txt" "Downspouts, as the sheet has it" "no figure" "^  Downspouts +no figure +no price"
@@ -147,12 +149,12 @@ for w in $SOUTH $EAST $NORTH $WEST; do "$P" set "$J" "$w" unit_cost '$3.50/LF' -
 for o in $WIN $DOOR; do "$P" set "$J" "$o" unit_cost '$3/LF' --line "Exterior casing" "${A[@]}" >/dev/null; done
 estimate
 echo "  (by hand: fascia 52 x 4 = 208.00; rake fascia 4 x (10.0623 x 4 = 40.25) = 161.00; soffit 39 x 6 = 234.00; rake soffit 4 x (7.5467 x 6 = 45.28) = 181.12;"
-echo "   corner boards 72 x 3.50 = 252.00; casing (16 + 16.3333) x 3 = 48.00 + 49.00 = 97.00)"
+echo "   corner boards 74 x 3.50 = 259.00 (252.00 before call 204); casing (16 + 16.3333) x 3 = 48.00 + 49.00 = 97.00)"
 sum "Fascia" "52.00" "208.00"
 sum "Rake fascia" "40.25" "161.00"
 sum "Soffit" "39.00" "234.00"
 sum "Rake soffit" "30.19" "181.12"
-sum "Corner boards" "72.00" "252.00"
+sum "Corner boards" "74.00" "259.00"
 sum "Exterior casing" "32.33" "97.00"
 
 echo
@@ -200,10 +202,10 @@ echo "== 6. Where each piece lies (call 184, step 1): \`trim --pieces\` on the h
 cmp -s "$T/trim.txt" "$T/trim-plain.txt" && echo "    (without --pieces, \`trim\` says what it said at step 1, byte for byte: the lines changed nothing)"
 lacks "$T/trim-plain.txt" "piece"
 "$P" trim "$J" --pieces > "$T/pieces.txt"
-python3 - "$T/pieces.txt" "$EAVE_S" "$EAVE_N" "$SOUTH" "$WIN" "$DOOR" <<'PY'
+python3 - "$T/pieces.txt" "$EAVE_S" "$EAVE_N" "$SOUTH" "$WIN" "$DOOR" "$NORTH" <<'PY'
 import re, sys
 text = open(sys.argv[1]).read()
-eave_s, eave_n, south, win, door = sys.argv[2:7]
+eave_s, eave_n, south, win, door, north = sys.argv[2:8]
 pat = re.compile(r'^  (.+) \[([a-z]+-\d+)\], priced by "(.*)": ([~?]?)([\d.]+) LF from \(([^)]*)\) to \(([^)]*)\); looks ([^;]*); (.*) wide, (.*) thick \((.*)\)$')
 kind, rows = None, []
 for line in text.splitlines():
@@ -218,7 +220,7 @@ def check(what, by_hand, got, ok):
     print("    %-44s by hand %-22s said %s" % (what, by_hand, got))
     if not ok: print("FAIL: %s" % what); print(text); sys.exit(1)
 def close(x, y, e=0.0006): return abs(x - y) < e
-want = {"Fascia": (2, 52.0), "Rake fascia": (4, 40.2492), "Soffit": (2, 26.0 * 2), "Rake soffit": (4, 40.2492), "Corner boards": (8, 72.0), "Casing": (7, 32.3333)}
+want = {"Fascia": (2, 52.0), "Rake fascia": (4, 40.2492), "Soffit": (2, 26.0 * 2), "Rake soffit": (4, 40.2492), "Corner boards": (8, 74.0), "Casing": (7, 32.3333)}
 for k, (n, total) in want.items():
     got = of(k)
     check("%s: pieces, and their length" % k, "%d, %.2f LF" % (n, total), "%d, %.2f LF" % (len(got), sum(r["length"] for r in got)), len(got) == n and close(sum(r["length"] for r in got), total, 0.001))
@@ -231,7 +233,7 @@ check("each rake fascia climbs 4.5 ft in 9 ft on the plan", "10.0623 LF, up 4.5"
 check("each soffit is as wide as the overhang, looking down", "9 in", "%s" % sorted(set(r["width"] for r in of("Soffit"))), all(r["width"] == "9 in" and r["looks"] == "down" for r in of("Soffit")))
 check("each rake soffit: 9 in wide, 10.0623 LF", "9 in, 10.0623", "%s" % sorted(set((r["width"], r["length"]) for r in of("Rake soffit"))), all(r["width"] == "9 in" and close(r["length"], 10.0623) for r in of("Rake soffit")))
 cb = of("Corner boards")
-check("each corner board stands 9 ft from the foot", "9 LF", "%s" % sorted(set(r["length"] for r in cb)), all(close(r["length"], 9.0) and r["a"][2] == 0.0 and r["b"][2] == 9.0 for r in cb))
+check("each corner board stands from the foot to the wall's top at its corner (call 204)", "9 LF on south and north, 9.5 on east, west", "%s" % sorted(set((r["length"], r["path"] in (south, north)) for r in cb)), all(close(r["length"], 9.0 if r["path"] in (south, north) else 9.5) and r["a"][2] == 0.0 and close(r["b"][2], r["length"]) for r in cb))
 sw = [r for r in cb if r["path"] == south and close(r["a"][0], -0.25 + 3.5 / 24)]
 check("south wall's board at the south-west corner", "(-0.1042,-0.25), looks south", "%s %s" % (sw[0]["a"][:2], sw[0]["looks"]) if sw else "none", len(sw) == 1 and sw[0]["a"][1] == -0.25 and sw[0]["looks"] == "south")
 cs = of("Casing")
@@ -249,7 +251,7 @@ says "$T/pieces.txt" "  fascia: 2 pieces come to 52.00 LF; the lines price 52.00
 says "$T/pieces.txt" "  rake fascia: 4 pieces come to 40.25 LF; the lines price 40.25 LF"
 says "$T/pieces.txt" "  soffit: 2 pieces come to 39.00 SF; the lines price 39.00 SF"
 says "$T/pieces.txt" "  rake soffit: 4 pieces come to 30.19 SF; the lines price 30.19 SF"
-says "$T/pieces.txt" "  corner boards: 8 pieces come to 72.00 LF; the lines price 72.00 LF"
+says "$T/pieces.txt" "  corner boards: 8 pieces come to 74.00 LF; the lines price 74.00 LF"
 says "$T/pieces.txt" "  casing: 7 pieces come to 32.33 LF; the lines price 32.33 LF"
 echo "  an eave with no fascia line has no fascia: the job before its lines were given has no piece at all, and says so:"
 "$P" trim "$T/job-before-lines.json" --pieces > "$T/pieces0.txt"
