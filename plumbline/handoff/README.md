@@ -45,8 +45,10 @@ session's scratch area and were lost with it.
   build, every crate's tests, then EVERY window demonstration whose house uses
   something the merge touched (one was missed for three merges: see DECISIONS.md,
   "Call 193, as built"), `tools/committed.sh`, push.
-- **The disk is about 39 GB.** `tools/committed.sh` needs 8 GB free and fails with
-  "No space left": `cargo clean -p` each workspace crate first, keeping a frozen
+- **The disk is about 39 GB.** `tools/committed.sh` needs about 12 GB free (8.9 GB
+  was not enough on 2026-11-25 and it failed at linking, with only "linking with
+  cc failed" to show for it; 13.7 GB passed): `cargo clean -p` each workspace
+  crate first and delete a worker's `target`, keeping a frozen
   copy of the two programs elsewhere. A worker's `target` is deleted the moment its
   patch is verified.
 - **A restart stops every agent and keeps the disk.** Resume the agent with a

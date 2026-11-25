@@ -11459,22 +11459,39 @@ and the code's fitness for other machines, remote now and a field app later.
 in DECISIONS.md call 216 and `research/review-1125-*.md`; the new features it
 suggests are PROPOSALS.md 34 to 40.
 
-- Pushed head when he stopped: 0236018 (command line: 1,085 tests, 57
-  demonstrations, verified in the worker's copy). The window was last built on
-  e3aedff plus one uncommitted wording fix in the main checkout
-  (`crates/app/src/bring.rs`, built, the window's 48 tests pass).
-- Window demonstrations on that build: `shapebenchw`, `benchw` and `fixes197w`
-  passed; `fixes209w` fails step 6 twice at its margin (56 dots with Plumbing on,
-  15 with it off, against a limit of 14) while its picture shows every pipe gone:
-  not diagnosed, not loosened. The rest of the set was still running.
+- Pushed head when he stopped: 0236018. **Pushed head now: the merge b965501**
+  (everything accepted, the review's records, the gate fix, and two window fixes
+  the checks and the review found): **1,134 tests pass on it** (window 49, model
+  667, command line 45, sheets 6, model files 73, roofing 122, plans 172) and
+  the three gates pass, the egress gate now reading this program.
+  **`tools/committed.sh` passes on b965501 (86 test runs).** Its first run
+  failed at linking with 8.9 GB of disk free; with 13.7 GB free the same commit
+  passed. The check builds every test program afresh, and they have grown: it
+  now wants more than 9 GB free, not the 8 the handoff notes said.
+- Window demonstrations, each on a frozen build of the window as it stood
+  BEFORE that last merge brought in call 213's model changes (which touch no
+  window code and move no figure of the sample house): `shapebenchw` and
+  `benchw` before either window fix; `fixes197w`, `itemlibw`, `itemneww` with
+  the first; `fixes209w`, `cabinetsw`, `pricew`, `moneyw`, `bringw`, `dressw`,
+  `trimw`, `gablew`, `gableendw`, `glassw`, `tradesw` with both. Sixteen pass.
+  Two things seen and not hidden: `glassw` failed its first run ("the door did
+  not grow by what six lines of the wheel give": a wheel step lost on the slow
+  renderer) and passed its second; `fixes209w` step 6 failed twice (56 dots
+  against 15) while a build ran on the same machine and passes alone (85 and 87
+  against 15). Neither check was changed. Both say what CLAUDE.md already says:
+  nothing is built beside a timed window run.
+- The two window fixes: the window pointed at "Estimate workbook, under Write
+  out" only for a guessed form of the model's sentence (now the model's own
+  words); a name that was empty or began with a letter of more than one byte
+  stopped the window in seven places (`theme::capital`, with a test seen to fail
+  on the old way).
 - Stopped part-way and NOT on the branch: the worker of call 214 (scratch copy
   only). Not started: call 215; the window jobs 207W, 211W, 210W.
 - Put right regardless of his answers (each a fault against a fixed rule or a
   crash, DECISIONS.md call 216 at its end): **the egress gate now reads this
   program** (done the same day, proved red two ways: "Call 216, the gate put
-  right"); a typed shape name can crash the item's panel (read in the code at
-  `crates/app/src/panels.rs:2819` and three like it; not yet reproduced, not yet
-  fixed).
+  right"); **a typed name could stop the window, and is fixed** (reproduced in
+  a test, seven places, one helper).
 
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
