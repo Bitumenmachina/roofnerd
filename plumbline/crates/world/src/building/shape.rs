@@ -188,8 +188,8 @@ impl Shape {
         None
     }
 
-    /// One block read, worked at the three sizes and held to the box (rulings 2 and 3).
-    fn piece(&self, n: usize) -> Result<Compiled, String> {
+    /// One block read: its figures and its condition, every one a formula in width, depth and height.
+    fn read_piece(&self, n: usize) -> Result<Compiled, String> {
         let piece = &self.blocks[n];
         let mut read: Vec<Expr> = Vec::new();
         for (what, text) in FIGURES.iter().zip(piece.figures()) {
@@ -200,36 +200,90 @@ impl Shape {
             Some(text) => Some(read_cond(text).map_err(|why| format!("shape {:?}, block {}, There when: {why}", self.name, n + 1))?),
             None => None,
         };
-        let c = Compiled { made: piece.made, round: piece.round, figures, when };
+        Ok(Compiled { made: piece.made, round: piece.round, figures, when })
+    }
+
+    /// One block read, worked at the three sizes and held to the box (rulings 2 and 3). `held_on` names an item the shape already holds on
+    /// at its own size, so that a refusal at a smaller size says so (call 213 point 14).
+    fn tried(&self, n: usize, c: &Compiled, held_on: Option<&str>) -> Result<(), String> {
         for (_, size) in CHECK_SIZES {
-            if let Some((out, _, way)) = outside_box(&self.name, n, &c, size)? {
+            let (w, d, h) = (crate::units::inches_said(size[0]), crate::units::inches_said(size[1]), crate::units::inches_said(size[2]));
+            if let Some((out, _, way)) = outside_box(&self.name, n, c, size)? {
                 // In the words a builder says, in inches (call 212): the item the figure was tried on, how far, and which way.
-                let past = match way {
-                    "to the left" => "past the left side",
-                    "to the right" => "past the right side",
-                    "in front" => "in front of the front",
-                    "behind" => "behind the back",
-                    "below" => "below the foot",
-                    _ => "above the top",
+                let past = past_said(way);
+                let how = match held_on {
+                    Some(on) => format!("it holds on {on}, but on an item {w} wide, {d} deep and {h} high it would stand {} {past}; a shape has to hold on a smaller item too, so write the figure from the item's sizes", crate::units::inches_said(out)),
+                    None => format!("on an item {w} wide, {d} deep and {h} high it would stand {} {past}; a shape is held inside its item at every size, so write the figure from the item's sizes", crate::units::inches_said(out)),
                 };
-                let (w, d, h) = (crate::units::inches_said(size[0]), crate::units::inches_said(size[1]), crate::units::inches_said(size[2]));
-                return Err(format!("shape {:?}, block {}: on an item {w} wide, {d} deep and {h} high it would stand {} {past}; a shape is held inside its item at every size, so write the figure from the item's sizes", self.name, n + 1, crate::units::inches_said(out)));
+                return Err(format!("shape {:?}, block {}: {how}", self.name, n + 1));
             }
         }
+        Ok(())
+    }
+
+    /// One block read, worked at the three sizes and held to the box (rulings 2 and 3).
+    fn piece(&self, n: usize) -> Result<Compiled, String> {
+        let c = self.read_piece(n)?;
+        self.tried(n, &c, None)?;
         Ok(c)
+    }
+
+    /// The shape read, and held first at each of these items' own sizes (an item's name and its width, depth and height in feet), then at the
+    /// three sizes a shape is tried at (call 213 point 14). Where it fails at an item's own size, the refusal speaks of that item and its sizes;
+    /// only where it holds at those and fails at a smaller size does it say so, and why: a shape has to hold on a smaller item too.
+    pub fn check_for(&self, items: &[(String, P3)]) -> Result<(), String> {
+        if let Some(why) = self.shape_fault() {
+            return Err(why);
+        }
+        let read: Vec<Compiled> = (0..self.blocks.len()).map(|n| self.read_piece(n)).collect::<Result<_, _>>()?;
+        for (item, size) in items {
+            for (n, c) in read.iter().enumerate() {
+                if let Some((axis, from, to, flat)) = thin(&self.name, n, c, *size)? {
+                    let sizes = format!("{} wide, {} deep and {} high", crate::units::inches_said(size[0]), crate::units::inches_said(size[1]), crate::units::inches_said(size[2]));
+                    return Err(format!("shape {:?}, block {}: on {item} ({sizes}) its {axis} runs from {} to {}, which {}; {axis} to has to be more than {axis} from", self.name, n + 1, end_said(from), end_said(to), if flat { "has no thickness" } else { "is backwards" }));
+                }
+            }
+            self.check_at(item, *size)?;
+        }
+        // A block with no thickness, or written backwards, at every size a shape is tried at is no block at any: a figure that runs the wrong
+        // way only on an item smaller than the smallest tried (a plinth that is the height less 6 in) is left to the item it is for.
+        for (n, c) in read.iter().enumerate() {
+            let mut all: Option<(&'static str, f64, f64, bool, P3)> = None;
+            let mut every = true;
+            for (_, size) in CHECK_SIZES {
+                match thin(&self.name, n, c, size)? {
+                    Some((axis, from, to, flat)) if all.as_ref().is_none_or(|a| a.0 == axis) => all = Some((axis, from, to, flat, size)),
+                    Some(_) => every = false,
+                    None => every = false,
+                }
+            }
+            if let (true, Some((axis, from, to, flat, size))) = (every, all) {
+                let sizes = format!("{} wide, {} deep and {} high", crate::units::inches_said(size[0]), crate::units::inches_said(size[1]), crate::units::inches_said(size[2]));
+                return Err(format!("shape {:?}, block {}: its {axis} runs from {} to {} (on an item {sizes}, and the same way at every size a shape is tried at), which {}; {axis} to has to be more than {axis} from", self.name, n + 1, end_said(from), end_said(to), if flat { "has no thickness" } else { "is backwards" }));
+            }
+        }
+        let held_on = items.first().map(|(name, _)| name.as_str());
+        for (n, c) in read.iter().enumerate() {
+            self.tried(n, c, held_on)?;
+        }
+        Ok(())
     }
 
     /// The shape held to the box of one item's own sizes (call 206 point 2): the three sizes a table is tried at are
     /// no proof that a block stays inside at another. Refused, naming the item, the block and how far it reaches.
     /// `size` is the item's width, depth and height in feet.
     pub fn check_at(&self, item: &str, size: P3) -> Result<(), String> {
-        let compiled = self.compile()?;
+        // Read, and held at this item's own size alone: the sizes a shape is tried at come after (`check_for`), so that a figure that
+        // fails on the item itself says so before it speaks of a smaller one (call 213 point 14).
+        if let Some(why) = self.shape_fault() {
+            return Err(why);
+        }
+        let compiled: Vec<Compiled> = (0..self.blocks.len()).map(|n| self.read_piece(n)).collect::<Result<_, _>>()?;
         for (n, c) in compiled.iter().enumerate() {
             if let Some((out, axis, way)) = outside_box(&self.name, n, c, size)? {
-                let inches = format!("{:.3}", out * 12.0);
-                let inches = inches.trim_end_matches('0').trim_end_matches('.');
-                let (w, d, h) = (inch_said(size[0]), inch_said(size[1]), inch_said(size[2]));
-                return Err(format!("{item:?} is {w} wide, {d} deep and {h} high, and drawn as {:?}, whose block {} reaches {inches} in {way} its box ({axis}); a shape is drawn inside the box of its item's sizes", self.name, n + 1));
+                let (w, d, h) = (crate::units::inches_said(size[0]), crate::units::inches_said(size[1]), crate::units::inches_said(size[2]));
+                let _ = axis;
+                return Err(format!("shape {:?}, block {}: on {item} ({w} wide, {d} deep and {h} high) it would stand {} {}; a shape is held inside its item", self.name, n + 1, crate::units::inches_said(out), past_said(way)));
             }
         }
         Ok(())
@@ -279,11 +333,55 @@ pub fn thing_axes(size: P3, across: f64, back: f64, up: f64) -> P3 {
     [across, size[1] / 2.0 - back, up]
 }
 
-/// A length in feet as inches, to the thousandth.
-fn inch_said(ft: f64) -> String {
-    let t = format!("{:.3}", ft * 12.0 + 0.0);
-    let t = t.trim_end_matches('0').trim_end_matches('.');
-    format!("{} in", if t == "-0" { "0" } else { t })
+/// A block's end, as a person reads it off a tape, in inches (signed): `-18 in`, `34 1/2 in`.
+fn end_said(feet: f64) -> String {
+    if feet < 0.0 && crate::units::inches_said(-feet) != "less than 1/16 in" {
+        format!("-{}", crate::units::inches_said(-feet))
+    } else {
+        crate::units::inches_said(feet.abs())
+    }
+}
+
+/// Which way past the box a block stands, in the words a builder says it in.
+fn past_said(way: &str) -> &'static str {
+    match way {
+        "to the left" => "past the left side",
+        "to the right" => "past the right side",
+        "in front" => "in front of the front",
+        "behind" => "behind the back",
+        "below" => "below the foot",
+        _ => "above the top",
+    }
+}
+
+/// The axis on which a block has no thickness or is written backwards at `size`, with its two ends in feet and whether it is flat (else
+/// backwards): where its "from" is not less than its "to" (call 213 point 15). None where the block is not there at this size.
+fn thin(name: &str, n: usize, c: &Compiled, size: P3) -> Result<Option<(&'static str, f64, f64, bool)>, String> {
+    let Some(f) = figures_at(name, n, c, size)? else { return Ok(None) };
+    for (axis, (from, to)) in [("Across", (f[0], f[1])), ("Back", (f[2], f[3])), ("Up", (f[4], f[5]))] {
+        if (to - from).abs() <= REACH {
+            return Ok(Some((axis, from, to, true)));
+        }
+        if to < from {
+            return Ok(Some((axis, from, to, false)));
+        }
+    }
+    Ok(None)
+}
+
+/// The six figures of a block worked for a size, in feet: across from and to, back from and to, up from and to. None where its condition
+/// does not hold at that size.
+fn figures_at(name: &str, n: usize, c: &Compiled, size: P3) -> Result<Option<[f64; 6]>, String> {
+    if let Some(cond) = &c.when {
+        if !holds(name, n, cond, size)? {
+            return Ok(None);
+        }
+    }
+    let mut f = [0.0; 6];
+    for i in 0..6 {
+        f[i] = figure(name, n, FIGURES[i], &c.figures[i], size)?;
+    }
+    Ok(Some(f))
 }
 
 /// How far a block of a shape reaches outside the box of `size`, if it does: how far in feet, on which axis, and which way.

@@ -452,3 +452,42 @@ screen shows two places always, and the cents on most lines of every demonstrati
 move and are worked again by hand. It is a change to what a number means, so it is
 the lead's to make and Patrick's to know about; a word from him ("round it the way
 an estimator does") settles it.
+
+## Q30. In what order is the review's list taken? (2026-11-25, call 216)
+The lead's recommendation: (1) sound on any machine (the eight items, the egress
+gate, autosave); (2) one window that follows its size; (3) feel (a ghost before
+the click that shows fits-or-clashes, the length at the pointer, turn before
+placing, move a door, copy, one search box); (4) the bench's window halves; (5)
+notes, a measuring tool and one revision over another on a plan; (6) hand-offs
+(clashes as an issue list, DXF, a shop's cut list); (7) the field companion.
+**Working assumption: none; building is stopped until he says.**
+
+## Q31. What will the desktop be? (2026-11-25, call 216)
+Windows, a Mac or Linux, and with what graphics card. It decides the first
+machine the program is made sound on and how remote access is set up (the set-up
+found serves from Linux and Windows; a Mac has its own). **Working assumption:
+none.**
+
+## Q32. Two windows, or one with the estimate as a tab? (2026-11-25, call 216)
+Today the model and the estimate are two windows side by side, 2,490 wide
+together. A laptop, a remote session and a tablet each have one screen. The lead
+recommends one window with the estimate as a tab or a panel that can be pulled
+out to a second window where there is room. It changes the look, which is his.
+**Working assumption: none.**
+
+## Q33. Does a field companion that passes the job by file sit inside "sends nothing anywhere"? (2026-11-25, call 216)
+A small companion would carry the verify-in-field list to the site and bring
+measurements and photos back. By a file moved by hand, the fixed rule is plainly
+kept. Over his own local network, a program would be opening a connection, which
+the rule as written forbids for the program itself. **Working assumption: by
+file only, until he says otherwise.**
+
+## Q34. The two bench steps that were mid-build when he stopped (2026-11-25, call 216)
+A maker's model as an item (call 214, stopped part-way) and a cabinet by rule
+(call 215, not started): finish them now, or hold them behind the review's list?
+**Working assumption: held.**
+
+## Q35. "mailing programs like CNC" (2026-11-25, call 216)
+Read as milling: programs that drive CNC machines. If he meant something else,
+the survey `research/review-1125-cnc-and-fabrication.md` is beside the point and
+is done again.

@@ -3065,7 +3065,7 @@ pub fn rows(w: &World, e: Entity, path: &str, names: &HashMap<String, String>) -
         rows.push(view::length(path, "height above its level", &c.offset));
         if let Some(a) = &c.angle {
             // `entered` writes the unit after the figure: "180 deg".
-            rows.push(view::entered(path, "turned", a, |x| view::num(*x)));
+            rows.push(view::entered(path, "turned", a, |x| view::num(crate::editing::turned_said(*x))));
         }
         // Its size as a tape reads it, wide by deep by high: the same way an item's is said.
         let mut size = view::entered(path, "size", &c.size, |s| format!("{} × {} × {}", view::num(s[0]), view::num(s[1]), view::num(s[2])));
@@ -3425,6 +3425,14 @@ pub struct OpenEnd {
     pub at: P3,
 }
 
+/// A run that passes over a thing's connection: where, and what it says.
+#[derive(Clone, Debug, PartialEq)]
+pub struct OverConnection {
+    pub at: P3,
+    /// "pipe 1 passes over Lavatory's Waste connection".
+    pub said: String,
+}
+
 /// How a system's runs hang together, read off the job's network (`network.rs`). Nothing
 /// here stops a job from loading or a length from being counted: a job being entered has
 /// open ends. It is what an estimator checks before trusting a count of fittings.
@@ -3437,6 +3445,9 @@ pub struct Continuity {
     /// Where a run or a connector meets a run along its length with no fitting entered:
     /// each is a tee, or a mistake.
     pub no_fitting: Vec<P3>,
+    /// Where a run passes over a thing's connection with no fitting: joined to it, and said as that, by the run, the thing and the
+    /// connection (call 213 point 3).
+    pub over_connection: Vec<OverConnection>,
     /// What else looks wrong, said in a sentence each.
     pub warnings: Vec<String>,
     /// What could not be placed, and so was not checked, each with why.
@@ -3644,6 +3655,17 @@ pub fn takeoff(job: &mut Job) -> Vec<SystemTakeoff> {
                 for i in groups_of(if runs.is_empty() { &warning.elements } else { &runs }) {
                     match (warning.kind, warning.at) {
                         ("joined_mid_run", Some(at)) => found[i].no_fitting.push(at),
+                        ("over_connection", Some(at)) => {
+                            let said = warning.connector.as_ref().map(|(thing, index)| {
+                                let label = order.iter().find(|e| w.get::<Node>(**e).is_some_and(|n| n.path == *thing)).and_then(|e| w.get::<Connectors>(*e)).and_then(|c| c.0.get(*index)).map(|k| k.name.clone()).filter(|s| !s.is_empty());
+                                let connection = match label {
+                                    Some(label) => format!("{label} connection"),
+                                    None => format!("connection {}", index + 1),
+                                };
+                                format!("{} passes over {}'s {connection}", runs.first().map(|r| tree.called(r)).unwrap_or_else(|| "a run".to_string()), tree.called(thing))
+                            });
+                            found[i].over_connection.push(OverConnection { at, said: said.unwrap_or_else(|| warning.message.clone()) });
+                        }
                         _ => found[i].warnings.push(warning.message.clone()),
                     }
                 }

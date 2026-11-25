@@ -140,7 +140,7 @@ fn step_5_the_same_file_again_is_refused_and_nothing_is_doubled() {
     assert!(why.contains("this model is already in the job: nothing was brought in"), "{why}");
     assert!(why.contains("2 of its 2 things"), "{why}");
     assert!(why.contains("It holds 1 floor and 4 walls, which were not asked for"), "{why}");
-    assert!(why.contains("(1 duct, 1 other thing)"), "{why}");
+    assert!(why.contains("(1 duct, 1 piece of equipment)"), "{why}");
     assert_eq!(file::save(&mut job), before);
     // The sample's 23 ducts and 5 pieces of equipment, and the one each: not doubled.
     assert_eq!((count(&mut job, Kind::Duct), count(&mut job, Kind::Equipment)), (24, 6));
@@ -208,7 +208,7 @@ fn a_run_on_a_level_at_a_height_the_job_lacks_is_put_on_the_level_it_stands_with
     assert_eq!((b.made.get("ducts"), b.made.get("pieces of equipment"), b.made.get("levels")), (Some(&1), Some(&1), None), "{:#?}", b.made);
     let notes = b.notes.join("\n");
     assert!(
-        notes.contains("the model's level \"Mezzanine\" has its floor at 4 ft, which is not the height of any level the job has: what the model has on it was put on the job's \"first floor\", the level it stands within, and no level was added"),
+        notes.contains("the model's level \"Mezzanine\" has its floor at 4 ft, which is not the height of any level the job has: it holds 1 thing, and each was put on the level it stands within (the job's \"first floor\"); no level was added"),
         "{notes}"
     );
     assert!(notes.contains("the model's level \"Loft\" has its floor at 13 ft") && notes.contains("the job's \"second floor\""), "{notes}");
@@ -345,5 +345,5 @@ fn no_level_to_stand_on_is_refused_and_a_run_below_the_lowest_is_put_on_it_and_s
     let mut q = job.world.query::<(&Kind, &building::Segment)>();
     assert_eq!(q.iter(&job.world).find(|(k, _)| **k == Kind::Duct).unwrap().1.offset.feet(), Some(-7.0));
     let notes = b.notes.join("\n");
-    assert!(notes.contains("the model's level \"Basement\" has its floor at -9 ft") && notes.contains("1 of them stand below the job's lowest level and were put on it"), "{notes}");
+    assert!(notes.contains("the model's level \"Basement\" has its floor at -9 ft") && notes.contains("1 thing stands below the job's lowest level, \"first floor\" (its floor at 0 ft): ") && notes.contains("7 ft below it; check the model's heights against the job's"), "{notes}");
 }

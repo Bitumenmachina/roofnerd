@@ -106,7 +106,7 @@ fn step_3_a_figure_that_leaves_the_box_is_refused_naming_the_block_the_size_and_
     let (mut j, _) = with_fourth();
     let before = file::save(&mut j);
     let why = ed::shape_block_set(&mut j, KEPT, 4, BlockSet::Figure(5, "height + 1 in".into())).unwrap_err();
-    assert!(why.contains("block 4") && why.contains("on an item 4 13/16 in wide, 3 5/8 in deep and 6 in high it would stand 1 in above the top") && !why.contains("small") && !why.contains(" ft"), "{why}");
+    assert!(why.contains("block 4") && why.contains("on Vanity, 36 in (36 in wide, 21 in deep and 34 1/2 in high) it would stand 1 in above the top") && !why.contains("small") && !why.contains(" ft"), "{why}");
     assert!(why.contains("1 in above"), "it says how far and which way: {why}");
     assert_eq!(file::save(&mut j), before, "the shape and the job are as they were");
 }

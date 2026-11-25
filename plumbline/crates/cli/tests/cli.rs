@@ -408,7 +408,8 @@ fn the_estimate_is_read_by_item_and_comes_to_the_same_job_cost() {
 
 /// An item's size typed at the command line is said as the window says it: a size that differs is the item
 /// changed (Assumed; how many set down follow; the name that still carries the old size), the same size again is
-/// the check, Known, checked on site (contract 200P, part 2).
+/// the check, Known, checked on site in the window (contract 200P, part 2); at the command line the same size again changes nothing and a size is
+/// Known with how sure and where from (call 213 points 5 and 6).
 #[test]
 fn an_items_size_typed_is_said_as_the_window_says_it() {
     let dir = folder("item-size");
@@ -418,11 +419,15 @@ fn an_items_size_typed_is_said_as_the_window_says_it() {
     assert!(run(&dir, &[&["place", "j.json", "level-0002", "Vanity, 36 in", "--at", "5,5", "--offset", "0 ft"][..], &KNOWN[..]].concat()).0);
     let (ok, said) = run(&dir, &["set", "j.json", "Vanity, 36 in", "width", "48 in"]);
     assert!(ok, "{said}");
-    for words in ["width is now 48 in (it was 36 in)", "Assumed: typed in the window; not yet checked against its maker's sheet", "1 thing set down from it follows", "type 48 in again on its width", "Its name still reads 36 in: Rename item changes it"] {
+    for words in ["width is now 48 in (it was 36 in)", "Assumed: typed at the command line; not yet checked against its maker's sheet", "1 thing set down from it follows", "--status Known --source", "Its name still reads 36 in: Rename item changes it"] {
         assert!(said.contains(words), "{words}: {said}");
     }
+    // The same size again at the command line is no check (call 213 points 5 and 6): nothing changes, and it says so.
     let (ok, said) = run(&dir, &["set", "j.json", "Vanity, 36 in", "width", "48 in", "--source", "J. Smith, tape"]);
-    assert!(ok && said.contains("width 48 in is checked: Known, checked on site."), "{said}");
+    assert!(ok && said.contains("width is 48 in already: nothing changed"), "{said}");
+    // Known the way every value is: how sure and where from.
+    let (ok, said) = run(&dir, &["set", "j.json", "Vanity, 36 in", "width", "48 in", "--status", "Known", "--source", "J. Smith, tape"]);
+    assert!(ok && said.contains("width 48 in is Known: J. Smith, tape"), "{said}");
     let (ok, said) = run(&dir, &["set", "j.json", "Vanity, 36 in", "width", "wide"]);
     assert!(!ok && !said.is_empty(), "{said}");
     std::fs::remove_dir_all(&dir).unwrap();

@@ -114,9 +114,22 @@ pub const PLACE_WORDS: [&str; 3] = ["Across", "Back", "Up"];
 
 /// A length in feet as inches, to the thousandth, no trailing zeros ("22 in").
 pub fn inches_of(ft: f64) -> String {
-    let t = format!("{:.3}", ft * 12.0 + 0.0);
-    let t = t.trim_end_matches('0').trim_end_matches('.');
-    format!("{} in", if t == "-0" { "0" } else { t })
+    // To the sixteenth, as a tape reads and as every length in a reply is written (call 213 point 8): 1/2 in, 5 1/2 in, 21 in.
+    let parts = (ft.abs() * 12.0 * 16.0).round() as u64;
+    if parts == 0 {
+        return "0 in".to_string();
+    }
+    let (whole, mut top, mut bottom) = (parts / 16, parts % 16, 16);
+    while top > 0 && top % 2 == 0 {
+        top /= 2;
+        bottom /= 2;
+    }
+    let sign = if ft < 0.0 { "-" } else { "" };
+    match (whole, top) {
+        (w, 0) => format!("{sign}{w} in"),
+        (0, t) => format!("{sign}{t}/{bottom} in"),
+        (w, t) => format!("{sign}{w} {t}/{bottom} in"),
+    }
 }
 
 /// The item's sizes as a refusal says them: "24 in wide, 18 in deep, 34 in high".
@@ -230,7 +243,8 @@ impl ItemConnection {
         let what = [Some(kind_word(self.kind).to_string()), self.carries.map(|d| domain_word(d).to_string()), (self.flow != Flow::Both).then(|| flow_word(self.flow).to_string())].into_iter().flatten().collect::<Vec<_>>().join(", ");
         let across = at[0];
         let back = size[1] / 2.0 - at[1];
-        let sized = self.size.as_ref().and_then(|s| s.value.as_ref().map(|l| format!("; size {}", units::show_length(l, &s.unit)))).unwrap_or_default();
+        // A size says where it is from where that is not where the place is from (a size typed on a connection is not the rough-in sheet's).
+        let sized = self.size.as_ref().and_then(|s| s.value.as_ref().map(|l| format!("; size {}{}", units::show_length(l, &s.unit), if s.source != self.place_from || s.status != self.place { format!(" ({}: {})", status_word(s.status), s.source) } else { String::new() }))).unwrap_or_default();
         format!("{}: {what}; across {}, back {}, up {}; faces {}{sized}; {}: {}", self.name, inches_of(across), inches_of(back), inches_of(at[2]), self.faces.word(), status_word(self.place), self.place_from)
     }
 }

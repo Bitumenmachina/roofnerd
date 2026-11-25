@@ -160,7 +160,7 @@ MT="$(made <("$P" type "$M" duct "Duct 12 round" --round "12 in" "${A[@]}") 'typ
 "$P" export ifc "$M" "$T/mezz.ifc" >/dev/null
 cp "$T/house.json" "$T/mezz-job.json"
 "$P" import ifc "$T/mezz-job.json" "$T/mezz.ifc" --status Assumed --source "designer, made up" --only runs > "$T/mezz-in.txt"
-says "$T/mezz-in.txt" "note: the model's level \"Mezzanine\" has its floor at 4 ft, which is not the height of any level the job has: what the model has on it was put on the job's \"first floor\", the level it stands within, and no level was added"
+says "$T/mezz-in.txt" "note: the model's level \"Mezzanine\" has its floor at 4 ft, which is not the height of any level the job has: it holds 1 thing, and each was put on the level it stands within (the job's \"first floor\"); no level was added"
 "$P" show "$T/mezz-job.json" > "$T/mezz.show"
 MD="$(grep -E '^ *duct-[0-9]+  duct 1  \[duct\]' "$T/mezz.show" | grep -oE 'duct-[0-9]+' | head -1)"
 "$P" show "$T/mezz-job.json" "$MD" > "$T/mezz-duct.txt"

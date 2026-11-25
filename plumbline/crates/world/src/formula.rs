@@ -58,6 +58,8 @@ fn unit_named(word: &str) -> Option<(&'static str, f64, i32)> {
 #[derive(Clone, Debug, PartialEq)]
 enum Tok {
     Num(f64),
+    /// A length written with its unit as a person writes it: `1/2 in`, `5 1/2 in`, `3'`, `6"` (call 213 point 8). The unit is one of `UNITS`.
+    Len(f64, &'static str),
     Name(String),
     Op(char),
     Open,
@@ -132,10 +134,69 @@ fn tokens(text: &str) -> Result<Vec<Tok>, String> {
                     _ => out.push(Tok::Name(word)),
                 }
             }
-            other => return Err(format!("{other:?} is not something a formula can hold; it takes names, numbers, + - * / brackets, min and max")),
+            // The marks a builder writes feet and inches with, after a number: 3' is 3 ft and 6" is 6 in (call 213 point 8).
+            '\'' | '"' if matches!(out.last(), Some(Tok::Num(_))) => {
+                out.push(Tok::Name(if c == '\'' { "ft" } else { "in" }.to_string()));
+                i += 1;
+            }
+            other => return Err(format!("{other} is not something a formula can hold; it takes names, numbers, + - * / brackets, min and max; a length is written with its unit, like 4 in, 1/2 in, 3 ft 6 in or 100 mm")),
         }
     }
-    Ok(out)
+    Ok(lengths(out))
+}
+
+/// A length as it is written by hand, read from the tokens (call 213 point 8). A number, a slash, a number and a unit is a fraction of
+/// that unit (`1/2 in`); a whole number before one is added (`5 1/2 in`); a number and a unit is a length. Nothing that read before reads
+/// otherwise: a fraction with a `*` or a `/` beside it (`plan_length * 1 / 2 in`, which was a number over a length) is left as it was,
+/// and a number and a unit with nothing between them is what it always was.
+fn lengths(toks: Vec<Tok>) -> Vec<Tok> {
+    let mut out: Vec<Tok> = Vec::with_capacity(toks.len());
+    let mut i = 0;
+    let is_unit = |t: Option<&Tok>| match t {
+        Some(Tok::Name(w)) => unit_named(w).map(|(u, _, _)| u),
+        _ => None,
+    };
+    let times_or_over = |t: Option<&Tok>| matches!(t, Some(Tok::Op('*' | '/')));
+    while i < toks.len() {
+        // A whole number, a fraction and a unit: 5 1/2 in. (Two numbers side by side were never a figure.)
+        if let (Tok::Num(w), Some(Tok::Num(a)), Some(Tok::Op('/')), Some(Tok::Num(b))) = (&toks[i], toks.get(i + 1), toks.get(i + 2), toks.get(i + 3)) {
+            if let Some(unit) = is_unit(toks.get(i + 4)) {
+                if *b != 0.0 {
+                    out.push(Tok::Len(w + a / b, unit));
+                    i += 5;
+                    continue;
+                }
+            }
+        }
+        // A fraction of a unit: 1/2 in.
+        if let (Tok::Num(a), Some(Tok::Op('/')), Some(Tok::Num(b))) = (&toks[i], toks.get(i + 1), toks.get(i + 2)) {
+            if let Some(unit) = is_unit(toks.get(i + 3)) {
+                let before = out.last().map(|t| matches!(t, Tok::Op('*' | '/'))).unwrap_or(false);
+                if *b != 0.0 && !before && !times_or_over(toks.get(i + 4)) {
+                    out.push(Tok::Len(a / b, unit));
+                    i += 4;
+                    continue;
+                }
+            }
+        }
+        // A number and a unit: a length (what the parser read before, said once here).
+        if let Tok::Num(x) = &toks[i] {
+            if let Some(unit) = is_unit(toks.get(i + 1)) {
+                out.push(Tok::Len(*x, unit));
+                i += 2;
+                continue;
+            }
+        }
+        out.push(toks[i].clone());
+        i += 1;
+    }
+    out
+}
+
+/// Whether `next` is a smaller unit of the same kind of length than `last`, so that `3 ft 6 in` is 3 ft and 6 in: feet then inches; meters
+/// then centimeters or millimeters; centimeters then millimeters.
+fn smaller_than(last: &str, next: &str) -> bool {
+    matches!((last, next), ("ft", "in") | ("m", "cm") | ("m", "mm") | ("cm", "mm"))
 }
 
 /// The most names, numbers, signs and brackets a formula may hold.
@@ -187,6 +248,21 @@ impl Parser {
                     },
                     _ => Ok(Expr::Num(x)),
                 }
+            }
+            Some(Tok::Len(x, unit)) => {
+                self.at += 1;
+                // Feet and inches side by side add (3 ft 6 in); a minus between them is a minus.
+                let mut sum = Expr::Sized(x, unit);
+                let mut last = unit;
+                while let Some(Tok::Len(y, next)) = self.peek().cloned() {
+                    if !smaller_than(last, next) {
+                        break;
+                    }
+                    self.at += 1;
+                    sum = Expr::Bin(Box::new(sum), '+', Box::new(Expr::Sized(y, next)));
+                    last = next;
+                }
+                Ok(sum)
             }
             Some(Tok::Name(n)) => {
                 self.at += 1;

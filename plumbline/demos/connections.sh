@@ -94,7 +94,9 @@ says "$T/take.txt" "its Cold water connection"
 "$P" show "$J" "$THING" > "$T/thing.txt"
 says "$T/thing.txt" "(-4, 9, 24)"
 "$P" set "$J" "Test lavatory" height "34 in" > "$T/h34.txt"
-lacks "$T/h34.txt" "stands off"
+# The cold pipe is joined again; the hot pipe, 3 in short of its connection in step 4, stood off all along and still does, and is said so (call 213 point 2).
+says "$T/h34.txt" "1 run is now joined to its connection"
+says "$T/h34.txt" "1 run still stands off its connection"
 "$P" takeoff "$J" > "$T/take.txt"
 lacks "$T/take.txt" "its Cold water connection"
 

@@ -71,8 +71,8 @@ pub enum Bring {
     /// Everything in the file, as always, and still refused where it lies over what the job has.
     #[default]
     Whole,
-    /// Only its runs and what they serve: ducts, pipes, conduit, cable, their fittings, the fixtures and equipment they
-    /// reach, their systems and what is connected to what.
+    /// Only its runs and what they serve: ducts, pipes, conduit, cable, their fittings, every fixture and piece of equipment (a run reaches
+    /// it or not: an air handler is wanted before its ducts are drawn), their systems and what is connected to what.
     RunsOnly,
 }
 
@@ -186,14 +186,29 @@ fn already_in_the_job(left_out: &[(String, usize, String)]) -> Option<String> {
     if twice == 0 || twice * 2 < total {
         return None;
     }
-    // The file's own words for what this program calls a post and a room.
+    // The file's own words for what this program calls a post and a room, and one word for a kind of thing in every reply: a fixture, a
+    // piece of equipment (call 213 point 10).
+    let equipment_said: Vec<String> = EQUIPMENT.iter().map(|c| said(c)).collect();
     let plain = |class: &str| match class {
-        c if c.contains("as the model calls it") => "other things".to_string(),
+        c if equipment_said.iter().any(|e| e == c) => "piece of equipment".to_string(),
+        c if c.contains("as the model calls it") => "other thing".to_string(),
         "column" => "post".to_string(),
         "space" => "room".to_string(),
+        "fixture or outlet" | "plumbing fixture" => "fixture".to_string(),
         c => c.to_string(),
     };
-    let rest: Vec<String> = left_out.iter().filter(|(_, _, why)| !already(why) && !with_walls(why)).map(|(c, n, why)| format!("{n} {} ({})", plain(c), why)).collect();
+    let counted = |n: usize, kind: &str| -> String {
+        if n == 1 {
+            return format!("{n} {kind}");
+        }
+        let many = match kind {
+            "piece of equipment" => "pieces of equipment".to_string(),
+            k if k.ends_with('s') => k.to_string(),
+            k => format!("{k}s"),
+        };
+        format!("{n} {many}")
+    };
+    let rest: Vec<String> = left_out.iter().filter(|(_, _, why)| !already(why) && !with_walls(why)).map(|(c, n, why)| format!("{} ({})", counted(*n, &plain(c)), why)).collect();
     let mut said = format!(
         "this model is already in the job: nothing was brought in. {twice} of its {total} thing{} {} in the job already, in the same place, so a second would be counted twice",
         if total == 1 { "" } else { "s" },
@@ -205,10 +220,10 @@ fn already_in_the_job(left_out: &[(String, usize, String)]) -> Option<String> {
         let name = if class.ends_with(" fitting") { "fitting".to_string() } else { plain(class) };
         *kinds.entry(name).or_insert(0) += n;
     }
-    let mut kinds: Vec<(String, usize)> = kinds.into_iter().map(|(k, n)| (if k == "other things" && n == 1 { "other thing".to_string() } else { k }, n)).collect();
+    let mut kinds: Vec<(String, usize)> = kinds.into_iter().collect();
     kinds.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(&b.0)));
     if !kinds.is_empty() {
-        said.push_str(&format!(" ({})", kinds.iter().map(|(k, n)| format!("{n} {k}")).collect::<Vec<_>>().join(", ")));
+        said.push_str(&format!(" ({})", kinds.iter().map(|(k, n)| counted(*n, k)).collect::<Vec<_>>().join(", ")));
     }
     if openings > 0 {
         said.push_str(&format!("; {openings} door{} and window{} go with walls that were not brought in again", if openings == 1 { "" } else { "s" }, if openings == 1 { "" } else { "s" }));
@@ -1235,6 +1250,11 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
         let mut v: Vec<(String, String, f64)> = q.iter(&job.world).filter_map(|(n, l)| l.elevation.feet().map(|e| (n.name.clone(), n.path.clone(), e))).collect();
         v.sort_by(|a, b| a.2.total_cmp(&b.2));
         v
+    };
+    // How high each of the job's levels reaches, by path: its floor and its height (call 213 point 11).
+    let job_tops: HashMap<String, f64> = {
+        let mut q = job.world.query::<(&plumbline_world::Node, &building::Level)>();
+        q.iter(&job.world).filter_map(|(n, l)| Some((n.path.clone(), l.elevation.feet()? + l.height.feet()?))).collect()
     };
     if only_runs && job_levels.is_empty() {
         return Err("the job has no level with a height to put the model's runs on: bringing in only its runs adds no level. Add the building's levels first, or bring the whole model into a job of its own".into());
@@ -2693,32 +2713,54 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
         }
     }
     // Where the model's levels at a height the job has not were put (call 210 point 2): on the job's level each thing stands within, and
-    // no level was added. Said for each of the model's levels that had something made on it.
+    // no level was added. Said for each of the model's levels that had something made on it, of the things; and, where a thing stands above
+    // the top of the job's highest level or below its lowest, which and how far (call 213 point 11).
     {
         let mut by_level: BTreeMap<u64, Vec<&(u64, u64, String, f64, f64)>> = BTreeMap::new();
         for p in put_on.iter().filter(|p| made_ids.contains(&p.0)) {
             by_level.entry(p.1).or_default().push(p);
         }
         let mut said_levels: Vec<(f64, String)> = Vec::new();
+        let (mut above, mut below): (Vec<(String, f64)>, Vec<(String, f64)>) = (Vec::new(), Vec::new());
+        let highest = job_levels.last().cloned();
+        let lowest = job_levels.first().cloned();
         for (sid, things) in &by_level {
             let Some((called, stated, _)) = loose.get(sid) else { continue };
             let name_of = |path: &str| job_levels.iter().find(|l| l.1 == path).map(|l| l.0.clone()).unwrap_or_else(|| path.to_string());
             let mut targets: BTreeMap<String, usize> = BTreeMap::new();
             for t in things {
                 *targets.entry(name_of(&t.2)).or_insert(0) += 1;
+                let thing_name = r.file.entities.get(&t.0).map(|e| r.name(e)).filter(|n| !n.is_empty()).unwrap_or_else(|| "a thing".to_string());
+                if let Some((_, hp, _)) = &highest {
+                    if t.2 == *hp {
+                        if let Some(top) = job_tops.get(hp).filter(|top| t.3 > **top + 0.01) {
+                            above.push((thing_name.clone(), t.3 - top));
+                        }
+                    }
+                }
+                if let Some((_, lp, floor)) = &lowest {
+                    if t.2 == *lp && t.3 < *floor - 0.01 {
+                        below.push((thing_name, floor - t.3));
+                    }
+                }
             }
-            let lowest = job_levels.first().map(|l| l.2).unwrap_or(0.0);
-            let below = things.iter().filter(|t| t.3 < lowest - 0.01).count();
-            let where_to = if targets.len() == 1 {
-                format!("the job's \"{}\", the level it stands within", targets.keys().next().cloned().unwrap_or_default())
-            } else {
-                format!("the job's levels, each on the one it stands within ({})", targets.iter().map(|(n, c)| format!("\"{n}\": {c}")).collect::<Vec<_>>().join(", "))
-            };
-            let low = if below > 0 { format!("; {below} of them stand below the job's lowest level and were put on it") } else { String::new() };
-            said_levels.push((*stated, format!("the model's level \"{called}\" has its floor at {}, which is not the height of any level the job has: what the model has on it was put on {where_to}, and no level was added{low}", feet(*stated))));
+            let where_to = format!("(the job's {})", targets.iter().map(|(n, c)| if targets.len() == 1 { format!("\"{n}\"") } else { format!("\"{n}\": {c}") }).collect::<Vec<_>>().join(", "));
+            said_levels.push((*stated, format!("the model's level \"{called}\" has its floor at {}, which is not the height of any level the job has: it holds {}, and each was put on the level it stands within {where_to}; no level was added", feet(*stated), if things.len() == 1 { "1 thing".to_string() } else { format!("{} things", things.len()) })));
         }
         said_levels.sort_by(|a, b| a.0.total_cmp(&b.0));
         out.notes.extend(said_levels.into_iter().map(|(_, n)| n));
+        let list = |v: &[(String, f64)], way: &str| -> String {
+            let shown: Vec<String> = v.iter().take(5).map(|(n, by)| format!("{n} is {} {way} it", feet(*by))).collect();
+            let more = if v.len() > 5 { format!(" and {} more", v.len() - 5) } else { String::new() };
+            format!("{}{more}", shown.join(", "))
+        };
+        if let (false, Some((name, path, _))) = (above.is_empty(), highest) {
+            let top = job_tops.get(&path).copied().unwrap_or(0.0);
+            out.notes.push(format!("{} above the top of the job's highest level, \"{name}\" ({}): {}; check the model's heights against the job's", if above.len() == 1 { "1 thing stands".to_string() } else { format!("{} things stand", above.len()) }, feet(top), list(&above, "above")));
+        }
+        if let (false, Some((name, _, floor))) = (below.is_empty(), lowest) {
+            out.notes.push(format!("{} below the job's lowest level, \"{name}\" (its floor at {}): {}; check the model's heights against the job's", if below.len() == 1 { "1 thing stands".to_string() } else { format!("{} things stand", below.len()) }, feet(floor), list(&below, "below")));
+        }
     }
     out.notes.push(format!("the model is in {}: every length was turned into feet and kept to a ten-thousandth of a foot", out.unit));
     out.left_out = left.into_iter().map(|((class, why), n)| (class, n, why)).collect();

@@ -245,16 +245,18 @@ fn change(job: &mut Job, shape: &str, f: impl FnOnce(&mut Shape) -> Result<(Stri
         let at = own_shape(job, shape)?;
         let mut s = job.shapes[at].clone();
         let (did, block) = f(&mut s)?;
-        s.check()?;
-        // And at each item's own sizes (call 206 point 2).
+        // At each item's own sizes first (call 206 point 2, call 213 point 14): a refusal speaks of the item the shape is drawn on, and only
+        // where it holds there does a smaller size the shape is also tried at refuse it.
         let (items, _) = followers(job, &s.name);
+        let mut sizes: Vec<(String, crate::building::P3)> = Vec::new();
         for (path, name) in &items {
             if let Some(it) = job.find(path).and_then(|e| job.world.get::<Item>(e)).cloned() {
                 if let Ok((size, _, _)) = it.size_ft() {
-                    s.check_at(name, size)?;
+                    sizes.push((name.clone(), size));
                 }
             }
         }
+        s.check_for(&sizes)?;
         job.shapes[at] = s;
         let name = job.shapes[at].name.clone();
         said_of(job, &name, did, block, None)
@@ -329,7 +331,7 @@ pub fn shape_block_take(job: &mut Job, shape: &str, block: usize) -> Result<Shap
     change(job, shape, |s| {
         let i = block_index(s, block)?;
         if s.blocks.len() == 1 {
-            return Err(format!("shape {:?} would have no blocks: a shape keeps at least one (take the item's shape off instead)", s.name));
+            return Err(format!("shape {:?} would have no blocks: a shape keeps at least one block. To draw the item as something else, change its Drawn as (a column of the item table, or Drawn as on the item's panel)", s.name));
         }
         s.blocks.remove(i);
         Ok((format!("block {block} taken away; the blocks after it are numbered one less"), None))

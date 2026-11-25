@@ -83,10 +83,10 @@ head='Item,Trade,Kind,Drawn as,Width,Width: how sure,Width: where from,Depth,Dep
 printf '%s\nWide thing,,furnishing,x,144 in,Assumed,made-up,24 in,Assumed,made-up,96 in,Assumed,made-up\nNarrow thing,,furnishing,x,100 in,Assumed,made-up,24 in,Assumed,made-up,96 in,Assumed,made-up\n' "$head" > "$T/items.csv"
 "$P" import items "$S" "$T/items.csv" > "$T/said.txt"
 sed 's/^/    | /' "$T/said.txt"
-says "$T/said.txt" '"Wide thing" is 144 in wide, 24 in deep and 96 in high, and drawn as "x", whose block 1 reaches 24 in above its box'
+says "$T/said.txt" 'shape "x", block 1: on Wide thing (144 in wide, 24 in deep and 96 in high) it would stand 24 in above the top'
 says "$T/said.txt" "Narrow thing: added"
 echo "-- the narrow one sized to 144 in: refused, and left as it was --"
-fails "$T/said.txt" '"Narrow thing" is 144 in wide, 24 in deep and 96 in high' -- "$P" set "$S" "Narrow thing" width "144 in"
+fails "$T/said.txt" 'on Narrow thing (144 in wide, 24 in deep and 96 in high)' -- "$P" set "$S" "Narrow thing" width "144 in"
 "$P" items "$S" "Narrow thing" > "$T/said.txt"
 says "$T/said.txt" "100 in wide"
 echo "-- a job made to hold one (the file written by hand) says so under check, and still opens --"
@@ -95,7 +95,7 @@ sed -i 's/"value": 100.0,/"value": 144.0,/' "$T/held.json"
 cmp -s "$S" "$T/held.json" && { echo "FAIL: the job was not changed by hand"; exit 1; }
 "$P" check "$T/held.json" > "$T/said.txt" || true
 sed 's/^/    | /' "$T/said.txt"
-says "$T/said.txt" '! "Narrow thing" is 144 in wide, 24 in deep and 96 in high, and drawn as "x", whose block 1 reaches 24 in above its box'
+says "$T/said.txt" '! shape "x", block 1: on Narrow thing (144 in wide, 24 in deep and 96 in high) it would stand 24 in above the top'
 says "$T/said.txt" "reads"
 echo "-- a block set so that an item stands outside is refused naming the item --"
 "$P" new "$T/y.json" "Shapes (not a real job)" >/dev/null
@@ -103,7 +103,7 @@ printf 'Shape,Made of,Form,Across from,Across to,Back from,Back to,Up from,Up to
 "$P" import shapes "$T/y.json" "$T/y.csv" >/dev/null
 printf '%s\nWide thing,,furnishing,y,144 in,Assumed,made-up,24 in,Assumed,made-up,96 in,Assumed,made-up\n' "$head" > "$T/yi.csv"
 "$P" import items "$T/y.json" "$T/yi.csv" >/dev/null
-fails "$T/said.txt" '"Wide thing" is 144 in wide' -- "$P" shape "$T/y.json" set y 1 "up to" "height + max(0 in, width - 10 ft)"
+fails "$T/said.txt" 'on Wide thing (144 in wide' -- "$P" shape "$T/y.json" set y 1 "up to" "height + max(0 in, width - 10 ft)"
 
 echo
 echo "== 3. A model brought into a job that has a building =="

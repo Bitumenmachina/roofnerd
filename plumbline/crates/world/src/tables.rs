@@ -170,7 +170,8 @@ fn list_figure(text: &str) -> Result<f64, String> {
     if t.contains(',') && !units::commas_part_thousands(t) {
         return Err(format!("\"{}\" has a comma that does not part thousands; if it is the decimal mark, write a point (9.05)", text.trim()));
     }
-    let x: f64 = t.replace(',', "").parse().map_err(|_| format!("\"{}\" is not a figure", text.trim()))?;
+    // A price is dollars and cents, as written: 1e3 is a way of writing a figure that nobody writes a price in (call 213 point 10).
+    let x: f64 = if t.contains(['e', 'E']) { None } else { t.replace(',', "").parse().ok() }.ok_or_else(|| format!("\"{}\" is not a figure", text.trim()))?;
     if !x.is_finite() {
         return Err(format!("\"{}\" is not a figure", text.trim()));
     }
@@ -208,7 +209,7 @@ fn price_cell(text: &str) -> Result<(f64, Option<String>), String> {
         Some((f, u)) => (f.trim(), Some(u.trim().to_string()).filter(|u| !u.is_empty())),
         None => (t, None),
     };
-    let x = list_figure(figure).map_err(|why| if why.contains("comma") { format!("its price: {why}") } else { format!("its price, \"{}\", is not a figure", text.trim()) })?;
+    let x = list_figure(figure).map_err(|why| if why.contains("comma") { format!("its price: {why}") } else { format!("its price, \"{}\", is not a figure; write a price as dollars, like $4.25/SF or $180/EA", text.trim()) })?;
     if x < 0.0 {
         return Err(format!("its price, \"{}\", is less than nothing", text.trim()));
     }
@@ -1789,9 +1790,21 @@ fn read_shapes(rows: &[Vec<String>], numbers: Option<&[usize]>, a_job_brings_the
 /// as the job has it, else as the program's starter has it. "box", and a form the program
 /// draws without a table row (a sink, a bed), have no rows.
 pub fn shapes_out(job: &mut Job) -> Vec<Vec<String>> {
+    shapes_out_counted(job).0
+}
+
+/// The shapes as a table, and the names of the job's own shapes that no item is drawn as: they are written after the others, so that the
+/// table is the one way a shape is carried to another job and loses none (call 213 point 13).
+pub fn shapes_out_counted(job: &mut Job) -> (Vec<Vec<String>>, Vec<String>) {
     use crate::Item;
     let mut rows: Vec<Vec<String>> = vec![SHAPE_HEADINGS.iter().map(|h| h.to_string()).collect()];
     let mut done: Vec<String> = Vec::new();
+    let put = |shape: &crate::building::shape::Shape, rows: &mut Vec<Vec<String>>| {
+        for b in &shape.blocks {
+            let [af, at, bf, bt, uf, ut] = b.figures().map(str::to_string);
+            rows.push(vec![shape.name.clone(), b.made.word().to_string(), if b.round { "round" } else { "box" }.to_string(), af, at, bf, bt, uf, ut, b.when.clone().unwrap_or_default()]);
+        }
+    };
     for e in job.order.clone() {
         let Some(said) = job.world.get::<Item>(e).and_then(|it| it.form.clone()) else { continue };
         if done.iter().any(|d| d.eq_ignore_ascii_case(&said)) {
@@ -1799,12 +1812,16 @@ pub fn shapes_out(job: &mut Job) -> Vec<Vec<String>> {
         }
         done.push(said.clone());
         let Some(shape) = crate::building::shape::find(&job.shapes, &said) else { continue };
-        for b in &shape.blocks {
-            let [af, at, bf, bt, uf, ut] = b.figures().map(str::to_string);
-            rows.push(vec![shape.name.clone(), b.made.word().to_string(), if b.round { "round" } else { "box" }.to_string(), af, at, bf, bt, uf, ut, b.when.clone().unwrap_or_default()]);
+        put(shape, &mut rows);
+    }
+    let mut unused: Vec<String> = Vec::new();
+    for shape in &job.shapes {
+        if !done.iter().any(|d| d.eq_ignore_ascii_case(&shape.name)) {
+            put(shape, &mut rows);
+            unused.push(shape.name.clone());
         }
     }
-    rows
+    (rows, unused)
 }
 
 /// Bring a shape table in. A shape the job does not have is added; one it has, by name, is
@@ -2006,9 +2023,11 @@ pub fn connections_in(job: &mut Job, rows: &[Vec<String>], numbers: Option<&[usi
         for key in order {
             let (item, pieces) = by.remove(&key).unwrap_or_default();
             let numbers: Vec<usize> = pieces.iter().map(|(n, _)| *n).collect();
+            // A reason a row gave of itself, without the item's name said again before it (each row says its own reason once).
+            let own = |why: &str| why.strip_prefix(&format!("{item:?}: ")).unwrap_or(why).to_string();
             let say_all = |out: &mut Brought, first: usize, why: String| {
                 for n in &numbers {
-                    out.not_used.push((*n, if *n == first { format!("{item}: {why}") } else { format!("{item}: its connections are left out, as row {first} of them cannot be used") }));
+                    out.not_used.push((*n, if *n == first { format!("{item}: {}", own(&why)) } else { format!("{item}: its connections are left out: its rows cannot be used together (row {first} says why)") }));
                 }
             };
             let Some(path) = have.get(&key).cloned() else {
@@ -2017,8 +2036,33 @@ pub fn connections_in(job: &mut Job, rows: &[Vec<String>], numbers: Option<&[usi
                 }
                 continue;
             };
-            if let Some((n, why)) = pieces.iter().find_map(|(n, p)| p.as_ref().err().map(|why| (*n, why.clone()))) {
-                say_all(&mut out, n, why);
+            // Each row that cannot be used says why, once; the others of the item say how many cannot and which (call 213 point 10).
+            let mut faults: Vec<(usize, String)> = Vec::new();
+            for (n, p) in &pieces {
+                match p {
+                    Err(why) => faults.push((*n, own(why))),
+                    Ok(row) => {
+                        if let Some(why) = crate::editing::connections::row_fault(job, &path, row) {
+                            faults.push((*n, why));
+                        }
+                    }
+                }
+            }
+            if !faults.is_empty() {
+                let rows_said = {
+                    let nums: Vec<String> = faults.iter().map(|(n, _)| n.to_string()).collect();
+                    match nums.as_slice() {
+                        [one] => format!("row {one}"),
+                        [init @ .., last] => format!("rows {} and {last}", init.join(", ")),
+                        [] => String::new(),
+                    }
+                };
+                for n in &numbers {
+                    out.not_used.push((*n, match faults.iter().find(|(f, _)| f == n) {
+                        Some((_, why)) => format!("{item}: {why}"),
+                        None => format!("{item}: its connections are left out, as {} of its rows cannot be used ({rows_said})", faults.len()),
+                    }));
+                }
                 continue;
             }
             let wanted: Vec<crate::building::ItemConnection> = pieces.into_iter().filter_map(|(_, p)| p.ok()).collect();
@@ -2070,5 +2114,33 @@ pub fn connections_in_missing(job: &mut Job, rows: &[Vec<String>], numbers: Opti
         wanted.push(row.clone());
         their_numbers.push(row_number(numbers, i));
     }
-    connections_in(job, &wanted, Some(&their_numbers)).map(|brought| (brought, kept))
+    let mut brought = connections_in(job, &wanted, Some(&their_numbers))?;
+    // The rows of an item the job has connections for are rows too (call 213 point 10): the same as the job has, or not used because the job's own
+    // stand. Every row of the file is counted as one of them, none as "no rows".
+    let mut by_item: BTreeMap<String, Vec<(usize, Vec<String>)>> = BTreeMap::new();
+    for (i, row) in rows.iter().enumerate().skip(cols.row + 1) {
+        let name = cols.cell(row, "item");
+        if !name.is_empty() && held.contains(&check::plain_name(name)) {
+            by_item.entry(check::plain_name(name)).or_default().push((row_number(numbers, i), row.clone()));
+        }
+    }
+    for (key, list) in by_item {
+        let path = {
+            let mut q = job.world.query::<(&Node, &crate::Item)>();
+            q.iter(&job.world).find(|(n, _)| check::plain_name(&n.name) == key).map(|(n, _)| n.path.clone())
+        };
+        let table_rows: Vec<Result<crate::building::ItemConnection, String>> = list.iter().map(|(_, r)| read_connection(&cols, r)).collect();
+        let have = path.as_deref().map(|p| crate::editing::item_rows(job, p).unwrap_or_default()).unwrap_or_default();
+        let same = table_rows.iter().all(|r| r.is_ok()) && table_rows.iter().filter_map(|r| r.as_ref().ok()).cloned().collect::<Vec<_>>() == have;
+        brought.rows += list.len();
+        for (n, row) in &list {
+            if same {
+                brought.same += 1;
+            } else {
+                brought.not_used.push((*n, format!("{}: the job has connections for this item already, and keeps them", cols.cell(row, "item"))));
+            }
+        }
+    }
+    brought.not_used.sort();
+    Ok((brought, kept))
 }

@@ -520,7 +520,15 @@ pub fn connect(job: &mut Job, thing: &str, run: &str, how: Entered) -> Result<us
             (true, false) => qa,
             (false, true) => qb,
             (true, true) => return Err(format!("both ends of {run} are inside {thing}")),
-            (false, false) => return Err(format!("neither end of {run} is at {thing}: its ends are at ({}, {}) and ({}, {})", tidy(r.a[0]), tidy(r.a[1]), tidy(r.b[0]), tidy(r.b[1]))),
+            (false, false) => {
+                // Where an item gave the thing a connection of the run's sort and an end stands near it, outside the thing: which connection and how
+                // far, in inches (call 213 point 4).
+                if let Some(of_run) = ConnectorKind::for_run(r.kind) {
+                    let domain = super::connections::run_domain(job, &r);
+                    super::connections::refuse_if_near_outside(job, thing, run, [qa, qb], of_run, domain)?;
+                }
+                return Err(format!("neither end of {run} is at {thing}: its ends are at ({}, {}) and ({}, {})", tidy(r.a[0]), tidy(r.a[1]), tidy(r.b[0]), tidy(r.b[1])));
+            }
         };
         let of_run = ConnectorKind::for_run(r.kind).ok_or_else(|| format!("a {:?} has no connection that joins it", r.kind))?;
         let mut connectors = job.world.get::<Connectors>(e).cloned().unwrap_or(Connectors(Vec::new()));
