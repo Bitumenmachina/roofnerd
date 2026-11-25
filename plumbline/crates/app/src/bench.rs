@@ -697,7 +697,8 @@ mod tests {
         let saved = plumbline_world::file::save(&mut doc.job);
         doc.shaping = Some((name.clone(), 4, 5));
         crate::tools::shape_typed(&mut doc, "height + 1 in");
-        assert!(doc.tone == Tone::Refused && doc.message.contains("1 in above the box"), "{}", doc.message);
+        // (The words are the model's: "above the top" since call 212; they were "above the box".)
+        assert!(doc.tone == Tone::Refused && doc.message.contains("1 in above the top"), "{}", doc.message);
         assert_eq!(plumbline_world::file::save(&mut doc.job), saved);
         assert!(matches!(doc.entry, Some((Entry::ShapeBlock, _))));
         // A form, a material and a condition are typed the same way; a word that is none of them is refused.

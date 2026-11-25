@@ -229,7 +229,8 @@ says "$T/said-b-02.txt" "Block 4 reads, at Vanity, 36 in's sizes (36 in x 21 in 
 says "$T/said-b-02.txt" "1 item is drawn as it, and 2 things set down from it follow."
 echo
 echo "== 5. A figure above the box is refused, in the model's words; the row is as it was; the job is as it was =="
-says "$T/said-b-03.txt" "1 in above the box"
+# (the model's words since call 212: "above the top"; they were "above the box")
+says "$T/said-b-03.txt" "1 in above the top"
 python3 -I - "$T/map-b-03.txt" <<'PY'
 import sys
 r = [l.rstrip("\n").split("\t") for l in open(sys.argv[1]) if l.startswith("shape\t")][0]
