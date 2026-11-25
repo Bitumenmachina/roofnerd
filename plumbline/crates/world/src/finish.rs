@@ -600,6 +600,11 @@ fn height_in(text: &str) -> Option<f64> {
                 said = cut.trim().to_string();
             }
         }
+        // "3-4" in a line of free text may be a range as well as three feet four: a typed 12-6 is read (call 209 point 5), a
+        // line's words are not guessed at, and this goes on as it did before the dash was read.
+        if matches!(crate::units::parse_length(&said), Ok((crate::units::Len::FtIn(_), _))) && said.contains('-') && !said.contains(['\'', '"']) && !said.contains("ft") && !said.contains("feet") {
+            continue;
+        }
         if let Some(h) = crate::units::parse_length(&said).ok().and_then(|(len, unit)| len.feet(unit).ok()).filter(|h| *h > 0.0) {
             return Some(h);
         }
@@ -1317,6 +1322,8 @@ mod tests {
             ("Stone wainscot, 42 in high", Some(3.5)),
             ("Stone wainscot, 1 1/2 in thick, 42 in high", Some(3.5)),
             ("Stone wainscot, 0 in", None),
+            // A line's words are not read as 3 ft 4 where they may be a range (call 209 point 5): unread, as before.
+            ("Stone wainscot 3-4 high", None),
             ("Stone wainscot, 1.5 m", None),
             ("Stone wainscot", None),
         ] {

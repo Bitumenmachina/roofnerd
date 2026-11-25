@@ -91,7 +91,7 @@ lacks "$T/est.txt" "room line"
 says "$T/clash.txt" "Tested: 6 elements"
 lacks "$T/clash.txt" "$RL"
 "$P" export ifc "$J" "$T/o.ifc" > "$T/ifc.txt"
-says "$T/ifc.txt" "1 x room line:"
+says "$T/ifc.txt" "1 room line:"
 says "$T/ifc.txt" "7 walls"
 # Base is priced by the run of wall, and not by the perimeter, which takes in the line:
 # Living's base is 63 LF and not 78.5; the Kitchen's 39 LF and not 54.5 (call 157).

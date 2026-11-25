@@ -8560,3 +8560,32 @@ reaching the roof at the gable's corners. Decided, point by point:
 
 **Left, and said**: a steep swing from above can put the roof's edge under the
 right panel; one round trip of a swing drifted 41 dots once and did not repeat.
+
+**Call 209, the model's side, as built (2026-11-25, by a Sonnet worker under
+`handoff/contracts/contract-209M.md`; `research/worker-report-call209M.md`; accepted by
+the lead's own run in the worker's copy).**
+- **Point 2**: an item renamed renames every thing set down from it, each keeping
+  its number, and gives back how many were renamed and how many kept. **A name a
+  person gave since is left, and counted as left, because it is theirs**; so is one
+  the new name would make the same as another thing on its level.
+- **Point 3**: the worker listed every phrase before changing one. A file's
+  "connection points" are "connections" and their "ties" "joints" where a builder
+  reads them; what is not written is said in counts and plain words; the model's
+  sentence names no command, and the command line adds its own.
+- **Point 4**: the two refusals say what stands in the way and what can be done
+  today (bring the model into a job of its own, or take out what it brought), and
+  that bringing in part of a model is not there yet.
+- **Point 5**: `12-6` is twelve feet six wherever a length is read, with
+  `12-6 1/2`, `6-0` and `-12-6`; a bare `-6`, `12 6`, `12-12` are still refused, in
+  words that are true. **No test or demonstration typed a length that way, so no
+  figure moved.** One place that reads free text could have met a range ("wainscot
+  3-4 high") and is guarded to read as it did.
+- **Point 8**: the model gives the counts of known, assumed and unknown for the
+  building and for the tool chest apart; their sum is the old count.
+Expectations moved, each for its point's words; two tests that held a reply to a
+length now hold its counts to that length and let the advice call 209 point 4 asks
+for follow them. **Owed to the window**: it still says its own sentences for a
+rename and for what a file left out, and counts the chest in the top bar; the calls
+it must make are in the report and in `contract-207W.md`, Part 2. **Not right**: a
+fitting brought in as another kind than the file says is named by its place in
+feet from the job's zero, which is not how a builder finds it.

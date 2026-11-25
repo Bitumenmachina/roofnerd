@@ -59,6 +59,21 @@ pub struct Brought {
     pub rooms_moved: Vec<ed::RoomMoved>,
 }
 
+impl Brought {
+    /// What was not brought in, a line for each: "4 floor slabs: why". The command line and the window both say it as it stands,
+    /// so the one wording is the model's (call 209 point 3: the window built "4 x floor slab" for itself).
+    pub fn left_out_said(&self) -> Vec<String> {
+        self.left_out
+            .iter()
+            .map(|(class, n, why)| {
+                // "4 floor slabs", and each reason as it reads for that many.
+                let plural = *n > 1 && !class.ends_with('s') && !class.contains('"') && !class.contains(" or ");
+                format!("{n} {class}{}: {why}", if plural { "s" } else { "" })
+            })
+            .collect()
+    }
+}
+
 type P3 = [f64; 3];
 
 /// A place and a turn: three axes and where their meeting point is.
@@ -101,12 +116,11 @@ fn already_in_the_job(left_out: &[(String, usize, String)]) -> Option<String> {
         "space" => "room".to_string(),
         c => c.to_string(),
     };
-    let rest: Vec<String> = left_out.iter().filter(|(_, _, why)| !already(why) && !with_walls(why)).map(|(c, n, why)| format!("{n} {} ({})", plain(c), why.replace("this program would not take it: ", ""))).collect();
+    let rest: Vec<String> = left_out.iter().filter(|(_, _, why)| !already(why) && !with_walls(why)).map(|(c, n, why)| format!("{n} {} ({})", plain(c), why)).collect();
     let mut said = format!(
-        "this model is already in the job: nothing was brought in. {twice} of its {total} thing{} {} in the very place the model has {}, so a second would be counted twice",
+        "this model is already in the job: nothing was brought in. {twice} of its {total} thing{} {} in the job already, in the same place, so a second would be counted twice",
         if total == 1 { "" } else { "s" },
-        if twice == 1 { "is" } else { "are" },
-        if twice == 1 { "it" } else { "them" }
+        if twice == 1 { "is" } else { "are" }
     );
     // By kind: the fittings together, and no word of the file's own.
     let mut kinds: BTreeMap<String, usize> = BTreeMap::new();
@@ -781,6 +795,24 @@ fn feet(x: f64) -> String {
 /// Bring a model in. `name` is what the file is called, for the sources of what is made.
 /// All of it or none: if the job would not check afterwards, it is as it was.
 pub fn import(job: &mut Job, bytes: &[u8], name: &str, how: Entered) -> Result<Brought, String> {
+    import_whole(job, bytes, name, how).map_err(with_a_way_on)
+}
+
+/// What stands in the way of a model being brought in, and what a person can do about it today (call 209 point 4). A model comes
+/// in whole: bringing in only what the job lacks is a job of its own and is not built. The two refusals that follow from the
+/// model and the job both having the same thing say so, and what can be done.
+fn with_a_way_on(why: String) -> String {
+    if why.starts_with("this model is already in the job") {
+        return format!("{why}. To bring it in again, bring it into a job of its own, or take what it brought in out of this job first. A model comes in whole: bringing in only what the job lacks is not there yet");
+    }
+    if why.contains("would be counted twice") {
+        let said = if why.contains("nothing was brought in") { why } else { format!("{why}. Nothing was brought in") };
+        return format!("{said}. To bring this model in, take out of the job what is already there on that ground (here, the floor), or bring the model into a job of its own. A model comes in whole: bringing in only what the job lacks is not there yet");
+    }
+    why
+}
+
+fn import_whole(job: &mut Job, bytes: &[u8], name: &str, how: Entered) -> Result<Brought, String> {
     let file = step::parse(bytes).map_err(|why| format!("it is not an IFC file this can read ({why})"))?;
     if !file.schema.starts_with("IFC") {
         return Err(format!("it is a file written the way a model is, but of another kind (\"{}\"): not an IFC model", file.schema));
@@ -832,10 +864,13 @@ pub fn import(job: &mut Job, bytes: &[u8], name: &str, how: Entered) -> Result<B
         }
         let property_sets = property_sets.saturating_sub(storey_heights(&r).len()).saturating_sub(out.made.get("roofs").copied().unwrap_or(0));
         if property_sets + materials > 0 {
+            // What the model keeps on its things besides their shapes, said as a builder would (call 209 point 3): notes, and
+            // materials only when there are some.
+            let notes = if property_sets == 0 { String::new() } else { format!("the notes the model carries on its things ({property_sets} of them)") };
+            let mats = if materials == 0 { String::new() } else { format!("{materials} material{} it names", if materials == 1 { "" } else { "s" }) };
+            let both = [notes, mats].into_iter().filter(|x| !x.is_empty()).collect::<Vec<_>>().join(" and ");
             out.notes.push(format!(
-                "not read: {property_sets} list{} of what the model says of each thing, and {materials} material{}. A thing brought in has its shape, its place and its name, and, where the model gives them, its work mark (new, existing, to demolish or temporary) and its bearing mark, each Assumed; what the model says it is made of, and anything else it says about each thing, is not brought in",
-                if property_sets == 1 { "" } else { "s" },
-                if materials == 1 { "" } else { "s" }
+                "not read: {both}. A thing brought in has its shape, its place and its name, and, where the model gives them, its work mark (new, existing, to demolish or temporary) and its bearing mark, each Assumed; what the model says it is made of, and anything else it says about each thing, is not brought in"
             ));
         }
         if twice > 0 {
@@ -1170,7 +1205,7 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
                 wall_of.insert(id, (path, [a[0], a[1], base], [way[0], way[1], 0.0], length));
                 made("walls");
             }
-            Err(why) => leave(&e.name, &format!("this program would not take it: {why}")),
+            Err(why) => leave(&e.name, &why),
         }
     }
     if !told_apart.is_empty() {
@@ -1216,7 +1251,7 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
                 keep_name(job, &path, &r.name(e), id);
                 made(if kind == Kind::Door { "doors" } else { "windows" })
             }
-            Err(why) => leave(&e.name, &format!("this program would not take it: {why}")),
+            Err(why) => leave(&e.name, &why),
         }
     }
     for (path, id, source) in &wall_marks {
@@ -1401,7 +1436,7 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
                     if let Some(reach) = r.reach(e) {
                         stood_on.push((said(&e.name), [reach.0[0] * k, reach.0[1] * k, reach.0[2] * k], [reach.1[0] * k, reach.1[1] * k, reach.1[2] * k]));
                     }
-                    leave(&e.name, &format!("this program would not take it: {why}"));
+                    leave(&e.name, &why);
                 }
             }
         }
@@ -1510,7 +1545,7 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
                     floors_cut += 1;
                 }
             }
-            Err(why) => leave(&e.name, &format!("this program would not take it: {why}")),
+            Err(why) => leave(&e.name, &why),
         }
     }
     if floors_cut > 0 {
@@ -1545,7 +1580,7 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
         })();
         match done {
             Ok(()) => made("rooms"),
-            Err(why) => leave(&e.name, &format!("this program would not take it: {why}")),
+            Err(why) => leave(&e.name, &why),
         }
     }
     // ---- Systems the file names, where they are ones this program has.
@@ -1734,7 +1769,7 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
                     _ => "cables",
                 })
             }
-            Err(why) => leave(&e.name, &format!("this program would not take it: {why}")),
+            Err(why) => leave(&e.name, &why),
         }
     }
     // The file's units to feet, for what stood where a left-out thing did (call 197, point 6).
@@ -1846,8 +1881,7 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
                 if let Some(reach) = reach_of(e) {
                     stood_on.push((said(&e.name), reach.0, reach.1));
                 }
-                let plain = why.starts_with("its ") || why.starts_with("the model") || why.starts_with("it ");
-                leave(&e.name, &if plain { why } else { format!("this program would not take it: {why}") });
+                leave(&e.name, &why);
             }
         }
     }
@@ -1956,8 +1990,7 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
                 if let Some(reach) = reach_of(e) {
                     stood_on.push((said(&e.name), reach.0, reach.1));
                 }
-                let plain = why.starts_with("its ") || why.starts_with("the model") || why.starts_with("it ");
-                leave(&e.name, &if plain { why } else { format!("this program would not take it: {why}") });
+                leave(&e.name, &why);
             }
         }
     }
@@ -2046,7 +2079,7 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
                 if let Some(reach) = reach_of(e) {
                     stood_on.push((said(&e.name), reach.0, reach.1));
                 }
-                leave(&e.name, &format!("this program would not take it: {why}"));
+                leave(&e.name, &why);
             }
         }
     }
@@ -2116,7 +2149,7 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
                 if let Some(reach) = reach_of(e) {
                     stood_on.push((said(&e.name), reach.0, reach.1));
                 }
-                leave(&e.name, &format!("this program would not take it: {why}"));
+                leave(&e.name, &why);
             }
         }
     }
@@ -2269,7 +2302,7 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
         }
     }
     if runs_unsized > 0 {
-        out.notes.push(format!("{runs_unsized} run{} {} no size: {} drawn as a line alone, and {} in with its size Unknown", if runs_unsized == 1 { "" } else { "s" }, if runs_unsized == 1 { "has" } else { "have" }, if runs_unsized == 1 { "it is" } else { "each is" }, if runs_unsized == 1 { "comes" } else { "come" }));
+        out.notes.push(format!("{runs_unsized} run{} {} no size: {} drawn as a line alone and comes in with its size Unknown", if runs_unsized == 1 { "" } else { "s" }, if runs_unsized == 1 { "has" } else { "have" }, if runs_unsized == 1 { "it is" } else { "each is" }));
     }
     // Run ends that stand at a thing but are joined to nothing, said (call 200): nothing is joined for being
     // near, so where an end stands within a foot of a fixture or a piece of equipment and nothing joins it,

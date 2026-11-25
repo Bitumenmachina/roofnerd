@@ -162,7 +162,7 @@ says "$T/ifc.txt" "4 roof planes"
 says "$T/ifc.txt" "41 fittings"
 ! grep -qF "it has no shape: its size is not known" "$T/ifc.txt" || { echo "FAIL: a fitting with no size is still said to have no shape"; exit 1; }
 ! grep -qF "its size is not known, so it has no shape to write" "$T/ifc.txt" || { echo "FAIL: a run with no size is still said to have no shape"; exit 1; }
-says "$T/ifc.txt" "x type: each thing is written with its own size"
+says "$T/ifc.txt" "wall, door, window or run types: each wall, door, window and run is written with its own size"
 if python3 -c "import ifcopenshell" 2>/dev/null; then
   python3 tools/ifc-check.py "$T/house.ifc" > "$T/checked.txt" || { echo "FAIL: IfcOpenShell finds a fault in the model"; cat "$T/checked.txt"; exit 1; }
   says "$T/checked.txt" "IFC4: no fault"
@@ -183,7 +183,7 @@ says "$T/in.txt" "10 rooms"
 says "$T/in.txt" "22 fixtures"
 says "$T/in.txt" "5 pieces of equipment"
 says "$T/in.txt" "39 fittings"
-says "$T/in.txt" "1 pipe fitting: this program would not take it: "
+says "$T/in.txt" "1 pipe fitting: pipe-"
 # (Its walls by type are left out of the comparison: a building model is written with
 # each wall's own thickness and not its type, which the export says, so the types a
 # reader makes for them are the reader's and are named by it.)

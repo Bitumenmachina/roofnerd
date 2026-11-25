@@ -343,7 +343,7 @@ echo "   what is said of the model is in a builder's words"
 saysnt "$T/import11.txt" "property set"
 saysnt "$T/import11.txt" "LoadBearing"
 saysnt "$T/import11.txt" "Status"
-says "$T/import11.txt" "of what the model says of each thing"
+says "$T/import11.txt" "the notes the model carries on its things"
 echo "   the figures the BIM file's quantities were worked from are named in words"
 if grep -qE "plan_length|face_area|net_area|section_area" "$T/eleven.ifc"; then echo "FAIL: a quantity in the BIM file is named as the program holds it"; grep -nE "plan_length|face_area|net_area|section_area" "$T/eleven.ifc" | head -3; exit 1; fi
 grep -q "plan length" "$T/eleven.ifc" && echo "    plan length, face area"

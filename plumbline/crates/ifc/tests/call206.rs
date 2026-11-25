@@ -95,7 +95,7 @@ fn point_9_a_model_brought_in_twice_says_it_is_in_the_job_by_counts_and_in_a_bui
     let mut job = house();
     import(&mut job, model(false).as_bytes(), "other.ifc", HOW).unwrap();
     let why = import(&mut job, model(false).as_bytes(), "other.ifc", HOW).unwrap_err();
-    assert_eq!(why, "this model is already in the job: nothing was brought in. 1 of its 1 thing is in the very place the model has it, so a second would be counted twice (1 wall)");
+    assert_eq!(why, "this model is already in the job: nothing was brought in. 1 of its 1 thing is in the job already, in the same place, so a second would be counted twice (1 wall). To bring it in again, bring it into a job of its own, or take what it brought in out of this job first. A model comes in whole: bringing in only what the job lacks is not there yet");
     // The whole sample house twice: counted, one sentence, no word of the file's own, no clause for each fitting.
     let mut sample = plumbline_world::sample::house_priced();
     let text = export(&mut sample, "house.ifc", WHEN).unwrap().text;
@@ -105,7 +105,10 @@ fn point_9_a_model_brought_in_twice_says_it_is_in_the_job_by_counts_and_in_a_bui
     assert!(why.starts_with("this model is already in the job: nothing was brought in. "), "{why}");
     assert!(!why.contains("distributionflowelement") && !why.contains("as the model calls it") && !why.contains("a equipment"), "{why}");
     assert!(!why.contains("fitting-0"), "no clause for each fitting: {why}");
-    assert!(why.len() < 600, "{} characters: {why}", why.len());
+    // The counts stay under 600 characters, as they were; what a person can do about it (call 209 point 4) comes after them.
+    let counts = why.split(". To bring it in again").next().unwrap();
+    assert!(counts.len() < 600, "{} characters: {why}", counts.len());
+    assert!(why.contains("To bring it in again, bring it into a job of its own"), "{why}");
 }
 
 #[test]

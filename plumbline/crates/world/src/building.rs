@@ -573,7 +573,7 @@ pub fn drawn_faults(job: &mut Job) -> Vec<(String, String)> {
     for (i, (a, level, ring)) in floors.iter().enumerate() {
         for (b, other, its) in &floors[i + 1..] {
             if level == other && gone.contains(*a) == gone.contains(*b) && rings_overlap(ring, its) {
-                out.push((format!("{b} over {a}"), format!("{b} lies in {a} on the same level: two floors in one place would be counted twice")));
+                out.push((format!("{b} over {a}"), format!("{b} and {a} cover the same ground on one level: two floors in one place would be counted twice")));
             }
         }
     }

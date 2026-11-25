@@ -1377,10 +1377,8 @@ fn tables(args: &[String]) -> Result<(), String> {
                 let _ = writeln!(out, "    {n} {}", if *n == 1 { what.strip_suffix('s').unwrap_or(what) } else { what });
             }
             let _ = writeln!(out, "  not brought in: {}", count(b.left_out.iter().map(|l| l.1).sum(), "thing", "things"));
-            for (class, n, why) in &b.left_out {
-                // "4 floor slabs", and each reason as it reads for that many.
-                let plural = *n > 1 && !class.ends_with('s') && !class.contains('"') && !class.contains(" or ");
-                let _ = writeln!(out, "    {n} {class}{}: {why}", if plural { "s" } else { "" });
+            for line in b.left_out_said() {
+                let _ = writeln!(out, "    {line}");
             }
             for note in &b.notes {
                 let _ = writeln!(out, "  note: {note}");
@@ -1546,8 +1544,14 @@ fn tables(args: &[String]) -> Result<(), String> {
             say!("  every value entered on each goes with it, with how sure it is and where it came from");
             if !written.not_written.is_empty() {
                 say!("  not written (a building model has no place for it, or it has no shape):");
-                for (what, n, why) in &written.not_written {
-                    say!("    {n} x {what}: {why}");
+                // The model says each in a builder's words; here, at the command line, the command that writes the estimate out is
+                // added to its line (call 209 point 3). The window adds where it is: Estimate workbook, under Write out.
+                for ((what, ..), line) in written.not_written.iter().zip(written.not_written_said()) {
+                    if what == "cost line" {
+                        say!("    {line} (plumbline export estimate <job> <out.xlsx>)");
+                    } else {
+                        say!("    {line}");
+                    }
                 }
             }
             Ok(())
@@ -1892,18 +1896,21 @@ fn run(args: &[String]) -> Result<(), String> {
         let item_path = item_path_of(&mut job, item)?;
         let at = job.find(&item_path).ok_or("the item is not there")?;
         let was = job.world.get::<plumbline_world::Node>(at).map(|n| n.name.clone()).unwrap_or_default();
-        let placed = plumbline_world::editing::rename_item(&mut job, &item_path, name)?;
+        let done = plumbline_world::editing::rename_item_counted(&mut job, &item_path, name)?;
         job.derive();
         std::fs::write(path, file::save(&mut job)).map_err(|e| format!("cannot write {path}: {e}"))?;
-        say!(
-            "{was:?} is now called {:?}{}",
-            name.trim(),
-            match placed {
-                0 => "; none is set down".to_string(),
-                1 => "; the 1 set down from it is called that too, and its line made of the item".to_string(),
-                n => format!("; the {n} set down from it are called that too, and their lines made of the item"),
-            }
-        );
+        let placed = done.set_down;
+        let mut tail = match placed {
+            0 => "; none is set down".to_string(),
+            1 if done.renamed == 1 => "; the 1 set down from it is called that too, and its line made of the item".to_string(),
+            n if done.renamed == n => format!("; the {n} set down from it are called that too, and their lines made of the item"),
+            n => format!("; {} of the {n} set down from it are called that too, and their lines made of the item", done.renamed),
+        };
+        // Names a person gave since are theirs, and are left (call 209 point 2).
+        if !done.kept.is_empty() {
+            tail.push_str(&format!("; {} keep{} the name a person gave: {}", done.kept.len(), if done.kept.len() == 1 { "s" } else { "" }, done.kept.join(", ")));
+        }
+        say!("{was:?} is now called {:?}{tail}", name.trim());
         return Ok(());
     }
     if cmd == "compare" {
@@ -2629,8 +2636,12 @@ fn show(job: &mut plumbline_world::Job, report: &file::LoadReport) -> String {
         }
     }
     let (known, assumed, unknown) = view::tally(&elements);
+    let apart = view::tallies(job, &elements);
     let _ = writeln!(out);
     let _ = writeln!(out, "{known} Known, {assumed} Assumed, {unknown} Unknown");
+    // The building and the tool chest apart, whose two make that one (call 209 point 8).
+    let _ = writeln!(out, "  in the building: {} known, {} assumed, {} unknown", apart.building.0, apart.building.1, apart.building.2);
+    let _ = writeln!(out, "  in the tool chest: {} known, {} assumed, {} unknown", apart.chest.0, apart.chest.1, apart.chest.2);
     let flagged: Vec<_> = elements.iter().flat_map(|e| e.rows.iter().map(move |r| (e, r))).filter(|(_, r)| r.status != Status::Known).collect();
     if !flagged.is_empty() {
         let _ = writeln!(out);

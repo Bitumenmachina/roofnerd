@@ -11204,8 +11204,12 @@ above):
      writes them, so it is a column of the chest and a window job), E (a maker's
      BIM object brought in as an item), F (a cabinet by rule): not designed.
 1. **The third window judge's points** (call 209, `research/judgment-window-1125.md`):
-   the model's side is `handoff/contracts/contract-209M.md`; the window's side is
-   Part 2 of `contract-205W.md`. **Another trade's model brought into a job that
+   the model's side is **built** (DECISIONS.md, "Call 209, the model's side, as
+   built": 1,017 command-line tests, 54 demonstrations, no figure moved; "12-6" is
+   twelve feet six); the window's side is Part 2 of `contract-205W.md` (a window
+   builder was started on it at 07:30 UTC on 2026-11-25: if no
+   `research/worker-report-call205W.md` is in the tree, it did not land) and Part 2
+   of `contract-207W.md` (the sentences the window must take from the model). **Another trade's model brought into a job that
    has a building** (point 11: only what the job lacks, or only the runs and
    equipment) is the next call on a model, and is not designed.
 2. **Small, and said where found**: the per-level count of what is set down is

@@ -107,7 +107,7 @@ fn split_at(job: &mut Job, run: &str, at: P2, how: Entered) -> Result<String, St
     let (dx, dy) = (b[0] - a[0], b[1] - a[1]);
     let len = dx.hypot(dy);
     if len <= FIT_TOLERANCE_FT {
-        return Err(format!("{run} stands upright: it has no length on the plan to be cut along"));
+        return Err(format!("{run} runs straight up and down: there is no length along the plan to cut it at"));
     }
     let t = ((at[0] - a[0]) * dx + (at[1] - a[1]) * dy) / (len * len);
     let on = [a[0] + dx * t, a[1] + dy * t];
