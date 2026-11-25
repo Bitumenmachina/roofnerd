@@ -11639,6 +11639,45 @@ inserted twice. By hand:
 
 Not built yet.
 
+## Any screen, and work never lost: a demonstration, written before it is built (call 222, part A; 2026-11-25)
+
+`demos/screensw.sh` (contract `handoff/contracts/contract-222WA.md`). The job is
+the made-up whole house. The program writes each window's place and size to the
+map; the script reads them. Three screens are made on the virtual display, one
+after another.
+
+1. **A screen 2,560 by 1,440**: the two windows stand side by side, each wholly
+   on the screen (every corner of each inside 0 to 2,560 and 0 to 1,440), and
+   they do not lie over one another.
+2. **A screen 1,920 by 1,080**: the same, or the second over the right side of
+   the first; each wholly on the screen.
+3. **A screen 1,366 by 768**: the model window takes the screen; the second
+   window is wholly on the screen; **every control the map names in either
+   window lies inside its window**, or is in a panel that scrolls and says so.
+4. **Resized**: on the largest screen the model window is drawn in from 1,600
+   wide to 1,000 and back, in steps of 100: at each step the picture shows no
+   panel over another, the Details panel is folded below the width the builder
+   names and back above it, the Job panel below its width, every tool of the
+   build bar can be reached, and the glass has no seam or stale strip (the
+   builder gives the measure it uses).
+5. **Kept**: a window moved and resized, a panel put away, the lettering set one
+   step larger; the program closed and opened: each is as it was left. Opened on
+   another job: the same. With the settings file removed: as the program first
+   opens.
+6. **Larger lettering**: one step larger, the word "Wall" on its button is
+   taller by the step (the builder names the step; between a tenth and a
+   quarter) and nothing is cut off.
+7. **Work never lost**: a wall drawn and a door put in it, not saved; the
+   program is stopped dead after 70 seconds (not closed); opened again on the
+   same job it says there is recovered work with its time, and "Take the
+   recovered work" gives a job that is, byte for byte, the job the command line
+   makes by drawing the same wall and door. "Leave it" gives the job as last
+   saved. After a Save there is no recovery copy.
+8. Every window demonstration that ran before runs as it did (the builder runs
+   `glassw`, `moneyw`, `benchw` and `pricew` and says so).
+
+Not built yet.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **As of 2026-11-25, 06:00 UTC (the lead). Read this block first; what is below it is

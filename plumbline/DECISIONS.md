@@ -9426,3 +9426,66 @@ cabinet shop's parts go by it too.
    name and where it stands, not a copy of its insides.
 9. Not in this call: the window's entry under Bring in and Write out (a small
    window job after); parts for a cabinet shop (with the cut list, proposal 38).
+
+### Call 222. Two windows on any screen, work never lost, three ways to stand in front of a job, a plan in the second window (2026-11-25; the lead's design, not built)
+
+Step 3 of call 217's order, with call 220's third point (depth without
+overwhelming) and Patrick's ruling that two windows stay and the second can show
+plans. What the read of the code found (`research/review-1125-code-audit.md`):
+the two windows open at fixed sizes side by side and need a screen 2,490 wide;
+nothing follows a window that is resized; the panels are fixed widths; only Ctrl
+is read; there is no setting of any kind and nothing is saved for the user.
+Built in three jobs, in this order.
+
+**A. Any screen, and work never lost.**
+1. **Both windows open whole on the screen they are given.** Where there is room
+   they stand side by side as today; where there is not, the model takes the
+   screen and the second window stands over its right side at its own size, to
+   be moved. Neither opens with any part off the screen.
+2. **A window resized is followed.** The model fills it; the panels keep to its
+   edges; as it narrows the Details panel and then the Job panel fold to their
+   switches by themselves and come back as it widens; the build bar keeps every
+   tool reachable (it wraps or slides, the builder says which); the frosted
+   glass is right at every size. No window is smaller than a size at which every
+   control can still be reached, and the builder finds that size.
+3. **What a person set is kept**: where each window stood and how big, which
+   panels were put away, the size of the lettering, in one small text file of
+   the program's own on that machine. It is the program's, not the job's: a job
+   opened elsewhere is the same job. The demonstrations run without it.
+4. **Lettering can be made larger**: one setting, in steps, that scales every
+   word and control together.
+5. **The Command key does what Ctrl does** on a keyboard that has one.
+6. **Work is never lost.** While a job is open and has changes not saved, a
+   recovery copy is written beside it every minute and after every tenth change,
+   never over the job itself. Saving, or closing with nothing unsaved, removes
+   it. A job opened with a recovery copy newer than itself says so in one
+   sentence with the time, and offers "Take the recovered work" and "Leave it";
+   nothing is taken without the click. The recovery copy is the job as Save
+   would have written it, byte for byte.
+
+**B. Three ways to stand in front of the same job** (call 220, point 3): one
+control on the top bar that reads at a glance.
+7. **Field**: the verify-in-field list, one question at a time in large
+   lettering: where it is (the model flies there), what is asked, the dollars
+   riding on it, a place to type or laser the measurement, and the next. Nothing
+   else is on the screen but the model.
+8. **Estimate**: the drawing tools, the Job and Details panels, the sheet, the
+   lists. What a first-time user and an estimator need. A new job opens here,
+   with its ten next steps.
+9. **Everything**: also the bench and what belongs to it, the tool chest's own
+   editing, the formulas and the layouts.
+10. **No number, no saved job and no file written out differs between the three.**
+    Nothing is removed from the program: a thing a view leaves out is one click
+    away, and the window says which view has it when someone looks for it
+    (with the search of call 219).
+
+**C. A plan in the second window.**
+11. The second window shows **the estimate or a plan**, by a control at its top.
+    As a plan it shows any level of the job or any drawing sheet, with its own
+    wheel and drag, its own layers, and the same catches when it is looked at.
+    **Two plans stand side by side**: the first floor beside the second, or the
+    architect's sheet beside the tracing.
+12. What is selected in one window is marked in the other, and a double-click in
+    either flies both to it.
+13. Drawing stays in the first window in this call; the second is for looking.
+    Said on the screen where someone tries.
