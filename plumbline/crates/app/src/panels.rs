@@ -599,10 +599,16 @@ fn status_line(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc) {
     // on another at the right. The model is seen between them (J22B-3, A1).
     let card = |shrinks: bool| glass_card(Node { height: percent(100.0), padding: UiRect::horizontal(px(12.0)), align_items: AlignItems::Center, column_gap: px(9.0), overflow: Overflow::clip(), flex_shrink: if shrinks { 1.0 } else { 0.0 }, min_width: px(0.0), ..default() });
     p.spawn((Node { position_type: PositionType::Absolute, bottom: px(theme::GAP), left: px(theme::GAP), right: px(theme::GAP), height: px(STATUS_H), justify_content: JustifyContent::SpaceBetween, column_gap: px(theme::GAP), ..default() }, Pickable::IGNORE)).with_children(|row| {
-        row.spawn(card(true)).with_children(|bar| {
-            bar.spawn((Node { width: px(7.0), height: px(7.0), flex_shrink: 0.0, ..default() }, BackgroundColor(dot)));
-            bar.spawn(Node { flex_shrink: 1.0, min_width: px(0.0), overflow: Overflow::clip(), ..default() }).with_child((text(fonts, first, 12.0, Weight::Regular, ink), TextLayout::no_wrap()));
-        });
+        // With nothing said there is no card: a small square alone said nothing (call 209 point 7: it was the mark of how the last thing
+        // went, standing by itself). The room is kept, so the cards at the right stay at the right.
+        if first.is_empty() {
+            row.spawn(Node { flex_grow: 1.0, ..default() });
+        } else {
+            row.spawn(card(true)).with_children(|bar| {
+                bar.spawn((Node { width: px(7.0), height: px(7.0), flex_shrink: 0.0, ..default() }, BackgroundColor(dot)));
+                bar.spawn(Node { flex_shrink: 1.0, min_width: px(0.0), overflow: Overflow::clip(), ..default() }).with_child((text(fonts, first, 12.0, Weight::Regular, ink), TextLayout::no_wrap()));
+            });
+        }
         row.spawn(Node { column_gap: px(theme::GAP), flex_shrink: 0.0, ..default() }).with_children(|row| {
         // Every panel has a switch (the fixed rule; J24B-40: only Next steps could be
         // put away). Off, the panel is gone and the model has its room.
@@ -1885,6 +1891,16 @@ fn entry_words(doc: &Doc, snap: &Snapshot, field: Entry) -> (String, &'static st
         },
         Entry::RenameItem => format!("What {name} is called"),
         Entry::InTheWall => format!("What is in {name}"),
+        Entry::KeepShape => "What the new shape is called".to_string(),
+        Entry::ShapeBlock => match &doc.shaping {
+            Some((_, block, what)) => match what {
+                0..=5 => format!("Block {block}, {}", plumbline_world::building::shape::FIGURES[*what].to_lowercase()),
+                6 => format!("Block {block}, its form"),
+                7 => format!("What block {block} is made of"),
+                _ => format!("When block {block} is there"),
+            },
+            None => String::new(),
+        },
         _ => String::new(),
     };
     let hint = match field {
@@ -1905,6 +1921,17 @@ fn entry_words(doc: &Doc, snap: &Snapshot, field: Entry) -> (String, &'static st
             _ => "Type same if it is as drawn",
         },
         Entry::RenameItem => "A name of its own, like Wall oven, 27 in",
+        Entry::KeepShape => "A name of its own, like vanity with a panel. The item is drawn as it from then on",
+        Entry::ShapeBlock => match &doc.shaping {
+            Some((shape, _, _)) if plumbline_world::building::shape::starter_named(shape).is_some() => "A starter shape is not changed: keep it as a new shape first, then change that",
+            Some((_, _, what)) => match what {
+                0..=5 => "A length in width, depth and height, like height - 6 in or -width / 2 + 2 in",
+                6 => "box or round",
+                7 => "timber, worktop, porcelain, fabric, steel or enamel",
+                _ => "A comparison, like width >= 30 in, or none for every size",
+            },
+            None => "",
+        },
         Entry::InTheWall => "In words, like a 2 in drain and two cables, or nothing",
         _ => "",
     };
@@ -2704,6 +2731,10 @@ fn item_bench(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Sna
             });
         }
     });
+    // What it is drawn as, block by block, and how to change it (call 205): on the bench only.
+    if on_the_bench {
+        shape_card(p, fonts, doc, snap);
+    }
     // The item itself: called something else, or taken out of the job's library.
     p.spawn(Node { margin: UiRect::top(px(8.0)), column_gap: px(4.0), row_gap: px(4.0), flex_wrap: FlexWrap::Wrap, flex_shrink: 0.0, ..default() }).with_children(|r| {
         let called = el.name.clone();
@@ -2731,12 +2762,11 @@ fn item_bench(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Sna
     }
     // What the item is priced as (call 196; call 197 point 18): the assembly each of it set down takes, or that it is priced
     // as nothing. A click lists what goes on its kind; picking one is the model's change (`editing::item_priced_as`).
-    heading(p, fonts, "Priced as");
     let priced = el.rows.iter().find(|r| r.label == "priced as").map(|r| r.text.clone());
     let kind = snap.items.iter().find(|i| i.0 == el.path).map(|i| i.2);
-    p.spawn((Node { flex_direction: FlexDirection::Column, padding: UiRect::bottom(px(4.0)), flex_shrink: 0.0, ..default() }, Named { name: "Priced as row".to_string(), scrolls: true })).with_children(|c| {
+    p.spawn((Node { flex_direction: FlexDirection::Column, padding: UiRect::bottom(px(4.0)), margin: UiRect::top(px(12.0)), flex_shrink: 0.0, ..default() }, Named { name: "Priced as row".to_string(), scrolls: true })).with_children(|c| {
         match &priced {
-            Some(a) => c.spawn(text(fonts, format!("Priced as {a:?}: each of it set down takes that assembly's lines."), 12.0, Weight::Medium, theme::ink())),
+            Some(a) => c.spawn(text(fonts, format!("Each of it set down takes the lines of {a:?}."), 12.0, Weight::Medium, theme::ink())),
             None => c.spawn(text(fonts, "Not priced: what is set down from it is in no line and no total until it is priced as an assembly.", 12.0, Weight::Medium, theme::ink_soft())),
         };
     });
@@ -2786,12 +2816,13 @@ fn item_bench(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Sna
     heading(p, fonts, "Drawn as");
     hint(p, "Click one. Every one of this item already placed is drawn that way, inside the box of its sizes.");
     let by_name = drawn.contains("by its name") || drawn.contains("its name saying");
-    let mut choices: Vec<(String, Option<String>)> = vec![("What its name says".to_string(), None), ("Box".to_string(), Some(BOX.to_string()))];
-    choices.extend(Form::ALL.iter().map(|f| {
-        let name = f.name();
-        (format!("{}{}", name[..1].to_uppercase(), &name[1..]), Some(name.to_string()))
-    }));
-    for (shown, form) in choices {
+    let cap = |name: &str| format!("{}{}", name[..1].to_uppercase(), &name[1..]);
+    // The job's own shapes first, marked as the job's (call 205), then what the program has.
+    let mut choices: Vec<(String, Option<String>, bool)> = doc.job.shapes.iter().map(|s| (cap(&s.name), Some(s.name.clone()), true)).collect();
+    choices.push(("What its name says".to_string(), None, false));
+    choices.push(("Box".to_string(), Some(BOX.to_string()), false));
+    choices.extend(Form::ALL.iter().map(|f| (cap(f.name()), Some(f.name().to_string()), false)));
+    for (shown, form, own) in choices {
         let mine = match &form {
             None => by_name,
             Some(name) => !by_name && drawn.eq_ignore_ascii_case(name),
@@ -2803,6 +2834,7 @@ fn item_bench(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Sna
                     doc.job.derive();
                     doc.edit("changed how it is drawn");
                     doc.say(Tone::Done, match &pick {
+                        Some(name) if own => format!("{called} is drawn as {name}, the job's own shape, wherever one stands."),
                         Some(name) => format!("{called} is drawn as a {name}, wherever one stands."),
                         None => format!("{called} is drawn as its name says, wherever one stands."),
                     });
@@ -2812,6 +2844,9 @@ fn item_bench(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Sna
             doc.redraw();
         }, |r| {
             r.spawn(Node { flex_grow: 1.0, flex_basis: px(0.0), min_width: px(0.0), ..default() }).with_child(text(fonts, shown.clone(), 12.0, if mine { Weight::Semibold } else { Weight::Regular }, theme::ink()));
+            if own {
+                r.spawn(Node { flex_shrink: 0.0, ..default() }).with_child((text(fonts, "the job's own", 11.0, Weight::Regular, theme::accent()), TextLayout::no_wrap()));
+            }
             if mine {
                 r.spawn(Node { flex_shrink: 0.0, ..default() }).with_child((text(fonts, "as it is now", 11.0, Weight::Regular, theme::ink_faint()), TextLayout::no_wrap()));
             }
@@ -2836,6 +2871,97 @@ fn item_bench(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Sna
         }, |r| {
             r.spawn(Node { flex_grow: 1.0, flex_basis: px(0.0), min_width: px(0.0), ..default() }).with_child(text(fonts, shown.clone(), 12.0, if mine { Weight::Semibold } else { Weight::Regular }, theme::ink()));
         });
+    }
+}
+
+/// The bench's "Shape" (call 205): the blocks of what the item is drawn as, each a row by its material and its form, numbered; a
+/// click on one picks it (it is outlined on the bench) and its six figures, its form, what it is made of and when it is there
+/// stand under the list as rows, each read as the table writes it and typed like any value. A starter shape is shown and not
+/// changed: "Keep as a new shape" is what is offered. On the job's own shape, "Add block" and "Take block away".
+fn shape_card(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot) {
+    use plumbline_world::building::shape::FIGURES;
+    heading(p, fonts, "Shape");
+    let hint = |p: &mut ChildSpawnerCommands, words: String| {
+        p.spawn(Node { padding: UiRect::bottom(px(4.0)), flex_shrink: 0.0, ..default() }).with_child(text(fonts, words, 11.0, Weight::Regular, theme::ink_faint()));
+    };
+    let Some(shape) = &snap.bench_shape else {
+        hint(p, "It is drawn as a plain box of its sizes: nothing to change here. Under Drawn as, below, a shape can be picked for it.".to_string());
+        return;
+    };
+    let n = shape.pieces.len();
+    hint(p, format!("Drawn as {}, {}: {}.", shape.name, if shape.own { "the job's own shape" } else { "a starter shape" }, if n == 1 { "1 block".to_string() } else { format!("{n} blocks") }));
+    let picked = crate::tools::picked_block(doc, n);
+    for (i, piece) in shape.pieces.iter().enumerate() {
+        let number = i + 1;
+        let there = shape.worked.get(i).is_some_and(Option::is_some);
+        let mine = picked == Some(number);
+        row(p, mine, format!("Shape block {number}"), move |doc| {
+            doc.shape_block = if doc.shape_block == Some(number) { None } else { Some(number) };
+            doc.entry = None;
+            doc.shaping = None;
+            doc.touch();
+        }, |r| {
+            r.spawn(Node { width: px(18.0), flex_shrink: 0.0, ..default() }).with_child(text(fonts, number.to_string(), 12.0, Weight::Semibold, theme::ink_faint()));
+            r.spawn(Node { flex_grow: 1.0, flex_basis: px(0.0), min_width: px(0.0), ..default() }).with_child(text(fonts, format!("{}, {}", piece.made.word(), if piece.round { "round" } else { "box" }), 12.0, if mine { Weight::Semibold } else { Weight::Regular }, theme::ink()));
+            if !there {
+                r.spawn(Node { flex_shrink: 0.0, ..default() }).with_child((text(fonts, "not there at this size", 11.0, Weight::Regular, theme::ink_faint()), TextLayout::no_wrap()));
+            }
+        });
+    }
+    // What can be done to the list.
+    p.spawn(Node { margin: UiRect::vertical(px(6.0)), column_gap: px(4.0), row_gap: px(4.0), flex_wrap: FlexWrap::Wrap, flex_shrink: 0.0, ..default() }).with_children(|r| {
+        if shape.own {
+            let name = shape.name.clone();
+            on_click(&mut button(r, fonts, "Add block", "", false), move |doc| crate::tools::shape_add(doc, &name));
+            if let Some(block) = picked {
+                let name = shape.name.clone();
+                on_click(&mut button(r, fonts, "Take block away", "", false), move |doc| crate::tools::shape_take(doc, &name, block));
+            }
+        } else {
+            on_click(&mut button(r, fonts, "Keep as a new shape", "", matches!(doc.entry, Some((Entry::KeepShape, _)))), |doc| {
+                doc.open(Entry::KeepShape, "");
+                doc.fresh = true;
+                doc.say(Tone::Done, "Keep as a new shape: type what it is called. The item is drawn as the copy, and the copy is the job's own to change. Enter sets it.");
+            });
+        }
+    });
+    if !shape.own {
+        hint(p, "A starter shape is kept as the job's own before it is changed: its figures are shown here and not typed.".to_string());
+    }
+    if matches!(doc.entry, Some((Entry::KeepShape, _))) {
+        entry_box(p, fonts, doc, snap);
+    }
+    let Some(number) = picked else {
+        if n > 0 {
+            hint(p, "Click a block to outline it on the bench and read its figures.".to_string());
+        }
+        return;
+    };
+    let piece = &shape.pieces[number - 1];
+    p.spawn(Node { margin: UiRect::top(px(4.0)), ..default() }).with_child(text(fonts, format!("BLOCK {number}"), 11.0, Weight::Semibold, theme::ink_faint()));
+    // What is being typed stands right under the block's name, where it is in view whichever row it is for.
+    if matches!(doc.entry, Some((Entry::ShapeBlock, _))) {
+        entry_box(p, fonts, doc, snap);
+    }
+    let mut values: Vec<(String, String)> = FIGURES.iter().zip(piece.figures()).map(|(label, figure)| (label.to_string(), figure.to_string())).collect();
+    values.push(("Form".to_string(), if piece.round { "round" } else { "box" }.to_string()));
+    values.push(("Made of".to_string(), piece.made.word().to_string()));
+    values.push(("There when".to_string(), piece.when.clone().unwrap_or_else(|| "always".to_string())));
+    for (what, (label, value)) in values.into_iter().enumerate() {
+        let name = shape.name.clone();
+        let open = matches!(doc.entry, Some((Entry::ShapeBlock, _))) && doc.shaping.as_ref().is_some_and(|s| s.1 == number && s.2 == what);
+        let typed = if what == 8 && piece.when.is_none() { String::new() } else { value.clone() };
+        row(p, open, label.clone(), move |doc| {
+            doc.open(Entry::ShapeBlock, typed.clone());
+            doc.shaping = Some((name.clone(), number, what));
+            doc.fresh = true;
+        }, |r| {
+            r.spawn(Node { width: px(78.0), flex_shrink: 0.0, ..default() }).with_child((text(fonts, label.clone(), 12.0, Weight::Regular, theme::ink_soft()), TextLayout::no_wrap()));
+            r.spawn(Node { flex_grow: 1.0, flex_basis: px(0.0), min_width: px(0.0), justify_content: JustifyContent::FlexEnd, ..default() }).with_child(text(fonts, value.clone(), 12.0, Weight::Medium, theme::ink()));
+        });
+    }
+    if let Some(Some(block)) = shape.worked.get(number - 1) {
+        hint(p, format!("At its sizes: {}.", plumbline_world::editing::shapes::block_said(block, shape.size)));
     }
 }
 
@@ -3308,7 +3434,9 @@ fn selection(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snap
             // what was read: a length is measured, anything else is checked.
             match snap.takes.iter().find(|t| t.0 == row.label) {
                 None => {
-                    property(p, fonts, &pretty(&row.label), shown(row), row.status, &row.basis, "", "");
+                    // A price is not typed here yet: it is the price list's, and is changed by bringing a price list in (call 209 point 10).
+                    let note = if row.label == "price" || row.label.starts_with("quote: ") { "Not typed here: it is what the price list says. To change it, bring in a price list with the new price (Bring in, Price list)." } else { "" };
+                    property(p, fonts, &pretty(&row.label), shown(row), row.status, &row.basis, note, "");
                 }
                 Some((what, length)) => {
                     let (path, what, length) = (el.path.clone(), what.clone(), *length);

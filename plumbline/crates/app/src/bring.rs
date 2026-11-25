@@ -286,7 +286,7 @@ pub fn write_out(doc: &mut Doc, what: crate::model::WriteOut) {
                 let one = |what: &str| what.strip_prefix("pieces ").map(|rest| format!("piece {rest}")).unwrap_or_else(|| what.strip_suffix('s').unwrap_or(what).to_string());
                 let mut out = format!("Wrote {shown}, beside the job: the building as a BIM model (IFC4, lengths in feet). In it: {}.", written.made.iter().map(|(what, n)| format!("{n} {}", if *n == 1 { one(what) } else { what.clone() })).collect::<Vec<_>>().join(", "));
                 if !written.not_written.is_empty() {
-                    out.push_str(&format!("\nNot in it: {}.", written.not_written.iter().map(|(what, n, why)| format!("{n} x {what} ({why})")).collect::<Vec<_>>().join("; ")));
+                    out.push_str(&format!("\nNot in it: {}.", written.not_written.iter().map(|(what, n, why)| format!("{n} x {what} ({})", where_written(why))).collect::<Vec<_>>().join("; ")));
                 }
                 Ok(out)
             }
@@ -498,4 +498,35 @@ fn scan_file(doc: &mut Doc, name: &str, units: plumbline_plans::scan::Units, up:
         Err(why) => crate::tools::cant(doc, "bring in the scan", why),
     }
     doc.redraw();
+}
+
+/// Where the estimate is written out, for a sentence of the model's that says it is (call 209 point 3): the model says what is
+/// not in a building model and that the estimate is written out as a workbook; the window says where that button is. (A sentence
+/// that still names the command line's verb is said in the same words: no command's name is on a screen.)
+pub fn where_written(why: &str) -> String {
+    const WHERE: &str = "Estimate workbook, under Write out";
+    let why = why.replace("write it out with `export estimate`", &format!("write it out with {WHERE}"));
+    if why.contains("the estimate is written out as a workbook") && !why.contains(WHERE) {
+        return why.replace("the estimate is written out as a workbook", &format!("the estimate is written out as a workbook ({WHERE})"));
+    }
+    why
+}
+
+#[cfg(test)]
+mod tests {
+    use super::where_written;
+
+    #[test]
+    fn the_estimate_written_out_says_where_and_names_no_command() {
+        // The model's sentence as it is now, and as call 209 point 3 words it: either way the window says where, and no command.
+        let was = where_written("the estimate is not part of a building model: write it out with `export estimate`");
+        assert_eq!(was, "the estimate is not part of a building model: write it out with Estimate workbook, under Write out");
+        let now = where_written("the estimate is not part of a building model; the estimate is written out as a workbook");
+        assert_eq!(now, "the estimate is not part of a building model; the estimate is written out as a workbook (Estimate workbook, under Write out)");
+        // Said once: a sentence that already says where is left as it is.
+        assert_eq!(where_written(&now), now);
+        // Any other sentence is left alone.
+        assert_eq!(where_written("it has no length"), "it has no length");
+        assert!(!was.contains("export"));
+    }
 }

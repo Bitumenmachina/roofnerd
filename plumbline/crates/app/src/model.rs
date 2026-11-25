@@ -192,6 +192,10 @@ pub enum Entry {
     LayoutName,
     /// What runs inside the selected wall, in words (call 160).
     InTheWall,
+    /// One value of a block of the job's own shape, typed on the bench (call 205).
+    ShapeBlock,
+    /// The name a shape is kept under, typed on the bench (call 205).
+    KeepShape,
 }
 
 /// How the last action went. Said by what happened, not read back out of the words.
@@ -376,6 +380,11 @@ pub struct Doc {
     pub bench: Option<crate::bench::Bench>,
     /// What a button or a key asked of the bench, answered where the camera is held.
     pub bench_ask: Option<crate::bench::Ask>,
+    /// The block of the shape picked on the bench, from 1 (call 205): outlined on the bench, its figures under the list.
+    pub shape_block: Option<usize>,
+    /// A block's value being typed: the shape's name, the block (from 1), and which value (0 to 5 the six figures, 6 its
+    /// form, 7 what it is made of, 8 when it is there).
+    pub shaping: Option<(String, usize, usize)>,
     /// A file dropped on the window that could be more than one thing (a CSV or a
     /// workbook): kept until what it is has been said.
     pub dropped: Option<String>,
@@ -558,6 +567,8 @@ impl Doc {
                 Entry::Storey => "The level was not added: its fields were let go.",
                 Entry::NewItem => "The item was not added: its fields were let go.",
                 Entry::RenameItem => "The item keeps its name: the new one was let go.",
+                Entry::ShapeBlock => "The shape is as it was: what was typed was let go.",
+                Entry::KeepShape => "The shape was not kept: its name was let go.",
                 Entry::Line => "The cost line was not added: its fields were let go.",
                 Entry::Drawing => "The drawing was not added: its file was let go.",
                 Entry::BringIn(_) => "Nothing was brought in: the file's name was let go.",
@@ -731,6 +742,11 @@ pub struct Snapshot {
     pub revision: u64,
     /// The item on the bench, laid out: its floor, its dimensions, its framing (call 195).
     pub bench: Option<crate::bench::Layout>,
+    /// What the item on the bench is drawn as: its blocks, each worked by the model at its sizes (call 205).
+    pub bench_shape: Option<crate::bench::DrawnShape>,
+    /// The blocks of each thing set down that is drawn as a shape of the job's own, by its path, and of the item on the bench
+    /// by the item's path (`bench::own_blocks`): the scene draws what is here.
+    pub shaped: std::collections::HashMap<String, Vec<plumbline_world::building::forms::Block>>,
     pub title: String,
     pub file: String,
     pub roof_path: String,
@@ -877,6 +893,7 @@ pub fn refresh(mut doc: ResMut<Doc>, mut snap: ResMut<Snapshot>) {
     };
     // The bench (call 195): where the item's floor and dimensions stand, the model's own sizes in its own words.
     s.bench = doc.bench.as_ref().and_then(|b| crate::bench::layout(&mut doc.job, &b.item).ok());
+    s.bench_shape = doc.bench.as_ref().and_then(|b| crate::bench::drawn_shape(&mut doc.job, &b.item));
     s.boxes = plumbline_world::editing::box_codes(&mut doc.job).into_iter().map(|(_, name)| name).collect();
     s.layouts = if doc.beside.is_empty() {
         None
@@ -992,6 +1009,7 @@ pub fn refresh(mut doc: ResMut<Doc>, mut snap: ResMut<Snapshot>) {
             s.room_lines.push((el.path.clone(), on.get(&el.path).cloned().unwrap_or_default(), ends));
         }
     }
+    s.shaped = crate::bench::own_blocks(&mut doc.job, &drawn, doc.bench.as_ref().map(|b| b.item.as_str()));
     s.drawn = drawn;
     s.not_drawn = not_drawn;
     s.frames = plumbline_world::building::frames::frames(&mut doc.job);

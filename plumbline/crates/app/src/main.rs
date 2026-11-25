@@ -186,6 +186,8 @@ pub fn build_doc(path: String, roof_arg: Option<String>) -> Result<Doc, String> 
         look_at: None,
         bench: None,
         bench_ask: None,
+        shape_block: None,
+        shaping: None,
         dropped: None,
         choosing: false,
         pricing_item: None,
@@ -743,6 +745,7 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
                     doc.draw.cabinets = None;
                 }
                 doc.measuring = None;
+                doc.shaping = None;
                 // A length let go leaves the line's start where it was: said, so that
                 // "Cancelled" is not read as the wall cancelled (call 86).
                 if field == Entry::Length && !doc.draw.picked.is_empty() {
@@ -839,6 +842,8 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
                 Entry::Line => tools::new_line(doc, &values),
                 Entry::NewItem => tools::new_item(doc, &values),
                 Entry::RenameItem => tools::rename_item(doc, &text),
+                Entry::ShapeBlock => tools::shape_typed(doc, &text),
+                Entry::KeepShape => tools::keep_shape(doc, &text),
                 Entry::Drawing => plans::add(doc, &text),
                 Entry::Distance => tools::scale_entered(doc, &text),
                 Entry::Measure => tools::measured(doc, &text),
@@ -1253,8 +1258,8 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
         if let Some(sel) = doc.selected.clone() {
             let called = doc.job.find(&sel).and_then(|e| doc.job.world.get::<plumbline_world::Node>(e)).map(|n| n.name.clone()).unwrap_or_else(|| sel.clone());
             let priced_before = plumbline_world::view::estimate(&mut doc.job);
-            match doc.job.change_assembly_said(&sel, &name, Status::Assumed, SOURCE).map(|c| (c.added, c.taken, c.rewritten, c.left)) {
-                Ok((added, taken, rewritten, kept)) => {
+            match doc.job.change_assembly_said(&sel, &name, Status::Assumed, SOURCE).map(|c| (c.added, c.taken, c.rewritten, c.left, c.took)) {
+                Ok((added, taken, rewritten, kept, took)) => {
                     doc.job.derive();
                     // What the lines that came off took out of the job cost (J23-5).
                     let money = plumbline_world::view::came_off_said(&priced_before, &mut doc.job).filter(|s| s.contains('$')).and_then(|s| s.split_once(": ").map(|(_, rest)| format!(" {}{}", rest[..1].to_uppercase(), &rest[1..]))).unwrap_or_default();
@@ -1262,7 +1267,17 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
                     // Its lines are on the estimate: the sheet turns to it.
                     doc.tab = model::Tab::Estimate;
                     let lines = |n: usize| plumbline_world::view::so_many(n, "cost line");
-                    let off = if taken.is_empty() { String::new() } else { format!(" {} of the assembly it had came off: {}.", lines(taken.len()), taken.join(", ")) };
+                    // Each line that came off is named with whatever a person had entered on it and what it came to, in the model's
+                    // words (`Took::tail`, call 206 point 1), the amount from the estimate as it stood before.
+                    let named: Vec<String> = taken
+                        .iter()
+                        .map(|d| {
+                            let mut t = took.iter().find(|t| t.line == *d).cloned().unwrap_or(plumbline_world::Took { line: d.clone(), ..Default::default() });
+                            t.amount = priced_before.lines.iter().find(|l| l.path == sel && l.description == *d && !l.off).and_then(|l| l.amount.value);
+                            format!("{d}{}", t.tail())
+                        })
+                        .collect();
+                    let off = if taken.is_empty() { String::new() } else { format!(" {} of the assembly it had came off: {}.", lines(taken.len()), named.join(if named.iter().zip(&taken).any(|(n, d)| n != d) { "; " } else { ", " })) };
                     // A roof is one thing to an estimator: an assembly given to one of
                     // its planes goes on each of its other planes that has nothing
                     // priced on it yet, and it is said. A plane with lines of its own is

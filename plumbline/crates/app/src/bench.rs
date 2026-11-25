@@ -14,7 +14,9 @@
 //! (`main::keys`) answers, so that the view always flies and never jumps.
 
 use bevy::prelude::*;
-use plumbline_world::building::{forms, Placement, Shape};
+use plumbline_world::building::forms::Block;
+use plumbline_world::building::shape::Piece;
+use plumbline_world::building::{forms, shape, Placement, Shape};
 use plumbline_world::units;
 use plumbline_world::value::Status;
 use plumbline_world::{Item, Job};
@@ -97,6 +99,86 @@ pub fn placement(job: &mut Job, path: &str, origin: [f64; 3]) -> Result<Placemen
     Ok(Placement { path: path.to_string(), name, kind: item.category, storey: None, system: None, discipline: item.category.discipline(), shape: Shape::Box { at: origin, size, angle: 0.0 }, status, form, tag: None, stack: false })
 }
 
+
+/// What an item is drawn as, for the bench's "Shape": the shape's name, whether it is the job's own, its blocks as the
+/// table writes them, and each block worked at the item's sizes by the model (`Shape::worked_block`; the window
+/// works nothing out). None for an item drawn as a plain box, or that has no size to work them at.
+#[derive(Clone, Debug)]
+pub struct DrawnShape {
+    pub name: String,
+    pub own: bool,
+    pub pieces: Vec<Piece>,
+    pub worked: Vec<Option<Block>>,
+    /// The item's width, depth and height, in feet.
+    pub size: [f64; 3],
+}
+
+/// The shape an item is drawn as: what it says, else what its name says; the job's own shapes first (`shape::find`).
+pub fn drawn_shape(job: &mut Job, path: &str) -> Option<DrawnShape> {
+    let e = job.find(path)?;
+    let item = job.world.get::<Item>(e).cloned()?;
+    let name = job.world.get::<plumbline_world::Node>(e).map(|n| n.name.clone())?;
+    let said = match item.form.as_deref().map(str::trim) {
+        Some(said) if said.eq_ignore_ascii_case(forms::BOX) => return None,
+        Some(said) => said.to_string(),
+        None => forms::form_of(&name)?.name().to_string(),
+    };
+    let found = shape::find(&job.shapes, &said)?;
+    let own = job.shapes.iter().any(|s| s.name.eq_ignore_ascii_case(&found.name));
+    let (size, _, _) = item.size_ft().ok()?;
+    let worked = (0..found.blocks.len()).map(|n| found.worked_block(n, size).ok().flatten()).collect();
+    Some(DrawnShape { name: found.name.clone(), own, pieces: found.blocks.clone(), worked, size })
+}
+
+/// The blocks of every thing set down that is drawn as a shape of the job's own, by its path, and of the item on the
+/// bench the same way (by the item's path): the model's `Shape::worked` at each one's size. A starter shape is a `Form`
+/// and is drawn from that.
+pub fn own_blocks(job: &mut Job, drawn: &[Placement], bench: Option<&str>) -> std::collections::HashMap<String, Vec<Block>> {
+    let mut out = std::collections::HashMap::new();
+    if job.shapes.is_empty() {
+        return out;
+    }
+    let mut take = |job: &mut Job, key: &str, item: &str, size: [f64; 3]| {
+        let Some(said) = job.find(item).and_then(|e| job.world.get::<Item>(e)).and_then(|it| it.form.clone()) else { return };
+        if let Some(found) = job.shapes.iter().find(|s| s.name.eq_ignore_ascii_case(said.trim())) {
+            if let Ok(blocks) = found.worked(size) {
+                out.insert(key.to_string(), blocks);
+            }
+        }
+    };
+    for p in drawn.iter().filter(|p| p.form.is_none() && !p.kind.is_framing()) {
+        let Shape::Box { size, .. } = &p.shape else { continue };
+        let item = job.find(&p.path).and_then(|e| job.world.get::<plumbline_world::Placed>(e)).and_then(|c| c.item.clone());
+        if let Some(item) = item {
+            take(job, &p.path, &item, *size);
+        }
+    }
+    if let Some(item) = bench {
+        if let Some(size) = job.find(item).and_then(|e| job.world.get::<Item>(e)).and_then(|it| it.size_ft().ok()).map(|s| s.0) {
+            take(job, item, item, size);
+        }
+    }
+    out
+}
+
+/// The twelve edges of a block, in the view's frame, for the item standing with its middle over the origin and its underside
+/// on the floor: a block's own frame is x along its width from the middle, y from its middle to the back, z up from its foot.
+pub fn block_edges(b: &Block) -> Vec<(Vec3, Vec3)> {
+    let corner = |i: usize| {
+        let (x, y, z) = (if i & 1 == 0 { b.lo[0] } else { b.hi[0 ] }, if i & 2 == 0 { b.lo[1] } else { b.hi[1] }, if i & 4 == 0 { b.lo[2] } else { b.hi[2] });
+        Vec3::new(x as f32, z as f32, -y as f32)
+    };
+    let mut out = Vec::new();
+    for i in 0..8usize {
+        for bit in [1usize, 2, 4] {
+            if i & bit == 0 {
+                out.push((corner(i), corner(i | bit)));
+            }
+        }
+    }
+    out
+}
+
 /// The floor, the dimensions and the framing for the item.
 pub fn layout(job: &mut Job, path: &str) -> Result<Layout, String> {
     let e = job.find(path).ok_or_else(|| format!("{path} is not in the job"))?;
@@ -163,6 +245,10 @@ pub fn enter(doc: &mut Doc, orbit: &mut Orbit, snap: &Snapshot, item: &str) {
     doc.marking = None;
     doc.together.clear();
     doc.selected = Some(item.to_string());
+    if doc.bench.as_ref().is_none_or(|b| b.item != item) {
+        doc.shape_block = None;
+        doc.shaping = None;
+    }
     // The view that is left: kept once, from the house.
     let left = match &doc.bench {
         Some(b) => b.left.clone(),
@@ -199,6 +285,8 @@ pub fn enter(doc: &mut Doc, orbit: &mut Orbit, snap: &Snapshot, item: &str) {
 /// Back to the house, to the view that was left.
 pub fn leave(doc: &mut Doc, orbit: &mut Orbit, snap: &Snapshot) {
     let Some(bench) = doc.bench.take() else { return };
+    doc.shape_block = None;
+    doc.shaping = None;
     let left = bench.left;
     if left.plan || left.walk {
         crate::set_view(doc, orbit, snap, left.plan, left.walk);
@@ -232,6 +320,7 @@ pub fn answer(doc: &mut Doc, orbit: &mut Orbit, snap: &Snapshot) {
 mod tests {
     use super::*;
     use plumbline_world::editing as ed;
+    use crate::model::Entry;
     use plumbline_world::value::Val;
 
     /// A job with a level, a vanity 36 x 21 x 34 1/2 in as an item, two of it set down, and
@@ -531,5 +620,103 @@ mod tests {
         crate::tools::measured(&mut doc, "22 in");
         assert_eq!(size(&mut doc, "depth").1, Status::Assumed);
         assert_eq!(size(&mut doc, "width").1, Status::Known);
+    }
+
+    // ---- A shape on the bench (call 205, point 6) ----
+
+    /// The bench's item kept as a new shape and a fourth block added, through the window's own functions.
+    fn kept_and_added(doc: &mut Doc, vanity: &str) -> String {
+        doc.selected = Some(vanity.to_string());
+        crate::tools::keep_shape(doc, "vanity with a panel");
+        crate::tools::shape_add(doc, "vanity with a panel");
+        "vanity with a panel".to_string()
+    }
+
+    #[test]
+    fn an_item_drawn_as_a_starter_shape_lists_its_blocks_and_is_not_the_jobs_own() {
+        let (mut doc, vanity, heater) = doc_with_items();
+        let shape = drawn_shape(&mut doc.job, &vanity).expect("a vanity is drawn as a base cabinet");
+        assert_eq!((shape.name.as_str(), shape.own, shape.pieces.len()), ("base cabinet", false, 3));
+        assert_eq!(shape.pieces.iter().map(|p| p.made.word()).collect::<Vec<_>>(), vec!["timber", "timber", "worktop"]);
+        assert!(shape.worked.iter().all(Option::is_some));
+        assert_eq!(shape.size, [3.0, 1.75, 2.875]);
+        // A tank is a starter shape too; an item drawn as a box has none.
+        assert_eq!(drawn_shape(&mut doc.job, &heater).map(|s| s.name), Some("tank".to_string()));
+        ed::item_drawn_as(&mut doc.job, &vanity, Some("box")).expect("a box");
+        assert!(drawn_shape(&mut doc.job, &vanity).is_none());
+    }
+
+    #[test]
+    fn a_thing_set_down_is_drawn_from_the_rows_of_the_jobs_own_shape_and_the_bench_too() {
+        let (mut doc, vanity, _) = doc_with_items();
+        let (snap, mut orbit) = (Snapshot::default(), Orbit::new());
+        enter(&mut doc, &mut orbit, &snap, &vanity);
+        let name = kept_and_added(&mut doc, &vanity);
+        assert_eq!(doc.shape_block, Some(4), "the block added is picked: {}", doc.message);
+        let shape = drawn_shape(&mut doc.job, &vanity).expect("drawn as the copy");
+        assert_eq!((shape.name.as_str(), shape.own, shape.pieces.len()), (name.as_str(), true, 4));
+        // The model's blocks for each thing set down and for the item on the bench: four, the fourth the item's whole box.
+        let drawn = plumbline_world::building::placements(&mut doc.job).0;
+        let blocks = own_blocks(&mut doc.job, &drawn, Some(&vanity));
+        let things: Vec<_> = drawn.iter().filter(|p| p.name.starts_with("Vanity")).collect();
+        assert_eq!(things.len(), 2);
+        for t in &things {
+            assert_eq!(t.form, None, "a job's own shape is no form");
+            let own = blocks.get(&t.path).expect("its blocks");
+            assert_eq!(own.len(), 4);
+            assert!((own[3].hi[0] - 1.5).abs() < 1e-9 && (own[3].hi[2] - 2.875).abs() < 1e-9, "{:?}", own[3]);
+        }
+        assert_eq!(blocks.get(&vanity).map(Vec::len), Some(4), "the bench's own item");
+        // The same item drawn as a starter has no entry: it is drawn from its form.
+        ed::item_drawn_as(&mut doc.job, &vanity, Some("base cabinet")).expect("back to the starter");
+        let drawn = plumbline_world::building::placements(&mut doc.job).0;
+        assert!(own_blocks(&mut doc.job, &drawn, Some(&vanity)).is_empty());
+    }
+
+    #[test]
+    fn a_figure_typed_is_the_models_change_and_a_refusal_leaves_the_shape_and_says_why() {
+        let (mut doc, vanity, _) = doc_with_items();
+        let (snap, mut orbit) = (Snapshot::default(), Orbit::new());
+        enter(&mut doc, &mut orbit, &snap, &vanity);
+        // A starter shape is refused in the model's words, and nothing is changed.
+        let saved = plumbline_world::file::save(&mut doc.job);
+        doc.shaping = Some(("base cabinet".to_string(), 3, 5));
+        crate::tools::shape_typed(&mut doc, "height + 1 in");
+        assert!(doc.message.contains("starter shape") && doc.message.contains("keep it as a new shape first"), "{}", doc.message);
+        assert_eq!(plumbline_world::file::save(&mut doc.job), saved);
+        // The copy: the fourth block's figures typed, each its own change.
+        let name = kept_and_added(&mut doc, &vanity);
+        for (what, text) in [(0, "-width / 2 + 2 in"), (1, "width / 2 - 2 in"), (2, "depth - 1 in"), (3, "depth"), (4, "4 in"), (5, "height - 6 in")] {
+            doc.shaping = Some((name.clone(), 4, what));
+            crate::tools::shape_typed(&mut doc, text);
+            assert!(doc.message.contains("1 item is drawn as it") && doc.message.contains("2 things set down from it follow"), "{}", doc.message);
+        }
+        let shape = drawn_shape(&mut doc.job, &vanity).expect("the copy");
+        assert_eq!(shape.pieces[3].figures(), ["-width / 2 + 2 in", "width / 2 - 2 in", "depth - 1 in", "depth", "4 in", "height - 6 in"]);
+        // Above the box: refused, as the model says it, and the row is as it was; the field is open on what was typed.
+        let saved = plumbline_world::file::save(&mut doc.job);
+        doc.shaping = Some((name.clone(), 4, 5));
+        crate::tools::shape_typed(&mut doc, "height + 1 in");
+        assert!(doc.tone == Tone::Refused && doc.message.contains("1 in above the box"), "{}", doc.message);
+        assert_eq!(plumbline_world::file::save(&mut doc.job), saved);
+        assert!(matches!(doc.entry, Some((Entry::ShapeBlock, _))));
+        // A form, a material and a condition are typed the same way; a word that is none of them is refused.
+        for (what, text, said) in [(6, "round", "an upright round"), (6, "box", "a box"), (7, "steel", "made of steel"), (8, "width >= 30 in", "there when width >= 30 in"), (8, "none", "every size")] {
+            doc.shaping = Some((name.clone(), 4, what));
+            crate::tools::shape_typed(&mut doc, text);
+            assert!(doc.message.contains(said), "{}: {}", text, doc.message);
+        }
+        doc.shaping = Some((name.clone(), 4, 7));
+        crate::tools::shape_typed(&mut doc, "brass");
+        assert!(doc.tone == Tone::Refused && doc.message.contains("timber"), "{}", doc.message);
+        // Take block away takes the picked one, and the next is picked.
+        crate::tools::shape_take(&mut doc, &name, 4);
+        assert_eq!(drawn_shape(&mut doc.job, &vanity).map(|s| s.pieces.len()), Some(3));
+        assert_eq!(doc.shape_block, Some(3));
+        // A name taken is refused in the model's words.
+        doc.selected = Some(vanity.clone());
+        ed::item_drawn_as(&mut doc.job, &vanity, Some("base cabinet")).expect("the starter again");
+        crate::tools::keep_shape(&mut doc, "Vanity with a panel");
+        assert!(doc.message.contains("already"), "{}", doc.message);
     }
 }

@@ -1196,8 +1196,11 @@ pub fn rebuild(
                             edge(&mut build, from, to, w / 2.0, d / 2.0);
                         }
                     }
-                    // No size: there is nothing to draw it as but its centre line, broken.
-                    (None, None) => build.drawing.runs.extend(frame.iter().map(|(a, b)| (*a, *b, theme::red(), true))),
+                    // No size: there is nothing to draw it as but its centre line, broken. In quiet ink, where its trade's switch
+                    // has it on; in red, the mark of what is Unknown, only under "Known, Assumed, Unknown" (call 209 point 6: a red
+                    // dashed line that no switch owned and no word explained; red is also what a hot water system is drawn in). With
+                    // Sizes on it wears the model's words, "hot water, size not known" (`panels::size_tags`), and the sheet lists it so.
+                    (None, None) => build.drawing.runs.extend(frame.iter().map(|(a, b)| (*a, *b, if show.certainty { theme::red() } else { theme::ink_soft() }, true))),
                 }
                 build.drawing.frames.push((p.path.clone(), frame));
             }
@@ -1227,10 +1230,12 @@ pub fn rebuild(
                     // is inside the box, which is still what is tested for clashes and
                     // what is outlined when the thing is selected. A thing whose name
                     // names no form is the box it is.
-                    match p.form {
-                        Some(form) => {
+                    // A thing drawn as a shape of the job's own is drawn from that shape's rows, worked by the model
+                    // (`bench::own_blocks`, call 205); a starter's from its form.
+                    match p.form.map(|form| plumbline_world::building::forms::blocks(form, *size)).or_else(|| snap.shaped.get(&p.path).cloned()) {
+                        Some(shaped) => {
                             use plumbline_world::building::forms::Made;
-                            for b in plumbline_world::building::forms::blocks(form, *size) {
+                            for b in shaped {
                                 // The thing's own frame: x along its width, y from front to
                                 // back, z up. The view's: x east, y up, z south.
                                 let mid = [(b.lo[0] + b.hi[0]) / 2.0, (b.lo[1] + b.hi[1]) / 2.0, (b.lo[2] + b.hi[2]) / 2.0];
@@ -2427,6 +2432,14 @@ pub fn draw_lines(doc: Res<Doc>, snap: Res<Snapshot>, drawing: Res<Drawing>, mut
             lines.line(dim.a, dim.b, colour);
             for end in [dim.a, dim.b] {
                 lines.line(end - dim.tick * 0.12, end + dim.tick * 0.12, colour);
+            }
+        }
+        // The block of the shape picked on the panel, outlined in the accent (call 205): where the model puts it at the item's sizes.
+        if let (Some(shape), Some(n)) = (&snap.bench_shape, doc.shape_block) {
+            if let Some(Some(block)) = shape.worked.get(n.wrapping_sub(1)) {
+                for (a, b) in crate::bench::block_edges(block) {
+                    highlight.line(a, b, theme::accent());
+                }
             }
         }
     }

@@ -218,7 +218,7 @@ pub fn rebuild(mut commands: Commands, doc: Res<Doc>, snap: Res<Snapshot>, fonts
             // Layouts: this job beside others of it. Always offered, with how many are set.
             all.push((Tab::Layouts, "Layouts".to_string(), doc.beside.len()));
             // What is set down is listed under Building too (call 197, point 10): a job with only things set down has the tab.
-            all.push((Tab::Building, "Building".to_string(), snap.fabric.len() + snap.drawn.iter().filter(|p| p.kind.is_placed()).count()));
+            all.push((Tab::Building, "Building".to_string(), snap.fabric.len() + snap.storeys.iter().map(|s| s.set_down.count()).sum::<usize>()));
             all.push((Tab::Roof, "Roof".to_string(), snap.planes.len()));
             for d in [Discipline::Mechanical, Discipline::Electrical, Discipline::Plumbing] {
                 all.push((Tab::Of(d), theme::discipline_name(d).to_string(), snap.counts.iter().find(|c| c.0 == d).map(|c| c.1).unwrap_or(0)));
@@ -544,36 +544,30 @@ fn building(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
     }
 }
 
-/// What is set down on a level (call 197, point 10): equipment, fixtures and furnishings by kind, with what each is called. They are
-/// drawn and counted by the model and are on this list so that the sheet window does not read as though they were not there. Their
-/// number is the model's list of what stands on the level (`Placement`); what is priced on them is the estimate's, and what is not
-/// is said at the foot of its recap.
-// OWED TO THE MODEL (call 197 point 10, the lead's ruling): a count is a figure and belongs to the model. This groups the model's
-// placements by level and kind here for now; a set-down count by level and kind in the storey's totals is to replace it, and this
-// window then reads that figure.
+/// What is set down on a level (call 197, point 10; call 209 point 1): equipment, fixtures and furnishings by kind, with what each
+/// is called. Their count is the model's (`StoreyTotals::set_down`, said as `takeoff` says it): a thing with no size is counted and said
+/// not to be drawn, and a fitting is not a thing set down (it is counted with its run). What is priced on them is the estimate's, and
+/// what is not is said under the list as the model says it.
 fn set_down(t: &mut ChildSpawnerCommands, fonts: &Fonts, snap: &Snapshot, level: &str, level_name: &str) {
-    let mut kinds: Vec<Kind> = Vec::new();
-    for p in snap.drawn.iter().filter(|p| p.kind.is_placed() && p.storey.as_deref() == Some(level)) {
-        if !kinds.contains(&p.kind) {
-            kinds.push(p.kind);
-        }
-    }
-    if kinds.is_empty() {
+    let Some(set) = snap.storeys.iter().find(|s| s.path == level).map(|s| &s.set_down) else { return };
+    if set.kinds.is_empty() {
         return;
     }
     header_row(t, fonts, &[("", 7.0, false), ("Set down on this level", 0.0, false)]);
-    for kind in kinds {
-        let here: Vec<&plumbline_world::building::Placement> = snap.drawn.iter().filter(|p| p.kind == kind && p.storey.as_deref() == Some(level)).collect();
-        let said = kind.so_many(here.len());
-        let worst = here.iter().map(|p| p.status).max().unwrap_or(Status::Unknown);
-        let names = here.iter().map(|p| p.name.as_str()).collect::<Vec<_>>().join(", ");
+    for k in &set.kinds {
+        let said = k.kind.so_many(k.count);
+        let names = k.names.join(", ");
         t.spawn((Node { align_items: AlignItems::Center, column_gap: px(12.0), padding: UiRect::axes(px(16.0), px(6.0)), min_height: px(31.0), border: UiRect::bottom(px(1.0)), ..default() }, BorderColor::all(theme::rule()), theme::named(format!("Set down on {level_name}: {said}")))).with_children(|r| {
-            cell(r, 7.0, false, |c| dot(c, worst));
+            cell(r, 7.0, false, |c| dot(c, k.status));
             r.spawn(Node { flex_direction: FlexDirection::Column, flex_grow: 1.0, flex_basis: px(0.0), min_width: px(0.0), ..default() }).with_children(|c| {
                 c.spawn(text(fonts, said, 12.5, Weight::Medium, theme::ink()));
                 c.spawn(text(fonts, names, 11.0, Weight::Regular, theme::ink_faint()));
             });
         });
+    }
+    // What the model says besides the kinds: what is not priced, and what cannot be drawn for want of a size.
+    for line in set.said().into_iter().skip(set.kinds.len()) {
+        t.spawn((Node { padding: UiRect::axes(px(16.0), px(5.0)), border: UiRect::bottom(px(1.0)), ..default() }, BorderColor::all(theme::rule()))).with_child(text(fonts, line, 11.5, Weight::Regular, theme::ink_soft()));
     }
 }
 

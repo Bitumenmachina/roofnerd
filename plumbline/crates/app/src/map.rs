@@ -38,6 +38,7 @@ pub fn write(
     named: Query<(&Named, &ComputedNode, &UiGlobalTransform, &ComputedUiTargetCamera, &InheritedVisibility, Option<&CalculatedClip>)>,
     windows: Query<(&Window, Has<PrimaryWindow>)>,
     camera: Query<(&Camera, &GlobalTransform, &Projection), With<MainCamera>>,
+    texts: Query<(&Text, &ComputedNode, &UiGlobalTransform, &ComputedUiTargetCamera, &InheritedVisibility, Option<&CalculatedClip>)>,
     mut last: Local<String>,
     mut file: Local<Option<Option<String>>>,
     mut said: Local<String>,
@@ -104,6 +105,26 @@ pub fn write(
         }
         let (window, corner) = if on_model { ("model", model.0) } else { ("sheet", sheet.0) };
         found.push((window, name.name.clone(), at.x + corner.x as f32, at.y + corner.y as f32));
+    }
+    // The words on both windows that are in sight, as they read: `text<TAB>model or sheet<TAB>the words<TAB>x<TAB>y`. A demonstration that counts what a
+    // panel says (a word that stood twice, a line that is there) reads these.
+    let mut words: Vec<(&str, String, f32, f32)> = Vec::new();
+    for (words_of, node, place, target, visible, clip) in &texts {
+        if !visible.get() || node.size.x <= 0.0 || words_of.0.trim().is_empty() {
+            continue;
+        }
+        if clip.is_some_and(|c| !c.contains_point(place.translation)) {
+            continue;
+        }
+        let on_model = target.get() == Some(cameras.ui);
+        let at = place.translation * node.inverse_scale_factor;
+        let corner = if on_model { model.0 } else { sheet.0 };
+        words.push((if on_model { "model" } else { "sheet" }, words_of.0.replace(['\t', '\n'], " "), at.x + corner.x as f32, at.y + corner.y as f32));
+    }
+    words.sort_by(|a, b| a.0.cmp(b.0).then(a.3.total_cmp(&b.3)).then(a.2.total_cmp(&b.2)).then(a.1.cmp(&b.1)));
+    let mut spoken = String::new();
+    for (window, w, x, y) in &words {
+        spoken.push_str(&format!("text\t{window}\t{w}\t{}\t{}\n", x.round(), y.round()));
     }
     // The box of a card laid over the model (the Cabinets card): `box<TAB>name<TAB>left<TAB>top<TAB>right<TAB>bottom`, so that a script
     // can ask whether it lies over what is drawn (call 197, point 11).
@@ -211,6 +232,22 @@ pub fn write(
                         out.push_str(&format!("bench\t{what}\t{:.1}\t{:.1}\t{:.1}\t{:.1}\n", a.0, a.1, b.0, b.1));
                     }
                 }
+                // The block of the shape that is picked (call 205): its front edge at its foot, and the item's own at the floor, on
+                // screen, so that a demonstration measures one against the other in the picture.
+                // `edge<TAB>block<TAB>x1<TAB>y1<TAB>x2<TAB>y2` and `edge<TAB>item<TAB>...`.
+                // What the picked block's rows read, as the table writes them: `shape<TAB>block<TAB>N<TAB>made of<TAB>form<TAB>there when<TAB>the six figures`.
+                if let Some((s, n)) = snap.bench_shape.as_ref().zip(doc.shape_block).filter(|(s, n)| (1..=s.pieces.len()).contains(n)) {
+                    let piece = &s.pieces[n - 1];
+                    out.push_str(&format!("shape\tblock\t{n}\t{}\t{}\t{}\t{}\n", piece.made.word(), if piece.round { "round" } else { "box" }, piece.when.clone().unwrap_or_else(|| "always".to_string()), piece.figures().join("\t")));
+                }
+                if let Some(Some(block)) = snap.bench_shape.as_ref().zip(doc.shape_block).and_then(|(s, n)| s.worked.get(n.wrapping_sub(1))) {
+                    for (what, x, y, z) in [("block", (block.lo[0], block.hi[0]), block.lo[1], block.lo[2]), ("item", (-(w as f64) / 2.0, w as f64 / 2.0), -(d as f64) / 2.0, 0.0)] {
+                        let end = |x: f64| at(Vec3::new(x as f32, z as f32, -y as f32));
+                        if let (Some(a), Some(b)) = (end(x.0), end(x.1)) {
+                            out.push_str(&format!("edge\t{what}\t{:.1}\t{:.1}\t{:.1}\t{:.1}\n", a.0, a.1, b.0, b.1));
+                        }
+                    }
+                }
             }
             (None, _) if !doc.plan => {
                 if let Some(p) = snap.extent.and_then(|(lo, _, _)| at(to_view(doc.origin, [lo[0], lo[1], 0.0]))) {
@@ -222,6 +259,17 @@ pub fn write(
                 }
             }
             _ => {}
+        }
+    }
+    // Each piece of a run that has no size, where it is drawn as its dashed centerline (call 209 point 6): `unsized<TAB>path<TAB>x1<TAB>y1<TAB>x2<TAB>y2`,
+    // its two ends on screen. A demonstration reads the colour of the picture along it.
+    if let (None, Ok((camera, eye, _))) = (&doc.bench, camera.single()) {
+        for p in &snap.drawn {
+            if let (Shape::Run { a, b, round: None, rect: None }, true) = (&p.shape, p.kind.is_segment()) {
+                if let (Ok(q), Ok(r)) = (camera.world_to_viewport(eye, to_view(doc.origin, *a)), camera.world_to_viewport(eye, to_view(doc.origin, *b))) {
+                    out.push_str(&format!("unsized\t{}\t{:.0}\t{:.0}\t{:.0}\t{:.0}\n", p.path, q.x + model.0.x as f32, q.y + model.0.y as f32, r.x + model.0.x as f32, r.y + model.0.y as f32));
+                }
+            }
         }
     }
     // Where a place in the middle of each wall's gable is on screen, in 3D (call 192): halfway up between the wall's top and the roof's
@@ -251,6 +299,7 @@ pub fn write(
             out.push_str(&format!("gable_panel\t{}\t{} {}\t{:?}\n", el.path, value, unit, status));
         }
     }
+    out.push_str(&spoken);
     if out != *last {
         // Written whole, then put in place, so a script never reads half of it.
         let part = format!("{file}.part");

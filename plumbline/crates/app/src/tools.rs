@@ -558,6 +558,92 @@ pub fn rename_item(doc: &mut Doc, typed: &str) {
     doc.redraw();
 }
 
+/// The block the bench has picked (from 1) in the shape of the item on the bench, kept inside the shape it is: after a block is
+/// taken away or an undo, a number past the last is the last.
+pub fn picked_block(doc: &Doc, blocks: usize) -> Option<usize> {
+    doc.shape_block.map(|n| n.min(blocks)).filter(|n| *n >= 1)
+}
+
+/// A value of a block of the job's own shape, typed on the bench: one of the six figures, its form (box or round), what it is
+/// made of, or when it is there. The model makes the change (`editing::shape_block_set`), checks the shape as it will be and
+/// refuses with the row, the size and the reason; a starter shape is refused in the model's own words. A refusal leaves the
+/// shape as it was and the field open on what was typed, to be put right.
+pub fn shape_typed(doc: &mut Doc, typed: &str) {
+    use plumbline_world::building::forms::Made;
+    let Some((shape, block, what)) = doc.shaping.take() else { return cant(doc, "change the block", "no block is picked") };
+    let text = typed.trim();
+    let set = match what {
+        0..=5 => Ok(ed::BlockSet::Figure(what, text.to_string())),
+        6 => match text.to_ascii_lowercase().as_str() {
+            "box" => Ok(ed::BlockSet::Round(false)),
+            "round" => Ok(ed::BlockSet::Round(true)),
+            _ => Err(format!("{text:?} is not a form a block can have: it is a box or a round")),
+        },
+        7 => Made::named(text).map(ed::BlockSet::Made).ok_or_else(|| format!("{text:?} is not something a block is made of: it is {}", Made::ALL.map(Made::word).join(", "))),
+        _ => Ok(ed::BlockSet::When(match text.to_ascii_lowercase().as_str() {
+            "" | "none" | "always" => None,
+            _ => Some(text.to_string()),
+        })),
+    };
+    match set.and_then(|set| ed::shape_block_set(&mut doc.job, &shape, block, set)) {
+        Ok(done) => {
+            doc.edit("changed a shape");
+            doc.say(Tone::Done, done.said());
+        }
+        Err(why) => {
+            cant(doc, "change that block", why);
+            doc.open(Entry::ShapeBlock, text);
+            doc.shaping = Some((shape, block, what));
+            doc.fresh = true;
+        }
+    }
+    doc.redraw();
+}
+
+/// "Keep as a new shape": the shape the item on the bench is drawn as, copied into the job under the name typed, and the item
+/// drawn as the copy (`editing::keep_shape_as`). A name taken is refused in the model's words and the field stays open.
+pub fn keep_shape(doc: &mut Doc, typed: &str) {
+    let Some(path) = doc.bench.as_ref().map(|b| b.item.clone()).or_else(|| doc.selected.clone()) else { return cant(doc, "keep the shape", "no item is open") };
+    match ed::keep_shape_as(&mut doc.job, &path, typed) {
+        Ok(done) => {
+            doc.edit("kept a shape");
+            doc.say(Tone::Done, done.said());
+        }
+        Err(why) => {
+            cant(doc, "keep the shape", why);
+            doc.open(Entry::KeepShape, typed.trim());
+            doc.fresh = true;
+        }
+    }
+    doc.redraw();
+}
+
+/// "Add block" on the job's own shape: a box the item's whole size, picked.
+pub fn shape_add(doc: &mut Doc, shape: &str) {
+    match ed::shape_block_add(&mut doc.job, shape, None) {
+        Ok(done) => {
+            doc.edit("added a block");
+            doc.shape_block = done.block;
+            doc.say(Tone::Done, done.said());
+        }
+        Err(why) => cant(doc, "add a block", why),
+    }
+    doc.redraw();
+}
+
+/// "Take block away": the picked block of the job's own shape.
+pub fn shape_take(doc: &mut Doc, shape: &str, block: usize) {
+    match ed::shape_block_take(&mut doc.job, shape, block) {
+        Ok(done) => {
+            doc.edit("took a block away");
+            doc.shape_block = Some(block.min(done.blocks)).filter(|n| *n >= 1);
+            doc.say(Tone::Done, done.said());
+        }
+        Err(why) => cant(doc, "take the block away", why),
+    }
+    doc.redraw();
+}
+
 /// A new storey typed as "name, elevation, height". It becomes the storey drawn on.
 pub fn new_storey(doc: &mut Doc, values: &[String]) {
     let parts: Vec<&str> = values.iter().map(|s| s.trim()).collect();
