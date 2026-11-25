@@ -1,0 +1,6 @@
+Item,Connection,Takes,Carries,Goes,Across,Back,Up,Faces,Place: how sure,Place: where from,Size,Size: how sure,Size: where from
+Water closet,Waste,pipe,waste,out,0,12 in,0,down,Assumed,a typical rough-in; the product is not chosen,,,
+Water closet,Cold water,pipe,cold,in,'-6 in,0,6 in,back,Assumed,a typical rough-in; the product is not chosen,,,
+Lavatory,Hot water,pipe,hot,in,'-4 in,0,21 in,back,Assumed,a typical rough-in; the product is not chosen,,,
+Lavatory,Cold water,pipe,cold,in,4 in,0,21 in,back,Assumed,a typical rough-in; the product is not chosen,,,
+Lavatory,Waste,pipe,waste,out,0,0,19 in,back,Assumed,a typical rough-in; the product is not chosen,,,

@@ -207,6 +207,8 @@ BIMCraft: https://github.com/IPedrax/bimcraft at
 | `reach_cautions` | ours |  |  | a room reaching past its level's floor, and a wall standing off a footing that has no wall on it (call 179, B1); `grep -rn 'reach\|stands off' crates/core/src`: nothing of the kind; `commands.rs` `floor_outline` (2467) makes a floor from walls once and never checks it again |
 | `turn` | ported | `rotate` | `crates/core/src/commands.rs:12444` | turn a placed thing by degrees counter-clockwise. Taken: the turn itself, about the thing's own point. Not taken: turning about another point; walls and runs; several at once; a copy |
 | `rename_item` | ported | `rename_type` | `crates/core/src/commands.rs:12943` | a library entry called something else: a name another has is refused, and what refers to it follows (there `rename_entry`; here each thing set down from the item is called what the item is). Not taken: a family's types named `family: type`; a rename to the name it has is refused here, where BIMCraft answers that it was done |
+| `rename_item_counted` | ours |  |  | `rename_item` that says what it did to each thing set down from the item: how many are set down, how many are called by the new name (the item\'s name, or it and its number, kept), and the names a person gave since, left (call 209 point 2). BIMCraft's `rename_entry` (`commands.rs:13364`) renames the entry in the library and every placed instance that names it, with no number and no hand-given name to keep: `grep -rn 'fn rename_entry' crates` and read it; there is no count of names left |
+| `Renamed` | ours |  |  | the count `rename_item_counted` gives back: things set down, called by the new name, and kept by a person's name; `said` words them in a builder's words, the window's sentence and the command line's (call 209 point 2); `grep -rn 'fn rename_entry' crates` in BIMCraft finds the one rename and it returns nothing counted |
 | `remove` | ported | `delete` | `crates/core/src/commands.rs:13011` | take an element out, and a wall's doors and windows with it (`commands.rs:13040`) |
 | `room` | ported | `room` | `crates/core/src/commands.rs:7909` | a room placed by a point on a level, with a name. Not taken: a number given when none is said |
 | `room_lines` | ported | `room_separator` | `crates/core/src/commands.rs:6938` | one room line for each pair of points that follow one another, on a level (the `closed` flag is not taken: a closed ring of room lines is made by giving the first point again) |
@@ -237,6 +239,41 @@ BIMCraft: https://github.com/IPedrax/bimcraft at
 | `connect_at` | ours |  |  | `connect`, for a point picked on the plan; `grep -rn 'fn connect_at' crates/core/src`: nothing |
 | `PortSaid` | ours |  |  | what a model brought in says of one connection on a thing (a port): its name, its sort, what it carries, which way it goes (call 200); `grep -rn 'struct PortSaid' crates/core/src`: nothing, and BIMCraft reads no port: `grep -rn 'IFCDISTRIBUTIONPORT' crates/core/src` finds only the line that leaves ports out of what is brought in (`import.rs:63`) |
 | `connect_port` | ours |  |  | `connect`, opened to what a file's ports say: told which end of a run, or a place where there is no run, and Assumed, sourced to the file (call 200); `grep -rn 'fn connect_port' crates/core/src`: nothing |
+| `Facing` | ported | `direction` | `crates/core/src/family.rs:453` | BIMCraft's connector `direction` (a vector out of the family: the way a pipe leaves it) kept to the six words a tradesman says: back, front, left, right, up, down (call 211) |
+| `check_item_connections` | ported | `check_connectors` | `crates/core/src/family.rs:1353` | the rules it holds on a family's connectors (only a pipe has a domain; a place and a size that are lengths, a bound on how many: 8 there, 64 here) applied to an item's rows; a place that is Assumed is ours |
+| `ItemConnection` | ours |  |  | a row of an item: where it connects, as across, back and up from the item's sizes; `grep -rn 'item.*connect\|connector' crates/core/src` over BIMCraft: its connectors are a family's (family.rs 430 to 475), never an item's row; BIMCraft's `at` is a formula of a family's parameters in mm, here of width, depth and height |
+| `ItemConnections` | ours |  |  | the rows an item holds as a component (`pl::item_connections`); BIMCraft's are on a family: `grep -rn 'item.*connect\|connector' crates/core/src` over BIMCraft: its connectors are a family's (family.rs 430 to 475), never an item's row |
+| `K_ITEM_CONNECTIONS` | ours |  |  | the saved job's `pl::` keys are this program's (handoff 7.9); `grep -rn pl:: crates/core/src`: nothing |
+| `PLACE_WORDS` | ours |  |  | the three words of a place in a refusal; `grep -rn PLACE_WORDS crates/core/src`: nothing |
+| `inches_of` | ours |  |  | a length in feet as inches to the thousandth, for a refusal and a reply; `grep -rn 'fn inches_of' crates/core/src`: nothing |
+| `size_in_inches` | ours |  |  | the item's sizes said in inches; `grep -rn 'fn size_in_inches' crates/core/src`: nothing |
+| `placed` | ours |  |  | a row's place worked and held to the item's box at its own size; BIMCraft holds no connector to a family's box: `grep -n 'reach\|outside' crates/core/src/family.rs` finds only forms |
+| `made` | ours |  |  | the connection a thing set down from an item has; BIMCraft's `component_connectors` (model.rs:3313) works a family's connectors for a component and turns them; here the turn is network.rs's (already ported) and the connection says its item; `grep -rn 'fn made(`grep -rn 'fn made(&self, item' crates/core/src`: nothingself, item' crates/core/src`: nothing |
+| `said_at` | ours |  |  | a row said in inches at the item's sizes for a person; `grep -rn 'fn said_at' crates/core/src`: nothing |
+| `kind_word` | ours |  |  | what a connection takes, as the table says it; `grep -rn kind_word crates/core/src`: nothing |
+| `domain_word` | ours |  |  | what a pipe carries, as the table says it; `grep -rn domain_word crates/core/src`: nothing |
+| `flow_word` | ours |  |  | which way a connection goes, as the table says it; `grep -rn flow_word crates/core/src`: nothing |
+| `vector` | ours |  |  | a facing as a unit vector in the thing's axes; BIMCraft's `direction` is the vector itself (family.rs:453), here it is one of six words; `grep -rn 'fn vector' crates/core/src`: nothing |
+| `thing_axes` | ours |  |  | across, back and up into the thing's own axes: the one function a block's figures and a connection's go through (call 211); BIMCraft's family has no 'back from the back' frame (its y is 0 at the wall and minus the depth at the front): `grep -rn 'fn thing_axes' crates/core/src`: nothing |
+| `connection_row` | ours |  |  | a row made from what is typed; `grep -rn 'fn connection_row' crates/core/src`: nothing |
+| `connection_add` | ours |  |  | a row added to an item, held, and what is set down from the item following; BIMCraft's `family` command changes a copy, checks the whole and refuses leaving the stored one alone (commands.rs:10588, the pattern taken as call 205 took it), and never draws a pipe to a connector (`grep -rn connector` in plumbing.rs, runs.rs, snap.rs: nothing) |
+| `connection_set` | ours |  |  | as connection_add, one thing about a row changed; `grep -rn connection_set crates/core/src`: nothing |
+| `connection_take` | ours |  |  | as connection_add, a row taken away; `grep -rn connection_take crates/core/src`: nothing |
+| `FIELDS` | ours |  |  | the fields of a row a person may change by hand; `grep -rn 'const FIELDS' crates/core/src`: nothing |
+| `ConnectionDone` | ours |  |  | what a change to an item's rows did, said alike by the window and the command line; as ShapeChanged; `grep -rn ConnectionDone crates/core/src`: nothing |
+| `ConnectionsFollowed` | ours |  |  | what following did on the things set down from an item; `grep -rn ConnectionsFollowed crates/core/src`: nothing |
+| `StandsOff` | ours |  |  | a run that stood at a connection and no longer does; BIMCraft has no clash and no run drawn to a connector; `grep -rn StandsOff crates/core/src`: nothing |
+| `Standing` | ours |  |  | a connection of a thing in the world and which runs end at it, read from the network (already ported); nothing is stored; `grep -rn 'struct Standing' crates/core/src`: nothing |
+| `Near` | ours |  |  | the open connection a run's end stands nearest to and how far; `grep -rn 'struct Near ' crates/core/src`: nothing |
+| `WorkedConnection` | ours |  |  | a row worked at the item's sizes; `grep -rn WorkedConnection crates/core/src`: nothing |
+| `item_connections_worked` | ours |  |  | an item's rows worked at its own sizes; `grep -rn 'fn item_connections_worked' crates/core/src`: nothing |
+| `item_rows` | ours |  |  | the rows an item holds; `grep -rn item_rows crates/core/src`: nothing |
+| `connections_outside_their_boxes` | ours |  |  | what `check` says of an item whose rows reach outside its box; as items_outside_their_boxes; `grep -rn connections_outside_their_boxes crates/core/src`: nothing |
+| `connections_standing` | ours |  |  | where each connection of a thing stands and what ends at it; read from the network; `grep -rn connections_standing crates/core/src`: nothing |
+| `run_end_near_connection` | ours |  |  | the open connection a run that ends inside a thing is nearest to, for the clash's line; BIMCraft has no clash (`grep -rni clash crates/core/src`: two comments) |
+| `connection_words` | ours |  |  | what a clash says of a thing's open connection (call 211 point 7); BIMCraft has no clash; `grep -rn connection_words crates/core/src`: nothing |
+| `lines` | ours |  |  | what a reply adds about connections left where measured and runs standing off their connection; `grep -rn 'fn lines(&self) -> Vec<String>' crates/core/src`: nothing |
+| `away` | ours |  |  | how far away a nearest connection is, as a person says it; `grep -rn 'fn away' crates/core/src`: nothing |
 | `ITEM_SIZE_TYPED` | ours |  |  | where an item's size typed in a window comes from, said once (contract 200P); `grep -rn 'ITEM_SIZE_TYPED' crates/core/src`: nothing |
 | `HowSized` | ours |  |  | what typing a size on an item did: the item changed, or the check; `grep -rn 'enum HowSized' crates/core/src`: nothing |
 | `ItemSizeDone` | ours |  |  | what `item_size` did, for a window and a command line to say alike; `grep -rn 'struct ItemSizeDone' crates/core/src`: nothing |
@@ -293,6 +330,16 @@ from BIMCraft at the same commit is listed here by hand, and is checked by its o
   anywhere in BIMCraft, and no relation between ports.** Nothing is ported; NOTICE unchanged. What a port is and how it is put on an
   element and tied is read from IfcOpenShell's own IFC4 schema and the buildingSMART texts it carries (buildingSMART's own pages
   could not be reached from this machine); IfcOpenShell is run as the checker and never linked.
+- `crates/ifc/src/lib.rs`, a model brought in as only its runs and what they serve (call 210, contract 210M: `Bring`, `import_choosing`,
+  `ClashCounts`, `ClashChange`, `Brought::not_asked_said`, `Brought::clashes_said`, `one_of`) is ours, and `tools/portmap.sh` does not read it
+  (none of these is in `crates/world/src/building*` or `editing*`). Searched all of BIMCraft (`/home/user/ipedrax/bimcraft`):
+  `grep -rn "filter\|only\|categories\|disciplines" crates/core/src/import.rs crates/core/src/ifc.rs` finds `filter(...)` on iterators and the
+  word "categories" for project parameters (`import.rs:165`, `3271` to `3303`: the categories a user parameter applies to), and no choice of
+  what an import brings in; `grep -rn "ImportOptions\|ImportFilter\|IfcOptions" crates` finds nothing; `import::ifc(bytes, name)`
+  (`import.rs:1664`) reads the whole file into a model, and its `NOT_GENERIC` list (`import.rs:44` to `80`) is what is never made a thing, not a
+  choice. So BIMCraft has nothing to port for the choice; it is written fresh over this program's reader. What is counted after is the model's
+  own clash list (`building/clash.rs`: `clashes`, `Clashes::in_the_same_space`, `set_against`, `hole_rows`, `laid_in`), the same one
+  `plumbline clashes` lists, called before and after. NOTICE unchanged.
 - `crates/world/src/pricelist.rs` (call 207, contract 207M: `PriceCell`, `PriceRow`, `PriceList`, `PriceSet`, `price_list`, `set_price`) is
   ours, and `tools/portmap.sh` does not read it. Searched all of BIMCraft (`/home/user/ipedrax/bimcraft`): `grep -rniE "price|\$/|unit_cost|supplier"
   --include=*.rs .` finds a test that renames a user parameter "Cost" to "Price" (`crates/core/src/tests.rs:1041`) and a "Supplier" parameter in

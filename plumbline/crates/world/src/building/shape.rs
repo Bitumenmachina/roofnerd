@@ -201,11 +201,19 @@ impl Shape {
             None => None,
         };
         let c = Compiled { made: piece.made, round: piece.round, figures, when };
-        for (word, size) in CHECK_SIZES {
-            if let Some((out, axis, way)) = outside_box(&self.name, n, &c, size)? {
-                let inches = format!("{:.3}", out * 12.0);
-                let inches = inches.trim_end_matches('0').trim_end_matches('.');
-                return Err(format!("shape {:?}, block {}: at the {word} size ({} x {} x {} ft) it reaches {out:.4} ft outside the box of the item's sizes, {axis} ({inches} in {way} the box); a shape is drawn inside its box", self.name, n + 1, size[0], size[1], size[2]));
+        for (_, size) in CHECK_SIZES {
+            if let Some((out, _, way)) = outside_box(&self.name, n, &c, size)? {
+                // In the words a builder says, in inches (call 212): the item the figure was tried on, how far, and which way.
+                let past = match way {
+                    "to the left" => "past the left side",
+                    "to the right" => "past the right side",
+                    "in front" => "in front of the front",
+                    "behind" => "behind the back",
+                    "below" => "below the foot",
+                    _ => "above the top",
+                };
+                let (w, d, h) = (crate::units::inches_said(size[0]), crate::units::inches_said(size[1]), crate::units::inches_said(size[2]));
+                return Err(format!("shape {:?}, block {}: on an item {w} wide, {d} deep and {h} high it would stand {} {past}; a shape is held inside its item at every size, so write the figure from the item's sizes", self.name, n + 1, crate::units::inches_said(out)));
             }
         }
         Ok(c)
@@ -263,6 +271,14 @@ impl Shape {
     }
 }
 
+/// A place across, back and up from the middle, the back and the foot of a thing of `size` (feet), in the thing's own axes: x
+/// across from the middle, y from its front (less) to its back (more) from the middle, z up from the foot. The one function that
+/// does it: a block's figures come through it, and so do a connection's (call 211), so that a block and a connection written
+/// with the same figures land on the same point.
+pub fn thing_axes(size: P3, across: f64, back: f64, up: f64) -> P3 {
+    [across, size[1] / 2.0 - back, up]
+}
+
 /// A length in feet as inches, to the thousandth.
 fn inch_said(ft: f64) -> String {
     let t = format!("{:.3}", ft * 12.0 + 0.0);
@@ -313,7 +329,7 @@ fn run_one(name: &str, n: usize, c: &Compiled, size: P3) -> Result<Option<Block>
     }
     // The thing's own frame: y from its front (less) to its back (more), from the
     // middle. A figure "back" is from the back toward the front.
-    let y = |b: f64| size[1] / 2.0 - b;
+    let y = |b: f64| thing_axes(size, 0.0, b, 0.0)[1];
     let (y0, y1) = (y(f[2]), y(f[3]));
     Ok(Some(Block { lo: [f[0].min(f[1]), y0.min(y1), f[4].min(f[5])], hi: [f[0].max(f[1]), y0.max(y1), f[4].max(f[5])], round: c.round, made: c.made }))
 }

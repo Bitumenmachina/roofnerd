@@ -346,6 +346,35 @@ pub fn tally(elements: &[ElementRows]) -> (usize, usize, usize) {
     t
 }
 
+/// The same count for the building and for the tool chest apart (call 209 point 8): the top bar counts the building, and an
+/// empty job with a chest brought in read "149 known, 165 assumed, 96 unknown" of things that are not in the building. The
+/// chest is the items (a thing that can be set down, with its sizes and its maker); everything else is the building. The two
+/// together are what `tally` has always given.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct Tallies {
+    /// (Known, Assumed, Unknown) of everything that is not an item.
+    pub building: (usize, usize, usize),
+    /// (Known, Assumed, Unknown) of the items.
+    pub chest: (usize, usize, usize),
+}
+
+impl Tallies {
+    /// The old count: the two added.
+    pub fn total(&self) -> (usize, usize, usize) {
+        (self.building.0 + self.chest.0, self.building.1 + self.chest.1, self.building.2 + self.chest.2)
+    }
+}
+
+/// How many values stand at each status, the building and the tool chest apart.
+pub fn tallies(job: &mut Job, elements: &[ElementRows]) -> Tallies {
+    let in_chest: Vec<bool> = elements.iter().map(|e| job.find(&e.path).is_some_and(|at| job.world.get::<crate::Item>(at).is_some())).collect();
+    let (mut building, mut chest) = (Vec::new(), Vec::new());
+    for (e, is) in elements.iter().zip(in_chest) {
+        if is { chest.push(e.clone()) } else { building.push(e.clone()) }
+    }
+    Tallies { building: tally(&building), chest: tally(&chest) }
+}
+
 /// A sum over part of the job, honest about what it could not include.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Sum {

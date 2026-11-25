@@ -37,6 +37,30 @@ pub struct Written {
     pub not_written: Vec<(String, usize, String)>,
 }
 
+impl Written {
+    /// What was not written, a line for each: "432 cost lines: why". The command line and the window say it as it stands (call 209
+    /// point 3: they built "432 x cost line" for themselves, with the command's name in the reason).
+    pub fn not_written_said(&self) -> Vec<String> {
+        self.not_written
+            .iter()
+            .map(|(what, n, why)| {
+                let many = if *n == 1 {
+                    what.clone()
+                } else if what == "assembly" {
+                    "assemblies".to_string()
+                } else if let Some(head) = what.strip_suffix(" made before") {
+                    format!("{head}s made before")
+                } else if what.ends_with('y') && !what.ends_with("ey") {
+                    format!("{}ies", &what[..what.len() - 1])
+                } else {
+                    format!("{what}s")
+                };
+                format!("{n} {many}: {why}")
+            })
+            .collect()
+    }
+}
+
 /// What sort of quantity an IFC4 base quantity is.
 enum Q {
     Length,
@@ -619,6 +643,8 @@ pub fn export(job: &mut Job, file: &str, when: &str) -> Result<Written, String> 
     // `IfcRelConnectsPorts`. A third end at one place is joined by being there, as the model joins it.
     let mut port_of: HashMap<(String, usize), u64> = HashMap::new();
     let mut ports_made = 0usize;
+    // Which way a connection faces is not written (call 211): the port stands where the connection is, and the model file keeps that.
+    let mut faced = 0usize;
     {
         let class_of = |job: &mut Job, system: &Option<String>| -> Option<String> { system.as_ref().and_then(|s| job.find(s)).and_then(|e| job.world.get::<SystemInfo>(e)).map(|i| i.classification.clone()) };
         for p in &placed {
@@ -650,6 +676,9 @@ pub fn export(job: &mut Job, file: &str, when: &str) -> Result<Written, String> 
                     let its = class_of(job, &p.system).and_then(|c| system_word(&c));
                     for (i, c) in connectors.0.iter().enumerate() {
                         let Some(at) = c.at_ft() else { continue };
+                        if c.facing.is_some() {
+                            faced += 1;
+                        }
                         let place = o.placed(Some(parent), at, [0.0, 0.0, 1.0], [1.0, 0.0, 0.0]);
                         let flow = match c.flow {
                             Flow::Out => "SOURCE",
@@ -676,7 +705,10 @@ pub fn export(job: &mut Job, file: &str, when: &str) -> Result<Written, String> 
             }
         }
         for _ in 0..ports_made {
-            count("connection points");
+            count("connections");
+        }
+        if faced > 0 {
+            not_written.push(("connection".into(), faced, "which way it faces is not written: the model file keeps where it is".into()));
         }
         // The ties, from where the model has two of them at one place.
         let mut ties = 0usize;
@@ -710,7 +742,7 @@ pub fn export(job: &mut Job, file: &str, when: &str) -> Result<Written, String> 
             }
         }
         for _ in 0..ties {
-            count("connection point ties");
+            count("joints");
         }
     }
 
@@ -954,15 +986,15 @@ pub fn export(job: &mut Job, file: &str, when: &str) -> Result<Written, String> 
     }
     let lines: usize = job.order.iter().filter_map(|e| job.world.get::<Cost>(*e)).map(|c| c.lines.len()).sum();
     if lines > 0 {
-        not_written.push(("cost line".into(), lines, "the estimate is not part of a building model: write it out with `export estimate`".into()));
+        not_written.push(("cost line".into(), lines, "the estimate is not part of a building model: it is written out as a workbook".into()));
     }
     for (kind, what, why) in [
         (Kind::Material, "material", "its price and how it is ordered are the estimate's"),
-        (Kind::Condition, "condition", "its recipe of cost lines is the estimate's"),
+        (Kind::Condition, "assembly", "its cost lines are the estimate's"),
         (Kind::RoomLine, "room line", "it only parts one room from another where no wall stands; each room is written with the figures it came to, and no line is a part of the building"),
         (Kind::Drawing, "drawing", "a plan laid under a level is kept as where its file is, which another program cannot follow"),
         (Kind::Prior, "estimate made before", "it is kept beside the job, and is no part of the building"),
-        (Kind::Type, "type", "each thing is written with its own size; the type it took it from is named among its values"),
+        (Kind::Type, "wall, door, window or run type", "each wall, door, window and run is written with its own size, and the name of its type stays among its values"),
     ] {
         let n = elements.iter().filter(|e| e.kind == kind).count();
         if n > 0 {

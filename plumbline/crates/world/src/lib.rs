@@ -53,7 +53,7 @@ pub mod value;
 pub mod view;
 pub mod vif;
 
-pub use building::{JoistsSpan, Stood, Item, Connector, ConnectorKind, Connectors, Discipline, Domain, Flow, Fitting, FittingKind, Floor, FloorType, Function, InSystem, Justify, Layer, Level, Location, Opening, OpeningType, Placed, Room, RoomLine, Segment, SegmentType, SystemInfo, Wall, WallType, P3};
+pub use building::{Facing, ItemConnection, ItemConnections, JoistsSpan, Stood, Item, Connector, ConnectorKind, Connectors, Discipline, Domain, Flow, Fitting, FittingKind, Floor, FloorType, Function, InSystem, Justify, Layer, Level, Location, Opening, OpeningType, Placed, Room, RoomLine, Segment, SegmentType, SystemInfo, Wall, WallType, P3};
 pub use components::*;
 pub use entered::Took;
 pub use job::{Changed, Header, Job, Left, LeftAsIs, Rewritten};

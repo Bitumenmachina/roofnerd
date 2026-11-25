@@ -1,0 +1,271 @@
+{
+  "header": {
+    "id": "plumbline/baseline-not-a-real-job",
+    "ifcxVersion": "ifcx_alpha",
+    "dataVersion": "1.0.0",
+    "author": "plumbline",
+    "timestamp": "2026-11-25"
+  },
+  "imports": [],
+  "schemas": {
+    "pl::allowance": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::class": {
+      "value": {
+        "dataType": "String"
+      }
+    },
+    "pl::condition": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::connectors": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::cost": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::drawing": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::fitting": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::floor": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::floor_type": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::footprint": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::height": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::in_system": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::item": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::job": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::level": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::line_quantities": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::markup": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::material": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::measure": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::opening": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::opening_type": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::outline": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::pitch": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::placed": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::priced": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::prior": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::recipe": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::room": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::room_line": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::run": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::schedule": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::segment": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::segment_type": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::solve": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::solved": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::supply": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::system": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::taper": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::wall": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::wall_type": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::work": {
+      "value": {
+        "dataType": "Object"
+      }
+    }
+  },
+  "data": [
+    {
+      "path": "job-0001",
+      "children": {
+        "Test lavatory": "type-0002"
+      },
+      "attributes": {
+        "pl::class": "Job",
+        "pl::job": {
+          "title": "Baseline (not a real job)",
+          "length_unit": "ft",
+          "next_id": 3
+        }
+      }
+    },
+    {
+      "path": "type-0002",
+      "attributes": {
+        "pl::class": "Type",
+        "pl::item": {
+          "category": "Fixture",
+          "maker": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not said in the item library"
+          },
+          "model": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not said in the item library"
+          },
+          "width": {
+            "value": 24.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "a made-up size"
+          },
+          "depth": {
+            "value": 18.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "a made-up size"
+          },
+          "height": {
+            "value": 34.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "a made-up size"
+          },
+          "division": 15
+        }
+      }
+    }
+  ]
+}

@@ -60,7 +60,7 @@ fn main() -> ExitCode {
 }
 
 fn usage() -> String {
-    "usage:\n  plumbline sample <file>\n  plumbline house <file>\n  plumbline sixteen <file>   (the sample whole house with a made-up price on everything, in all sixteen divisions)\n  plumbline show <file> [<thing>]   (a thing alone, with its rows; a wall also says what stands on it and what it stands on)\n  plumbline set <file> <path> <field> <value|unknown> --status <Known|Assumed|Unknown> --source \"<where from>\" [--line \"<cost line>\"] [--with \"name=value\"]\n  plumbline set <file> <item or material, by its name> price <$/unit|unknown> [--supplier \"<name>\"] --status <Known|Assumed|Unknown> --source \"<where from>\"   (the estimator's price, or a named supplier's with --supplier (a supplier new to the job is added); unknown: no price, never $0.00; it says the lines the price prices, on how many things, and the job cost before and after; the same price again changes nothing; a material by its path goes by the same road)\n  plumbline set <file> <item> priced_as \"<assembly>\"|unknown   (what an item is priced as: an assembly that goes on its kind, which each of it set down takes, those already set down following; unknown: priced as nothing, and what came by it comes off; no --status or --source: it is a name)\n  plumbline check <file>\n  plumbline lines <file>\n  plumbline takeoff <file>\n  plumbline drawings <file>\n  plumbline clashes <file> [--clearance \"2 in\"]\n  plumbline vif <file>   (what is still to be verified in the field, and the dollars riding on each)\n  plumbline trim <file> [--pieces]   (--pieces: where each piece of outside trim lies, one by one, drawn only where a cost line prices it, with each kind's total beside what its lines price; the outside trim's figures, worked from what is drawn and priced by nothing here: each eave's and rake's length and how far it overhangs the wall under it, each wall's outside corners and the corner board they take, each window's and door's casing; a cost line names the figure it is priced by, like \"true_length * overhang\")\n  plumbline gable <file>   (each wall that rises to the roof under a rake or the high edge of a shed roof: the gable's area, which a line prices as \"net_area + gable_area\", and the wall's top as points, how far along the wall and how high; a wall under an eave, or with no roof over it, has none and says so; the frame of a gable is not counted)\n  plumbline finishes <file>   (what each wall, roof plane, window and door is finished with, read from what is priced on it)\n  plumbline price <file> [list]   (list: the price list, a row for each material and item a line is made of or that has a price, no price first: its unit, the estimator's price and each supplier's, how sure and where from, the lines it prices, the things they are on and the dollars riding)\n  plumbline estimate <file> [by-item]   (every line under the thing it is on; by-item: each item once, with its places, division by division)\n  plumbline priced <file>\n  plumbline material <file> \"<name>\" <unit it is bought by: lb, sheet, SF>\n  plumbline line <file> <path> \"<description>\" <quantity, or a measure like \"60 SF\" with --status and --source> [--cost-type <material|labor|...>] [--division <1 to 16>] [--of-material]\n  plumbline remove-line <file> <path> \"<cost line>\"   (takes that one line off the thing)\n  plumbline division <file> <path> <1 to 16, or its title> [--line \"<cost line>\"]\n  plumbline cost-type <file> <path> <material|labor|fabrication|supervision|subcontract|general> [--line \"<cost line>\"]\n  plumbline labor <file> <path> <on|off> [--line \"<cost line>\"]\n  plumbline apply <file> <path> <assembly> --source \"<who says>\" [--change]   (--change: in place of the assembly it has; lines the two share keep their prices, and take the new assembly's quantity where nobody changed it by hand; each is named with what it was and what it is)\n  plumbline export <prices|assemblies> <file> <out.csv|out.xlsx>\n  plumbline export estimate <file> <out.xlsx|out.csv>   (.xlsx: a workbook whose amounts, recap and price are formulas; .csv: the lines as values)\n  plumbline export ifc <file> <out.ifc>   (the building as an IFC4 model, for another trade or a designer)\n  plumbline export <supplier|subcontractor|pm> <file> <out.xlsx|out.csv> [--division <1 to 16>] [--system \"<name>\"]   (--division and --system cut the subcontractor's list to one trade's or one system's scope; one lens on the estimate: what to quote; the subcontract scope; the lines, budget and what is to verify)\n  plumbline import prices <file> <a price list: CSV or XLSX> [--sheet \"<name>\"] [--supplier \"<whose prices>\"] [--add] [--status <Known|Assumed> --source \"<where from>\"]\n  plumbline import assemblies <file> <an assembly library this program wrote: CSV or XLSX> [--sheet \"<name>\"]\n  plumbline import assemblies <file> starter   (the starter library the program ships with: whole assemblies for walls, floors, rooms, roofs, openings and runs, a line in every division, no prices)\n  plumbline import items <file> <an item library: CSV or XLSX, or the word starter for the one the program ships with> [--sheet \"<name>\"]   (the things that can be placed, by trade: each row an item, its kind, what it is drawn as and its sizes; a row whose item the job has changes it)\n  plumbline export items <file> <out.csv>   (the job's items as that table, to open, change and bring back in)\n  plumbline export vif <file> <out.xlsx|out.csv>   (what is to verify in the field, as a sheet to print and take to the job: a box to tick, the dollars riding, where, what, what to do, and a blank for what was found)\n  plumbline export shapes <file> <out.csv>   (the shapes the job's items are drawn as, one row a block: each figure a formula in width, depth and height, such as min(100 mm, 0.14 * height); across from the middle, back from the back, up from the foot; the rest of the tool chest with the items)\n  plumbline import shapes <file> <a shape table: CSV or XLSX> [--sheet \"<name>\"]   (shapes of your own, for items to be drawn as; bring them in before the items that name them; a shape that cannot be worked is not used and says which block and which figure)\n  plumbline items <file> [\"<item>\"]   (the job's items, trade by trade; with an item's name, its shape's blocks at its sizes, each between its figures)\n  plumbline shape <file> [\"<shape>\"]   (the job's own shapes; with a name, its blocks, and the items drawn as it)\n  plumbline shape <file> keep \"<item>\" \"<new name>\"   (the shape the item is drawn as is copied into the job under a new name, and the item is drawn as the copy)\n  plumbline shape <file> add \"<shape>\" [--made timber|worktop|porcelain|fabric|steel|enamel]   (a block the whole size of the item)\n  plumbline shape <file> set \"<shape>\" <block> \"<across from|across to|back from|back to|up from|up to|made of|form|there when>\" \"<value>\"   (form: box or round; there when: none for always; a figure is a formula in width, depth and height)\n  plumbline shape <file> take \"<shape>\" <block>   (a block taken away; the others are numbered again; a starter shape is never changed: keep it first)\n  plumbline import prior <file> <an estimate made before: CSV or XLSX> [--sheet \"<name>\"] [--name \"<what to call it>\"] --status <Known|Assumed> --source \"<where from>\"\n  plumbline import scan <file> <a scan: a PLY point cloud> --level <level> [--units m|ft] [--up z|y] [--cut \"4 ft\"]   (a scan of the building, cut above its floor into a sheet to trace over: to scale, in the scan's own place, Assumed; taken as meters with z up unless said)\n  plumbline find-walls <file> <a scan: a PLY point cloud> --level <level> [--units m|ft] [--up z|y] [--by-ceiling] [--lay [--outside \"<wall type>\"] [--take <n>] [--anyway]]   (the walls, doors and windows a scan shows, said in full and not laid; --by-ceiling finds them by the points near the ceiling, where furniture does not reach: the dense parts of those points laid on the plan, their outlines made straight, opposite faces paired into walls; --lay lays them with the model's own wall, door and window, all Assumed, sourced to the scan: two faces make a wall and give its thickness, a wall seen from one side is laid as the wall type named with --outside, and not laid without one; what stood short of the ceiling is not a wall, and what is not seen behind something is taken as wall, both said)\n  plumbline find-walls <file> <a drawing of the job, scaled> [--plan <n>] [--within \"x,y\" \"x,y\"] [--dimensions] [--scale-by <n> [--anyway]] [--lay [--take <n>] [--doors \"<head>\"] [--windows \"<sill>\" \"<head>\"]]   (the walls, doors and windows a drawn plan shows, said in full and not laid; a sheet of more than one drawing of like size (a plan and a roof plan), or where the wall found outside the largest drawing is half of it or more, says so and lays none until --plan <n> (the drawings are numbered, largest first; it takes that drawing's walls and no others) or --within (two corners, in feet on the plan; it says which walls it cuts) says which is the plan; walls within 8 ft of one another are one drawing, and a gap in a wall wider than 8 ft is an opening only where something is drawn in it, else two walls; a wall drawn with its faces twice is found once, and says how many pairs of lines were joined; lines inside a wall with a room on both sides and its faces running on past them (a shower's glass) are no window, and a tag is no opening; where the page holds its dimensions as words, --dimensions lists each string with where it is and the line it stands by, and the scale most of them give, and says which do not agree, and --scale-by <n> scales the sheet by one (Assumed, its source the string; nothing else is changed, and what was traced or laid at the scale it had is named as not moved; a scale that is Known is not replaced unless you say --anyway; a lone string is said to be alone; a string of no length, inches alone or metric is counted and not used); the drawing is a PDF with lines of its own, and must have its scale; two lines a wall's thickness apart make a wall and give its thickness, a line across ends it, evenly spaced lines (treads, boards) are not walls, a pair that meets nothing is in doubt and laid only with --take; a break in both lines is a door, or a window if lines are drawn across it inside the wall, and a pier between two openings is part of its wall however short; a wall drawn in its layers (several lines a side) is one wall, a line already a wall's face is no second wall, and a house drawn with one line a wall is told so; a wall's lines are solid, so dashed lines (a beam, cabinets above, a property line, a wall to be demolished) are never walls and are said as what they may be; where part of the sheet is a picture, or a clip or the page's edge cuts the lines off, it says so and the walls are not said to close; a scale no drawing is made at is cautioned, with the nearest; a sheet not lined up with the job says where it lays the walls; a plan gives no head or sill, so --doors and --windows say them (each above the floor, a head above its sill) and an opening they do not say is not laid, the walls then standing across it; dimension lines, lettering, the border, the title block and the key are left out and counted, and what could not be told is said with where; --lay lays them with the model's own wall, door and window, all Assumed, sourced to the sheet, and a second laying from the same sheet is refused)\n  plumbline import spec <file> <a maker's sheet: PDF> [--page <n>] [--as <equipment|fixture|furnishing>] [--name \"<what it is called>\"]   (an item to place: its name, maker, model, width, depth, height and weight read off the sheet, each Assumed and sourced to its line; what is not there is Unknown)\n  plumbline import ifc <file> <a model: IFC2x3 or IFC4> --status <Known|Assumed> --source \"<where from>\"\n  plumbline plan-set <file> <level> <out.pdf> [--scale \"1/4\"] [--paper \"ARCH A\"] [--date <the day>] [--list]   (the plan of a level as it stands, the demolition plan and the proposed plan, a page each, as line work to print: walls joined, doors and windows, room names and areas, a dimension along each wall (VIF after a length that is not Known), a title box and notes; 1/4 in to the foot unless said (1/8, 3/16, 1/4, 3/8, 1/2); the smallest of ARCH A, B, C and D it fits unless said; a level with no mark on anything gets one page, FLOOR PLAN; --list says what is on each page, wall by wall; the name ends .pdf; a plan set already there is written over and it says so, and a file there that is not a PDF is not; the job is not changed)\n  plumbline page <file> [--page <n>] [--lines [--longer-than <points>]] [--png <out.png>]   (what a page of a PDF holds as this program reads it: its size, the straight lines it draws; --png writes the page as a picture)\n  plumbline compare <file>\n  plumbline options <layout> <layout> [<layout>]   (two or three layouts of a job, each a job file, set side by side: each room's floor area, the walls by what the work does to them, the job cost and each division; the last less the first, and the lines each job cost leaves out; nothing is changed)\n  plumbline rename <file> \"<item>\" \"<new name>\"   (an item called something else: each of it set down is called that too, and the price list has it under the new name)\n  plumbline price-item <file> \"<item>\" '$180' --status <Known|Assumed|Unknown> --source \"<where from>\"   (one price on the line named for the item, on every one of it set in the job; it says how many; one set later takes none)\n\ndrawing (each but new and system takes --status <Known|Assumed> --source \"<where from>\"; points are x,y in feet):\n  plumbline new <file> \"<title>\"\n  plumbline level <file> \"<name>\" --elevation \"0 ft\" --height \"9 ft\"\n  plumbline type <file> wall \"<name>\" --thickness \"6 in\"\n  plumbline type <file> floor \"<name>\" --thickness \"4 in\"\n  plumbline type <file> <door|window> \"<name>\" --width \"3 ft\" --height \"7 ft\"\n  plumbline type <file> <duct|pipe|conduit|cable> \"<name>\" (--round \"6 in\" | --width \"12 in\" --depth \"8 in\")\n  plumbline system <file> \"<name>\" \"<Supply Air|Domestic Cold Water|...>\"\n  plumbline wall <file> <level> <type> --points \"0,0 20,0 20,10\" [--closed] (--height \"9 ft\" | --top <level>)\n  plumbline type <file> footing \"<name>\" --width \"24 in\"\n  plumbline type <file> <beam|post|pad> \"<name>\" (--round \"6 in\" | --width \"3 1/2 in\" --depth \"11 7/8 in\") [--weight \"18 lb/ft\"]   (a beam's, a post's or a pad footing's section, typed: nothing here sizes anything; --weight is a beam's, what a foot of it weighs)\n  plumbline beam <file> <level> <type> --points \"12,0 12,16\" --top \"9 ft\"   (a beam for each pair of points, its top that high above the level's floor)\n  plumbline post <file> <level> <type> --at \"12,0\" [--height \"8 ft\"] [--base \"0 ft\"]   (with no height it stands to its level's height, Assumed)\n  plumbline pad <file> <level> <type> --at \"12,0\" --thickness \"18 in\" --top \"-1 ft\"   (a pad footing: a post laid flat; its top above the level's floor, below it a minus height)\n  plumbline carries <file> [<level or wall>]   (for each wall, what is drawn standing on it and what it stands on, worked from the levels above and below and the roof; it is what is drawn and no engineer's finding; and how many walls whose bearing is not said have something standing on them)\n  plumbline structure <file>   (what carries the building, for the engineer: the walls the work opens, each beam, post and pad footing with its size, how sure that is and where it came from; and how many are to be sized)\n  plumbline footing <file> <level> <type> --points \"0,0 40,0 40,28\" [--closed] --depth \"12 in\"   (strip footings under a level's floor; the type gives the width)\n  plumbline <door|window> <file> <wall> <type> (--offset \"5 ft\" | --at \"5,0\") --sill \"0 ft\"\n  plumbline floor <file> <level> <type> (--walls | --points \"0,0 30,0 30,20 0,20\")   (--walls: the outline the level's walls enclose)\n  plumbline room <file> <level> \"<name>\" --at \"6,8\"\n  plumbline room-line <file> <level> --points \"24,0 24,16\"   (parts the rooms of a level where no wall stands: one room line for each pair of points that follow one another; it is no wall, and is not priced or counted)\n  plumbline low-slope <file> \"<name>\" --points \"0,0 48,0 48,48 0,48\" --pitch 1/4:12 --height \"11 ft\"   (a low-slope roof: its outline, the slope it finishes at, how high its deck is)\n  plumbline drains <file> <low-slope area> --at \"24,24\" --at-drain \"1/2 in\"   (its roof drains; the tapered insulation is laid out to them at the area's pitch, NRCA's four-way layout)\n  plumbline roof <file> \"<name>\" --points \"0,0 30,0 30,20 0,20\" --pitch 6:12 --eave-height \"8 ft\"   (a hip roof over its footprint: every edge rises at the pitch)\n  plumbline run <file> <level> <duct|pipe|conduit|cable> <type> --points \"2,2 14,2\" --height \"8 ft\" [--system <system>]\n  plumbline run <file> <level> <duct|pipe|conduit|cable> <type> --points \"6,5\" --height \"2 ft\" --rises-to \"9 ft\" [--system <system>]   (a riser: one upright piece, from one height up to the other; pieces end to end are one riser)\n  plumbline place <file> <level> <fixture|equipment|furnishing> \"<what>\" --at \"14,7\" --offset \"0 ft\" [--size \"2,2,6\"] [--system <system>]\n  plumbline place <file> <level> <item> --at \"x,y\" [--offset \"0 ft\"] --status <Known|Assumed> --source \"<where from>\"   (one of an item made from a maker's sheet: its size is the item's)\n  plumbline cabinets <file> <level> <wall> --in <room> --from \"1 ft\" --boxes \"B18 SB36 B24\" [--countertop] --status <Known|Assumed> --source \"<where from>\"   (a run of cabinet boxes by their codes, side by side along the wall's face on the room's side, backs to the wall, from so far along the wall from its first end; base and tall boxes stand on the floor, wall boxes (W...) hang 54 in up; each box carries one line, 1 EA, Division 12, to be priced; any item of the job goes in by its name, a name with a space or a comma in square brackets (\"B18 [Dishwasher] SB36 [Range, 30 in]\"), standing on the floor like a base box; --countertop sets one over the base boxes and what stands no taller than they do, 25 1/2 in deep; a box that would stand in another thing, or across a window, is refused; it says the run's length and what is left to the corner)\n  plumbline drawing <file> <level> \"<name>\" --file <a PDF, PNG or JPEG of the plan> [--page 1]\n  plumbline calibrate <file> <drawing> --from \"126,90\" --to \"666,90\" --distance \"30 ft\"   (two places on the page and the dimension between them)\n  plumbline lineup <file> <drawing> --page-point \"126,126\" --plan-point \"0,0\"\n  tracing: wall, floor, door, window, room, run and place take --on <drawing> in place of --status and --source; their points are then places on the drawing's page\n  plumbline mark <file> <path> [<path> ...] <new|existing|demolish|temporary> [--clear|--keep]   (what the work does to a thing; --clear takes the lines for building it off, --keep leaves them priced as work done to it; what is to demolish bounds no room and is in nothing's way; a thing with no mark is new)\n  plumbline move <file> <path> --by \"3,2\" [--alone]   (a wall takes with it the ends of the walls that meet it, and says which followed; --alone moves it and nothing else)\n  plumbline measure <file> <path> \"<the value, as it is listed: level height, sill, ...>\" <what was read: 8' 10 1/2\", or same> [--to <bottom|center|top>] [--line \"<cost line>\", for a value entered on it]  --source \"<who measured, or with what>\"\n  plumbline remove <file> <path>\n  plumbline fitting <file> <level> --at \"10,2\" [--height \"8 ft\"] [--kind <bend|tee|cross|transition|coupling>]\n  plumbline fitting <file> --all [--system <system>]\n  plumbline connect <file> <fixture or equipment> <run>\n  plumbline split <file> <run> --at \"6,2\"\n\nfields: pitch (6, 6:12, 1/4:12), joists_span (\"the short way\" or \"the long way\": which way a floor's joists run), type (a beam's, a post's or a pad footing's, another type of its kind), height, eave_height, on a roof drawn from its footprint edge:<n> (a pitch, or gable) and move:<n> (how far that edge moves out, like \"6 in\"), stretch_out (2.5 ft, 30 in, 19 1/2\", 25' 6 1/2\"), assembly, wbs, allowance (28, $28.00/SF), material (a material's name)\non the job: overhead (10), profit (8)\non a material: price ($4.10/lb), order (\"1.25 lb/SF\", \"30 SF/sheet\"), quote ($4.25/lb --supplier \"<name>\")\non a cost line (--line): a stretch-out and the quantity that uses it go on together (set <file> <path> quantity \"plan_length * stretch_out\" --line \"<line>\" --with \"stretch_out=19 1/2 in\"); once it is on, stretch_out alone changes it; quantity (\"plan_length * stretch_out\"), waste (10), order (\"30 SF/sheet\", \"1.25 lb/SF\"), unit_cost (4.25, $4.25/SF), or a value the formula names (spacing \"12 in\")".to_string()
+    "usage:\n  plumbline sample <file>\n  plumbline house <file>\n  plumbline sixteen <file>   (the sample whole house with a made-up price on everything, in all sixteen divisions)\n  plumbline show <file> [<thing>]   (a thing alone, with its rows; a wall also says what stands on it and what it stands on)\n  plumbline set <file> <path> <field> <value|unknown> --status <Known|Assumed|Unknown> --source \"<where from>\" [--line \"<cost line>\"] [--with \"name=value\"]\n  plumbline set <file> <item or material, by its name> price <$/unit|unknown> [--supplier \"<name>\"] --status <Known|Assumed|Unknown> --source \"<where from>\"   (the estimator's price, or a named supplier's with --supplier (a supplier new to the job is added); unknown: no price, never $0.00; it says the lines the price prices, on how many things, and the job cost before and after; the same price again changes nothing; a material by its path goes by the same road)\n  plumbline set <file> <item> priced_as \"<assembly>\"|unknown   (what an item is priced as: an assembly that goes on its kind, which each of it set down takes, those already set down following; unknown: priced as nothing, and what came by it comes off; no --status or --source: it is a name)\n  plumbline check <file>\n  plumbline lines <file>\n  plumbline takeoff <file>\n  plumbline drawings <file>\n  plumbline clashes <file> [--clearance \"2 in\"]\n  plumbline vif <file>   (what is still to be verified in the field, and the dollars riding on each)\n  plumbline trim <file> [--pieces]   (--pieces: where each piece of outside trim lies, one by one, drawn only where a cost line prices it, with each kind's total beside what its lines price; the outside trim's figures, worked from what is drawn and priced by nothing here: each eave's and rake's length and how far it overhangs the wall under it, each wall's outside corners and the corner board they take, each window's and door's casing; a cost line names the figure it is priced by, like \"true_length * overhang\")\n  plumbline gable <file>   (each wall that rises to the roof under a rake or the high edge of a shed roof: the gable's area, which a line prices as \"net_area + gable_area\", and the wall's top as points, how far along the wall and how high; a wall under an eave, or with no roof over it, has none and says so; the frame of a gable is not counted)\n  plumbline finishes <file>   (what each wall, roof plane, window and door is finished with, read from what is priced on it)\n  plumbline price <file> [list]   (list: the price list, a row for each material and item a line is made of or that has a price, no price first: its unit, the estimator's price and each supplier's, how sure and where from, the lines it prices, the things they are on and the dollars riding)\n  plumbline estimate <file> [by-item]   (every line under the thing it is on; by-item: each item once, with its places, division by division)\n  plumbline priced <file>\n  plumbline material <file> \"<name>\" <unit it is bought by: lb, sheet, SF>\n  plumbline line <file> <path> \"<description>\" <quantity, or a measure like \"60 SF\" with --status and --source> [--cost-type <material|labor|...>] [--division <1 to 16>] [--of-material]\n  plumbline remove-line <file> <path> \"<cost line>\"   (takes that one line off the thing)\n  plumbline division <file> <path> <1 to 16, or its title> [--line \"<cost line>\"]\n  plumbline cost-type <file> <path> <material|labor|fabrication|supervision|subcontract|general> [--line \"<cost line>\"]\n  plumbline labor <file> <path> <on|off> [--line \"<cost line>\"]\n  plumbline apply <file> <path> <assembly> --source \"<who says>\" [--change]   (--change: in place of the assembly it has; lines the two share keep their prices, and take the new assembly's quantity where nobody changed it by hand; each is named with what it was and what it is)\n  plumbline export <prices|assemblies> <file> <out.csv|out.xlsx>\n  plumbline export estimate <file> <out.xlsx|out.csv>   (.xlsx: a workbook whose amounts, recap and price are formulas; .csv: the lines as values)\n  plumbline export ifc <file> <out.ifc>   (the building as an IFC4 model, for another trade or a designer)\n  plumbline export <supplier|subcontractor|pm> <file> <out.xlsx|out.csv> [--division <1 to 16>] [--system \"<name>\"]   (--division and --system cut the subcontractor's list to one trade's or one system's scope; one lens on the estimate: what to quote; the subcontract scope; the lines, budget and what is to verify)\n  plumbline import prices <file> <a price list: CSV or XLSX> [--sheet \"<name>\"] [--supplier \"<whose prices>\"] [--add] [--status <Known|Assumed> --source \"<where from>\"]\n  plumbline import assemblies <file> <an assembly library this program wrote: CSV or XLSX> [--sheet \"<name>\"]\n  plumbline import assemblies <file> starter   (the starter library the program ships with: whole assemblies for walls, floors, rooms, roofs, openings and runs, a line in every division, no prices)\n  plumbline import items <file> <an item library: CSV or XLSX, or the word starter for the one the program ships with> [--sheet \"<name>\"]   (the things that can be placed, by trade: each row an item, its kind, what it is drawn as and its sizes; a row whose item the job has changes it)\n  plumbline export items <file> <out.csv>   (the job's items as that table, to open, change and bring back in)\n  plumbline export vif <file> <out.xlsx|out.csv>   (what is to verify in the field, as a sheet to print and take to the job: a box to tick, the dollars riding, where, what, what to do, and a blank for what was found)\n  plumbline export shapes <file> <out.csv>   (the shapes the job's items are drawn as, one row a block: each figure a formula in width, depth and height, such as min(100 mm, 0.14 * height); across from the middle, back from the back, up from the foot; the rest of the tool chest with the items)\n  plumbline import shapes <file> <a shape table: CSV or XLSX> [--sheet \"<name>\"]   (shapes of your own, for items to be drawn as; bring them in before the items that name them; a shape that cannot be worked is not used and says which block and which figure)\n  plumbline items <file> [\"<item>\"]   (the job's items, trade by trade, each with how many connections it has and, after them, how many of the starter items have none; with an item's name, its shape's blocks and its connections at its sizes, each between its figures)\n  plumbline connection <file> \"<item>\" add \"<name>\" --takes <pipe|duct|conduit|power> [--carries <cold|hot|waste|vent|storm|gas>] [--goes <in|out|both>] --across \"-4 in\" --back \"0\" --up \"height - 12 in\" --faces <back|front|left|right|up|down> [--size \"1/2 in\"] --status Assumed --source \"<where from>\"   (a place on the item where a pipe, a duct, a conduit or power meets it: across from the middle, back from the back, up from the foot, each a formula in width, depth and height, and on or inside the item at its own size; every thing set down from the item has it, and it says how many)\n  plumbline connection <file> \"<item>\" set \"<name>\" <takes|carries|goes|across|back|up|faces|size> \"<value>\"   (one thing about a connection changed; the things set down from the item follow, and a run left standing off its connection is counted)\n  plumbline connection <file> \"<item>\" take \"<name>\"   (a connection taken away from the item and from what is set down from it)\n  plumbline export connections <file> <out.csv>   (where the job's items connect, one row a connection, to open, change and bring back in)\n  plumbline import connections <file> <a connections table: CSV or XLSX, or the word starter for the one the program ships with> [--sheet \"<name>\"]   (an item that has connections already keeps them when the starter ones come in; one that is not in the job is not used)\n  plumbline shape <file> [\"<shape>\"]   (the job's own shapes; with a name, its blocks, and the items drawn as it)\n  plumbline shape <file> keep \"<item>\" \"<new name>\"   (the shape the item is drawn as is copied into the job under a new name, and the item is drawn as the copy)\n  plumbline shape <file> add \"<shape>\" [--made timber|worktop|porcelain|fabric|steel|enamel]   (a block the whole size of the item)\n  plumbline shape <file> set \"<shape>\" <block> \"<across from|across to|back from|back to|up from|up to|made of|form|there when>\" \"<value>\"   (form: box or round; there when: none for always; a figure is a formula in width, depth and height)\n  plumbline shape <file> take \"<shape>\" <block>   (a block taken away; the others are numbered again; a starter shape is never changed: keep it first)\n  plumbline import prior <file> <an estimate made before: CSV or XLSX> [--sheet \"<name>\"] [--name \"<what to call it>\"] --status <Known|Assumed> --source \"<where from>\"\n  plumbline import scan <file> <a scan: a PLY point cloud> --level <level> [--units m|ft] [--up z|y] [--cut \"4 ft\"]   (a scan of the building, cut above its floor into a sheet to trace over: to scale, in the scan's own place, Assumed; taken as meters with z up unless said)\n  plumbline find-walls <file> <a scan: a PLY point cloud> --level <level> [--units m|ft] [--up z|y] [--by-ceiling] [--lay [--outside \"<wall type>\"] [--take <n>] [--anyway]]   (the walls, doors and windows a scan shows, said in full and not laid; --by-ceiling finds them by the points near the ceiling, where furniture does not reach: the dense parts of those points laid on the plan, their outlines made straight, opposite faces paired into walls; --lay lays them with the model's own wall, door and window, all Assumed, sourced to the scan: two faces make a wall and give its thickness, a wall seen from one side is laid as the wall type named with --outside, and not laid without one; what stood short of the ceiling is not a wall, and what is not seen behind something is taken as wall, both said)\n  plumbline find-walls <file> <a drawing of the job, scaled> [--plan <n>] [--within \"x,y\" \"x,y\"] [--dimensions] [--scale-by <n> [--anyway]] [--lay [--take <n>] [--doors \"<head>\"] [--windows \"<sill>\" \"<head>\"]]   (the walls, doors and windows a drawn plan shows, said in full and not laid; a sheet of more than one drawing of like size (a plan and a roof plan), or where the wall found outside the largest drawing is half of it or more, says so and lays none until --plan <n> (the drawings are numbered, largest first; it takes that drawing's walls and no others) or --within (two corners, in feet on the plan; it says which walls it cuts) says which is the plan; walls within 8 ft of one another are one drawing, and a gap in a wall wider than 8 ft is an opening only where something is drawn in it, else two walls; a wall drawn with its faces twice is found once, and says how many pairs of lines were joined; lines inside a wall with a room on both sides and its faces running on past them (a shower's glass) are no window, and a tag is no opening; where the page holds its dimensions as words, --dimensions lists each string with where it is and the line it stands by, and the scale most of them give, and says which do not agree, and --scale-by <n> scales the sheet by one (Assumed, its source the string; nothing else is changed, and what was traced or laid at the scale it had is named as not moved; a scale that is Known is not replaced unless you say --anyway; a lone string is said to be alone; a string of no length, inches alone or metric is counted and not used); the drawing is a PDF with lines of its own, and must have its scale; two lines a wall's thickness apart make a wall and give its thickness, a line across ends it, evenly spaced lines (treads, boards) are not walls, a pair that meets nothing is in doubt and laid only with --take; a break in both lines is a door, or a window if lines are drawn across it inside the wall, and a pier between two openings is part of its wall however short; a wall drawn in its layers (several lines a side) is one wall, a line already a wall's face is no second wall, and a house drawn with one line a wall is told so; a wall's lines are solid, so dashed lines (a beam, cabinets above, a property line, a wall to be demolished) are never walls and are said as what they may be; where part of the sheet is a picture, or a clip or the page's edge cuts the lines off, it says so and the walls are not said to close; a scale no drawing is made at is cautioned, with the nearest; a sheet not lined up with the job says where it lays the walls; a plan gives no head or sill, so --doors and --windows say them (each above the floor, a head above its sill) and an opening they do not say is not laid, the walls then standing across it; dimension lines, lettering, the border, the title block and the key are left out and counted, and what could not be told is said with where; --lay lays them with the model's own wall, door and window, all Assumed, sourced to the sheet, and a second laying from the same sheet is refused)\n  plumbline import spec <file> <a maker's sheet: PDF> [--page <n>] [--as <equipment|fixture|furnishing>] [--name \"<what it is called>\"]   (an item to place: its name, maker, model, width, depth, height and weight read off the sheet, each Assumed and sourced to its line; what is not there is Unknown)\n  plumbline import ifc <file> <a model: IFC2x3 or IFC4> --status <Known|Assumed> --source \"<where from>\" [--only runs]   (--only runs: of a model another trade made of the same building, only its runs and what they serve: ducts, pipes, conduit and cable, their fittings, the fixtures and equipment they reach, their systems and what is connected to what; its walls, floors, roofs, footings, doors, windows and rooms are not asked for and are counted as that; no level is added, a run on a level at a height the job does not have goes on the job's level it stands within; it says how many clashes the things brought in make with what the job has, by kind, and the job's own count of each before and after)\n  plumbline plan-set <file> <level> <out.pdf> [--scale \"1/4\"] [--paper \"ARCH A\"] [--date <the day>] [--list]   (the plan of a level as it stands, the demolition plan and the proposed plan, a page each, as line work to print: walls joined, doors and windows, room names and areas, a dimension along each wall (VIF after a length that is not Known), a title box and notes; 1/4 in to the foot unless said (1/8, 3/16, 1/4, 3/8, 1/2); the smallest of ARCH A, B, C and D it fits unless said; a level with no mark on anything gets one page, FLOOR PLAN; --list says what is on each page, wall by wall; the name ends .pdf; a plan set already there is written over and it says so, and a file there that is not a PDF is not; the job is not changed)\n  plumbline page <file> [--page <n>] [--lines [--longer-than <points>]] [--png <out.png>]   (what a page of a PDF holds as this program reads it: its size, the straight lines it draws; --png writes the page as a picture)\n  plumbline compare <file>\n  plumbline options <layout> <layout> [<layout>]   (two or three layouts of a job, each a job file, set side by side: each room's floor area, the walls by what the work does to them, the job cost and each division; the last less the first, and the lines each job cost leaves out; nothing is changed)\n  plumbline rename <file> \"<item>\" \"<new name>\"   (an item called something else: each of it set down is called that too, and the price list has it under the new name)\n  plumbline price-item <file> \"<item>\" '$180' --status <Known|Assumed|Unknown> --source \"<where from>\"   (one price on the line named for the item, on every one of it set in the job; it says how many; one set later takes none)\n\ndrawing (each but new and system takes --status <Known|Assumed> --source \"<where from>\"; points are x,y in feet):\n  plumbline new <file> \"<title>\"\n  plumbline level <file> \"<name>\" --elevation \"0 ft\" --height \"9 ft\"\n  plumbline type <file> wall \"<name>\" --thickness \"6 in\"\n  plumbline type <file> floor \"<name>\" --thickness \"4 in\"\n  plumbline type <file> <door|window> \"<name>\" --width \"3 ft\" --height \"7 ft\"\n  plumbline type <file> <duct|pipe|conduit|cable> \"<name>\" (--round \"6 in\" | --width \"12 in\" --depth \"8 in\")\n  plumbline system <file> \"<name>\" \"<Supply Air|Domestic Cold Water|...>\"\n  plumbline wall <file> <level> <type> --points \"0,0 20,0 20,10\" [--closed] (--height \"9 ft\" | --top <level>)\n  plumbline type <file> footing \"<name>\" --width \"24 in\"\n  plumbline type <file> <beam|post|pad> \"<name>\" (--round \"6 in\" | --width \"3 1/2 in\" --depth \"11 7/8 in\") [--weight \"18 lb/ft\"]   (a beam's, a post's or a pad footing's section, typed: nothing here sizes anything; --weight is a beam's, what a foot of it weighs)\n  plumbline beam <file> <level> <type> --points \"12,0 12,16\" --top \"9 ft\"   (a beam for each pair of points, its top that high above the level's floor)\n  plumbline post <file> <level> <type> --at \"12,0\" [--height \"8 ft\"] [--base \"0 ft\"]   (with no height it stands to its level's height, Assumed)\n  plumbline pad <file> <level> <type> --at \"12,0\" --thickness \"18 in\" --top \"-1 ft\"   (a pad footing: a post laid flat; its top above the level's floor, below it a minus height)\n  plumbline carries <file> [<level or wall>]   (for each wall, what is drawn standing on it and what it stands on, worked from the levels above and below and the roof; it is what is drawn and no engineer's finding; and how many walls whose bearing is not said have something standing on them)\n  plumbline structure <file>   (what carries the building, for the engineer: the walls the work opens, each beam, post and pad footing with its size, how sure that is and where it came from; and how many are to be sized)\n  plumbline footing <file> <level> <type> --points \"0,0 40,0 40,28\" [--closed] --depth \"12 in\"   (strip footings under a level's floor; the type gives the width)\n  plumbline <door|window> <file> <wall> <type> (--offset \"5 ft\" | --at \"5,0\") --sill \"0 ft\"\n  plumbline floor <file> <level> <type> (--walls | --points \"0,0 30,0 30,20 0,20\")   (--walls: the outline the level's walls enclose)\n  plumbline room <file> <level> \"<name>\" --at \"6,8\"\n  plumbline room-line <file> <level> --points \"24,0 24,16\"   (parts the rooms of a level where no wall stands: one room line for each pair of points that follow one another; it is no wall, and is not priced or counted)\n  plumbline low-slope <file> \"<name>\" --points \"0,0 48,0 48,48 0,48\" --pitch 1/4:12 --height \"11 ft\"   (a low-slope roof: its outline, the slope it finishes at, how high its deck is)\n  plumbline drains <file> <low-slope area> --at \"24,24\" --at-drain \"1/2 in\"   (its roof drains; the tapered insulation is laid out to them at the area's pitch, NRCA's four-way layout)\n  plumbline roof <file> \"<name>\" --points \"0,0 30,0 30,20 0,20\" --pitch 6:12 --eave-height \"8 ft\"   (a hip roof over its footprint: every edge rises at the pitch)\n  plumbline run <file> <level> <duct|pipe|conduit|cable> <type> --points \"2,2 14,2\" --height \"8 ft\" [--system <system>]\n  plumbline run <file> <level> <duct|pipe|conduit|cable> <type> --points \"6,5\" --height \"2 ft\" --rises-to \"9 ft\" [--system <system>]   (a riser: one upright piece, from one height up to the other; pieces end to end are one riser)\n  plumbline place <file> <level> <fixture|equipment|furnishing> \"<what>\" --at \"14,7\" --offset \"0 ft\" [--size \"2,2,6\"] [--system <system>]\n  plumbline place <file> <level> <item> --at \"x,y\" [--offset \"0 ft\"] --status <Known|Assumed> --source \"<where from>\"   (one of an item made from a maker's sheet: its size is the item's)\n  plumbline cabinets <file> <level> <wall> --in <room> --from \"1 ft\" --boxes \"B18 SB36 B24\" [--countertop] --status <Known|Assumed> --source \"<where from>\"   (a run of cabinet boxes by their codes, side by side along the wall's face on the room's side, backs to the wall, from so far along the wall from its first end; base and tall boxes stand on the floor, wall boxes (W...) hang 54 in up; each box carries one line, 1 EA, Division 12, to be priced; any item of the job goes in by its name, a name with a space or a comma in square brackets (\"B18 [Dishwasher] SB36 [Range, 30 in]\"), standing on the floor like a base box; --countertop sets one over the base boxes and what stands no taller than they do, 25 1/2 in deep; a box that would stand in another thing, or across a window, is refused; it says the run's length and what is left to the corner)\n  plumbline drawing <file> <level> \"<name>\" --file <a PDF, PNG or JPEG of the plan> [--page 1]\n  plumbline calibrate <file> <drawing> --from \"126,90\" --to \"666,90\" --distance \"30 ft\"   (two places on the page and the dimension between them)\n  plumbline lineup <file> <drawing> --page-point \"126,126\" --plan-point \"0,0\"\n  tracing: wall, floor, door, window, room, run and place take --on <drawing> in place of --status and --source; their points are then places on the drawing's page\n  plumbline mark <file> <path> [<path> ...] <new|existing|demolish|temporary> [--clear|--keep]   (what the work does to a thing; --clear takes the lines for building it off, --keep leaves them priced as work done to it; what is to demolish bounds no room and is in nothing's way; a thing with no mark is new)\n  plumbline turn <file> <fixture or equipment> --by <degrees> --status <Known|Assumed> --source \"<where from>\"   (turned that many degrees counter-clockwise from east, and further than it was; 90 is a quarter turn; what is joined to its connections is not moved)\n  plumbline move <file> <path> --by \"3,2\" [--alone]   (a wall takes with it the ends of the walls that meet it, and says which followed; --alone moves it and nothing else)\n  plumbline measure <file> <path> \"<the value, as it is listed: level height, sill, ...>\" <what was read: 8' 10 1/2\", or same> [--to <bottom|center|top>] [--line \"<cost line>\", for a value entered on it]  --source \"<who measured, or with what>\"\n  plumbline remove <file> <path>\n  plumbline fitting <file> <level> --at \"10,2\" [--height \"8 ft\"] [--kind <bend|tee|cross|transition|coupling>]\n  plumbline fitting <file> --all [--system <system>]\n  plumbline connect <file> <fixture or equipment> <run>\n  plumbline split <file> <run> --at \"6,2\"\n\nfields: pitch (6, 6:12, 1/4:12), joists_span (\"the short way\" or \"the long way\": which way a floor's joists run), type (a beam's, a post's or a pad footing's, another type of its kind), height, eave_height, on a roof drawn from its footprint edge:<n> (a pitch, or gable) and move:<n> (how far that edge moves out, like \"6 in\"), stretch_out (2.5 ft, 30 in, 19 1/2\", 25' 6 1/2\"), assembly, wbs, allowance (28, $28.00/SF), material (a material's name)\non the job: overhead (10), profit (8)\non a material: price ($4.10/lb), order (\"1.25 lb/SF\", \"30 SF/sheet\"), quote ($4.25/lb --supplier \"<name>\")\non a cost line (--line): a stretch-out and the quantity that uses it go on together (set <file> <path> quantity \"plan_length * stretch_out\" --line \"<line>\" --with \"stretch_out=19 1/2 in\"); once it is on, stretch_out alone changes it; quantity (\"plan_length * stretch_out\"), waste (10), order (\"30 SF/sheet\", \"1.25 lb/SF\"), unit_cost (4.25, $4.25/SF), or a value the formula names (spacing \"12 in\")".to_string()
 }
 
 /// What a page is measured in until its drawing has a scale.
@@ -287,7 +287,9 @@ fn clashes(job: &mut plumbline_world::Job, clearance: Option<f64>) -> Result<Str
             Some(by) => format!("in each other by {}", inches(by)),
             None => "in each other; by how much could not be worked out".to_string(),
         };
-        let _ = writeln!(out, "  {}: {by}, at {}", pairs(c), place(c));
+        // Where a run ends inside a thing that says where it connects: which connection is open and how far away (call 211).
+        let connection = clash::connection_words(job, c).map(|words| format!("; {words}")).unwrap_or_default();
+        let _ = writeln!(out, "  {}: {by}, at {}{connection}", pairs(c), place(c));
     }
     // A thing standing against a wall, hung on it or set in it, and a run at its joint, by no
     // more than two inches: not two things in one place, and counted apart (call 175).
@@ -1230,7 +1232,7 @@ fn tables(args: &[String]) -> Result<(), String> {
     while i < args.len() {
         match args[i].as_str() {
             "--add" => flags.push(("--add", None)),
-            f @ ("--sheet" | "--supplier" | "--status" | "--source" | "--name" | "--page" | "--as" | "--level" | "--units" | "--up" | "--cut" | "--division" | "--system") => {
+            f @ ("--sheet" | "--supplier" | "--status" | "--source" | "--name" | "--page" | "--as" | "--level" | "--units" | "--up" | "--cut" | "--division" | "--system" | "--only") => {
                 let v = args.get(i + 1).ok_or_else(|| format!("{f} needs a value after it"))?;
                 if flags.iter().any(|(known, _)| *known == f) {
                     return Err(format!("{f} is given twice"));
@@ -1280,8 +1282,12 @@ fn tables(args: &[String]) -> Result<(), String> {
     };
     let table = |sheet: Option<&str>| -> Result<plumbline_sheets::Sheet, String> {
         // "starter" in place of an assembly library's file is the one the program ships with.
-        let starter = matches!(*what, "assemblies" | "items") && *other == "starter" && !std::path::Path::new(other).exists();
-        let shipped = if *what == "items" { plumbline_world::tables::STARTER_ITEMS } else { plumbline_world::tables::STARTER_LIBRARY };
+        let starter = matches!(*what, "assemblies" | "items" | "connections") && *other == "starter" && !std::path::Path::new(other).exists();
+        let shipped = match *what {
+            "items" => plumbline_world::tables::STARTER_ITEMS,
+            "connections" => plumbline_world::tables::STARTER_CONNECTIONS,
+            _ => plumbline_world::tables::STARTER_LIBRARY,
+        };
         let bytes = if starter { shipped.as_bytes().to_vec() } else { std::fs::read(other).map_err(|e| format!("cannot read {other}: {e}"))? };
         plumbline_sheets::read(&bytes, sheet).map_err(|why| format!("{other}: {why}"))
     };
@@ -1330,6 +1336,31 @@ fn tables(args: &[String]) -> Result<(), String> {
             say!("wrote {other}: the items of {path}, {} under its headings", count(rows.len() - 1, "row", "rows"));
             Ok(())
         }
+        // Where the items connect (call 211): one row a connection.
+        ("export", "connections") => {
+            only(&[])?;
+            let rows = tables::connections_out(&mut job);
+            std::fs::write(other, plumbline_sheets::csv(&rows)).map_err(|e| format!("cannot write {other}: {e}"))?;
+            say!("wrote {other}: where the items of {path} connect, {} under its headings", count(rows.len() - 1, "row", "rows"));
+            Ok(())
+        }
+        ("import", "connections") => {
+            only(&["--sheet"])?;
+            let sheet = table(flag("--sheet"))?;
+            // The ones the program ships with are given to an item that has none and leave an item's own as they are.
+            let shipped = *other == "starter" && !std::path::Path::new(other).exists();
+            let (brought, kept) = if shipped {
+                tables::connections_in_missing(&mut job, &sheet.rows, Some(&sheet.numbers)).map_err(|why| format!("{other}: {why}"))?
+            } else {
+                (tables::connections_in(&mut job, &sheet.rows, Some(&sheet.numbers)).map_err(|why| format!("{other}: {why}"))?, Vec::new())
+            };
+            std::fs::write(path, file::save(&mut job)).map_err(|e| format!("cannot write {path}: {e}"))?;
+            let _ = std::io::stdout().write_all(brought_said(other, &sheet, &brought).as_bytes());
+            if !kept.is_empty() {
+                say!("  items that have connections already, and keep them: {}", kept.len());
+            }
+            Ok(())
+        }
         ("export", "shapes") => {
             only(&[])?;
             let rows = tables::shapes_out(&mut job);
@@ -1365,25 +1396,42 @@ fn tables(args: &[String]) -> Result<(), String> {
             Ok(())
         }
         ("import", "ifc") => {
-            only(&["--status", "--source"])?;
+            only(&["--status", "--source", "--only"])?;
             let (status, source) = how.clone().ok_or("say how sure the model is and where it came from: --status, --source")?;
+            // What of the model is brought in (call 210): all of it, or only its runs and what they serve.
+            let choice = match flag("--only") {
+                None => plumbline_ifc::Bring::Whole,
+                Some("runs") => plumbline_ifc::Bring::RunsOnly,
+                Some(other) => return Err(format!("--only {other:?}: the choice is runs (the model's ducts, pipes, conduit and cable, their fittings, and the fixtures and equipment they serve; its walls, floors and the rest are not asked for)")),
+            };
             let bytes = std::fs::read(other).map_err(|e| format!("cannot read {other}: {e}"))?;
             let called = std::path::Path::new(other).file_name().and_then(|s| s.to_str()).unwrap_or("the model");
-            let b = plumbline_ifc::import(&mut job, &bytes, called, plumbline_world::editing::Entered { status, source: &source }).map_err(|why| format!("{other}: {why}"))?;
+            // The word that makes the choice at the command line is said where the model's own words offer it.
+            let with_the_word = |said: String| said.replace("choose only its runs and the equipment they serve", "choose only its runs and the equipment they serve (--only runs)").replace("can be brought in alone, without its walls and floors", "can be brought in alone, without its walls and floors (--only runs)");
+            let b = plumbline_ifc::import_choosing(&mut job, &bytes, called, plumbline_world::editing::Entered { status, source: &source }, choice).map_err(|why| format!("{other}: {}", with_the_word(why)))?;
             std::fs::write(path, file::save(&mut job)).map_err(|e| format!("cannot write {path}: {e}"))?;
-            let mut out = format!("{other} ({}): brought in\n", b.schema);
+            let mut out = format!("{other} ({}): brought in{}\n", b.schema, if choice == plumbline_ifc::Bring::RunsOnly { ", only its runs and what they serve" } else { "" });
             // One of a thing is said as one: "1 door", not "1 doors" (J17B-19).
             for (what, n) in &b.made {
-                let _ = writeln!(out, "    {n} {}", if *n == 1 { what.strip_suffix('s').unwrap_or(what) } else { what });
+                let _ = writeln!(out, "    {n} {}", if *n == 1 { plumbline_ifc::one_of(what) } else { what });
             }
             let _ = writeln!(out, "  not brought in: {}", count(b.left_out.iter().map(|l| l.1).sum(), "thing", "things"));
-            for (class, n, why) in &b.left_out {
-                // "4 floor slabs", and each reason as it reads for that many.
-                let plural = *n > 1 && !class.ends_with('s') && !class.contains('"') && !class.contains(" or ");
-                let _ = writeln!(out, "    {n} {class}{}: {why}", if plural { "s" } else { "" });
+            for line in b.left_out_said() {
+                let _ = writeln!(out, "    {line}");
+            }
+            if let Some(said) = b.not_asked_said() {
+                let _ = writeln!(out, "  {said}");
             }
             for note in &b.notes {
-                let _ = writeln!(out, "  note: {note}");
+                let _ = writeln!(out, "  note: {}", with_the_word(note.clone()));
+            }
+            // What it was done for (call 210 point 4): the clashes the things brought in make, where they are listed.
+            let said = b.clashes_said();
+            if !said.is_empty() {
+                let _ = writeln!(out, "  clashes:");
+                for line in said {
+                    let _ = writeln!(out, "    {}", line.replace("they are in the clash list, with the job's own", &format!("they are listed with the job's own by `plumbline clashes {path}`")));
+                }
             }
             let _ = std::io::stdout().write_all(out.as_bytes());
             Ok(())
@@ -1546,8 +1594,14 @@ fn tables(args: &[String]) -> Result<(), String> {
             say!("  every value entered on each goes with it, with how sure it is and where it came from");
             if !written.not_written.is_empty() {
                 say!("  not written (a building model has no place for it, or it has no shape):");
-                for (what, n, why) in &written.not_written {
-                    say!("    {n} x {what}: {why}");
+                // The model says each in a builder's words; here, at the command line, the command that writes the estimate out is
+                // added to its line (call 209 point 3). The window adds where it is: Estimate workbook, under Write out.
+                for ((what, ..), line) in written.not_written.iter().zip(written.not_written_said()) {
+                    if what == "cost line" {
+                        say!("    {line} (plumbline export estimate <job> <out.xlsx>)");
+                    } else {
+                        say!("    {line}");
+                    }
                 }
             }
             Ok(())
@@ -1892,18 +1946,21 @@ fn run(args: &[String]) -> Result<(), String> {
         let item_path = item_path_of(&mut job, item)?;
         let at = job.find(&item_path).ok_or("the item is not there")?;
         let was = job.world.get::<plumbline_world::Node>(at).map(|n| n.name.clone()).unwrap_or_default();
-        let placed = plumbline_world::editing::rename_item(&mut job, &item_path, name)?;
+        let done = plumbline_world::editing::rename_item_counted(&mut job, &item_path, name)?;
         job.derive();
         std::fs::write(path, file::save(&mut job)).map_err(|e| format!("cannot write {path}: {e}"))?;
-        say!(
-            "{was:?} is now called {:?}{}",
-            name.trim(),
-            match placed {
-                0 => "; none is set down".to_string(),
-                1 => "; the 1 set down from it is called that too, and its line made of the item".to_string(),
-                n => format!("; the {n} set down from it are called that too, and their lines made of the item"),
-            }
-        );
+        let placed = done.set_down;
+        let mut tail = match placed {
+            0 => "; none is set down".to_string(),
+            1 if done.renamed == 1 => "; the 1 set down from it is called that too, and its line made of the item".to_string(),
+            n if done.renamed == n => format!("; the {n} set down from it are called that too, and their lines made of the item"),
+            n => format!("; {} of the {n} set down from it are called that too, and their lines made of the item", done.renamed),
+        };
+        // Names a person gave since are theirs, and are left (call 209 point 2).
+        if !done.kept.is_empty() {
+            tail.push_str(&format!("; {} keep{} the name a person gave: {}", done.kept.len(), if done.kept.len() == 1 { "s" } else { "" }, done.kept.join(", ")));
+        }
+        say!("{was:?} is now called {:?}{tail}", name.trim());
         return Ok(());
     }
     if cmd == "compare" {
@@ -1914,7 +1971,7 @@ fn run(args: &[String]) -> Result<(), String> {
         let _ = std::io::stdout().write_all(compared_said(&mut job).as_bytes());
         return Ok(());
     }
-    if matches!(cmd, "new" | "level" | "storey" | "type" | "system" | "wall" | "footing" | "low-slope" | "drains" | "mark" | "floor" | "door" | "window" | "room" | "room-line" | "run" | "place" | "cabinets" | "beam" | "post" | "pad" | "move" | "measure" | "remove" | "split" | "fitting" | "connect" | "drawing" | "calibrate" | "lineup") {
+    if matches!(cmd, "new" | "level" | "storey" | "type" | "system" | "wall" | "footing" | "low-slope" | "drains" | "mark" | "floor" | "door" | "window" | "room" | "room-line" | "run" | "place" | "cabinets" | "beam" | "post" | "pad" | "move" | "turn" | "measure" | "remove" | "split" | "fitting" | "connect" | "drawing" | "calibrate" | "lineup") {
         return draw(args);
     }
     if matches!(cmd, "sample" | "house" | "sixteen" | "priced" | "show" | "check" | "lines" | "takeoff" | "price" | "estimate") && args.len() > 2 && !(cmd == "estimate" && args.len() == 3) && !(cmd == "show" && args.len() == 3) && !(cmd == "price" && args.len() == 3) {
@@ -1973,6 +2030,10 @@ fn run(args: &[String]) -> Result<(), String> {
             }
             // An item drawn as a shape that stands outside its box at its own sizes (call 206 point 2).
             for (_, said) in plumbline_world::editing::shapes::items_outside_their_boxes(&mut job) {
+                say!("! {said}");
+            }
+            // An item whose connections stand outside its box at its own sizes (call 211).
+            for (_, said) in plumbline_world::editing::connections_outside_their_boxes(&mut job) {
                 say!("! {said}");
             }
             // A shape of the job's own held under a starter shape's name (call 208 point 3).
@@ -2096,6 +2157,72 @@ fn run(args: &[String]) -> Result<(), String> {
                     let _ = std::io::stdout().write_all(items_said(&mut job).as_bytes());
                 }
             }
+            Ok(())
+        }
+        // Where an item connects, changed by hand (call 211): a connection added, one thing about it set, or taken away. Each says what
+        // follows: how many things set down from the item have it now, and how many runs are left standing off their connection.
+        "connection" => {
+            use plumbline_world::building::Facing;
+            use plumbline_world::editing as ed;
+            use plumbline_world::{ConnectorKind, Domain, Flow};
+            let path = args.get(1).ok_or_else(usage)?;
+            let item = args.get(2).ok_or_else(usage)?;
+            let word = args.get(3).map(String::as_str).ok_or_else(usage)?;
+            let (mut job, _) = read(path)?;
+            let item_path = item_path_of(&mut job, item)?;
+            let done = match word {
+                "add" => {
+                    let name = args.get(4).ok_or_else(|| format!("connection add needs the connection's name\n{}", usage()))?.clone();
+                    let mut given: Vec<(String, String)> = Vec::new();
+                    let mut rest = args[5..].iter();
+                    while let Some(flag) = rest.next() {
+                        if !["--takes", "--carries", "--goes", "--across", "--back", "--up", "--faces", "--size", "--status", "--source"].contains(&flag.as_str()) {
+                            return Err(format!("connection add does not take {flag}\n{}", usage()));
+                        }
+                        if given.iter().any(|(f, _)| f == flag) {
+                            return Err(format!("{flag} given twice"));
+                        }
+                        given.push((flag.clone(), rest.next().cloned().ok_or_else(|| format!("{flag} needs a value"))?));
+                    }
+                    let flag = |n: &str| given.iter().find(|(f, _)| f == n).map(|(_, v)| v.as_str());
+                    let need = |n: &str, like: &str| flag(n).ok_or_else(|| format!("{n} is required, like {like}"));
+                    let takes = need("--takes", "pipe (pipe, duct, conduit or power)")?;
+                    let takes = [ConnectorKind::Pipe, ConnectorKind::Duct, ConnectorKind::Conduit, ConnectorKind::Power].into_iter().find(|k| plumbline_world::building::connections::kind_word(*k).eq_ignore_ascii_case(takes)).ok_or_else(|| format!("{takes:?} is not something a connection takes: pipe, duct, conduit or power"))?;
+                    let carries = match flag("--carries") {
+                        None => None,
+                        Some(said) => Some([Domain::Cold, Domain::Hot, Domain::Waste, Domain::Vent, Domain::Storm, Domain::Gas].into_iter().find(|d| plumbline_world::building::connections::domain_word(*d).eq_ignore_ascii_case(said)).ok_or_else(|| format!("{said:?} is not something a pipe carries: cold, hot, waste, vent, storm or gas"))?),
+                    };
+                    let goes = match flag("--goes") {
+                        None => Flow::Both,
+                        Some(said) => [Flow::In, Flow::Out, Flow::Both].into_iter().find(|f| plumbline_world::building::connections::flow_word(*f).eq_ignore_ascii_case(said)).ok_or_else(|| format!("{said:?} is not a way a connection goes: in, out or both"))?,
+                    };
+                    let faces_said = need("--faces", "back (back, front, left, right, up or down)")?;
+                    let faces = Facing::named(faces_said).ok_or_else(|| format!("{faces_said:?} is not a way a connection faces: back, front, left, right, up or down"))?;
+                    let status = match need("--status", "Assumed")? {
+                        "Known" => Status::Known,
+                        "Assumed" => Status::Assumed,
+                        other => return Err(format!("{other:?} is not a status a connection can be written with; use Assumed (a place is Known only where somebody measures it on the thing)")),
+                    };
+                    let source = need("--source", "\"a typical rough-in; the product is not chosen\"")?;
+                    let row = ed::connection_row(&name, takes, carries, goes, need("--across", "\"-4 in\"")?, need("--back", "\"0\"")?, need("--up", "\"height - 12 in\"")?, faces, flag("--size"), ed::Entered { status, source })?;
+                    ed::connection_add(&mut job, &item_path, row)?
+                }
+                "set" => {
+                    if args.len() != 7 {
+                        return Err(format!("connection set takes the item, the connection, what to set and its value\n{}", usage()));
+                    }
+                    ed::connection_set(&mut job, &item_path, &args[4], &args[5], &args[6])?
+                }
+                "take" => {
+                    if args.len() != 5 {
+                        return Err(format!("connection take takes the item and the connection\n{}", usage()));
+                    }
+                    ed::connection_take(&mut job, &item_path, &args[4])?
+                }
+                other => return Err(format!("connection {other:?}: add, set or take\n{}", usage())),
+            };
+            std::fs::write(path, file::save(&mut job)).map_err(|e| format!("cannot write {path}: {e}"))?;
+            say!("{}", done.said());
             Ok(())
         }
         // A shape changed by hand (call 205): kept as a new shape, a block added, set, taken away. Each says what follows.
@@ -2629,8 +2756,12 @@ fn show(job: &mut plumbline_world::Job, report: &file::LoadReport) -> String {
         }
     }
     let (known, assumed, unknown) = view::tally(&elements);
+    let apart = view::tallies(job, &elements);
     let _ = writeln!(out);
     let _ = writeln!(out, "{known} Known, {assumed} Assumed, {unknown} Unknown");
+    // The building and the tool chest apart, whose two make that one (call 209 point 8).
+    let _ = writeln!(out, "  in the building: {} known, {} assumed, {} unknown", apart.building.0, apart.building.1, apart.building.2);
+    let _ = writeln!(out, "  in the tool chest: {} known, {} assumed, {} unknown", apart.chest.0, apart.chest.1, apart.chest.2);
     let flagged: Vec<_> = elements.iter().flat_map(|e| e.rows.iter().map(move |r| (e, r))).filter(|(_, r)| r.status != Status::Known).collect();
     if !flagged.is_empty() {
         let _ = writeln!(out);
@@ -2894,6 +3025,15 @@ fn item_blocks_said(job: &mut plumbline_world::Job, item: &str) -> Result<String
             }
         }
     }
+    // Where it connects (call 211), each worked at its sizes: across from the middle, back from the back, up from the foot.
+    if let Ok(worked) = plumbline_world::editing::item_connections_worked(job, item) {
+        if !worked.is_empty() {
+            out.push_str(&format!("  it connects at {} (each is on the item or inside it at its sizes; Assumed unless a person measured it on the thing):\n", view::so_many(worked.len(), "place")));
+            for (n, w) in worked.iter().enumerate() {
+                out.push_str(&format!("    connection {}, {}\n", n + 1, w.said));
+            }
+        }
+    }
     Ok(out)
 }
 
@@ -2925,7 +3065,9 @@ fn items_said(job: &mut plumbline_world::Job) -> String {
             _ => "furnishing",
         };
         let priced = it.priced_as.as_ref().map(|a| format!("; priced as {a:?}")).unwrap_or_default();
-        by_trade.entry(it.division.map(Division::number).unwrap_or(0)).or_default().push(format!("    {} [{}]: {kind}, drawn as {drawn}; {} wide, {} deep, {} high; {} placed{priced}", n.name, n.path, size(&it.width), size(&it.depth), size(&it.height), placed));
+        // How many places it says it connects at (call 211): said where it has any.
+        let connects = w.get::<plumbline_world::ItemConnections>(*e).map(|c| format!("; {}", view::so_many(c.0.len(), "connection"))).unwrap_or_default();
+        by_trade.entry(it.division.map(Division::number).unwrap_or(0)).or_default().push(format!("    {} [{}]: {kind}, drawn as {drawn}; {} wide, {} deep, {} high; {} placed{priced}{connects}", n.name, n.path, size(&it.width), size(&it.depth), size(&it.height), placed));
     }
     let mut out = format!("ITEMS: the things that can be placed, by trade ({count})\n");
     if count == 0 {
@@ -2940,6 +3082,22 @@ fn items_said(job: &mut plumbline_world::Job) -> String {
             out.push_str(&line);
             out.push('\n');
         }
+    }
+    // How many of the starter items say where they connect (call 211): the program holds a place for the few a published
+    // rough-in gives one for, and the rest have none.
+    let starter: Vec<String> = plumbline_world::building::shape::csv_rows(plumbline_world::tables::STARTER_ITEMS).into_iter().skip(1).filter_map(|r| r.into_iter().next()).map(|n| plumbline_world::check::plain_name(&n)).collect();
+    let (mut present, mut without) = (0usize, 0usize);
+    for e in &job.order {
+        let (Some(n), Some(_)) = (job.world.get::<Node>(*e), job.world.get::<Item>(*e)) else { continue };
+        if starter.contains(&plumbline_world::check::plain_name(&n.name)) {
+            present += 1;
+            if job.world.get::<plumbline_world::ItemConnections>(*e).is_none() {
+                without += 1;
+            }
+        }
+    }
+    if present > 0 {
+        out.push_str(&format!("Where they connect: of the job's {}, {without} have none (`plumbline import connections <file> starter` gives each the program holds a published place for)\n", view::so_many(present, "starter item")));
     }
     out
 }
@@ -3413,6 +3571,14 @@ fn draw(args: &[String]) -> Result<(), String> {
             };
             let made = ed::place(&mut job, storey, kind_of(what)?, name, *at, &need(flag("--offset"), "--offset", "\"0 ft\" above the level's floor")?, size, flag("--system").as_deref(), ed::Entered { status, source: &source })?;
             format!("{made}: {name:?}")
+        }
+        // A thing turned (call 211 needed it at the command line; the window turns one with a key): so many degrees further,
+        // counter-clockwise from east. What is joined to its connections is not moved: the reply is what the model says.
+        ("turn", [element]) => {
+            let (status, source) = how(&status, &source)?;
+            let by: f64 = need(flag("--by"), "--by", "\"90\" (degrees counter-clockwise from east; 90 is a quarter turn)")?.trim().trim_end_matches("deg").trim().parse().map_err(|_| "--by is a number of degrees, like 90 or -45".to_string())?;
+            let now = ed::turn(&mut job, element, by, ed::Entered { status, source: &source })?;
+            format!("{element} is turned {} degrees from east now", view::num(now))
         }
         ("move", [element]) => {
             let (status, source) = how(&status, &source)?;

@@ -2895,7 +2895,7 @@ fn thing(job: &mut Job, storey: &str, kind: Kind, name: &str, at: [f64; 3], angl
     use plumbline_world::{Connector, Connectors, Flow, Placed};
     let p = job.add(storey, kind, name).unwrap();
     job.put(&p, Placed { what: named(name), at: Val::known([at[0], at[1]], "ft", "test"), offset: ft(at[2]), angle: angle.map(|a| Val::known(a, "deg", "test")), size: Val::known([1.0, 1.0, 1.0], "ft", "test"), item: None }).unwrap();
-    job.put(&p, Connectors(connectors.iter().map(|(kind, domain, at)| Connector { name: String::new(), kind: *kind, domain: *domain, flow: Flow::Both, at: Val::known(*at, "ft", "test"), size: None }).collect())).unwrap();
+    job.put(&p, Connectors(connectors.iter().map(|(kind, domain, at)| Connector { name: String::new(), kind: *kind, domain: *domain, flow: Flow::Both, at: Val::known(*at, "ft", "test"), size: None, facing: None, of_item: None }).collect())).unwrap();
     p
 }
 
@@ -3117,7 +3117,7 @@ fn a_connector_has_to_make_sense() {
     use plumbline_world::building::check_connectors;
     use plumbline_world::{Connector, ConnectorKind, Connectors, Domain, Flow};
     let at = |unit: &str| Val::known([0.0, 0.0, 0.0], unit, "test");
-    let one = |kind, domain, unit: &str| Connectors(vec![Connector { name: "x".into(), kind, domain, flow: Flow::In, at: at(unit), size: None }]);
+    let one = |kind, domain, unit: &str| Connectors(vec![Connector { name: "x".into(), kind, domain, flow: Flow::In, at: at(unit), size: None, facing: None, of_item: None }]);
     assert!(check_connectors("f", Kind::Fixture, &one(ConnectorKind::Pipe, Some(Domain::Cold), "ft")).is_ok());
     assert!(check_connectors("f", Kind::Fitting, &one(ConnectorKind::Pipe, None, "in")).is_ok());
     // Only a pipe connector says what it carries; a wall has no connectors; a position
@@ -3126,7 +3126,7 @@ fn a_connector_has_to_make_sense() {
     assert!(check_connectors("f", Kind::Wall, &one(ConnectorKind::Pipe, None, "ft")).is_err());
     assert!(check_connectors("f", Kind::Fixture, &one(ConnectorKind::Pipe, None, "")).is_err());
     assert!(check_connectors("f", Kind::Fixture, &one(ConnectorKind::Pipe, None, "mm")).is_err());
-    let sized = Connectors(vec![Connector { name: String::new(), kind: ConnectorKind::Pipe, domain: None, flow: Flow::Both, at: at("ft"), size: Some(Val::known(Len::One(0.0), "in", "test")) }]);
+    let sized = Connectors(vec![Connector { name: String::new(), kind: ConnectorKind::Pipe, domain: None, flow: Flow::Both, at: at("ft"), size: Some(Val::known(Len::One(0.0), "in", "test")), facing: None, of_item: None }]);
     assert!(check_connectors("f", Kind::Fixture, &sized).is_err(), "a size of nothing");
 }
 

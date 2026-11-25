@@ -47,6 +47,18 @@ Notes as you go to SCRATCH/review/W-207W-report.md. Commit nothing, push nothing
 7. `demos/pricesw.sh` (new) to the steps in STATUS.md, its pictures in
    `demos/captured/pricesw/`, its row in `plumbline/README.md`.
 
+## Part 2, after the above is whole: the window says the model's sentences (call 209, the model's side as built)
+Read plumbline/DECISIONS.md "Call 209, the model's side, as built" and
+plumbline/research/worker-report-call209M.md (search "The window must"). One step
+each in `demos/pricesw.sh` or a session of its own:
+- **A rename** calls `rename_item_counted` and shows what it says (how many were
+  renamed, how many kept and why), in place of the window's own sentence.
+- **A file written out or brought in**: the window shows `Written::not_written_said()`
+  and `Brought::left_out_said()` in place of its own list; for the estimate it adds
+  where (Estimate workbook, under Write out).
+- **The top bar** shows `view::tallies(...).building`; the tool chest's values are
+  not in it (point 8 of call 209, left by the last window job).
+
 ## Rules
 - Files you may touch: `crates/app/src/*.rs`, `demos/pricesw.sh`,
   `demos/captured/pricesw/`, `demos/window.sh` (only to add a helper, changing

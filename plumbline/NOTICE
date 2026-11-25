@@ -24,6 +24,9 @@ the same license:
   crates/world/src/building/walls.rs    from crates/core/src/walls.rs
   crates/world/src/building/runs.rs     from crates/core/src/runs.rs
   crates/world/src/building/network.rs  from crates/core/src/network.rs
+  crates/world/src/building/connections.rs  from crates/core/src/family.rs (the
+                                        connector's `direction`, kept to six words, and the rules of
+                                        `check_connectors`; call 211)
   crates/world/src/building/rooms.rs    from crates/core/src/geom.rs,
                                         crates/core/src/rooms.rs and
                                         crates/core/src/model.rs

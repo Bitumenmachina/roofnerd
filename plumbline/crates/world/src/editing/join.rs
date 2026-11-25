@@ -52,17 +52,17 @@ fn written(worst: Status) -> Status {
 
 /// A run as these verbs need it: its line, its type when it has one, the system it is
 /// on, its two ends in space, and the worst status among what places it.
-struct RunInfo {
-    kind: Kind,
-    segment: Segment,
-    section: Option<SegmentType>,
-    system: Option<String>,
-    a: P3,
-    b: P3,
-    status: Status,
+pub(super) struct RunInfo {
+    pub(super) kind: Kind,
+    pub(super) segment: Segment,
+    pub(super) section: Option<SegmentType>,
+    pub(super) system: Option<String>,
+    pub(super) a: P3,
+    pub(super) b: P3,
+    pub(super) status: Status,
 }
 
-fn run_info(job: &mut Job, path: &str) -> Result<RunInfo, String> {
+pub(super) fn run_info(job: &mut Job, path: &str) -> Result<RunInfo, String> {
     let index = job.index();
     let e = *index.get(path).ok_or_else(|| format!("no element {path}"))?;
     let kind = job.world.get::<Kind>(e).copied().ok_or_else(|| format!("{path} has no kind"))?;
@@ -107,7 +107,7 @@ fn split_at(job: &mut Job, run: &str, at: P2, how: Entered) -> Result<String, St
     let (dx, dy) = (b[0] - a[0], b[1] - a[1]);
     let len = dx.hypot(dy);
     if len <= FIT_TOLERANCE_FT {
-        return Err(format!("{run} stands upright: it has no length on the plan to be cut along"));
+        return Err(format!("{run} runs straight up and down: there is no length along the plan to cut it at"));
     }
     let t = ((at[0] - a[0]) * dx + (at[1] - a[1]) * dy) / (len * len);
     let on = [a[0] + dx * t, a[1] + dy * t];
@@ -384,6 +384,8 @@ fn fit_at(job: &mut Job, storey: &str, at: P2, z: Option<f64>, kind: Option<Fitt
             flow: Flow::Both,
             at: Val { value: Some([0.0, 0.0, tidy(deep_ft * 6.0)]), unit: units::IN.into(), status, source: "on the joint".to_string() },
             size: r.section.as_ref().map(|t| t.width.clone()),
+            facing: None,
+            of_item: None,
         })
         .collect();
     let placed = Placed {
@@ -522,7 +524,12 @@ pub fn connect(job: &mut Job, thing: &str, run: &str, how: Entered) -> Result<us
         };
         let of_run = ConnectorKind::for_run(r.kind).ok_or_else(|| format!("a {:?} has no connection that joins it", r.kind))?;
         let mut connectors = job.world.get::<Connectors>(e).cloned().unwrap_or(Connectors(Vec::new()));
-        if connectors.0.iter().any(|c| c.kind == of_run && c.at_ft().is_some_and(|c| (c[0] - q[0]).abs() + (c[1] - q[1]).abs() + (c[2] - q[2]).abs() <= tol)) {
+        if let Some(there) = connectors.0.iter().find(|c| c.kind == of_run && c.at_ft().is_some_and(|c| (c[0] - q[0]).abs() + (c[1] - q[1]).abs() + (c[2] - q[2]).abs() <= tol)) {
+            // A connection its item gave it is joined by the run's standing at it (call 211): there is nothing to add.
+            if there.of_item.is_some() {
+                let name = job.world.get::<Node>(e).map(|n| n.name.clone()).unwrap_or_else(|| thing.to_string());
+                return Err(format!("{run} ends at the {} connection of {name}: it is joined there already, by where it ends", there.name));
+            }
             return Err(format!("{thing} already has a connection where {run} ends"));
         }
         // What a pipe connector carries is what the pipe's system carries, where that is one
@@ -533,6 +540,9 @@ pub fn connect(job: &mut Job, thing: &str, run: &str, how: Entered) -> Result<us
             _ => None,
         };
         let name = its_system.map(|s| s.classification).unwrap_or_default();
+        // A thing whose item says where it connects is joined where a run's end stands at one of those places, and a run that ends
+        // inside it anywhere else is refused, naming the nearest open connection and how far off (call 211, point 6).
+        super::connections::refuse_if_off(job, thing, run, q, of_run, domain)?;
         let mut status = r.status.max(placed.at.status).max(placed.offset.status).max(placed.size.status).max(how.status);
         if let Some(a) = &placed.angle {
             status = status.max(a.status);
@@ -544,6 +554,8 @@ pub fn connect(job: &mut Job, thing: &str, run: &str, how: Entered) -> Result<us
             flow: Flow::Both,
             at: Val { value: Some([tidy(q[0] * 12.0), tidy(q[1] * 12.0), tidy(q[2] * 12.0)]), unit: units::IN.into(), status: written(status), source: format!("{}; where {run} ends", how.source) },
             size: r.section.as_ref().map(|t| t.width.clone()),
+            facing: None,
+            of_item: None,
         });
         building::check_connectors(thing, kind, &connectors)?;
         let which = connectors.0.len();
@@ -633,6 +645,8 @@ pub fn connect_port(job: &mut Job, thing: &str, run: Option<(&str, usize)>, at: 
             flow: said.flow,
             at: Val { value: Some([tidy(q[0] * 12.0), tidy(q[1] * 12.0), tidy(q[2] * 12.0)]), unit: units::IN.into(), status: written(status), source },
             size: info.as_ref().and_then(|(r, _)| r.section.as_ref().map(|t| t.width.clone())),
+            facing: None,
+            of_item: None,
         });
         building::check_connectors(thing, kind, &connectors)?;
         let which = connectors.0.len();

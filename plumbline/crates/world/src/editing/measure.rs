@@ -408,11 +408,15 @@ fn put(job: &mut Job, e: Entity, path: &str, kind: Kind, name: &str, what: &str,
             if let Some(slot) = slot {
                 let said = apply(slot, &name, what, reading, source)?;
                 building::check_item(path, kind, &c)?;
+                // Where the item says where it connects, a size that puts a connection outside its box is refused (call 211).
+                super::connections::item_fits(job, path, &c)?;
                 job.put(path, c.clone())?;
                 if !matches!(reading, Do::Probe) {
                     for at in super::placed_follow(job, path, &name, &c)? {
                         also.push(format!("{at} is one of it and is now that size"));
                     }
+                    // Their connections follow, and a run left standing off its connection is counted.
+                    also.extend(super::connections::follow(job, path)?.lines());
                 }
                 return Ok(Some(Measured { said, also }));
             }

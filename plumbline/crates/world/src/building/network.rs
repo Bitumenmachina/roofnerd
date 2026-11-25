@@ -124,6 +124,14 @@ pub struct Network {
     pub left_out: Vec<(String, String)>,
 }
 
+/// A point in a thing's own axes (x along its angle, y to its left, z up from its base), in the world: turned about the middle of
+/// its base and moved to where it stands. The one place that works it (BIMCraft `model.rs:3313`); a connection's place on a thing
+/// and a thing's blocks are both turned this way (call 211).
+pub(crate) fn thing_to_world(origin: P3, sin_cos: (f64, f64), q: P3) -> P3 {
+    let (sin, cos) = sin_cos;
+    [origin[0] + q[0] * cos - q[1] * sin, origin[1] + q[0] * sin + q[1] * cos, origin[2] + q[2]]
+}
+
 fn dist(a: P3, b: P3) -> f64 {
     ((a[0] - b[0]).powi(2) + (a[1] - b[1]).powi(2) + (a[2] - b[2]).powi(2)).sqrt()
 }
@@ -239,7 +247,7 @@ pub fn network(job: &mut Job, system: Option<&str>, storey: Option<&str>, tolera
                     left_out.push((n.path.clone(), format!("where its connection {} is, is not known", index + 1)));
                     continue;
                 };
-                let at = [origin[0] + q[0] * cos - q[1] * sin, origin[1] + q[0] * sin + q[1] * cos, origin[2] + q[2]];
+                let at = thing_to_world(origin, (sin, cos), q);
                 mine.entry(k.kind).or_default().push(points.len());
                 points.push((at, Joint::Connector { element: n.path.clone(), index, domain: k.domain }, k.kind.joins()));
             }

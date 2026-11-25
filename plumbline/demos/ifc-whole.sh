@@ -31,8 +31,8 @@ echo "== The first job: the made-up whole house, written out as a model, brought
 "$P" export ifc "$T/first.json" "$T/first.ifc" > "$T/export.txt"
 says "$T/export.txt" "22 fixtures"
 says "$T/export.txt" "41 fittings"
-says "$T/export.txt" "332 connection points"
-says "$T/export.txt" "147 connection point ties"
+says "$T/export.txt" "332 connections"
+says "$T/export.txt" "147 joints"
 lacks "$T/export.txt" "hot to the kitchen sink, piece"
 "$P" new "$T/second.json" "Second (not a real job)" >/dev/null
 "$P" import ifc "$T/second.json" "$T/first.ifc" --status Known --source "made-up model" > "$T/in.txt"
@@ -44,7 +44,7 @@ says "$T/in.txt" "5 pieces of equipment"
 #    (held: two refused where a third end meets), the 2 with no size among them, each with its size Unknown.
 echo "-- Point 2: fittings come in on their runs (HELD for a ruling: 39 of the 41, two refused where a third end meets) --"
 says "$T/in.txt" "39 fittings"
-says "$T/in.txt" "1 pipe fitting: this program would not take it: "
+says "$T/in.txt" "1 pipe fitting: pipe-"
 says "$T/in.txt" "leave (16.3, 22.7) the same way, one over the other"
 # 46 connections of the 22 fixtures and 5 pieces of equipment (the first job's own), each tied to the end of a run that stands at it.
 says "$T/in.txt" "46 connections on fixtures and equipment were brought in from the file's connection points, each Assumed; 46 were tied to the end of a run and are joined to it, and no other end was joined for being near"
@@ -55,7 +55,7 @@ says "$T/in.txt" "the fitting at (21.2, 27, 0.9) is not what the file calls it"
 says "$T/in.txt" "the fitting at (16.3, 26.5, 6) is not what the file calls it"
 # The three hot-water runs with no size are in the file and come back, their size Unknown and counted.
 says "$T/in.txt" "63 pipes"
-says "$T/in.txt" "3 runs have no size: each is drawn as a line alone, and come in with its size Unknown"
+says "$T/in.txt" "3 runs have no size: each is drawn as a line alone and comes in with its size Unknown"
 # 3. Four strip footings, 136 LF (the four outside walls' 136 LF), 136 x 2 ft x 1 ft / 27 = 10.07 CY of concrete.
 echo "-- Point 3: footings --"
 says "$T/in.txt" "4 footings"
@@ -229,7 +229,7 @@ says "$T/framing-structure.txt" "size 3 1/2 in × 3 1/2 in (Assumed: made-up mod
 printf '    the beam: 12 LF, 3 1/2 in by 9 1/4 in, its top 8 ft up; the post: 8 ft tall, 3 1/2 in square; every size Assumed, sourced to the file (said Known: not taken as Known)\n'
 # The same file again counts neither twice: refused, and says why.
 if "$P" import ifc "$T/framing2.json" "$T/framing.ifc" --status Known --source "made-up model" > "$T/framing-again.txt" 2>&1; then echo "FAIL: the same beam and post came in twice"; cat "$T/framing-again.txt"; exit 1; fi
-says "$T/framing-again.txt" "this model is already in the job: nothing was brought in. 2 of its 2 things are in the very place the model has them, so a second would be counted twice (1 beam, 1 post)"
+says "$T/framing-again.txt" "this model is already in the job: nothing was brought in. 2 of its 2 things are in the job already, in the same place, so a second would be counted twice (1 beam, 1 post)"
 # A beam that slopes is left out, and says why.
 "$P" new "$T/slope.json" "Slope (not a real job)" >/dev/null
 SL="$(grep -oE 'level-[0-9]+' <("$P" level "$T/slope.json" ground --elevation "0 ft" --height "9 ft" "${A[@]}") | head -1)"

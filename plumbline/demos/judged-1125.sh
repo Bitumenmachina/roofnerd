@@ -199,7 +199,8 @@ says "$T/said.txt" "this model is already in the job: nothing was brought in. "
 lacks "$T/said.txt" "distributionflowelement"
 lacks "$T/said.txt" "a equipment"
 lacks "$T/said.txt" "fitting-0"
-test "$(wc -c < "$T/said.txt")" -lt 700 || { echo "FAIL: the reply is a wall of text"; exit 1; }
+# The counts stay under 700 characters, as they were; what can be done about it follows them (call 209 point 4).
+test "$(sed 's/\. To bring it in again.*//' "$T/said.txt" | wc -c)" -lt 700 || { echo "FAIL: the reply is a wall of text"; exit 1; }
 
 echo
 echo "== 10. A connection left loose is named =="
@@ -298,6 +299,85 @@ fails "$T/said.txt" "spacing is below nothing (-16 in): a length a line enters i
 "$P" estimate "$T/lw.json" | tr -s ' ' > "$T/sheet.txt"
 # 20 ft of plan length at 16 in (1.3333 ft): the figure the refusals left as it was, 15 (the line's own count of studs it names).
 says "$T/sheet.txt" "Studs"
+
+echo
+echo "== 17. An item renamed renames every thing set down, each keeping its number (call 209 point 2) =="
+# Three vanities set down: "Vanity, 36 in", "Vanity, 36 in 2", "Vanity, 36 in 3". Renamed, the three are "Vanity, 42 in", "... 2", "... 3".
+"$P" new "$T/rn.json" "Renamed (not a real job)" >/dev/null
+"$P" level "$T/rn.json" ground --elevation "0 ft" --height "9 ft" "${K[@]}" >/dev/null
+"$P" import items "$T/rn.json" starter >/dev/null
+for x in 5 10 15; do "$P" place "$T/rn.json" level-0002 "Vanity, 36 in" --at "$x,5" "${K[@]}" >/dev/null; done
+"$P" rename "$T/rn.json" "Vanity, 36 in" "Vanity, 42 in" > "$T/said.txt"
+sed 's/^/    | /' "$T/said.txt"
+says "$T/said.txt" "the 3 set down from it are called that too"
+"$P" takeoff "$T/rn.json" > "$T/take.txt"
+says "$T/take.txt" "3 furnishings: Vanity, 42 in, Vanity, 42 in 2, Vanity, 42 in 3"
+lacks "$T/take.txt" "36 in 2"
+
+echo
+echo "== 18. 12-6 is twelve feet six (call 209 point 5) =="
+# A level 12 ft 6 in high (12-6) and a wall 20 ft long to its top: 20 x 12.5 = 250 SF.
+"$P" new "$T/hy.json" "Hyphen (not a real job)" >/dev/null
+"$P" level "$T/hy.json" ground --elevation "0 ft" --height "12-6" "${K[@]}" >/dev/null
+"$P" type "$T/hy.json" wall w6 --thickness "6 in" "${K[@]}" >/dev/null
+"$P" wall "$T/hy.json" level-0002 type-0003 --points "0,0 20,0" --height "12-6" "${K[@]}" >/dev/null
+"$P" takeoff "$T/hy.json" | tr -s ' ' > "$T/take.txt"
+says "$T/take.txt" "wall face, gross 250.00 SF"
+fails "$T/said.txt" "has feet after the inches; write twelve feet six as 12-6" -- "$P" set "$T/hy.json" wall-0004 height "12-6 ft" "${K[@]}"
+fails "$T/said.txt" "12-6 (twelve feet six)" -- "$P" set "$T/hy.json" wall-0004 height "12 6" "${K[@]}"
+fails "$T/said.txt" "has no unit" -- "$P" set "$T/hy.json" wall-0004 height "-6" "${K[@]}"
+lacks "$T/said.txt" "no commas"
+
+echo
+echo "== 19. The building and the tool chest are counted apart (call 209 point 8) =="
+"$P" new "$T/ch.json" "Chest (not a real job)" >/dev/null
+"$P" import items "$T/ch.json" starter >/dev/null
+"$P" show "$T/ch.json" > "$T/show.txt"
+says "$T/show.txt" "  in the building: 0 known, 0 assumed, 0 unknown"
+grep -E "^  in the tool chest: " "$T/show.txt" | sed 's/^/    | /'
+# The one old count is the two added.
+OLD="$(grep -E "^[0-9]+ Known, " "$T/show.txt" | tr -dc '0-9 ' )"
+CHEST="$(grep -E "^  in the tool chest: " "$T/show.txt" | tr -dc '0-9 ')"
+[ "$(echo $OLD)" = "$(echo $CHEST)" ] || { echo "FAIL: the old count '$OLD' is not the chest '$CHEST' with an empty building"; exit 1; }
+"$P" level "$T/ch.json" ground --elevation "0 ft" --height "9 ft" "${K[@]}" >/dev/null
+"$P" show "$T/ch.json" > "$T/show.txt"
+B="$(grep -E "^  in the building: " "$T/show.txt" | tr -dc '0-9 ')"; C="$(grep -E "^  in the tool chest: " "$T/show.txt" | tr -dc '0-9 ')"; T3="$(grep -E "^[0-9]+ Known, " "$T/show.txt" | tr -dc '0-9 ')"
+SUM="$(paste <(echo $B | tr ' ' '\n') <(echo $C | tr ' ' '\n') | awk '{printf "%d ", $1+$2}')"
+[ "$(echo $T3)" = "$(echo $SUM)" ] || { echo "FAIL: total '$T3' is not building '$B' plus chest '$C'"; exit 1; }
+printf '    total %s = building %s + chest %s\n' "$(echo $T3)" "$(echo $B)" "$(echo $C)"
+
+echo
+echo "== 20. What a model written out and brought in says is a builder's words (call 209 point 3) =="
+"$P" sixteen "$T/h16.json" >/dev/null
+"$P" export ifc "$T/h16.json" "$T/h16.ifc" > "$T/export.txt"
+sed 's/^/    | /' "$T/export.txt" | cut -c1-200
+says "$T/export.txt" "147 joints"
+says "$T/export.txt" "332 connections"
+says "$T/export.txt" "432 cost lines: the estimate is not part of a building model: it is written out as a workbook (plumbline export estimate <job> <out.xlsx>)"
+says "$T/export.txt" "31 wall, door, window or run types: each wall, door, window and run is written with its own size"
+lacks "$T/export.txt" " x cost line"
+lacks "$T/export.txt" "connection point"
+"$P" new "$T/in20.json" "Empty (not a real job)" >/dev/null
+"$P" import ifc "$T/in20.json" "$T/h16.ifc" "${K[@]}" > "$T/in.txt"
+says "$T/in.txt" "runs straight up and down: there is no length along the plan to cut it at"
+says "$T/in.txt" "not read: the notes the model carries on its things ("
+lacks "$T/in.txt" "would not take it"
+lacks "$T/in.txt" "stands upright"
+lacks "$T/in.txt" "lists of what the model says"
+
+echo
+echo "== 21. A model refused says what stands in the way and what can be done today (call 209 point 4) =="
+fails "$T/said.txt" "this model is already in the job: nothing was brought in." -- "$P" import ifc "$T/in20.json" "$T/h16.ifc" "${K[@]}"
+says "$T/said.txt" "To bring it in again, bring it into a job of its own, or take what it brought in out of this job first."
+says "$T/said.txt" "bringing in only what the job lacks is not there yet"
+"$P" new "$T/fl.json" "A floor (not a real job)" >/dev/null
+"$P" level "$T/fl.json" ground --elevation "0 ft" --height "9 ft" "${K[@]}" >/dev/null
+"$P" type "$T/fl.json" floor slab --thickness "4 in" "${K[@]}" >/dev/null
+"$P" floor "$T/fl.json" level-0002 type-0003 --points "0,0 10,0 10,10 0,10" "${K[@]}" >/dev/null
+cp "$T/fl.json" "$T/fl-before.json"
+fails "$T/said.txt" "cover the same ground on one level: two floors in one place would be counted twice. Nothing was brought in." -- "$P" import ifc "$T/fl.json" "$T/h16.ifc" "${K[@]}"
+says "$T/said.txt" "take out of the job what is already there on that ground (here, the floor), or bring the model into a job of its own."
+cmp "$T/fl.json" "$T/fl-before.json" || { echo "FAIL: the job changed though nothing was brought in"; exit 1; }
 
 echo
 echo "judged-1125: every step held"

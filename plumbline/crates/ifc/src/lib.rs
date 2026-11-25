@@ -57,6 +57,98 @@ pub struct Brought {
     /// The rooms of the job whose figures are not what they were before the model came in, worked by the model (call 206
     /// point 3): a wall brought in stands in a room and cuts it, and the rooms were not asked.
     pub rooms_moved: Vec<ed::RoomMoved>,
+    /// What was not asked for, by kind, when only a model's runs and what they serve were chosen (call 210 point 1): the walls,
+    /// floors, roofs, footings, doors, windows and rooms of the file, counted and not brought in. Empty when the whole was asked.
+    pub not_asked: Vec<(String, usize)>,
+    /// What the things brought in do to the clash list of the job (call 210 point 4), worked by the model's own clash list before
+    /// and after. None where the job was not asked (the whole model brought in by `import`).
+    pub clashes: Option<ClashChange>,
+}
+
+/// What is chosen when a model is brought in (call 210 point 1).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum Bring {
+    /// Everything in the file, as always, and still refused where it lies over what the job has.
+    #[default]
+    Whole,
+    /// Only its runs and what they serve: ducts, pipes, conduit, cable, their fittings, the fixtures and equipment they
+    /// reach, their systems and what is connected to what.
+    RunsOnly,
+}
+
+/// How many clashes of each kind a job has, counted by the model's own clash list.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct ClashCounts {
+    pub same_space: usize,
+    pub set_against: usize,
+    pub holes: usize,
+    pub laid_in: usize,
+}
+
+/// The clashes before and after a model was brought in, and the ones the things brought in make.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct ClashChange {
+    pub before: ClashCounts,
+    pub after: ClashCounts,
+    /// The clashes of the job now that have a thing brought in as one of the two, by kind.
+    pub made: ClashCounts,
+    /// Each of those, said: what, with what, how, where.
+    pub listed: Vec<String>,
+}
+
+impl Brought {
+    /// What was not asked for, said: "not asked for: 1 floor and 4 walls". None where the whole was asked.
+    pub fn not_asked_said(&self) -> Option<String> {
+        (!self.not_asked.is_empty()).then(|| format!("not asked for: {}", not_asked_list(&self.not_asked)))
+    }
+
+    /// What the things brought in do to the job's clashes (call 210 point 4), a line each, in the words `clashes` uses: how many the
+    /// things brought in make by kind, what the job had and has, and each of the new ones. Empty where the job was not asked.
+    pub fn clashes_said(&self) -> Vec<String> {
+        let Some(c) = &self.clashes else { return Vec::new() };
+        let many = |n: usize, one: &str, more: &str| format!("{n} {}", if n == 1 { one } else { more });
+        let mut out = Vec::new();
+        let made = c.made;
+        if made == ClashCounts::default() {
+            out.push("the things brought in clash with nothing the job has".to_string());
+        } else {
+            let mut each = vec![many(made.holes, "hole to cut", "holes to cut"), format!("{} in the same space", made.same_space), format!("{} set against a wall", made.set_against)];
+            if made.laid_in > 0 {
+                each.push(format!("{} laid in a floor or a wall", made.laid_in));
+            }
+            out.push(format!("the things brought in make {} with what the job has", list_said(&each)));
+        }
+        let kinds = [
+            ("holes to cut", c.before.holes, c.after.holes, made.holes),
+            ("in the same space", c.before.same_space, c.after.same_space, made.same_space),
+            ("set against a wall", c.before.set_against, c.after.set_against, made.set_against),
+            ("laid in a floor or a wall", c.before.laid_in, c.after.laid_in, made.laid_in),
+        ];
+        for (what, before, after, mine) in kinds {
+            if before != after {
+                out.push(format!("the job had {before} {what} and now has {after}"));
+            }
+            if after.saturating_sub(before) != mine || before > after {
+                out.push(format!("the job's own count of {what} moved by {} and the things brought in account for {mine}", after as i64 - before as i64));
+            }
+        }
+        out.extend(c.listed.iter().map(|l| format!("  {l}")));
+        out.push("they are in the clash list, with the job's own".to_string());
+        out
+    }
+
+    /// What was not brought in, a line for each: "4 floor slabs: why". The command line and the window both say it as it stands,
+    /// so the one wording is the model's (call 209 point 3: the window built "4 x floor slab" for itself).
+    pub fn left_out_said(&self) -> Vec<String> {
+        self.left_out
+            .iter()
+            .map(|(class, n, why)| {
+                // "4 floor slabs", and each reason as it reads for that many.
+                let plural = *n > 1 && !class.ends_with('s') && !class.contains('"') && !class.contains(" or ");
+                format!("{n} {class}{}: {why}", if plural { "s" } else { "" })
+            })
+            .collect()
+    }
 }
 
 type P3 = [f64; 3];
@@ -101,12 +193,11 @@ fn already_in_the_job(left_out: &[(String, usize, String)]) -> Option<String> {
         "space" => "room".to_string(),
         c => c.to_string(),
     };
-    let rest: Vec<String> = left_out.iter().filter(|(_, _, why)| !already(why) && !with_walls(why)).map(|(c, n, why)| format!("{n} {} ({})", plain(c), why.replace("this program would not take it: ", ""))).collect();
+    let rest: Vec<String> = left_out.iter().filter(|(_, _, why)| !already(why) && !with_walls(why)).map(|(c, n, why)| format!("{n} {} ({})", plain(c), why)).collect();
     let mut said = format!(
-        "this model is already in the job: nothing was brought in. {twice} of its {total} thing{} {} in the very place the model has {}, so a second would be counted twice",
+        "this model is already in the job: nothing was brought in. {twice} of its {total} thing{} {} in the job already, in the same place, so a second would be counted twice",
         if total == 1 { "" } else { "s" },
-        if twice == 1 { "is" } else { "are" },
-        if twice == 1 { "it" } else { "them" }
+        if twice == 1 { "is" } else { "are" }
     );
     // By kind: the fittings together, and no word of the file's own.
     let mut kinds: BTreeMap<String, usize> = BTreeMap::new();
@@ -114,7 +205,7 @@ fn already_in_the_job(left_out: &[(String, usize, String)]) -> Option<String> {
         let name = if class.ends_with(" fitting") { "fitting".to_string() } else { plain(class) };
         *kinds.entry(name).or_insert(0) += n;
     }
-    let mut kinds: Vec<(String, usize)> = kinds.into_iter().collect();
+    let mut kinds: Vec<(String, usize)> = kinds.into_iter().map(|(k, n)| (if k == "other things" && n == 1 { "other thing".to_string() } else { k }, n)).collect();
     kinds.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(&b.0)));
     if !kinds.is_empty() {
         said.push_str(&format!(" ({})", kinds.iter().map(|(k, n)| format!("{n} {k}")).collect::<Vec<_>>().join(", ")));
@@ -127,6 +218,16 @@ fn already_in_the_job(left_out: &[(String, usize, String)]) -> Option<String> {
     }
     Some(said)
 }
+
+/// What a model's fixtures, furnishings and equipment are called in the file (call 197 point 1; moved up to be seen by the choice of what
+/// to bring in, call 210).
+const FIXTURES: [&str; 7] = ["IFCSANITARYTERMINAL", "IFCFLOWTERMINAL", "IFCOUTLET", "IFCAIRTERMINAL", "IFCLIGHTFIXTURE", "IFCSTACKTERMINAL", "IFCWASTETERMINAL"];
+const FURNISHINGS: [&str; 3] = ["IFCFURNITURE", "IFCFURNISHINGELEMENT", "IFCSYSTEMFURNITUREELEMENT"];
+const EQUIPMENT: [&str; 28] = [
+    "IFCDISTRIBUTIONFLOWELEMENT", "IFCDISTRIBUTIONELEMENT", "IFCDISTRIBUTIONCONTROLELEMENT", "IFCDISTRIBUTIONCHAMBERELEMENT", "IFCENERGYCONVERSIONDEVICE", "IFCFLOWMOVINGDEVICE", "IFCFLOWSTORAGEDEVICE", "IFCFLOWTREATMENTDEVICE",
+    "IFCELECTRICDISTRIBUTIONBOARD", "IFCUNITARYEQUIPMENT", "IFCBOILER", "IFCPUMP", "IFCFAN", "IFCTANK", "IFCTRANSFORMER", "IFCCOMPRESSOR", "IFCCOIL", "IFCCONDENSER", "IFCEVAPORATOR", "IFCHEATEXCHANGER", "IFCFILTER",
+    "IFCELECTRICGENERATOR", "IFCSWITCHINGDEVICE", "IFCPROTECTIVEDEVICE", "IFCAIRTOAIRHEATRECOVERY", "IFCCHILLER", "IFCHUMIDIFIER", "IFCELECTRICMOTOR",
+];
 
 /// Two floors are at one height when they are within an eighth of an inch (call 206 point 3).
 const SAME_HEIGHT_FT: f64 = 0.125 / 12.0;
@@ -781,6 +882,113 @@ fn feet(x: f64) -> String {
 /// Bring a model in. `name` is what the file is called, for the sources of what is made.
 /// All of it or none: if the job would not check afterwards, it is as it was.
 pub fn import(job: &mut Job, bytes: &[u8], name: &str, how: Entered) -> Result<Brought, String> {
+    import_whole(job, bytes, name, how, Bring::Whole, false)
+}
+
+/// Bring a model in, choosing what of it (call 210). `Bring::Whole` is `import` and says in addition, in the reply, what the
+/// things brought in do to the job's clashes and, where walls or floors of the model were left out for lying over the job's own,
+/// that only its runs can be chosen; `Bring::RunsOnly` brings only its runs and what they serve (see `Bring`), and counts the rest
+/// as not asked for. What is brought in is Assumed and sourced to the file, either way.
+pub fn import_choosing(job: &mut Job, bytes: &[u8], name: &str, how: Entered, bring: Bring) -> Result<Brought, String> {
+    import_whole(job, bytes, name, how, bring, true)
+}
+
+/// What stands in the way of a model being brought in, and what a person can do about it today (call 209 point 4, call 210). A model
+/// comes in whole or only its runs and what they serve: bringing in only what the job lacks is not there yet. `alone` is what a
+/// trial of bringing in only its runs found would come in (the choice worked, and taken back), said, where the whole was refused.
+fn with_a_way_on(why: String, bring: Bring, alone: Option<String>) -> String {
+    let alone = alone.map(|a| format!(". Its runs and the equipment they serve ({a}) can be brought in alone, without its walls and floors")).unwrap_or_default();
+    if why.starts_with("this model is already in the job") {
+        if bring == Bring::RunsOnly {
+            return format!("{why}. To bring them in again, take what they brought in out of this job first. Bringing in only what the job lacks is not there yet");
+        }
+        return format!("{why}. To bring it in again, bring it into a job of its own, or take what it brought in out of this job first. A model comes in whole: bringing in only what the job lacks is not there yet{alone}");
+    }
+    if why.contains("would be counted twice") {
+        let said = if why.contains("nothing was brought in") { why } else { format!("{why}. Nothing was brought in") };
+        return format!("{said}. To bring this model in, take out of the job what is already there on that ground (here, the floor), or bring the model into a job of its own. A model comes in whole: bringing in only what the job lacks is not there yet{alone}");
+    }
+    format!("{why}{alone}")
+}
+
+/// What not asked for is called, as a builder says it, for one and for more: ("walls", "wall").
+const NOT_ASKED_WORDS: [(&str, &str); 11] = [
+    ("walls", "wall"), ("floors", "floor"), ("roofs", "roof"), ("footings", "footing"), ("doors", "door"), ("windows", "window"), ("rooms", "room"),
+    ("beams", "beam"), ("posts", "post"), ("furnishings", "furnishing"), ("holes in walls", "hole in a wall"),
+];
+
+/// What a kind of thing brought in is called for one of it: "ducts" is "duct", "pieces of equipment" is "piece of equipment".
+pub fn one_of(what: &str) -> &str {
+    if what == "pieces of equipment" {
+        return "piece of equipment";
+    }
+    what.strip_suffix('s').unwrap_or(what)
+}
+
+/// "a", "a and b", "a, b and c".
+fn list_said(items: &[String]) -> String {
+    match items {
+        [] => String::new(),
+        [one] => one.clone(),
+        [init @ .., last] => format!("{} and {last}", init.join(", ")),
+    }
+}
+
+/// What was not asked for, as words: "1 floor and 4 walls".
+fn not_asked_list(not_asked: &[(String, usize)]) -> String {
+    let each: Vec<String> = not_asked
+        .iter()
+        .map(|(what, n)| {
+            let word = if *n == 1 { NOT_ASKED_WORDS.iter().find(|(many, _)| many == what).map(|(_, one)| one.to_string()).unwrap_or_else(|| what.strip_suffix('s').unwrap_or(what).to_string()) } else { what.clone() };
+            format!("{n} {word}")
+        })
+        .collect();
+    list_said(&each)
+}
+
+/// Each clash of the job, by the model's own clash list, with the kind it counts as and the two things it is between: what
+/// `plumbline clashes` lists, and counted by the same accessors (call 210 point 4).
+struct ClashRow {
+    kind: &'static str,
+    a: String,
+    b: String,
+    said: String,
+}
+
+fn clash_state(job: &mut Job) -> Result<(ClashCounts, Vec<ClashRow>), String> {
+    use plumbline_world::building::clash;
+    let found = clash::clashes(job, None)?;
+    let inches = |feet: f64| format!("{:.2} in", feet * 12.0 + 0.0);
+    let place = |at: [f64; 3]| format!("({}, {}, {})", tidy(at[0]), tidy(at[1]), tidy(at[2]));
+    let counts = ClashCounts { same_space: found.in_the_same_space().len(), set_against: found.set_against().len(), holes: found.hole_rows().len(), laid_in: found.laid_in().len() };
+    let mut rows = Vec::new();
+    for c in found.in_the_same_space() {
+        let by = c.by.map(|b| format!("in each other by {}", inches(b))).unwrap_or_else(|| "in each other".to_string());
+        rows.push(ClashRow { kind: "in the same space", a: c.a.clone(), b: c.b.clone(), said: format!("{} and {}, {by}, at {}", c.a_name, c.b_name, place(c.at)) });
+    }
+    for c in found.set_against() {
+        rows.push(ClashRow { kind: "set against a wall", a: c.a.clone(), b: c.b.clone(), said: format!("{} and {}, set {} into it, at {}", c.a_name, c.b_name, inches(c.by.unwrap_or(0.0)), place(c.at)) });
+    }
+    for c in found.hole_rows() {
+        let said = match c.hole.and_then(|h| found.holes.get(h)) {
+            Some(h) => format!("{} and {}{}, at {}", h.pieces.first().map(|(_, n)| n.as_str()).unwrap_or(&c.a_name), h.through_name, if h.size.is_empty() { String::new() } else { format!(", {}", h.size) }, place(c.at)),
+            None => format!("{} and {}, at {}", c.a_name, c.b_name, place(c.at)),
+        };
+        rows.push(ClashRow { kind: "a hole to cut", a: c.a.clone(), b: c.b.clone(), said });
+    }
+    for c in found.laid_in() {
+        rows.push(ClashRow { kind: "laid in a floor or a wall", a: c.a.clone(), b: c.b.clone(), said: format!("{} and {}, at {}", c.a_name, c.b_name, place(c.at)) });
+    }
+    Ok((counts, rows))
+}
+
+/// Every thing of the job, by path.
+fn paths_of(job: &mut Job) -> HashSet<String> {
+    let mut q = job.world.query::<&plumbline_world::Node>();
+    q.iter(&job.world).map(|n| n.path.clone()).collect()
+}
+
+fn import_whole(job: &mut Job, bytes: &[u8], name: &str, how: Entered, choice: Bring, extras: bool) -> Result<Brought, String> {
     let file = step::parse(bytes).map_err(|why| format!("it is not an IFC file this can read ({why})"))?;
     if !file.schema.starts_with("IFC") {
         return Err(format!("it is a file written the way a model is, but of another kind (\"{}\"): not an IFC model", file.schema));
@@ -804,10 +1012,13 @@ pub fn import(job: &mut Job, bytes: &[u8], name: &str, how: Entered) -> Result<B
     // What the model holds that is not a thing with a shape, and is not read at all.
     let count = |names: &[&str]| file.entities.values().filter(|e| names.contains(&e.name.as_str())).count();
     let (property_sets, materials) = (count(&["IFCPROPERTYSET", "IFCELEMENTQUANTITY"]), count(&["IFCMATERIAL", "IFCMATERIALLAYERSET", "IFCMATERIALCONSTITUENTSET", "IFCMATERIALPROFILESET"]));
-    ed::all_or_nothing(job, |job| {
+    let only_runs = choice == Bring::RunsOnly;
+    let done = ed::all_or_nothing(job, |job| {
+        // The clashes the job has, and the things it has, before anything comes in (call 210 point 4).
+        let before = if extras { Some((paths_of(job), clash_state(job))) } else { None };
         // The rooms as they were, for the rooms the model changes to be named (call 206 point 3); a job with no room has none to change.
-        let rooms_before = if job.world.query::<&plumbline_world::Room>().iter(&job.world).next().is_some() { ed::room_figures(job) } else { Vec::new() };
-        let mut out = bring(job, &r, name, how, unit_name, k)?;
+        let rooms_before = if !only_runs && job.world.query::<&plumbline_world::Room>().iter(&job.world).next().is_some() { ed::room_figures(job) } else { Vec::new() };
+        let mut out = bring(job, &r, name, how, unit_name, k, only_runs, extras)?;
         if !rooms_before.is_empty() {
             let after = ed::room_figures(job);
             out.rooms_moved = ed::rooms_moved(&rooms_before, &after);
@@ -832,16 +1043,53 @@ pub fn import(job: &mut Job, bytes: &[u8], name: &str, how: Entered) -> Result<B
         }
         let property_sets = property_sets.saturating_sub(storey_heights(&r).len()).saturating_sub(out.made.get("roofs").copied().unwrap_or(0));
         if property_sets + materials > 0 {
+            // What the model keeps on its things besides their shapes, said as a builder would (call 209 point 3): notes, and
+            // materials only when there are some.
+            let notes = if property_sets == 0 { String::new() } else { format!("the notes the model carries on its things ({property_sets} of them)") };
+            let mats = if materials == 0 { String::new() } else { format!("{materials} material{} it names", if materials == 1 { "" } else { "s" }) };
+            let both = [notes, mats].into_iter().filter(|x| !x.is_empty()).collect::<Vec<_>>().join(" and ");
             out.notes.push(format!(
-                "not read: {property_sets} list{} of what the model says of each thing, and {materials} material{}. A thing brought in has its shape, its place and its name, and, where the model gives them, its work mark (new, existing, to demolish or temporary) and its bearing mark, each Assumed; what the model says it is made of, and anything else it says about each thing, is not brought in",
-                if property_sets == 1 { "" } else { "s" },
-                if materials == 1 { "" } else { "s" }
+                "not read: {both}. A thing brought in has its shape, its place and its name, and, where the model gives them, its work mark (new, existing, to demolish or temporary) and its bearing mark, each Assumed; what the model says it is made of, and anything else it says about each thing, is not brought in"
             ));
         }
         if twice > 0 {
             out.notes.push(format!("{twice} number{} in the file {} used by more than one thing: the later of each was read and the earlier was not, so something may be missing or changed", if twice == 1 { "" } else { "s" }, if twice == 1 { "is" } else { "are" }));
         }
+        // What it was done for (call 210 point 4): the clashes the things brought in make with what the job had, by the model's own
+        // clash list, worked before and after, and the ones that have a thing brought in as one of the two.
+        if let Some((had, state_before)) = before {
+            match (state_before, clash_state(job)) {
+                (Ok((counts_before, _)), Ok((counts_after, rows))) => {
+                    let mine: Vec<&ClashRow> = rows.iter().filter(|c| !had.contains(&c.a) || !had.contains(&c.b)).collect();
+                    let by = |kind: &str| mine.iter().filter(|c| c.kind == kind).count();
+                    out.clashes = Some(ClashChange {
+                        before: counts_before,
+                        after: counts_after,
+                        made: ClashCounts { same_space: by("in the same space"), set_against: by("set against a wall"), holes: by("a hole to cut"), laid_in: by("laid in a floor or a wall") },
+                        listed: mine.iter().map(|c| format!("{}: {}", c.kind, c.said)).collect(),
+                    });
+                }
+                (Err(why), _) | (_, Err(why)) => out.notes.push(format!("the clashes of the job could not be counted before and after: {why}")),
+            }
+        }
         Ok(out)
+    });
+    done.map_err(|why| {
+        // Where the whole was refused, what a bringing in of its runs alone would bring (worked, and taken back).
+        let alone = (extras && !only_runs)
+            .then(|| {
+                let mut found = None;
+                let _ = ed::all_or_nothing(job, |job| {
+                    if let Ok(b) = import_whole(job, bytes, name, how.clone(), Bring::RunsOnly, false) {
+                        let each: Vec<String> = b.made.iter().map(|(what, n)| format!("{n} {}", if *n == 1 { one_of(what) } else { what })).collect();
+                        found = Some(list_said(&each));
+                    }
+                    Err::<(), String>("a trial, taken back".to_string())
+                });
+                found
+            })
+            .flatten();
+        with_a_way_on(why, choice, alone)
     })
 }
 
@@ -865,8 +1113,11 @@ fn storey_heights(r: &Reader) -> HashMap<u64, f64> {
     out
 }
 
-fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String, k: f64) -> Result<Brought, String> {
+#[allow(clippy::too_many_arguments)]
+fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String, k: f64, only_runs: bool, extras: bool) -> Result<Brought, String> {
     let mut out = Brought { schema: r.file.schema.clone(), unit: unit_name, feet_per_unit: k, ..Brought::default() };
+    // What was not asked for, when only the model's runs and what they serve were (call 210 point 1).
+    let mut na: BTreeMap<&'static str, usize> = BTreeMap::new();
     let mut left: BTreeMap<(String, String), usize> = BTreeMap::new();
     let mut leave = |class: &str, why: &str| *left.entry((said(class), why.to_string())).or_insert(0) += 1;
     let mut made = |what: &str| *out.made.entry(what.to_string()).or_insert(0) += 1;
@@ -978,6 +1229,18 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
     if storeys.is_empty() {
         return Err("the model has no building level: there is nothing to stand its walls and floors on".into());
     }
+    // Only its runs: no level is added, so each run and thing stands on a level the job has (call 210 point 2).
+    let job_levels: Vec<(String, String, f64)> = {
+        let mut q = job.world.query::<(&plumbline_world::Node, &building::Level)>();
+        let mut v: Vec<(String, String, f64)> = q.iter(&job.world).filter_map(|(n, l)| l.elevation.feet().map(|e| (n.name.clone(), n.path.clone(), e))).collect();
+        v.sort_by(|a, b| a.2.total_cmp(&b.2));
+        v
+    };
+    if only_runs && job_levels.is_empty() {
+        return Err("the job has no level with a height to put the model's runs on: bringing in only its runs adds no level. Add the building's levels first, or bring the whole model into a job of its own".into());
+    }
+    // The model's levels at a height the job does not have, by their number in the file: its name, what it says its floor is at, and where it is placed.
+    let mut loose: HashMap<u64, (String, f64, f64)> = HashMap::new();
     let lifted: Vec<f64> = storeys.iter().map(|s| s.3 - s.2).filter(|d| d.abs() > 0.001).collect();
     if !lifted.is_empty() {
         out.notes.push(format!(
@@ -1020,6 +1283,11 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
                 by_height.push(format!("the model's level \"{called}\" has its floor at {}, the height of the job's \"{jname}\": it is that level, and what the model has on it was put on the job's own{differ}", feet(*elevation)));
             }
             storey_path.insert(*id, (path.clone(), *placed));
+            continue;
+        }
+        // Only its runs: a level at a height the job has not is not added; what stands on it stands on the job's level it is within.
+        if only_runs {
+            loose.insert(*id, (called.clone(), *elevation, *placed));
             continue;
         }
         // A storey of this name already in the job, at this height: it is that storey.
@@ -1103,20 +1371,40 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
     // The storey a thing is on: the one the file puts it on, or the highest whose floor
     // is not above where the thing is.
     let mut guessed = 0usize;
+    // Where a thing was put on a level of the job that the model's own level is not at: the thing, the model's level, the job's level, its
+    // height above the datum and how far above the job's floor it is (call 210 point 2).
+    let mut put_on: Vec<(u64, u64, String, f64, f64)> = Vec::new();
     let mut storey_of = |id: u64, z: f64| -> (String, f64) {
-        if let Some(found) = on.get(&id).and_then(|s| storey_path.get(s)) {
-            return found.clone();
+        let given = on.get(&id).copied().filter(|s| storey_path.contains_key(s) || loose.contains_key(s));
+        let sid = match given {
+            Some(s) => s,
+            None => {
+                guessed += 1;
+                storeys.iter().rev().find(|s| s.3 <= z + 0.01).unwrap_or(&storeys[0]).0
+            }
+        };
+        if let Some((_, stated, placed)) = loose.get(&sid) {
+            // Its height above the datum: the level's floor as it says, and what stands on it measured from where the level is placed. The
+            // job's highest level whose floor is not above that, or its lowest where it is below them all.
+            let height = stated + z - placed;
+            let (_, path, floor) = job_levels.iter().rev().find(|l| l.2 <= height + 0.01).or_else(|| job_levels.first()).cloned().unwrap_or_default();
+            put_on.push((id, sid, path.clone(), height, floor));
+            return (path, floor + (placed - stated));
         }
-        guessed += 1;
-        let below = storeys.iter().rev().find(|s| s.3 <= z + 0.01).unwrap_or(&storeys[0]);
-        storey_path[&below.0].clone()
+        storey_path[&sid].clone()
     };
+    // The things that were made, by their number in the file, for what is said of where they stand.
+    let mut made_ids: HashSet<u64> = HashSet::new();
 
     // ---- Walls.
     let mut wall_of: HashMap<u64, (String, P3, P3, f64)> = HashMap::new();
     let mut wall_marks: Vec<(String, u64, String)> = Vec::new();
     let mut told_apart: Vec<String> = Vec::new();
     for (id, e) in of(&["IFCWALL", "IFCWALLSTANDARDCASE", "IFCWALLELEMENTEDCASE"]) {
+        if only_runs {
+            *na.entry("walls").or_insert(0) += 1;
+            continue;
+        }
         let body = match r.upright(e) {
             Ok(body) => body,
             Err(why) => {
@@ -1170,7 +1458,7 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
                 wall_of.insert(id, (path, [a[0], a[1], base], [way[0], way[1], 0.0], length));
                 made("walls");
             }
-            Err(why) => leave(&e.name, &format!("this program would not take it: {why}")),
+            Err(why) => leave(&e.name, &why),
         }
     }
     if !told_apart.is_empty() {
@@ -1191,6 +1479,10 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
     }
     for (id, e) in of(&["IFCDOOR", "IFCDOORSTANDARDCASE", "IFCWINDOW", "IFCWINDOWSTANDARDCASE"]) {
         let kind = if e.name.starts_with("IFCDOOR") { Kind::Door } else { Kind::Window };
+        if only_runs {
+            *na.entry(if kind == Kind::Door { "doors" } else { "windows" }).or_insert(0) += 1;
+            continue;
+        }
         let Some((wall, start, way, _)) = fills.get(&id).and_then(|hole| hole_in.get(hole)).and_then(|w| wall_of.get(w)) else {
             leave(&e.name, "it fills no hole in a wall that was brought in");
             continue;
@@ -1216,7 +1508,7 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
                 keep_name(job, &path, &r.name(e), id);
                 made(if kind == Kind::Door { "doors" } else { "windows" })
             }
-            Err(why) => leave(&e.name, &format!("this program would not take it: {why}")),
+            Err(why) => leave(&e.name, &why),
         }
     }
     for (path, id, source) in &wall_marks {
@@ -1226,6 +1518,10 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
     }
     for (id, e) in of(&["IFCOPENINGELEMENT", "IFCOPENINGSTANDARDCASE"]) {
         if !fills.values().any(|hole| *hole == id) {
+            if only_runs {
+                *na.entry("holes in walls").or_insert(0) += 1;
+                continue;
+            }
             leave(&e.name, "a hole with no door or window in it: this program cuts a wall only for one of those, and a floor for nothing yet");
         }
     }
@@ -1302,6 +1598,13 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
             }
         }
         for (id, e) in of(&["IFCROOF"]) {
+            if only_runs {
+                // A roof is not a run: it is counted, with the slabs that are its parts, and not read.
+                *na.entry("roofs").or_insert(0) += 1;
+                done.insert(id);
+                roof_slabs.extend(parts_of.get(&id).cloned().unwrap_or_default());
+                continue;
+            }
             let Some(set) = sets.get(&id) else { continue };
             let prop = |name: &str| -> Option<&Entity> { Reader::list(r.arg(set, 4)).iter().filter_map(|p| r.get(p)).map(|(_, p)| p).find(|p| Reader::text(r.arg(p, 0)) == Some(name)) };
             let parsed = (|| -> Result<(Vec<[f64; 2]>, Vec<Option<f64>>, f64), String> {
@@ -1401,7 +1704,7 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
                     if let Some(reach) = r.reach(e) {
                         stood_on.push((said(&e.name), [reach.0[0] * k, reach.0[1] * k, reach.0[2] * k], [reach.1[0] * k, reach.1[1] * k, reach.1[2] * k]));
                     }
-                    leave(&e.name, &format!("this program would not take it: {why}"));
+                    leave(&e.name, &why);
                 }
             }
         }
@@ -1418,7 +1721,15 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
             if roof_slabs.contains(&id) {
                 continue;
             }
+            if only_runs {
+                *na.entry("roofs").or_insert(0) += 1;
+                continue;
+            }
             leave("IFCROOFSLAB", NO_ROOF_OUTLINE);
+            continue;
+        }
+        if only_runs {
+            *na.entry("floors").or_insert(0) += 1;
             continue;
         }
         if r.pieces(e) > 1 {
@@ -1510,7 +1821,7 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
                     floors_cut += 1;
                 }
             }
-            Err(why) => leave(&e.name, &format!("this program would not take it: {why}")),
+            Err(why) => leave(&e.name, &why),
         }
     }
     if floors_cut > 0 {
@@ -1518,6 +1829,10 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
     }
     // ---- Spaces, as rooms: a point inside each.
     for (id, e) in of(&["IFCSPACE"]) {
+        if only_runs {
+            *na.entry("rooms").or_insert(0) += 1;
+            continue;
+        }
         let Some(body) = r.pushed(e) else {
             leave(&e.name, "its shape is not an outline pushed straight, so no point inside it could be found");
             continue;
@@ -1545,7 +1860,7 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
         })();
         match done {
             Ok(()) => made("rooms"),
-            Err(why) => leave(&e.name, &format!("this program would not take it: {why}")),
+            Err(why) => leave(&e.name, &why),
         }
     }
     // ---- Systems the file names, where they are ones this program has.
@@ -1722,6 +2037,7 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
         })();
         match done {
             Ok(path) => {
+                made_ids.insert(id);
                 if across.is_none() {
                     runs_unsized += 1;
                 }
@@ -1734,7 +2050,7 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
                     _ => "cables",
                 })
             }
-            Err(why) => leave(&e.name, &format!("this program would not take it: {why}")),
+            Err(why) => leave(&e.name, &why),
         }
     }
     // The file's units to feet, for what stood where a left-out thing did (call 197, point 6).
@@ -1748,6 +2064,10 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
             continue;
         }
         done.insert(id);
+        if only_runs {
+            *na.entry("footings").or_insert(0) += 1;
+            continue;
+        }
         let sort = match r.arg(e, 8) {
             V::Enum(t) => t.as_str(),
             _ => "",
@@ -1846,8 +2166,7 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
                 if let Some(reach) = reach_of(e) {
                     stood_on.push((said(&e.name), reach.0, reach.1));
                 }
-                let plain = why.starts_with("its ") || why.starts_with("the model") || why.starts_with("it ");
-                leave(&e.name, &if plain { why } else { format!("this program would not take it: {why}") });
+                leave(&e.name, &why);
             }
         }
     }
@@ -1861,6 +2180,10 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
         }
         done.insert(id);
         let is_beam = e.name == "IFCBEAM";
+        if only_runs {
+            *na.entry(if is_beam { "beams" } else { "posts" }).or_insert(0) += 1;
+            continue;
+        }
         let source = from(e, id);
         let entered = Entered { status: how.status, source: &source };
         let outcome: Result<String, String> = (|| {
@@ -1956,21 +2279,13 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
                 if let Some(reach) = reach_of(e) {
                     stood_on.push((said(&e.name), reach.0, reach.1));
                 }
-                let plain = why.starts_with("its ") || why.starts_with("the model") || why.starts_with("it ");
-                leave(&e.name, &if plain { why } else { format!("this program would not take it: {why}") });
+                leave(&e.name, &why);
             }
         }
     }
     // ---- Things set down: fixtures, equipment and furnishings (call 197, point 1). Each is a box the
     // size of its body in the file, set down by the change that sets one down, Assumed, and called what
     // the file calls it. A body this does not read leaves its size unknown, and says so.
-    const FIXTURES: [&str; 7] = ["IFCSANITARYTERMINAL", "IFCFLOWTERMINAL", "IFCOUTLET", "IFCAIRTERMINAL", "IFCLIGHTFIXTURE", "IFCSTACKTERMINAL", "IFCWASTETERMINAL"];
-    const FURNISHINGS: [&str; 3] = ["IFCFURNITURE", "IFCFURNISHINGELEMENT", "IFCSYSTEMFURNITUREELEMENT"];
-    const EQUIPMENT: [&str; 28] = [
-        "IFCDISTRIBUTIONFLOWELEMENT", "IFCDISTRIBUTIONELEMENT", "IFCDISTRIBUTIONCONTROLELEMENT", "IFCDISTRIBUTIONCHAMBERELEMENT", "IFCENERGYCONVERSIONDEVICE", "IFCFLOWMOVINGDEVICE", "IFCFLOWSTORAGEDEVICE", "IFCFLOWTREATMENTDEVICE",
-        "IFCELECTRICDISTRIBUTIONBOARD", "IFCUNITARYEQUIPMENT", "IFCBOILER", "IFCPUMP", "IFCFAN", "IFCTANK", "IFCTRANSFORMER", "IFCCOMPRESSOR", "IFCCOIL", "IFCCONDENSER", "IFCEVAPORATOR", "IFCHEATEXCHANGER", "IFCFILTER",
-        "IFCELECTRICGENERATOR", "IFCSWITCHINGDEVICE", "IFCPROTECTIVEDEVICE", "IFCAIRTOAIRHEATRECOVERY", "IFCCHILLER", "IFCHUMIDIFIER", "IFCELECTRICMOTOR",
-    ];
     let mut set_down: Vec<(String, Kind, P3, [f64; 3])> = Vec::new();
     let mut thing_by_id: BTreeMap<u64, String> = BTreeMap::new();
     let every_class: Vec<&str> = FIXTURES.iter().chain(&FURNISHINGS).chain(&EQUIPMENT).copied().collect();
@@ -1986,6 +2301,10 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
         } else {
             Kind::Equipment
         };
+        if only_runs && kind == Kind::Furnishing {
+            *na.entry("furnishings").or_insert(0) += 1;
+            continue;
+        }
         let source = from(e, id);
         let entered = Entered { status: how.status, source: &source };
         let body = r.boxed(e);
@@ -2034,6 +2353,7 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
         })();
         match outcome {
             Ok(path) => {
+                made_ids.insert(id);
                 thing_by_id.insert(id, path.clone());
                 set_down.push((path, kind, [at[0], at[1], bottom * k], body.as_ref().map(|b| [b.size[0] * k, b.size[1] * k, b.size[2] * k]).unwrap_or([0.0; 3])));
                 made(match kind {
@@ -2046,7 +2366,7 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
                 if let Some(reach) = reach_of(e) {
                     stood_on.push((said(&e.name), reach.0, reach.1));
                 }
-                leave(&e.name, &format!("this program would not take it: {why}"));
+                leave(&e.name, &why);
             }
         }
     }
@@ -2081,6 +2401,7 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
         let outcome = ed::fitting(job, &storey, [tidy(middle[0] * k), tidy(middle[1] * k)], Some(&feet(middle_z)), None, entered);
         match outcome {
             Ok(fitted) => {
+                made_ids.insert(id);
                 keep_name(job, &fitted.path, &r.name(e), id);
                 // What the file calls it, against what the runs that meet there make it (call 200).
                 let (said_kind, ok) = match r.arg(e, 8) {
@@ -2116,7 +2437,7 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
                 if let Some(reach) = reach_of(e) {
                     stood_on.push((said(&e.name), reach.0, reach.1));
                 }
-                leave(&e.name, &format!("this program would not take it: {why}"));
+                leave(&e.name, &why);
             }
         }
     }
@@ -2269,7 +2590,7 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
         }
     }
     if runs_unsized > 0 {
-        out.notes.push(format!("{runs_unsized} run{} {} no size: {} drawn as a line alone, and {} in with its size Unknown", if runs_unsized == 1 { "" } else { "s" }, if runs_unsized == 1 { "has" } else { "have" }, if runs_unsized == 1 { "it is" } else { "each is" }, if runs_unsized == 1 { "comes" } else { "come" }));
+        out.notes.push(format!("{runs_unsized} run{} {} no size: {} drawn as a line alone and comes in with its size Unknown", if runs_unsized == 1 { "" } else { "s" }, if runs_unsized == 1 { "has" } else { "have" }, if runs_unsized == 1 { "it is" } else { "each is" }));
     }
     // Run ends that stand at a thing but are joined to nothing, said (call 200): nothing is joined for being
     // near, so where an end stands within a foot of a fixture or a piece of equipment and nothing joins it,
@@ -2327,9 +2648,18 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
             if let Some(reach) = reach_of(e) {
                 stood_on.push((said(&e.name), reach.0, reach.1));
             }
+            if only_runs {
+                // Not a run, and nothing a run serves: not asked for.
+                *na.entry("other things").or_insert(0) += 1;
+                continue;
+            }
             leave(&e.name, if e.name == "IFCROOF" { NO_ROOF_OUTLINE } else { "nothing here to bring it in as" });
         } else if Reader::text(r.arg(e, 0)).is_some_and(|mark| mark.len() == 22) && e.args.len() >= 7 && !e.name.starts_with("IFCREL") && !e.name.ends_with("TYPE") && !e.name.ends_with("STYLE") && !e.name.ends_with("TEMPLATE") && !NOT_THINGS.contains(&e.name.as_str()) {
-            leave(&e.name, "the model gives it no place, and there is nothing here to bring it in as");
+            if only_runs {
+                *na.entry("other things").or_insert(0) += 1;
+            } else {
+                leave(&e.name, "the model gives it no place, and there is nothing here to bring it in as");
+            }
         }
     }
     if guessed > 0 {
@@ -2362,13 +2692,74 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
             ));
         }
     }
+    // Where the model's levels at a height the job has not were put (call 210 point 2): on the job's level each thing stands within, and
+    // no level was added. Said for each of the model's levels that had something made on it.
+    {
+        let mut by_level: BTreeMap<u64, Vec<&(u64, u64, String, f64, f64)>> = BTreeMap::new();
+        for p in put_on.iter().filter(|p| made_ids.contains(&p.0)) {
+            by_level.entry(p.1).or_default().push(p);
+        }
+        let mut said_levels: Vec<(f64, String)> = Vec::new();
+        for (sid, things) in &by_level {
+            let Some((called, stated, _)) = loose.get(sid) else { continue };
+            let name_of = |path: &str| job_levels.iter().find(|l| l.1 == path).map(|l| l.0.clone()).unwrap_or_else(|| path.to_string());
+            let mut targets: BTreeMap<String, usize> = BTreeMap::new();
+            for t in things {
+                *targets.entry(name_of(&t.2)).or_insert(0) += 1;
+            }
+            let lowest = job_levels.first().map(|l| l.2).unwrap_or(0.0);
+            let below = things.iter().filter(|t| t.3 < lowest - 0.01).count();
+            let where_to = if targets.len() == 1 {
+                format!("the job's \"{}\", the level it stands within", targets.keys().next().cloned().unwrap_or_default())
+            } else {
+                format!("the job's levels, each on the one it stands within ({})", targets.iter().map(|(n, c)| format!("\"{n}\": {c}")).collect::<Vec<_>>().join(", "))
+            };
+            let low = if below > 0 { format!("; {below} of them stand below the job's lowest level and were put on it") } else { String::new() };
+            said_levels.push((*stated, format!("the model's level \"{called}\" has its floor at {}, which is not the height of any level the job has: what the model has on it was put on {where_to}, and no level was added{low}", feet(*stated))));
+        }
+        said_levels.sort_by(|a, b| a.0.total_cmp(&b.0));
+        out.notes.extend(said_levels.into_iter().map(|(_, n)| n));
+    }
     out.notes.push(format!("the model is in {}: every length was turned into feet and kept to a ten-thousandth of a foot", out.unit));
     out.left_out = left.into_iter().map(|((class, why), n)| (class, n, why)).collect();
+    out.not_asked = na.into_iter().map(|(what, n)| (what.to_string(), n)).collect();
+    if only_runs {
+        if out.made.is_empty() {
+            let total: usize = out.not_asked.iter().map(|(_, n)| n).sum();
+            let asked = if total == 0 { String::new() } else { format!(". It holds {}, which {} not asked for", not_asked_list(&out.not_asked), if total == 1 { "was" } else { "were" }) };
+            if out.left_out.is_empty() {
+                return Err(format!("this model has no runs and no equipment: nothing was brought in{asked}"));
+            }
+            if let Some(said) = already_in_the_job(&out.left_out) {
+                return Err(format!("{said}{asked}"));
+            }
+            return Err(format!("none of the model's runs and equipment could be brought in: {}{asked}", out.left_out.iter().map(|(c, n, why)| format!("{n} {c} ({why})")).collect::<Vec<_>>().join("; ")));
+        }
+        return Ok(out);
+    }
     if out.made.iter().all(|(what, _)| what == "levels") {
         if let Some(said) = already_in_the_job(&out.left_out) {
             return Err(said);
         }
         return Err(format!("nothing in the model but its levels could be brought in: {}", out.left_out.iter().map(|(c, n, why)| format!("{n} {c} ({why})")).collect::<Vec<_>>().join("; ")));
+    }
+    // Walls and floors of the model that lie over the job's own (call 210 point 1): left out, and the way not to be asked for them.
+    if extras {
+        let over = |class: &str| out.left_out.iter().filter(|(c, _, why)| c == class && why.contains("would be counted twice")).map(|(_, n, _)| n).sum::<usize>();
+        let (walls, floors) = (over("wall"), over("floor slab"));
+        if walls + floors > 0 {
+            let mut each = Vec::new();
+            if walls > 0 {
+                each.push(format!("{walls} wall{}", if walls == 1 { "" } else { "s" }));
+            }
+            if floors > 0 {
+                each.push(format!("{floors} floor{}", if floors == 1 { "" } else { "s" }));
+            }
+            out.notes.push(format!(
+                "{} of the model lie over what the job has and were left out, so as not to be counted twice; to bring a model like this in without being asked for them, choose only its runs and the equipment they serve",
+                list_said(&each)
+            ));
+        }
     }
     Ok(out)
 }

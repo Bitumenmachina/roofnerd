@@ -372,8 +372,19 @@ fn fraction_after_mark(scan: &mut Scan, inches: f64, by_mark: bool) -> Result<f6
     Ok(fraction)
 }
 
+/// What is said of a thing that is no measurement at all. It names the way the trades write feet and inches, and says nothing
+/// of commas: there are none in most of what lands here (call 209 point 5).
+fn not_a_measure_said() -> String {
+    "is not a measurement this program can read; write it like 25.5 ft, 306 in, 12-6 (twelve feet six) or 25' 6 1/2\"".into()
+}
+
+/// The dash after a number with a space before it ("12 - 6") is a range or a subtraction, not feet and inches.
+fn spaced_dash(scan: &Scan) -> bool {
+    scan.at > 0 && scan.s[scan.at - 1] == b' '
+}
+
 /// Read a length as typed: `25.5 ft`, `306 in`, `19 1/2"`, `25' 6"`, `25'-6 1/2"`,
-/// `25 ft 6 in`, and as a laser types its display: `2'2"13/32`, `26"13/32`, `23.46ft`.
+/// `25 ft 6 in`, `12-6` (twelve feet six, as the trades write it), and as a laser types its display: `2'2"13/32`, `26"13/32`, `23.46ft`.
 /// Gives the number and the unit it was entered in. A bare number is refused: it is
 /// never read as feet.
 pub fn parse_length(text: &str) -> Result<(Len, &'static str), String> {
@@ -402,8 +413,36 @@ pub fn parse_length(text: &str) -> Result<(Len, &'static str), String> {
                 Err(fail(format!("has no unit: is it {t} ft or {t} in? Type the unit with it. A number with no unit is never read as feet (a laser has to be set to send its unit with the reading)")))
             } else if scan.peek() == Some(b',') {
                 Err(fail("has a comma, and 1,234 is a thousand to one reader and one and a bit to another; write the decimal with a point, like 25.5 ft, and no comma in the thousands (a laser can be set to send a point)".into()))
+            } else if scan.peek() == Some(b'-') && !spaced_dash(&scan) {
+                // 12-6, 12-6 1/2, 12-6-1/2: feet and inches, written as the trades write them (call 209 point 5). Only
+                // with the dash hard against the feet; "12 - 6" and "12-6 ft" are ranges, and are not read.
+                scan.eat(b'-');
+                if !scan.peek().is_some_and(|c| c.is_ascii_digit() || c == b'.') {
+                    return Err(fail(not_a_measure_said()));
+                }
+                let (mut inches, _) = scan.quantity().map_err(&fail)?;
+                match mark(&mut scan, typed)? {
+                    Mark::Feet => return Err(fail("has feet after the inches; write twelve feet six as 12-6, 12' 6\" or 12 ft 6 in".into())),
+                    Mark::Inches => {
+                        let by_mark = scan.s[scan.at - 1] == b'"';
+                        inches += fraction_after_mark(&mut scan, inches, by_mark).map_err(&fail)?;
+                    }
+                    Mark::None => {
+                        scan.spaces();
+                        if !scan.done() {
+                            return Err(fail("has something after the inches".into()));
+                        }
+                    }
+                }
+                if first_decimal || first.fract() != 0.0 {
+                    return Err(fail("has a part of a foot and inches as well; write the feet as a whole number, or the whole length as decimal feet".into()));
+                }
+                if inches >= 12.0 {
+                    return Err(fail(format!("has {inches} inches after the feet; the inches of a feet-and-inches length are less than 12")));
+                }
+                Ok((Len::FtIn([sign * first + 0.0, sign * inches + 0.0]), FT_IN))
             } else {
-                Err(fail("is not a measurement this program can read; write it like 25.5 ft, 306 in, or 25' 6 1/2\", with no commas".into()))
+                Err(fail(not_a_measure_said()))
             }
         }
         Mark::Inches => {
@@ -660,6 +699,30 @@ pub fn parse_number(text: &str) -> Result<f64, String> {
 /// A thing's size, wide by deep by high, given in feet and written the way its maker's
 /// sheet and the trade write it: in inches while every side is under 8 ft (`16 × 16 ×
 /// 8 in`, `24 × 30 × 60 in`), to the sixteenth; in feet and inches when a side is longer.
+/// A length in feet as inches to the sixteenth, no unit written: `4 13/16`, `6`, `3 5/8`.
+fn sixteenths(feet: f64) -> String {
+    let parts = (feet.abs() * 12.0 * 16.0).round() as u64;
+    let (whole, mut top, mut bottom) = (parts / 16, parts % 16, 16);
+    while top > 0 && top % 2 == 0 {
+        top /= 2;
+        bottom /= 2;
+    }
+    match (whole, top) {
+        (w, 0) => format!("{w}"),
+        (0, t) => format!("{t}/{bottom}"),
+        (w, t) => format!("{w} {t}/{bottom}"),
+    }
+}
+
+/// A length in feet as a person says inches in a sentence, to the sixteenth: "4 13/16 in", "6 in". A distance too small to reach
+/// a sixteenth is said so, and never as nothing.
+pub fn inches_said(feet: f64) -> String {
+    if feet.is_finite() && feet.abs() > 0.0 && (feet.abs() * 12.0 * 16.0).round() < 1.0 {
+        return "less than 1/16 in".to_string();
+    }
+    format!("{} in", sixteenths(feet))
+}
+
 pub fn size_said(sides: [f64; 3]) -> String {
     if sides.iter().any(|x| !x.is_finite()) {
         return "unknown".into();
@@ -667,20 +730,7 @@ pub fn size_said(sides: [f64; 3]) -> String {
     if sides.iter().any(|x| x.abs() >= 8.0) {
         return sides.map(|x| feet_as_ft_in(x, 16)).join(" × ");
     }
-    let inches = |feet: f64| {
-        let parts = (feet.abs() * 12.0 * 16.0).round() as u64;
-        let (whole, mut top, mut bottom) = (parts / 16, parts % 16, 16);
-        while top > 0 && top % 2 == 0 {
-            top /= 2;
-            bottom /= 2;
-        }
-        match (whole, top) {
-            (w, 0) => format!("{w}"),
-            (0, t) => format!("{t}/{bottom}"),
-            (w, t) => format!("{w} {t}/{bottom}"),
-        }
-    };
-    format!("{} in", sides.map(inches).join(" × "))
+    format!("{} in", sides.map(sixteenths).join(" × "))
 }
 
 /// A number of feet written as feet and inches to the nearest `denominator`th of an inch

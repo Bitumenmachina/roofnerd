@@ -26,6 +26,7 @@
 //!   attaching a wall's top or base, moving one end, moving or removing several at once.
 
 pub mod carry;
+pub mod connections;
 pub mod history;
 pub mod join;
 pub mod measure;
@@ -33,6 +34,7 @@ pub mod shapes;
 pub mod snap;
 pub mod stretch;
 
+pub use connections::{connection_add, connection_row, connection_set, connection_take, connections_outside_their_boxes, connections_standing, item_connections_worked, item_rows, ConnectionDone, ConnectionsFollowed, Near, Standing, StandsOff, WorkedConnection};
 pub use history::{History, UNDO_LIMIT};
 pub use shapes::{keep_shape_as, shape_block_add, shape_block_set, shape_block_take, BlockSet, ShapeChanged};
 pub use stretch::{move_wall, read_move, way_said, Followed, Moved, Resized, RoofMoved};
@@ -146,6 +148,28 @@ pub fn all_or_nothing<T>(job: &mut Job, f: impl FnOnce(&mut Job) -> Result<T, St
 /// is how the file tells things apart and not how a builder does.)
 pub(crate) fn add_numbered(job: &mut Job, parent: &str, kind: Kind) -> Result<String, String> {
     add_called(job, parent, kind, kind.stem(), 1, false)
+}
+
+/// Every name a thing under `parent` is called by on its level: the level's own things, so that two things on one level are
+/// never called alike.
+pub(crate) fn names_in_scope(job: &mut Job, parent: &str) -> std::collections::HashSet<String> {
+    let (parents, names): (std::collections::HashMap<String, Option<String>>, Vec<(String, String)>) = {
+        let mut q = job.world.query::<&Node>();
+        let all: Vec<(String, Option<String>, String)> = q.iter(&job.world).map(|n| (n.path.clone(), n.parent.clone(), n.name.clone())).collect();
+        (all.iter().map(|(p, up, _)| (p.clone(), up.clone())).collect(), all.into_iter().map(|(p, _, n)| (p, n)).collect())
+    };
+    let up = |from: &str| -> Vec<String> {
+        let mut chain = vec![from.to_string()];
+        while let Some(Some(next)) = parents.get(chain.last().map(String::as_str).unwrap_or("")) {
+            if chain.len() > 64 {
+                break;
+            }
+            chain.push(next.clone());
+        }
+        chain
+    };
+    let scope = up(parent).into_iter().find(|p| job.kind(p) == Some(Kind::Storey)).unwrap_or_else(|| parent.to_string());
+    names.iter().filter(|(p, _)| up(p).contains(&scope)).map(|(_, n)| n.clone()).collect()
 }
 
 /// A new element called `base`, told apart from every other thing on its storey by a
@@ -754,8 +778,11 @@ pub fn place_item_said(job: &mut Job, storey: &str, item: &str, at: P2, offset: 
     all_or_nothing(job, |job| {
         let offset = how.length(offset)?;
         let item = item_by_name(job, item)?;
-        let path = place_item_in(job, storey, &item, at, offset, how)?;
-        let notes = price_as_its_item(job, &path, &item)?.into_iter().collect();
+        let (path, connections) = place_item_in(job, storey, &item, at, offset, how)?;
+        let mut notes: Vec<String> = price_as_its_item(job, &path, &item)?.into_iter().collect();
+        // Where the item says where it connects, the thing has its connections from now (call 211); where its sizes are not all
+        // known it has none, and this says so.
+        notes.extend(connections);
         Ok((path, notes))
     })
 }
@@ -1069,7 +1096,7 @@ fn item_by_name(job: &mut Job, typed: &str) -> Result<String, String> {
 }
 
 /// One of an item set down, within a change that is all or nothing already.
-fn place_item_in(job: &mut Job, storey: &str, item: &str, at: P2, offset: Val<Len>, how: Entered) -> Result<String, String> {
+fn place_item_in(job: &mut Job, storey: &str, item: &str, at: P2, offset: Val<Len>, how: Entered) -> Result<(String, Option<String>), String> {
     storey_of(job, storey)?;
     let e = job.find(item).ok_or_else(|| format!("{item} is not in the job"))?;
     let (name, it) = match (job.world.get::<Node>(e), job.world.get::<Item>(e)) {
@@ -1084,7 +1111,8 @@ fn place_item_in(job: &mut Job, storey: &str, item: &str, at: P2, offset: Val<Le
     let path = add_called(job, storey, it.category, &name, 2, true)?;
     building::check_placed(&path, it.category, &placed)?;
     job.put(&path, placed)?;
-    Ok(path)
+    let note = connections::set_down(job, &path, item)?;
+    Ok((path, note))
 }
 
 /// What a run of cabinet boxes came to (call 155).
@@ -1293,7 +1321,7 @@ pub fn cabinets(job: &mut Job, storey: &str, wall: &str, room: &str, from: &str,
                 Some(up) => Val { value: Some(units::Len::One(up)), unit: "ft".into(), status: assumed.status, source: "wall boxes hang with their bottoms 54 in up, 18 in over a 36 in counter; the maker's catalog decides".into() },
                 None => how.length("0 ft")?,
             };
-            let path = place_item_in(job, storey, item, mid, offset, Entered { status: sure, source: &by })?;
+            let (path, _) = place_item_in(job, storey, item, mid, offset, Entered { status: sure, source: &by })?;
             to_wall(job, &path)?;
             job.add_line(&path, code, "1", Some(crate::Class::Material), false)?;
             job.set_division(&path, Some(code), b.division.or(crate::components::Division::of_number(12)).ok_or("Division 12 is not there")?)?;
@@ -1592,10 +1620,50 @@ pub fn turn(job: &mut Job, path: &str, degrees: f64, how: Entered) -> Result<f64
     })
 }
 
+/// What an item's being called something else did to what is set down from it (call 209 point 2).
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct Renamed {
+    /// How many things are set down from the item.
+    pub set_down: usize,
+    /// How many of them are called by the new name now.
+    pub renamed: usize,
+    /// The names left as they were: a person gave the thing a name of its own.
+    pub kept: Vec<String>,
+}
+
+/// Call an item something else, and say what it did to each thing set down from it.
+pub fn rename_item_counted(job: &mut Job, path: &str, name: &str) -> Result<Renamed, String> {
+    all_or_nothing(job, |job| rename_item_inner(job, path, name))
+}
+
+impl Renamed {
+    /// What a person is told of the things set down, in a builder's words, and nothing when none is set down. The
+    /// command line says what else it likes after it; the window says this as it stands.
+    pub fn said(&self) -> String {
+        let mut out = match (self.set_down, self.renamed) {
+            (0, _) => return String::new(),
+            (1, 1) => "The one set down is called that too.".to_string(),
+            (n, m) if n == m => format!("The {n} set down are called that too."),
+            (n, 0) => format!("None of the {n} set down is called that."),
+            (n, m) => format!("{m} of the {n} set down are called that too."),
+        };
+        match self.kept.len() {
+            0 => {}
+            1 => out.push_str(&format!(" 1 has a name a person gave it and keeps it: {}.", self.kept[0])),
+            n => out.push_str(&format!(" {n} have names a person gave them and keep them: {}.", self.kept.join(", "))),
+        }
+        out
+    }
+}
+
 /// Call an item something else. Two items cannot share a name, however it is typed;
 /// each thing set down from it is called what the item is. Returns how many were.
 pub fn rename_item(job: &mut Job, path: &str, name: &str) -> Result<usize, String> {
-    all_or_nothing(job, |job| {
+    rename_item_counted(job, path, name).map(|r| r.renamed)
+}
+
+fn rename_item_inner(job: &mut Job, path: &str, name: &str) -> Result<Renamed, String> {
+    {
         let e = job.find(path).ok_or_else(|| format!("no element {path}"))?;
         if job.world.get::<crate::Item>(e).is_none() {
             return Err(format!("{path} is not an item"));
@@ -1622,19 +1690,35 @@ pub fn rename_item(job: &mut Job, path: &str, name: &str) -> Result<usize, Strin
             let mut q = job.world.query::<(&Node, &Kind, &Placed)>();
             q.iter(&job.world).filter(|(_, _, p)| p.item.as_deref() == Some(path)).map(|(n, k, p)| (n.path.clone(), *k, p.clone())).collect()
         };
-        let count = placed.len();
+        let mut done = Renamed { set_down: placed.len(), renamed: 0, kept: Vec::new() };
         for (at, k, mut p) in placed {
             p.what.value = Some(name.to_string());
             building::check_placed(&at, k, &p)?;
             job.put(&at, p)?;
-            // One still called by the item's old name is called by the new one: it was
-            // told "the one set down is called that too" while every list went on
-            // naming it as before (the pictures of `itemneww`, read by a worker). One a
-            // person has given a name of its own keeps it.
-            if let Some(mut node) = job.find(&at).and_then(|e| job.world.get_mut::<Node>(e)) {
-                if node.name == was {
-                    node.name = name.to_string();
+            // A thing set down is called by its item and, after the first, its number: renamed, it is the new name and the
+            // same number (call 209 point 2: the second kept "Vanity, 36 in 2" while the window said it was renamed). A
+            // name a person gave it since is theirs: it is left, and counted as left. So is a name that another thing on
+            // its level already has.
+            let now = job.find(&at).and_then(|e| job.world.get::<Node>(e)).map(|n| n.name.clone()).unwrap_or_default();
+            let number = if now == was { Some(None) } else { now.strip_prefix(&format!("{was} ")).filter(|n| !n.is_empty() && n.bytes().all(|c| c.is_ascii_digit())).map(|n| Some(n.to_string())) };
+            match number {
+                Some(number) => {
+                    let wanted = match &number {
+                        Some(n) => format!("{name} {n}"),
+                        None => name.to_string(),
+                    };
+                    let there = job.find(&at).ok_or("the thing is not there")?;
+                    let parent = job.world.get::<Node>(there).and_then(|n| n.parent.clone()).unwrap_or_default();
+                    if names_in_scope(job, &parent).contains(&wanted) {
+                        done.kept.push(now);
+                    } else {
+                        if let Some(mut node) = job.find(&at).and_then(|e| job.world.get_mut::<Node>(e)) {
+                            node.name = wanted;
+                        }
+                        done.renamed += 1;
+                    }
                 }
+                None => done.kept.push(now),
             }
             // Its line made of the item is called by the item's new name (call 196).
             if let Some(te) = job.find(&at) {
@@ -1649,8 +1733,11 @@ pub fn rename_item(job: &mut Job, path: &str, name: &str) -> Result<usize, Strin
                 }
             }
         }
-        Ok(count)
-    })
+        // Where the item says where it connects, what is set down from it says the item's new name in the source of each (call 211);
+        // where each is does not move.
+        connections::follow(job, path)?;
+        Ok(done)
+    }
 }
 
 /// Every thing set down from an item is as big as the item says: after the item's

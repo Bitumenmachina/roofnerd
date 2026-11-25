@@ -8560,3 +8560,348 @@ reaching the roof at the gable's corners. Decided, point by point:
 
 **Left, and said**: a steep swing from above can put the roof's edge under the
 right panel; one round trip of a swing drifted 41 dots once and did not repeat.
+
+**Call 209, the model's side, as built (2026-11-25, by a Sonnet worker under
+`handoff/contracts/contract-209M.md`; `research/worker-report-call209M.md`; accepted by
+the lead's own run in the worker's copy).**
+- **Point 2**: an item renamed renames every thing set down from it, each keeping
+  its number, and gives back how many were renamed and how many kept. **A name a
+  person gave since is left, and counted as left, because it is theirs**; so is one
+  the new name would make the same as another thing on its level.
+- **Point 3**: the worker listed every phrase before changing one. A file's
+  "connection points" are "connections" and their "ties" "joints" where a builder
+  reads them; what is not written is said in counts and plain words; the model's
+  sentence names no command, and the command line adds its own.
+- **Point 4**: the two refusals say what stands in the way and what can be done
+  today (bring the model into a job of its own, or take out what it brought), and
+  that bringing in part of a model is not there yet.
+- **Point 5**: `12-6` is twelve feet six wherever a length is read, with
+  `12-6 1/2`, `6-0` and `-12-6`; a bare `-6`, `12 6`, `12-12` are still refused, in
+  words that are true. **No test or demonstration typed a length that way, so no
+  figure moved.** One place that reads free text could have met a range ("wainscot
+  3-4 high") and is guarded to read as it did.
+- **Point 8**: the model gives the counts of known, assumed and unknown for the
+  building and for the tool chest apart; their sum is the old count.
+Expectations moved, each for its point's words; two tests that held a reply to a
+length now hold its counts to that length and let the advice call 209 point 4 asks
+for follow them. **Owed to the window**: it still says its own sentences for a
+rename and for what a file left out, and counts the chest in the top bar; the calls
+it must make are in the report and in `contract-207W.md`, Part 2. **Not right**: a
+fitting brought in as another kind than the file says is named by its place in
+feet from the job's zero, which is not how a builder finds it.
+
+### Call 210. Another trade's model into a job that has a building: only its runs and equipment (2026-11-25; the lead's design; the model's side built, see "as built" below)
+
+Call 209 point 11. The mission is to show the clashes the drawings hid, and the
+commonest way a clash arrives is a mechanical or electrical designer's model laid
+into the estimator's own building. Today that is refused whole: the designer's file
+carries its own copy of the walls and floors, they lie over the job's, and nothing
+is brought in. The person is told to make a job of its own for the model, which is
+the opposite of what they came for.
+
+1. **What is brought in is chosen when the file is picked**: everything in it (as
+   today, and still refused where it lies over what the job has), or **only its
+   runs and what they serve**: ducts, pipes, conduit, cable, their fittings, the
+   fixtures and equipment they reach, their systems and what is connected to
+   what. Walls, floors, roofs, footings, doors, windows and rooms in the file are
+   then not asked for, and the reply counts them as that, by kind.
+2. **Levels**: a level in the file at the height of one the job has is that level
+   (call 206); at a height the job does not have, the run or thing is put on the
+   job's level it stands within and the reply says so; a level is not added for
+   runs alone.
+3. Everything brought in is Assumed and sourced to the file, as always. A second
+   bringing-in of the same file is refused as it is today.
+4. **The reply ends with what it was done for**: how many clashes the things
+   brought in now make with what the job already had, by kind (a conflict, a hole
+   to cut, a thing against its wall), worked by the model's own clash list before
+   and after, and where to see them.
+5. **Not in this call**: "only what the job lacks" (telling a wall in the file from
+   the same wall in the job) and choosing by one trade or one system. Said so they
+   are not built round.
+6. In the window the choice is asked when "Designer's model" is picked and the job
+   already has a level with something on it; an empty job is not asked.
+
+### Call 210, the model's side, as built; bringing a model in whole stands as it is (2026-11-25)
+
+Points 1 to 5 were built by a Sonnet worker under `handoff/contracts/contract-210M.md`
+(`research/worker-report-call210M.md`) and accepted by the lead's own run in the
+worker's copy.
+
+1. **The design's premise was wrong, and the worker said so before building.** A
+   model brought in whole into a job that has a building is not refused whole: it
+   brings in what does not lie over the job's own and names each wall and floor it
+   left, with what it lies over. A refusal comes only where nothing but levels
+   could come in. **Ruled: that stands.** It is the honest reading of "everything
+   in it", nothing is counted twice, and nobody is sent away to make a second job.
+   The whole reading's reply now adds that only the runs and the equipment they
+   serve can be chosen.
+2. **Only its runs** is one choice, said at the command line as `--only runs` and
+   to the window as `import_choosing(..., Bring::RunsOnly)`. What comes in: ducts,
+   pipes, conduit, cable, their fittings, fixtures and equipment, their systems
+   and what is connected to what. What is not asked for is counted by kind in the
+   reply ("not asked for: 1 floor and 4 walls"). **Furnishings are not asked for**:
+   a chair is neither a run nor a thing a run serves.
+3. **Levels, as point 2 said, with the rule made exact**: a thing on a level the
+   job does not have is put on the job's highest level whose floor is not above
+   it, and stands as far above that floor as it stood above the datum less that
+   floor's height; below the job's lowest level it goes on the lowest and the
+   reply says how many. No level is added.
+4. **The reply ends with the clashes**, in both readings: the model's own clash
+   list is worked before and after, the difference is given by kind (in the same
+   space, set against a wall, a hole to cut, laid in a floor or wall), and where
+   the job's own count moved for another reason the reply says by how much. The
+   window words where to see them; the command line names its verb.
+5. **The demonstration's duct is 10 ft, not 12** (the lead's figure ran it into
+   the sample's own branch duct and made a second clash). As built: 47 holes to
+   cut become 48; the price, $468,050.22, does not move.
+6. Not right, and said: a duct type brought in is made beside a type of the same
+   size the job already has (types are looked up by name); the window's half is
+   not built (`handoff/contracts/contract-210W.md`, STATUS.md has its
+   demonstration).
+
+### Call 211. Where an item connects: the bench, step D (2026-11-25; the lead's design, not built)
+
+Call 195, step D: "hot, cold, waste, supply, return, power, each a place on the
+item, so a run can be drawn to it and a clash can tell a connection from a
+conflict". A survey of both programs was made first
+(`research/survey-connections.md`). What it found decides most of this:
+
+- **Held already**: a thing set down can hold connections (what it takes, what it
+  carries, which way it goes, where, how big, each with how sure and where from);
+  the saved job keeps them; `takeoff` names each one that meets no run; a run that
+  is joined to a thing is cut back at the joint before clashes are worked, so a
+  connection is not a conflict; a BIM model writes and reads them.
+- **Not held**: an item says nothing of where it connects. A thing set down from
+  it has no connection until somebody joins a run to it by hand, and then the
+  connection is wherever that run happened to end. That is the wrong way round:
+  the maker's sheet says where the water comes in, and the run is drawn to it.
+- BIMCraft holds the places on its family, as formulas of the family's sizes,
+  with the way each faces. It never draws a pipe to one.
+
+1. **An item says where it connects, in rows**, a table of the tool chest beside
+   its shapes (`library/connections.csv`; `import connections`, `export
+   connections`). A row: the item; the connection's name; what it takes (pipe,
+   duct, conduit, power: the words the Connections list already uses); what it
+   carries, for a pipe (cold, hot, waste, vent, storm, gas); which way it goes
+   (in, out, both); where it is, as three figures, **across, back and up, the
+   same three a block of a shape is written in** (across from the middle, back
+   from the back, up from the foot), each a formula of `width`, `depth` and
+   `height`; the way it faces (back, front, left, right, up, down), ported from
+   BIMCraft's `direction` and kept to the six a tradesman says; its size; and how
+   sure and where from, once for the place and once for the size.
+2. **Kept on the item, in the job.** The saved job gains the rows on the item and
+   a facing on a connection, each written only where there is one: a job with
+   none is, byte for byte, the job it was. One function turns across, back and up
+   into the thing's own axes, and it is the one a shape's blocks use: a block and
+   a connection written with the same figures land on the same point.
+3. **Checked when written**: names differ on one item; only a pipe carries
+   something; every figure is a length and a formula of the three sizes; the
+   place is on or within the item's box, held at the sizes a shape is held at; at
+   most the 64 a thing may hold. A refusal names the item, the connection and the
+   figure, in inches at the item's own size.
+4. **A thing set down from the item has its connections from that moment**, each
+   where the item's sizes put it, each no surer than Assumed and no surer than
+   the row and the sizes it is worked from, each saying the item and the
+   connection it came from. They are open until a run reaches them, and `takeoff`
+   says so by name, as it does today for any connection.
+5. **A thing follows its item here as it does in size.** When the item's sizes or
+   rows change, the connections that came from the item are worked again on each
+   thing set down from it (told by name). A connection put on a thing by a run or
+   by a model brought in, with a name the item does not have, is left alone. A
+   run's end is never moved to follow: where a connection moves away from a run
+   that reached it, the reply says how many runs now stand off their connection,
+   and `takeoff` names them open.
+6. **Joined means the run's end stands at the point** (within 0.05 ft, the rule a
+   model brought in is already held to). Nothing is joined because it is near.
+   `connect` on a thing whose item has an open connection of the run's sort that
+   the run's end is not at is refused, saying which connection and how far off, in
+   inches, and which way; where the thing has no such connection it does what it
+   does today.
+7. **A clash says so**: where a run ends inside a thing that has an open
+   connection of its sort, the clash's line adds which connection and how far
+   away it is. No count moves.
+8. **The starter rows are only what a source gives.** BIMCraft's starter fixtures
+   say which connections a water closet, a washbasin, a bathtub and a kitchen sink
+   have and which way each faces; that is ported. Where each is, in US practice,
+   is taken from a published rough-in a worker can name and give the address of
+   (`research/connection-places.md`), never from memory; a starter item with no
+   such source gets no row, and the reply to `items` counts those. Every starter
+   place is Assumed, "a typical rough-in; the product is not chosen".
+9. **The sample whole house does not move**: its fixtures are not set down from
+   items, so not a figure, a clash or an open end of it changes, and its saved
+   job is byte for byte what it was. Held by test.
+10. **Not in this call**: an open connection as a line of the verify-in-field
+   list (a connection with no run is work not drawn yet, not a thing to measure);
+   a connection's load or fixture units; sizing a run from what it serves. The
+   window's half is its own job after this: connection points drawn and changed
+   on the bench, and a run's end catching one as it is drawn.
+
+### Call 212. A shape's refusal in a builder's words (2026-11-25; wording only)
+
+The window builder of contract 205W met the model's refusal on the bench when a
+block of a shape was typed 1 in above its item: "at the small size (0.4 × 0.3 ×
+0.5 ft) it reaches 0.0833 ft outside the box of the item's sizes, up (1 in above
+the box); a shape is drawn inside its box". The check is right (a shape is held
+inside its item at the sizes it is tried at, so a figure written as a plain
+length is caught on a small item). The words are not a builder's: nobody on site
+thinks of "the small size", of 0.0833 ft, or of a box.
+
+It is to read: `shape "vanity with a panel", block 4: on an item 4 3/4 in wide,
+3 5/8 in deep and 6 in high it would stand 1 in above the top; a shape is held
+inside its item at every size, so write the figure from the item's sizes`. The
+size it was tried at is said as an item's three sizes in inches, the way the
+program writes inches; the six ways out are above the top, below the foot, past
+the left side, past the right side, in front of the front, behind the back; the
+amount is in inches. Only the words change: what is refused and what is let
+through are the same, and each test or demonstration that held the old words is
+listed with the new before it is changed (`research/worker-report-call211M.md`,
+"Round 2").
+
+### Call 211, the model's side, as built, and what was ruled on the way; call 212 as built (2026-11-25)
+
+Built by a Sonnet worker under `handoff/contracts/contract-211M.md`
+(`research/worker-report-call211M.md`), in two rounds, and accepted by the lead's
+own run in the worker's copy: 1,052 tests in the six command-line crates (655, 28,
+6, 69, 122, 172), 56 command-line demonstrations, no output with FAIL in it, the
+gates, `tools/portmap.sh`, `tools/licenses.sh`, and `plumbline sixteen` writing
+the job it wrote before, byte for byte.
+
+1. **Points 1 to 9 are built as written**, with these made exact:
+   - **Joined is the network's own answer** (a run and a connection in one node,
+     within 0.01 ft), not the 0.05 ft the design said: 0.05 ft is only how far a
+     model's tie may stand from a run's end. There is one way of knowing it and
+     everything reads it: `takeoff`'s open list, `connect`'s refusal, the count
+     of runs left standing off, the clash's words. **A run that passes over a
+     connection's place is joined to it**, as the network has always held (a
+     branch taken off a main). The first round had two answers to that; the
+     second has one, held by a test on four cases.
+   - **A place is held to the item's box at the item's own size**, not at the
+     sizes a shape is tried at: a connection is one item's, where a shape is
+     many items'. A size typed on the item that would put a connection outside
+     it is refused, naming the connection.
+   - **A connection somebody measured on a thing stays where it was measured**
+     when the item changes, and the reply says so.
+   - An item cannot be removed while a thing is set down from it (as before), so
+     no connection is left that is nobody's. A renamed item keeps its
+     connections on every thing, and each says the new name.
+2. **The rows are kept beside the item, not in it**, so nothing that builds an
+   item changed. A connection gains which way it faces and which row of its item
+   it came from, each written only where there is one. `SPEC.md` has the keys.
+3. **Verbs**: `connection <job> <item> add|set|take`, `import connections`,
+   `export connections`, and `turn` (there was no way to turn a thing at the
+   command line). The starter rows come with `import connections <job> starter`
+   and not with the starter items, so no demonstration that brings the starter
+   items in moved.
+4. **Starter rows: two fixtures, five rows, and that is all a source gave.** The
+   water closet (waste 12 in from the back at the floor; cold water 6 in to the
+   left, 6 in up) and the lavatory (hot and cold 4 in each side of the middle,
+   21 in up; waste 19 in up), each from a published page named and quoted in
+   `research/connection-places.md`, each Assumed. No size is written for any:
+   none was sourced. The bathtub, the kitchen sink, the water heater and the
+   rest have none: the pages could not be read, or the place stands outside the
+   item (a tub's valve is above the tub). `items` counts the ones with none.
+   Which side is hot and which way "left" is read are the program's, and are
+   said there.
+5. **Which way a connection faces is not written to a BIM model**, and the reply
+   to writing one says how many.
+6. **Three test literals gained the two new fields so that they build**; no
+   expectation in them moved.
+7. **Call 212 is built with it**: the refusal now reads `shape "vanity with a
+   panel", block 4: on an item 4 13/16 in wide, 3 5/8 in deep and 6 in high it
+   would stand 1 in above the top; a shape is held inside its item at every
+   size, so write the figure from the item's sizes` (4 13/16, not the 4 3/4 the
+   call guessed: the program's own way of writing 4.8 in). Three expectations
+   held the old words and moved to the new, listed in the worker's report before
+   they were changed: one line in each of two test files and two lines of
+   `demos/shapes.sh`.
+8. Not right, and said: two connections at one place with no run are open by the
+   new function and not by `takeoff` (an edge nobody has drawn); a note on a
+   model read back still gives a place as three figures in feet; the window's
+   half is not built (`handoff/contracts/contract-211W.md`, STATUS.md has its
+   demonstration).
+
+### Call 213. The command line judged a second time on 2026-11-25: twenty-two findings ruled on
+
+A Sonnet judge that built none of it tried the last day's command-line work
+(calls 205 to 212) on a frozen copy of 3338f9a, from empty jobs
+(`research/judgment-cli-1125b.md`). What held: every place a connection stands
+after a turn, by hand; things following their item; a measured connection staying
+put; every table out and back byte for byte; another trade's runs brought in with
+every count agreeing with `takeoff`, `clashes` and the verify list and the price
+unmoved; a price set by name agreeing in the estimate, the price list, the
+workbook and the table. What did not, and what is ruled (F numbers are the
+judge's):
+
+1. **F16, a job destroyed. An item renamed to the name of a material is taken,
+   and the job can never be opened again.** A rename holds the rule bringing-in
+   already holds: two things in one place cannot go by one name. It is refused
+   and the job is byte for byte what it was. Every kind of thing that can be
+   renamed is held to it, by test.
+2. **F1, F7: how far a run stands off its connection is measured, not carried
+   over.** The reply gave how far the connection moved. It gives how far the
+   run's end is from the connection as both now stand. A run that already stood
+   off and is carried farther is said too, and so is a run that the change
+   brings onto its connection: the reply says who now stands off, who still
+   does and by how much, and who is now joined.
+3. **F2: a run that passes over a connection is joined to it, and that stands**
+   (the network has always held it: a trunk passing a register's connection
+   feeds it). But two things are said wrongly. `takeoff` calls it "a run meets
+   another along its length with no fitting" where the other is a thing's
+   connection: it says so, naming the thing and the connection. And where a run
+   joined to a thing goes on inside it, the clash's line says it is joined to
+   that connection and goes on so many inches inside, so the two lists read as
+   one fact.
+4. **F3: `connect` refused where a run's end is near an open connection of its
+   sort and outside the thing** says which connection and how far, in inches,
+   as it does inside the thing.
+5. **F4: where a size was typed is said by who typed it**: the window says
+   "typed in the window", the command line "typed at the command line". One
+   function, told by its caller.
+6. **F5: at the command line, the same size typed again is not a check.** Call
+   197 made the second typing of a size the check, for the window, where the
+   message says what happened and a person is looking at the item. At the
+   command line the same line run twice would mark a value Known that nobody
+   measured. There, the same size again changes nothing and says so, and a
+   value becomes Known the way every other does: with how sure and where from.
+   The window's way is unchanged. Each demonstration that typed twice at the
+   command line to make a size Known is listed and moved to the stated way.
+7. **F6**: a turn is said one way everywhere (from 0 up to 360 degrees,
+   counter-clockwise from east); a turn by nothing says it changes nothing.
+8. **F8, F20: a length inside a figure is written the way a length is written
+   anywhere**: `1/2 in`, `5 1/2 in`, `3 ft 6 in`, `3'6"`. A number, a slash, a
+   number and a unit is a fraction of that unit; nothing that was a figure
+   before reads otherwise. A refusal says how to write it and shows no stray
+   marks. A minus is always a minus.
+9. **F9: a size typed on a connection says it was typed**: it takes how sure
+   and where from as every value does, and without them is Assumed, "typed at
+   the command line; not checked against the maker's sheet". It never wears the
+   place's source.
+10. **F10, F11, F12, F14, F17, F19: words.** A workbook is not called CSV; rows
+   the job already has are counted as that, not as no rows; each bad row of a
+   table gives its own reason, once; a refused size names the size typed, and
+   says to move the connection first; counts take their plural ("4 walls", "1
+   of them stands") and a thing has one word in every reply (a piece of
+   equipment, a fixture); a price that is not a figure says how to write one,
+   and `1e3` is not a price; "take the item's shape off" names the way that
+   exists to draw the item as something else.
+11. **F13: a thing above the top of the job's highest level is flagged.** The
+   note speaks of the things, not the level ("each was put on the level it
+   stands within"), and things that stand above the top of the highest level,
+   or below the lowest, are counted and named with how far, and the reply says
+   to check the model's heights against the job's.
+12. **F15: `--only runs` brings every fixture and piece of equipment, reached by
+   a run or not** (an air handler is wanted before its ducts are drawn). That
+   is what was built; the usage line said "they reach" and is corrected. The
+   stray "?none" beside a thing on no system goes.
+13. **F18: a shape of the job's own that no item is drawn as is written out with
+   the rest**, and the reply counts them. Out and back stays byte for byte.
+14. **F21: a refused figure is tried at the item's own size first.** Where it
+   fails there, the refusal speaks of that item and its sizes. Only where it
+   holds there and fails on the smaller item a shape is also tried on does it
+   say so, and why: a shape has to hold on a smaller item too.
+15. **F22: a block with no thickness, or written backwards, is refused**, naming
+   the figure and both ends, at the item's own size and at the sizes a shape is
+   tried at. If a starter shape has such a block at a tried size, the worker
+   stops on it and says which.
+16. Not changed: a price to a fraction of a cent is taken (unit prices are
+   written so); lines are rounded and then added, as before.
