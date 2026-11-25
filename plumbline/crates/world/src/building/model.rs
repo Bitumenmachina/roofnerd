@@ -799,8 +799,10 @@ pub fn check_item(path: &str, kind: Kind, t: &Item) -> Result<(), String> {
         return Err(format!("{path} item: is {:#}; an item is a piece of equipment, a fixture or a furnishing", t.category));
     }
     let what = format!("{path} item");
-    if let Some(form) = &t.form {
-        super::forms::drawn_as(form).map_err(|why| format!("{what}: drawn as: {why}"))?;
+    // What it is drawn as is a word of the built-in forms or a shape of the job's: whether
+    // there is such a shape is for whoever holds the job to say (`shape::check_drawn_as`).
+    if t.form.as_deref().is_some_and(|f| f.trim().is_empty() || f.trim() != f) {
+        return Err(format!("{what}: drawn as: has to name a shape, or be left out"));
     }
     if t.priced_as.as_deref().is_some_and(|a| a.trim().is_empty() || a.trim() != a) {
         return Err(format!("{what}: priced as: has to name an assembly, or be left out"));

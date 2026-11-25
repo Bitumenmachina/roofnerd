@@ -175,7 +175,8 @@ fn soffit_lies_under_the_overhang_looks_down_and_its_area_is_the_priced_line() {
     assert!(near(rs.iter().map(|p| len3(p) * p.width).sum::<f64>(), 30.1869));
 }
 
-// Corner boards: 8 pieces, 2 at each of the 4 outside corners (one on each face), each 9 ft from the wall's foot to its top.
+// Corner boards: 8 pieces, 2 at each of the 4 outside corners (one on each face), each from the wall's foot to its top at that corner:
+// 9 ft on the south and north walls (under an eave), 9.5 ft on the east and west walls (under a rake; call 204: it was 9 ft on all).
 // The model's rule: a board's back lies on its wall's outside face, flush with the corner of the outside faces, so the middle of its
 // back is half a board (3 1/2 in) in from the corner along the wall: the south-west corner of the outside faces is (-0.25, -0.25), the
 // south wall's board is at east -0.25 + 0.1458, north -0.25 (the lead's hand figure puts the piece AT the corner; it is its outer edge).
@@ -194,7 +195,8 @@ fn corner_boards_stand_two_at_each_outside_corner_nine_feet_on_their_own_faces()
     let ne_on_north = c.iter().find(|p| p.of == h.walls[2] && near(p.from[0], 24.25 - half)).expect("north wall, east end");
     assert!(at(ne_on_north.from, 24.25 - half, 16.25, 0.0) && at(ne_on_north.face, 0.0, 1.0, 0.0), "{ne_on_north:?}");
     for p in &c {
-        assert!(near(len3(p), 9.0) && near(p.from[0], p.to[0]) && near(p.from[1], p.to[1]), "{p:?}");
+        let rises = p.of == h.walls[1] || p.of == h.walls[3];
+        assert!(near(len3(p), if rises { 9.5 } else { 9.0 }) && near(p.from[0], p.to[0]) && near(p.from[1], p.to[1]), "{p:?}");
         assert!(near(p.width, 3.5 / 12.0) && near(p.thickness, 0.75 / 12.0));
         assert_eq!(p.line, "Corner boards");
         assert_eq!(p.status, Status::Assumed);
@@ -202,7 +204,7 @@ fn corner_boards_stand_two_at_each_outside_corner_nine_feet_on_their_own_faces()
     for w in &h.walls {
         assert_eq!(c.iter().filter(|p| &p.of == w).count(), 2, "{w}");
     }
-    assert!(near(c.iter().map(|p| len3(p)).sum::<f64>(), 72.0));
+    assert!(near(c.iter().map(|p| len3(p)).sum::<f64>(), 74.0), "4 x 9.0 + 4 x 9.5 = 74.00 (72.00 before call 204)");
 }
 
 // Casing: the window 4 pieces (head 3, sill 3, two sides 5: 16.00 LF); the door 3 pieces (head 3, two sides 6 ft 8 in: 16.33 LF, none
@@ -287,11 +289,12 @@ fn a_piece_is_known_only_when_everything_it_rests_on_is() {
     let ps = trim::pieces(&mut k.job);
     assert!(!ps.is_empty());
     assert!(ps.iter().all(|p| p.status == Status::Known), "{:?}", ps.iter().filter(|p| p.status != Status::Known).map(|p| (p.kind, p.status)).collect::<Vec<_>>());
-    // The same house with the roof only Assumed: what rests on the roof (fascia, soffit, rakes) is Assumed; the walls' boards stay Known.
+    // The same house with the roof only Assumed: what rests on the roof (fascia, soffit, rakes) is Assumed; the boards of the walls under an eave stay Known, and those of the
+    // east and west walls, which rise to the roof, are Assumed with it (call 204 point 2).
     let mut m = house(known(), Status::Assumed, true);
     let ps = trim::pieces(&mut m.job);
     for p in &ps {
-        let on_roof = matches!(p.kind, PK::Fascia | PK::RakeFascia | PK::Soffit | PK::RakeSoffit);
+        let on_roof = matches!(p.kind, PK::Fascia | PK::RakeFascia | PK::Soffit | PK::RakeSoffit) || (p.kind == PK::CornerBoard && (p.of == m.walls[1] || p.of == m.walls[3]));
         assert_eq!(p.status == Status::Assumed, on_roof, "{:?} {:?}", p.kind, p.status);
     }
 }

@@ -125,7 +125,8 @@ fn fascia_and_soffit_on_the_eaves_and_the_rakes_come_to_the_hand_figures() {
     assert_eq!((soffit.unit.as_str(), soffit.status), ("SF", Status::Assumed));
 }
 
-// Each wall has 2 outside corners: 2 x 9 = 18.00 LF a wall; four walls 72.00 LF.
+// Each wall has 2 outside corners: 2 x 9 = 18.00 LF on the south and the north wall (under an eave), 2 x 9.5 = 19.00 LF on the east and
+// the west (under a rake, call 204); four walls 18 + 19 + 18 + 19 = 74.00 LF (72.00 before call 204).
 #[test]
 fn each_wall_of_the_box_has_two_outside_corners_and_eighteen_feet_of_corner_board() {
     let (mut h, _) = box_house(assumed(), Status::Assumed);
@@ -133,13 +134,14 @@ fn each_wall_of_the_box_has_two_outside_corners_and_eighteen_feet_of_corner_boar
         h.job.add_line(&w, "Corner boards", "corner_board_length", Some(Class::Material), false).unwrap();
     }
     h.job.derive();
-    for w in h.walls.clone() {
+    for (k, w) in h.walls.clone().into_iter().enumerate() {
         let (n, l) = (figure(&mut h.job, &w, "outside_corners"), figure(&mut h.job, &w, "corner_board_length"));
         assert_eq!((n.value, n.unit.as_str(), n.status), (Some(2.0), "EA", Status::Assumed), "{w}: {n:?}");
-        assert_eq!((l.value, l.unit.as_str(), l.status), (Some(18.0), "LF", Status::Assumed), "{w}: {l:?}");
+        let each = if k == 1 || k == 3 { 19.0 } else { 18.0 };
+        assert_eq!((l.value, l.unit.as_str(), l.status), (Some(each), "LF", Status::Assumed), "{w}: {l:?}");
     }
     let total: f64 = h.walls.clone().iter().map(|w| quantity(&mut h.job, w, "Corner boards").value.unwrap()).sum();
-    assert_eq!(total, 72.0);
+    assert_eq!(total, 74.0);
 }
 
 // A window 3 by 5: 2 x (3 + 5) = 16.00 LF. A door 3 by 6 ft 8 in: 3 + 2 x 6.6667 = 16.33 LF.

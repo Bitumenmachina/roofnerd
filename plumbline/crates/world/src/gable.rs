@@ -337,6 +337,24 @@ pub(crate) fn gables(world: &mut World, wanted: Option<&HashSet<String>>) -> Has
     out
 }
 
+/// The wall's top at `s` feet along its line from its first end: read off the top line (`Gable::top`) between the two points
+/// either side of it. None where the wall has no top line (no gable) or `s` is outside the stretch the line covers, where the wall
+/// stands at its own top. A wall's top at a place along it is BIMCraft's idea (`top_at`, `walls.rs`), which reads the roof a wall is
+/// attached to; here it is read off the model's own line, which nothing else works out again (call 204).
+pub(crate) fn top_over(top: &[(f64, f64)], s: f64) -> Option<f64> {
+    let (first, last) = (top.first()?, top.last()?);
+    if s < first.0 - TOL || s > last.0 + TOL {
+        return None;
+    }
+    for pair in top.windows(2) {
+        let (a, b) = (pair[0], pair[1]);
+        if s <= b.0 + TOL {
+            return Some(if (b.0 - a.0).abs() < 1e-9 { a.1.max(b.1) } else { a.1 + (b.1 - a.1) * ((s - a.0) / (b.0 - a.0)).clamp(0.0, 1.0) });
+        }
+    }
+    Some(last.1)
+}
+
 /// Every wall's gable in the job, in the order of their paths, worked out whether a line names it or not.
 pub fn figures(job: &mut Job) -> Vec<Gable> {
     let mut all: Vec<Gable> = gables(&mut job.world, None).into_values().collect();

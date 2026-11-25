@@ -10825,7 +10825,21 @@ depth, a 20 mm lip but no more than 5 %):
 6. A cost line's quantity written `min(net_area, 100 SF)` on a wall of 120 SF net
    reads 100.00 SF and shows what it is made of; on a wall of 80 SF, 80.00 SF.
 
-Not built, and not contracted until steps A and B are in.
+**Built (2026-11-24), the model's and the command line's half; call 203.**
+`research/worker-report-call198.md`. Run by the lead in the worker's copy: the six
+command-line crates' tests pass (world 560); all 52 command-line demonstrations
+pass with no FAIL in their words, `demos/shapes.sh` holding the six points; the
+three gates, `portmap.sh` and `licenses.sh` pass. The thirteen shapes are rows of
+`library/shapes.csv` and the code that drew them is gone, held to it first: 13
+shapes at three sizes, 141 blocks. A block may say when it is there (the bed's
+second pillow, the sink's divider), and a shape whose block reaches outside its
+item's box is refused. `min`, `max` and a size with its unit are in the formula
+language, for cost lines too (a wall of 120 SF priced by `min(net_area, 100 SF)`
+reads 100.00 SF). **Not built: the window's half.** An item drawn as a shape the
+job brought in is a plain box in the window; nothing of a shape is seen or typed
+on the bench. **Not run when this was written**: the window against this change
+(the functions it calls keep their names and forms; it is built at the merge with
+the window fix job).
 
 ## An assembly changed for another: a demonstration, written before it is built (call 199; 2026-11-24)
 
@@ -10887,6 +10901,221 @@ points and 147 ties in the sample house's file; IfcOpenShell finds no fault.
 (ruled: written, with the next job); a model comes in slowly; the window has not
 been run on it.
 
+## A corner board as tall as its wall at that corner: a demonstration, written before it is built (call 204; 2026-11-24)
+
+`demos/trim.sh` and `demos/gable.sh` extended, at the command line. The house of
+`demos/gable.sh`: 24 ft by 16 ft, walls 9 ft, the roof 9.5 ft over the walls' lines
+at an eave and rising half a foot a foot. By hand:
+
+1. **A gable roof** (gables on the east and west walls; their top lines
+   (0, 9.5) (8, 13.5) (16, 9.5)). Each of the four walls has two outside corners.
+   South and north, under the eaves: 2 x 9 = **18.00 LF** each, as now. East and
+   west: 2 x 9.5 = **19.00 LF** each (18.00 now). The house: 18 + 19 + 18 + 19 =
+   **74.00 LF** (72.00 now).
+2. **A shed roof** (eave on the south, rising north; east wall's top (0, 9.5)
+   (16, 17.5), north wall level at 17.5, west wall (0, 17.5) (16, 9.5)). South:
+   2 x 9 = **18.00 LF**. East: 9.5 + 17.5 = **27.00 LF**. North: 2 x 17.5 =
+   **35.00 LF**. West: 17.5 + 9.5 = **27.00 LF**. The house: **107.00 LF** (72.00
+   now).
+3. **A hip roof**: every wall 18.00 LF, the house 72.00 LF: nothing moves.
+4. `trim --pieces` on each: the pieces of every corner-board line add to those
+   figures, and a piece on the shed's east wall at its north corner is 17.5 ft.
+5. The boards read `~` where the roof is traced (Assumed), as the gable's area does.
+6. The sample whole house (a hip roof): its corner boards are the 128 LF they were
+   and its price the $468,050.22 it was.
+7. With the wainscot wall's line (`wainscot` 3 ft) on the shed's east wall:
+   (9.5 - 3) + (17.5 - 3) = **21.00 LF**.
+
+And, on a model (`demos/ifc-whole.sh` extended): a made-up file with a beam 12 ft
+long, 3.5 in by 9.25 in, and a column 8 ft high, 3.5 in square, brings in **1 beam
+and 1 post** with those sizes, Assumed; the sample house written out has its two
+elbows with no size in it and they come back, size Unknown, so the second job has
+the first job's fittings but for the two the tool refuses; and the time the sample
+house takes to come in is printed before and after.
+
+**Built (2026-11-24/25).** `research/worker-report-call204.md`; DECISIONS.md, "Call 204,
+as built". Run by the lead in the worker's copy: the six command-line crates' tests
+pass (936: world 567, ifc 47); all 52 command-line demonstrations pass with no FAIL
+in their words; the three gates, `portmap.sh` and `licenses.sh` pass. **Changed
+figures**: corner boards on a house with a gable or a shed roof (74.00 and 107.00 LF
+on the demonstration's houses, 72.00 before); a made-up model's ridge beam now comes
+in. The sample whole house did not move. **Not run**: the window; the pictures of
+`trimw`, `gablew` and `gableendw` at a gable's corners are stale until they are run
+on a build that has this.
+
+## A shape changed by hand: a demonstration, written before it is built (call 205; 2026-11-24)
+
+`demos/shapes.sh` extended, at the command line (the model's half). The starter chest;
+"Vanity, 36 in" (36 in wide, 21 in deep, 34 1/2 in high, drawn as base cabinet) set
+down twice; "Base cabinet, 36 in" beside it in the chest. By hand:
+
+1. The vanity's shape kept as "vanity with a panel": the job has one shape of its
+   own, three rows, word for word the base cabinet's; the vanity is drawn as it;
+   "Base cabinet, 36 in" is still drawn as base cabinet. The reply says 1 item is
+   drawn as it and 2 set down follow.
+2. A block added and its figures set: timber, a box, across `-width / 2 + 2 in` to
+   `width / 2 - 2 in`, back `depth - 1 in` to `depth`, up `4 in` to
+   `height - 6 in`. The vanity's blocks are **4**; the new one reads across
+   **-16 in to 16 in**, back **20 in to 21 in**, up **4 in to 28 1/2 in**.
+3. Its "Up to" set as `height + 1 in`: refused, naming the block, the size it was
+   tried at and that it reaches 1 in above the item's box; the shape is as it was.
+4. A block added to "base cabinet": refused: a starter shape is not changed; keep
+   it as a new shape first.
+5. A table of shapes brought in with a shape called "base cabinet": refused: the
+   name is a starter shape's.
+6. The fourth block taken away: 3 blocks, the figures of step 1.
+7. The job saved after step 2, opened and saved again: the same to the byte; the
+   shapes written out as a table have the four rows.
+
+**Built (2026-11-25), the model's half.** `research/worker-report-call205M.md`;
+DECISIONS.md, "Call 205, the model's half, as built". Run by the lead in the worker's
+copy: the six command-line crates' tests pass (958: world 589); all 52 command-line
+demonstrations pass with no FAIL in their words, `demos/shapes.sh` holding the seven
+steps; the three gates, `portmap.sh` and `licenses.sh` pass. With it, **what is set
+down on a level is the model's count**, printed by `takeoff` under each level
+(`demos/lists.sh` step 4 gained its two lines: the one expectation that moved).
+**Not run**: the window. Its window half is call 205 point 6, contracted
+(`handoff/contracts/contract-205W.md`), its demonstration below.
+
+## A shape on the bench: a demonstration, written before it is built (call 205, point 6; 2026-11-25)
+
+`demos/shapebenchw.sh`, in the window, on the house `demos/benchw.sh` uses, with the
+starter tool chest and "Vanity, 36 in" (36 in, 21 in, 34 1/2 in; drawn as base
+cabinet) set down twice. By hand:
+
+1. The vanity on the bench. Under its sizes, **Shape** lists **3** blocks: timber,
+   timber, worktop. No "Add block" is offered; "Keep as a new shape" is, with its
+   line of why.
+2. A click on the third row: the top is outlined on the bench; its rows read up
+   from `height - min(40 mm, 0.06 * height)` to `height`, across `-width / 2` to
+   `width / 2`. Typing on one of them is refused in words: a starter shape is kept
+   as the job's own first.
+3. **Keep as a new shape**, named `vanity with a panel`: the message says 1 item is
+   drawn as it and 2 set down follow; the item's "Drawn as" reads that name, marked
+   the job's own; the picture is the vanity as it was (looked at beside step 1's).
+4. **Add block**: a fourth row, picked. Its figures typed: across `-width / 2 + 2 in`
+   to `width / 2 - 2 in`, back `depth - 1 in` to `depth`, up `4 in` to
+   `height - 6 in`. On the bench a panel stands on the vanity's front, 2 in in from
+   each side: measured in the picture, its width is 32 / 36 = **0.889** of the
+   vanity's (held between 0.86 and 0.92).
+5. Its "Up to" typed as `height + 1 in`: refused, in the model's words, that it
+   reaches 1 in above the box; the row still reads `height - 6 in`.
+6. **Take block away** with the fourth picked: 3 rows, and the picture is step 3's.
+   **Undo**: 4 rows again.
+7. **Back to the house**: both vanities set down show the panel (looked at in a
+   close picture of one). "Base cabinet, 36 in" on the bench still has 3 blocks and
+   no panel.
+8. Saved with F2: `plumbline shape` lists `vanity with a panel` with its four rows,
+   the fourth across **-16 in to 16 in**, back **20 in to 21 in**, up **4 in to
+   28 1/2 in** at the vanity's sizes; and the same steps made with the command
+   line's `shape` verb on a copy of the starting job give the same file, to the
+   byte.
+
+Not built yet.
+
+## The command line judged (2026-11-25), and its findings fixed: a demonstration, written before it is built (call 206)
+
+`research/judgment-cli-1125.md`: no wrong money in the corner boards, an assembly
+changed for another or the sample house; three findings that are more than words,
+and eleven of wording. `demos/judged-1125.sh`, at the command line. By hand:
+
+1. The starter chest and assemblies; "Refrigerator" priced as "Bought and set", set
+   down once, $1,000.00 in the price list; **7** typed as the quantity of its line:
+   **$7,000.00**. Priced as "Mechanical equipment": the reply names the line taken
+   off, **the 7 typed by hand where the assembly writes 1, and its $7,000.00**.
+   Priced as "Bought and set" again: 1 EA, **$1,000.00**. The same with
+   `apply --change` on a wall's line with 40 typed.
+2. A shape of the job's own with a block up to `height + max(0 in, width - 10 ft)`:
+   the table comes in (it is inside the box at the three sizes, and the reply says
+   that is what was tried). An item 144 in wide drawn as it: **refused**, naming
+   the item and the block and that it reaches **24 in** above the box (144 in is
+   12 ft; 2 ft over 10). An item 100 in wide drawn as it, then sized to 144 in:
+   the size is refused the same way. `check` on a job made to hold one says it.
+3. The sample whole house, and a made-up model of one level at 0 ft with one wall
+   16 ft long standing in the living room, brought in: the job has the levels it
+   had (no second level at 0 ft); the reply says the file's level is the job's
+   first floor; and it names the living room, its area before and after as
+   `takeoff` gives them (the judge read 614.7 and 365.7 SF) and its receptacles
+   (10 and 8).
+4. Each of points 4 to 14 of call 206, one step each, the reply quoted in the
+   script.
+
+**Built (2026-11-25).** `research/worker-report-call206.md`; DECISIONS.md, "Call 206, as
+built". Run by the lead in the worker's copy: the six command-line crates' tests
+pass (983: world 608, ifc 53); all 53 command-line demonstrations pass with no FAIL
+in their words, `demos/judged-1125.sh` holding its fourteen steps; the three gates,
+`portmap.sh` and `licenses.sh` pass. No figure of money or quantity moved; the
+expectations that moved gained the words a point asks for. **Not run**: the
+window. **Not right**: a spacing below nothing is still taken; the window does not
+yet say what was typed on a line that comes off when an assembly is changed there.
+
+## A price typed where it is seen: a demonstration, written before it is built (call 207, the model's half; 2026-11-25)
+
+`demos/pricelist.sh`, at the command line. An empty job, the starter assemblies and
+the starter tool chest. Every price is made up. By hand:
+
+1. "Water heater, 50 gal" priced as "Bought and set" and set down twice. The price
+   list as the model gives it has the heater at its head with **no price**, 2 lines
+   waiting on 2 things, and no dollars.
+2. The estimator's price set to $1,850.00: the reply says **2 lines on 2 things**
+   are priced and the job cost goes from no figure for them to **$3,700.00** (the
+   labor lines still wait and are said). The row reads $1,850.00, 2 lines,
+   $3,700.00 riding.
+3. A supplier "Northside Supply" set at $1,790.00 for it: the reply says the
+   supplier is new to the job; the row shows both; side by side the supplier's
+   column for the two lines reads **$3,580.00**.
+4. The estimator's price cleared: the row is at the head again with no price; the
+   two lines read no price; nothing reads $0.00. Set again to $1,850.00.
+5. $0.00 set for it: taken, and the row and the reply mark it as entered at
+   nothing; the lines read **$0.00** marked, not blank.
+6. A name that is neither a material nor an item: refused, naming what the job
+   has that is near it. A price of `abc`, and one below nothing: refused.
+7. A material a line of a wall is made of (the script picks one the starter
+   library has, and works its dollars by hand beside it): priced the same way, by
+   the same change.
+8. The price list written out with `export prices` after all of it, brought into a
+   second job with the same things: the two jobs' price lists are the same row for
+   row.
+
+**Built (2026-11-25), the model's half.** `research/worker-report-call207M.md`;
+DECISIONS.md, "Call 207, the model's half, as built". Run by the lead in the worker's
+copy: the six command-line crates' tests pass (999: world 624); all 54 command-line
+demonstrations pass with no FAIL in their words, `demos/pricelist.sh` among them;
+the three gates, `portmap.sh` and `licenses.sh` pass. No figure of money or quantity
+moved; one refusal in `demos/d5.sh` reads in other words. **Not run**: the window.
+Its window half is call 207 points 1 to 3, contracted
+(`handoff/contracts/contract-207W.md`), its demonstration below.
+
+## The price list in the window: a demonstration, written before it is built (call 207, points 1 to 3; 2026-11-25)
+
+`demos/pricesw.sh`, in the window. An empty job, the starter assemblies and the
+starter tool chest brought in; "Water heater, 50 gal" set down twice and priced as
+"Bought and set" from its panel. Every price is made up. By hand:
+
+1. The estimate window has a **Prices** tab. Its first row is the water heater,
+   **no price**, 2 lines on 2 things; nothing on the tab reads $0.00. The top bar
+   reads no figure.
+2. $1,850.00 typed on the heater's price: the window says 2 lines on 2 things are
+   priced; the row reads $1,850.00 and **$3,700.00** riding; the Estimate tab's two
+   heater lines read $1,850.00 each.
+3. A supplier added, `Northside Supply`, and $1,790.00 typed for the heater under
+   it: the row shows both; the Estimate tab's column for that supplier reads
+   **$3,580.00** for the two lines.
+4. The estimator's price cleared: "no price" again, the row back at the head, the
+   two lines without a price. **Undo**: $1,850.00 again.
+5. `abc` typed: refused in words; the cell reads $1,850.00.
+6. The heater's panel, under "Priced as", reads $1,850.00; $1,900.00 typed there:
+   the Prices tab's row reads $1,900.00 and **$3,800.00** riding. The same from the
+   bench.
+7. $0.00 typed: taken, marked as entered at nothing on the row and on the
+   Estimate tab; set back to $1,850.00.
+8. Saved with F2: `plumbline price <job> list` prints the heater at $1,850.00,
+   Northside Supply at $1,790.00, 2 lines on 2 things, $3,700.00 riding; and the
+   same prices set with the command line on a copy of the starting job give the
+   same file, to the byte.
+
+Not built yet.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **As of 2026-11-24, 22:10 UTC (the lead). Read this block first; what is below it is
@@ -10908,11 +11137,10 @@ demonstrations passed**, each on its first proper run: `benchw`, `dressw`,
 `itemlibw`, `glassw`. **On 8820f44 itself eight window demonstrations passed**, each on its first
 run, on the frozen build of that tree: `pricew` (42 starter assemblies), `itemlibw`,
 `itemneww`, `itemsw`, `benchw`, `bringw`, `moneyw`, `cabinetsw`; their pictures are
-committed with this note. **`tools/committed.sh` had not been run since a0d8477
-when this was written**: each piece was pushed on its own checks so that it could
-not be lost with the session, and the commit check is run on the commit that
-carries this note. The
-commit that reports it says so; if none does, run it first. It is not a release
+committed with this note. **`tools/committed.sh` passed on eeca2b7** (2026-11-24, 22:54
+UTC; 63 test runs), the commit that holds all of the above; it had not been run
+since a0d8477. The shape work (call 203) went in after it on the command line's
+checks alone. It is not a release
 candidate and is not tagged.
 
 **The machine.** Each commit runs the earlier program's build and tests through the
@@ -10958,11 +11186,17 @@ above):
      command line's half is **built** and in the pushed head. **Owed: its window
      half**, "Priced as" on the item's panel and on the bench: contract 197W,
      point 18.
-   - Step C (an item's shape as data, call 198): a command-line worker was started
-     on `handoff/contracts/contract-198.md` at 21:50 UTC in a second working copy.
-     If `research/` has no `worker-report-call198.md`, it did not land: start it
-     again from the contract. Its window half (blocks listed and typed on the
-     bench) is not contracted.
+   - Step C (an item's shape as data, calls 198, 203 and 205): the model's and the
+     command line's half is **built**, the changes a bench needs among them (a
+     shape kept as the job's own; a block added, set, taken away). **Owed: its
+     window half**: `handoff/contracts/contract-205W.md`, its demonstration above
+     ("A shape on the bench"). It is the next window job after 197W.
+   - **A price typed in the window** (call 207). The window has no way to type a
+     material's price, or an item's: both come only from a price list brought in.
+     Decided: a "Prices" tab of the estimate window, and the same price on an
+     item's panel. The model's change is **built**; the window's half is
+     contracted (`handoff/contracts/contract-207W.md`, its demonstration above: "The
+     price list in the window") and follows the shape on the bench.
    - D (where an item connects: the model now holds connections and the BIM file
      writes them, call 202, so this is a window job and a column of the chest), E
      (a maker's BIM object brought in as an item), F (a cabinet by rule): not

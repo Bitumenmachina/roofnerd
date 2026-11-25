@@ -4184,12 +4184,12 @@ fn j10_3_a_line_whose_quantity_is_nothing_says_so() {
     let detail = priced_of(&mut job, "plane-0003", "detail");
     assert_eq!(detail.value, Some(0.0));
     assert!(detail.note.contains("1 of its 1 lines comes to nothing because the quantity is 0"), "{}", detail.note);
-    // A price of $0 that somebody entered is an answer, and carries no note.
+    // A price of $0 that somebody entered is an answer, and is named on the line (call 206 point 13: it was said to carry no note).
     let mut job = sample();
     job.set("plane-0003", "unit_cost", Some("0"), Status::Known, "included in the panel price").unwrap();
     job.derive();
     let d = extension_of(&mut job, "plane-0003", "Copper standing seam, installed");
-    assert_eq!((d.value, d.note.as_str()), (Some(0.0), ""));
+    assert_eq!((d.value, d.note.as_str()), (Some(0.0), "its price is $0.00 as entered: nothing is charged for it"));
 }
 
 #[test]

@@ -500,18 +500,47 @@ fn end_of(ends: &Ends, all: &[&WallRec], i: usize, e: usize) -> Result<(bool, Ve
     }
 }
 
+/// A wall's outside corners and the corner boards they take (call 204).
+#[derive(Clone, Debug)]
+pub(crate) struct Corners {
+    pub(crate) count: Derived,
+    pub(crate) board: Derived,
+    /// The board at each outside corner, in feet, by end (the wall's first end first): as long as the wall is tall there.
+    pub(crate) up: Vec<(usize, f64)>,
+}
+
+/// How tall a wall is at one of its ends, from its foot: its own height, or, where it has a gable (call 192's line, worked nowhere
+/// else), the height of its top there. The second is the status of the roof it rests on, where it rests on one.
+pub(crate) fn height_at_end(w: &WallRec, gable: Option<&crate::gable::Gable>, end: usize) -> Result<(f64, Option<Status>), String> {
+    let own = w.height.clone()?;
+    let Some(g) = gable else { return Ok((own, None)) };
+    if g.area.worked().is_none() {
+        let why = if g.area.note.is_empty() { "the roof over it is not worked".to_string() } else { g.area.note.clone() };
+        return Err(format!("the wall's top at its corner is not known: {why}"));
+    }
+    if g.top.is_empty() {
+        return Ok((own, None));
+    }
+    let long = (w.line[1][0] - w.line[0][0]).hypot(w.line[1][1] - w.line[0][1]);
+    Ok((crate::gable::top_over(&g.top, if end == 0 { 0.0 } else { long }).map_or(own, |z| z - w.base), Some(g.area.status)))
+}
+
 /// Every wall's outside corners and corner-board length, by path (`wanted`: their paths; None for every wall).
-pub(crate) fn corners(world: &mut World, wanted: Option<&HashSet<String>>) -> HashMap<String, [Derived; 2]> {
+pub(crate) fn corners(world: &mut World, wanted: Option<&HashSet<String>>) -> HashMap<String, Corners> {
     let tree = Tree::of(world);
     let (walls, not_placed) = walls_of(world, &tree);
+    let gables = crate::gable::gables(world, wanted);
     let mut out = HashMap::new();
     let f_count = "the ends of this wall that are outside corners of the ring of walls it is in, a corner that points out of the house: counted on both its walls";
+    // Said as it always was where the wall stands at its own height at every corner (the saved job holds the words: a job saved before
+    // opens and saves the same); said new only where the wall's top line carries a corner up to the roof (call 204).
     let f_board = "outside_corners × height: a board up each outside corner, one on each wall's face";
+    let f_board_up = "for each outside corner, how tall the wall is there (the height of its top at that end, where a rake or the high edge of a shed roof carries the wall up to the roof): a board up each outside corner, one on each wall's face";
     for (path, why) in &not_placed {
         if wanted.is_none_or(|x| x.contains(path)) {
             let mine = vec![format!("{path}#{}", building::K_WALL)];
             let why = format!("the wall cannot be placed ({why})");
-            out.insert(path.clone(), [Derived::refused("EA", f_count, &mine, &why), Derived::refused("LF", f_board, &mine, &why)]);
+            out.insert(path.clone(), Corners { count: Derived::refused("EA", f_count, &mine, &why), board: Derived::refused("LF", f_board, &mine, &why), up: Vec::new() });
         }
     }
     for storey in walls.iter().map(|w| w.storey.clone()).collect::<std::collections::BTreeSet<_>>() {
@@ -526,11 +555,13 @@ pub(crate) fn corners(world: &mut World, wanted: Option<&HashSet<String>>) -> Ha
             let mut statuses = vec![w.status];
             let mut inputs = mine.clone();
             let mut fault: Option<String> = None;
+            let mut outside_ends: Vec<usize> = Vec::new();
             for e in 0..2 {
                 match end_of(&ends, &level, i, e) {
                     Ok((outside, ring)) => {
                         if outside {
                             count += 1.0;
+                            outside_ends.push(e);
                         }
                         for r in ring {
                             statuses.push(level[r].status);
@@ -549,12 +580,43 @@ pub(crate) fn corners(world: &mut World, wanted: Option<&HashSet<String>>) -> Ha
                 Some(why) => Derived::refused("EA", f_count, &mine, why),
                 None => Derived::new(Some(count), "EA", &statuses, f_count, &inputs),
             };
+            let mut up: Vec<(usize, f64)> = Vec::new();
             let l = match (&n.value, &w.height) {
                 (None, _) => Derived::refused("LF", f_board, &mine, &n.note),
                 (_, Err(why)) => Derived::refused("LF", f_board, &mine, why),
-                (Some(_), Ok(h)) => Derived::new(Some(n.worked().unwrap_or(0.0) * h), "LF", &[n.status, w.height_status], f_board, &inputs),
+                (Some(_), Ok(_)) => {
+                    // Each outside corner's board: the wall's height at that end.
+                    let mut st = vec![n.status, w.height_status];
+                    let mut rests = inputs.clone();
+                    let mut why: Option<String> = None;
+                    let mut rises = false;
+                    for &e in &outside_ends {
+                        match height_at_end(w, gables.get(&w.path), e) {
+                            Ok((h, roof)) => {
+                                up.push((e, h));
+                                if let Some(r) = roof {
+                                    rises = true;
+                                    st.push(r);
+                                    if let Some(g) = gables.get(&w.path) {
+                                        rests.extend(g.area.inputs.iter().filter(|x| !rests.contains(x)).cloned().collect::<Vec<_>>());
+                                    }
+                                }
+                            }
+                            Err(e) => {
+                                why.get_or_insert(e);
+                            }
+                        }
+                    }
+                    match why {
+                        Some(why) => {
+                            up.clear();
+                            Derived::refused("LF", f_board, &rests, &why)
+                        }
+                        None => Derived::new(Some(up.iter().map(|(_, h)| h).sum()), "LF", &st, if rises { f_board_up } else { f_board }, &rests),
+                    }
+                }
             };
-            out.insert(w.path.clone(), [n, l]);
+            out.insert(w.path.clone(), Corners { count: n, board: l, up });
         }
     }
     out
@@ -591,9 +653,9 @@ pub fn figures(job: &mut Job) -> Vec<Figure> {
                 }
             }
             Kind::Wall => {
-                if let Some([n, l]) = corners.get(&path) {
-                    out.push(Figure { path: path.clone(), name: OUTSIDE_CORNERS, figure: n.clone() });
-                    out.push(Figure { path, name: CORNER_BOARD_LENGTH, figure: l.clone() });
+                if let Some(c) = corners.get(&path) {
+                    out.push(Figure { path: path.clone(), name: OUTSIDE_CORNERS, figure: c.count.clone() });
+                    out.push(Figure { path, name: CORNER_BOARD_LENGTH, figure: c.board.clone() });
                 }
             }
             Kind::Window | Kind::Door => {

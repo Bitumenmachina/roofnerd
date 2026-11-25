@@ -28,10 +28,11 @@ cmp -s "$J" "$T/before.json" || { echo "FAIL: a refused model changed the job"; 
 OUT="$("$P" import ifc "$J" demos/ifc/made-up-house.ifc --status Assumed --source "the designer's model (made up)")"
 echo "$OUT" | sed 's/^/    /'
 # The model holds two levels, four walls, a door, a window, a slab, a space, a duct, a
-# pipe, and a beam, a stair and a chair. The chair is set down as a furnishing (call 197, point 1).
-for made in "2 levels" "4 walls" "1 door" "1 window" "1 floor" "1 room" "1 duct" "1 pipe" "1 furnishing"; do says "brought in" "$made" "$OUT"; done
-says "what was not" "not brought in: 2 things" "$OUT"
-for left in "1 beam: nothing here to bring it in as" "1 stair: nothing here to bring it in as"; do says "listed" "$left" "$OUT"; done
+# pipe, and a beam, a stair and a chair. The chair is set down as a furnishing (call 197, point 1); the beam, a straight box 0.1 m by 0.3 m and
+# 9.144 m long, level, comes in as a beam (call 204, point 5): 30 ft, 3.937 in by 11.811 in.
+for made in "2 levels" "4 walls" "1 door" "1 window" "1 floor" "1 room" "1 duct" "1 pipe" "1 furnishing" "1 beam"; do says "brought in" "$made" "$OUT"; done
+says "what was not" "not brought in: 1 thing" "$OUT"
+for left in "1 stair: nothing here to bring it in as"; do says "listed" "$left" "$OUT"; done
 says "its unit" "the model is in meters: every length was turned into feet" "$OUT"
 "$P" check "$J"
 
@@ -58,8 +59,11 @@ OUT="$("$P" clashes "$J")"
 echo "$OUT" | sed 's/^/    /' | head -4
 # Both 2.1336 m, 7 ft, up; they cross at (10, 10) ft. A 6 in duct and a 1 in pipe on one
 # center height: 3 in + 1/2 in. A question for the field: the model is Assumed.
-says "the clash" "In the same space: 1 (1 to verify in the field)" "$OUT"
+# Call 204, point 5: the ridge beam is in the job now (it was left out), and the duct, 6 in round and 7 ft up along y = 10 ft, lies in it: the beam's
+# bottom is 2.15 m = 7.0538 ft up and the duct's top 7.25 ft, so 7.25 - 7.0538 = 0.1962 ft = 2.35 in, at the duct's middle (15, 10, 7.15): a second question.
+says "the clashes" "In the same space: 2 (2 to verify in the field)" "$OUT"
 says "by how much, and where" "in each other by 3.50 in, at (10, 10, 7)" "$OUT"
+says "the beam and the duct" "Supply duct [duct-0019] and Ridge beam [beam-0023]: in each other by 2.35 in, at (15, 10, 7.1519)" "$OUT"
 
 echo
 echo "== What is refused, and leaves the job as it was =="
@@ -71,4 +75,4 @@ cmp -s "$J" "$T/before.json" || { echo "FAIL: a refused model changed the job"; 
 echo "    the job is byte for byte what it was before the refusals"
 
 echo
-echo "PASS: a model in meters was brought into an empty job as levels, walls, a door, a window, a floor, a room, a duct and a pipe, measured to the figures worked by hand, with what was not brought in listed and the clash it hid found"
+echo "PASS: a model in meters was brought into an empty job as levels, walls, a door, a window, a floor, a room, a duct, a pipe and a beam, measured to the figures worked by hand, with what was not brought in listed and the clash it hid found"

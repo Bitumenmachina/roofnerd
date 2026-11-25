@@ -64,6 +64,7 @@ use crate::view::{self, Row, Sum, WorkSplit};
 pub mod clash;
 mod footings;
 pub mod forms;
+pub mod shape;
 pub mod framing;
 pub mod frames;
 pub mod members;
@@ -1218,16 +1219,17 @@ pub fn measures(world: &mut World) -> HashMap<String, BTreeMap<String, Derived>>
                             (None, _) => Derived::refused("LF", f_above, &inputs, &format!("{:?} is not a height entered on the line", crate::view::words(input_name))),
                             _ if unit_fault => Derived::refused("LF", f_above, &inputs, &format!("the wall line {NOT_CONVERTED}")),
                             (Some(_), None) => Derived::refused("LF", f_above, &inputs, "the wall's outside corners are not worked"),
-                            (Some(hv), Some([n, board])) => match (hv.feet(), n.worked(), board.worked()) {
+                            (Some(hv), Some(corner)) => match (hv.feet(), corner.count.worked(), corner.board.worked()) {
                                 (None, _, _) => Derived::refused("LF", f_above, &inputs, &format!("the height {:?} is not known", crate::view::words(input_name))),
-                                (_, None, _) => Derived::refused("LF", f_above, &inputs, if n.note.is_empty() { "the wall's outside corners are not worked" } else { &n.note }),
-                                (_, _, None) => Derived::refused("LF", f_above, &inputs, if board.note.is_empty() { "the wall's corner boards are not worked" } else { &board.note }),
-                                (Some(h_ft), Some(count), Some(boards)) => {
+                                (_, None, _) => Derived::refused("LF", f_above, &inputs, if corner.count.note.is_empty() { "the wall's outside corners are not worked" } else { &corner.count.note }),
+                                (_, _, None) => Derived::refused("LF", f_above, &inputs, if corner.board.note.is_empty() { "the wall's corner boards are not worked" } else { &corner.board.note }),
+                                (Some(h_ft), Some(_), Some(_)) => {
                                     let mut rests = inputs.clone();
-                                    rests.extend(board.inputs.iter().filter(|i| !inputs.contains(i)).cloned());
-                                    // Each corner's board is the wall's height; the entry is held between nothing and that height.
-                                    let up = if count > 0.0 { count * (boards / count - h_ft.clamp(0.0, boards / count)) } else { 0.0 };
-                                    Derived::new(Some(up), "LF", &[board.status, hv.status], f_above, &rests)
+                                    rests.extend(corner.board.inputs.iter().filter(|i| !inputs.contains(i)).cloned());
+                                    // Each corner's board is as tall as the wall is there (call 204); the entry is held between nothing and
+                                    // that height, corner by corner.
+                                    let up: f64 = corner.up.iter().map(|(_, h)| h - h_ft.clamp(0.0, *h)).sum();
+                                    Derived::new(Some(up), "LF", &[corner.board.status, hv.status], f_above, &rests)
                                 }
                             },
                         };
@@ -1274,9 +1276,9 @@ pub fn measures(world: &mut World) -> HashMap<String, BTreeMap<String, Derived>>
                 };
                 m.insert("thickness".into(), thick);
                 // Its outside corners and the corner board they take, where a line of it names them (call 185).
-                if let Some([n, l]) = corner_figures.get(me) {
-                    m.insert(crate::trim::OUTSIDE_CORNERS.into(), n.clone());
-                    m.insert(crate::trim::CORNER_BOARD_LENGTH.into(), l.clone());
+                if let Some(c) = corner_figures.get(me) {
+                    m.insert(crate::trim::OUTSIDE_CORNERS.into(), c.count.clone());
+                    m.insert(crate::trim::CORNER_BOARD_LENGTH.into(), c.board.clone());
                 }
                 // Its gable, where a line of it names the area (call 192).
                 if gable_named.contains(me) {
@@ -2146,6 +2148,28 @@ struct RoomFigures {
 /// `rooms.rs:62` and `walls.rs:238`: a bounding wall's outline is cut against every wall
 /// it meets, bounding or not).
 fn rooms_among(walls: &[walls::PlanWall], bounding: &[usize], room_lines: &[(crate::skeleton::P2, crate::skeleton::P2)], points: &[crate::skeleton::P2], tol: f64) -> Vec<RoomFigures> {
+    // The rooms of a set of walls are a function of the walls, the room lines and the points alone, and the same set is asked for again
+    // by every figure worked out after an edit that moved none of them: a model brought in whole made two hundred edits and worked
+    // its ten rooms out two hundred times, three quarters of the twenty seconds it took (call 204, point 7). So what was worked out
+    // is kept, by what it was worked out from (every number as it is written, so equal only where identical), and handed back as it
+    // was. Nothing is kept past the run of the program, and nothing about the answer changes.
+    thread_local! { static KEPT: std::cell::RefCell<HashMap<String, Vec<RoomFigures>>> = std::cell::RefCell::new(HashMap::new()); }
+    let key = format!("{walls:?}|{bounding:?}|{room_lines:?}|{points:?}|{tol:?}");
+    if let Some(found) = KEPT.with(|k| k.borrow().get(&key).cloned()) {
+        return found;
+    }
+    let worked = rooms_among_worked(walls, bounding, room_lines, points, tol);
+    KEPT.with(|k| {
+        let mut k = k.borrow_mut();
+        if k.len() >= 256 {
+            k.clear();
+        }
+        k.insert(key, worked.clone());
+    });
+    worked
+}
+
+fn rooms_among_worked(walls: &[walls::PlanWall], bounding: &[usize], room_lines: &[(crate::skeleton::P2, crate::skeleton::P2)], points: &[crate::skeleton::P2], tol: f64) -> Vec<RoomFigures> {
     use crate::skeleton::P2 as V;
     use rooms::{Plan, RoomArea};
     let (centre, finish) = (Plan::of_walls(walls, bounding, room_lines, RoomArea::Centre, tol), Plan::of_walls(walls, bounding, room_lines, RoomArea::Finish, tol));
@@ -3662,6 +3686,67 @@ pub struct StoreyTotals {
     /// What of the above is not new work, given three ways (call 158): to build,
     /// existing to remain, to demolish. Empty where nothing on the level is marked.
     pub by_work: StoreyByWork,
+    /// What is set down on it: equipment, fixtures and furnishings, by kind, counted here (call 197 point 10).
+    pub set_down: SetDown,
+}
+
+/// What is set down on one level: equipment, fixtures and furnishings, by kind in the order each kind first
+/// appears on it, counted here and nowhere else (call 197 point 10; contract 205M part 2). A fitting is joined to a
+/// run, not set down, and is in its system's list.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct SetDown {
+    pub kinds: Vec<SetDownKind>,
+}
+
+/// One kind of thing set down on one level.
+#[derive(Clone, Debug, PartialEq)]
+pub struct SetDownKind {
+    pub kind: Kind,
+    pub count: usize,
+    /// Each thing's name, in the order they stand in the job.
+    pub names: Vec<String>,
+    pub paths: Vec<String>,
+    /// As sure as the worst of them: what each is drawn from (`Placement::status`); a thing with no size is Unknown.
+    pub status: Status,
+    /// How many of them have nothing priced on them (the rule `view::pricing` counts by).
+    pub not_priced: usize,
+    /// How many have no shape, so are not drawn: their size is not known.
+    pub not_drawn: usize,
+}
+
+impl SetDown {
+    /// How many things are set down on the level.
+    pub fn count(&self) -> usize {
+        self.kinds.iter().map(|k| k.count).sum()
+    }
+    /// How many of them have nothing priced on them.
+    pub fn not_priced(&self) -> usize {
+        self.kinds.iter().map(|k| k.not_priced).sum()
+    }
+    /// How many of them cannot be drawn.
+    pub fn not_drawn(&self) -> usize {
+        self.kinds.iter().map(|k| k.not_drawn).sum()
+    }
+    /// What the sheet window says under "Set down on this level", line by line: each kind with its names, then what is
+    /// not priced, then what cannot be drawn. A level with nothing set down says so.
+    pub fn said(&self) -> Vec<String> {
+        if self.kinds.is_empty() {
+            return vec!["Nothing is set down on this level.".to_string()];
+        }
+        let mut out: Vec<String> = self.kinds.iter().map(|k| format!("{}: {}", k.kind.so_many(k.count), k.names.join(", "))).collect();
+        let bare: Vec<&SetDownKind> = self.kinds.iter().filter(|k| k.not_priced > 0).collect();
+        if !bare.is_empty() {
+            let n = self.not_priced();
+            let kinds: Vec<String> = bare.iter().map(|k| k.kind.so_many(k.not_priced)).collect();
+            out.push(format!("{} {} set down and not priced.", kinds.join(", "), if n == 1 { "is" } else { "are" }));
+        }
+        let undrawn: Vec<&SetDownKind> = self.kinds.iter().filter(|k| k.not_drawn > 0).collect();
+        if !undrawn.is_empty() {
+            let kinds: Vec<String> = undrawn.iter().map(|k| k.kind.so_many(k.not_drawn)).collect();
+            out.push(format!("{} cannot be drawn: its size is not known.", kinds.join(", ")));
+        }
+        out
+    }
 }
 
 /// A level's counts given three ways where something on that line is not new work (call
@@ -3693,6 +3778,8 @@ pub struct WallsOfType {
 
 pub fn storey_totals(job: &mut Job) -> Vec<StoreyTotals> {
     let order = job.order.clone();
+    // What is drawn, and how sure each is: a thing set down with no shape is not in this list.
+    let drawn_status: HashMap<String, Status> = placements(job).0.into_iter().map(|p| (p.path, p.status)).collect();
     let w = &job.world;
     let parents: HashMap<String, Option<String>> = order.iter().filter_map(|e| w.get::<Node>(*e)).map(|n| (n.path.clone(), n.parent.clone())).collect();
     let storeys: Vec<String> = order.iter().filter(|e| w.get::<Kind>(**e) == Some(&Kind::Storey)).filter_map(|e| w.get::<Node>(*e)).map(|n| n.path.clone()).collect();
@@ -3771,6 +3858,29 @@ pub fn storey_totals(job: &mut Job) -> Vec<StoreyTotals> {
                 _ => {}
             }
         }
+        let mut set_down = SetDown::default();
+        for &e in &order {
+            let (Some(n), Some(kind)) = (w.get::<Node>(e), w.get::<Kind>(e).copied()) else { continue };
+            if !matches!(kind, Kind::Equipment | Kind::Fixture | Kind::Furnishing) || !under(&n.path, &sn.path) {
+                continue;
+            }
+            let status = drawn_status.get(&n.path).copied();
+            let bare = view::nothing_priced_on(w, e);
+            let at = match set_down.kinds.iter().position(|k| k.kind == kind) {
+                Some(at) => at,
+                None => {
+                    set_down.kinds.push(SetDownKind { kind, count: 0, names: Vec::new(), paths: Vec::new(), status: Status::Known, not_priced: 0, not_drawn: 0 });
+                    set_down.kinds.len() - 1
+                }
+            };
+            let k = &mut set_down.kinds[at];
+            k.count += 1;
+            k.names.push(n.name.clone());
+            k.paths.push(n.path.clone());
+            k.status = k.status.max(status.unwrap_or(Status::Unknown));
+            k.not_priced += usize::from(bare);
+            k.not_drawn += usize::from(status.is_none());
+        }
         out.push(StoreyTotals {
             path: sn.path.clone(),
             name: sn.name.clone(),
@@ -3784,6 +3894,7 @@ pub fn storey_totals(job: &mut Job) -> Vec<StoreyTotals> {
             windows,
             footings: view::sum_of_what_is_there("LF", &figures[5]),
             footing_volume: view::sum_of_what_is_there("CY", &figures[6]),
+            set_down,
             by_work: StoreyByWork {
                 walls: view::split_by_work("LF", &figures[0], &places[0]),
                 wall_face: view::split_by_work("SF", &figures[1], &places[1]),

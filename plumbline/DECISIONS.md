@@ -8126,3 +8126,330 @@ worker's copy.
    (the fitting is made from the runs that meet there, as before); where a tie
    names the wrong end of a run and another run happens to end at the connection,
    the two are still joined by where they stand.
+
+### Call 203. An item's shape as data, as built; what a block may say; what stays the window's (2026-11-24)
+
+Call 198 was built by a Sonnet worker under `handoff/contracts/contract-198.md`
+(`research/worker-report-call198.md`), in two rounds, and accepted by the lead's own
+run in the worker's copy.
+
+1. **The thirteen shapes are rows** (`library/shapes.csv`), and the code that drew
+   them is gone. Before it went, each shape's rows were held to it block for block:
+   13 shapes at three sizes, 141 blocks, to a hundred-millionth of a foot, and the
+   test was seen to fail when one figure in one row was changed. For the starter
+   vanity the rows give the lead's hand figures to the thousandth of an inch
+   (plinth to 3.937 in, case to 32.925 in, top to 34.5 in).
+2. **The formula language gained `min` and `max`, and a size written with its
+   unit** (`4 in`, `100 mm`), for cost lines as well; no formula written before
+   reads otherwise (the whole suite ran). `0` is the one number that may stand
+   without a unit where a length is wanted; a bare `4` is refused, with its row.
+3. **A block may say when it is there** (ruled in the second round; the design did
+   not have it and the worker stopped on the two shapes that need it). The bed has
+   two pillows when it is wide and one when it is not; the sink's divider is there
+   from 30 in. A column "There when" holds one comparison between two formulas
+   (`width >= 30 in`). **It is read in the shape and nowhere else**: a cost line's
+   quantity is a quantity and cannot be a comparison, and one typed
+   `net_area > 100 SF` is refused as it was. This is BIMCraft's `visible`, narrowed.
+4. **A shape stays inside the box of its item's sizes** (ruled): a clash tests that
+   box, so a block outside it would be drawn where nothing is tested. A shape
+   brought in is worked at three sizes and refused, with the row and the size, if a
+   block reaches outside. All thirteen starter shapes pass.
+5. **The chest is two tables now**, items and shapes, each written out and brought
+   back to the byte; the saved job carries the shapes its items name, and a job
+   saved before opens and saves as it did.
+6. **The window's half is not built** (call 198 point 6, and what the worker
+   found): the window draws the thirteen from the rows, unchanged to look at, but
+   **an item drawn as a shape the job brought in itself is drawn as a plain box**,
+   and a job's own shape named like a starter one does not take its place there.
+   Nothing of a shape can be seen or typed on the bench yet. Until that is built
+   Patrick cannot see this step, and it is not shown to him as done.
+7. Said by the worker and true: but for the formula tests, which were red first,
+   the shape tests were written after the code. The test that matters, the rows
+   against the code, was run before the code went and proved red.
+
+### Call 204. A corner board is as tall as its wall is at that corner; and three things a model still leaves out (2026-11-24)
+
+**The corner board.** Since call 192 a wall under a rake, or under the high edge of
+a shed roof, rises to the roof, and its siding is priced to that line. Its corner
+boards still stop at the wall's old top (said as not right when the gable was
+drawn). On a gable end that is half a foot at each corner; on the tall wall of a
+shed roof it is the whole rise.
+
+1. **The corner board on a wall's face at an outside corner is as long as that
+   wall is tall at that corner**: the wall's own height where an eave is over it
+   or it has no roof; the height of its top line at that end where it has a gable
+   (call 192's line, the model's, worked nowhere else). `corner_board_length` is
+   the sum over the wall's outside corners, as before, and
+   `corner_board_length_above_<entry>` takes the entry off each (call 194).
+2. It takes the weakest status of what it rests on, as the gable's area does: a
+   board under an Assumed roof is Assumed.
+3. The pieces laid (`trim --pieces`, and so the boards the window draws) are the
+   same lengths: one arithmetic.
+4. **Every expectation that moves is listed first.** One moves only where a wall
+   with a gable has corner boards priced or printed, and only by the figures
+   worked in STATUS.md under this call or figures that follow from them.
+
+**A model brought in** (what calls 197, 200 and 202 left, each seen by a judge or
+in a picture):
+5. **A beam and a column come in as a beam and a post** where the body in the file
+   is a straight box, sized from it, Assumed, sourced to the file; any other is
+   left out with the reason that is true. Today each is left out with "nothing
+   here to bring it in as", and the program has both.
+6. **A fitting with no size is written** with its place and no body, and comes back
+   with its size Unknown (call 202 point 5).
+7. **A model that the program wrote comes in in seconds, not twenty**: find where
+   the time goes before changing anything, say it in the report, and change only
+   what the measurement names. No figure moves.
+
+**Call 204, as built (2026-11-24, by a Sonnet worker under `handoff/contracts/contract-204.md`;
+`research/worker-report-call204.md`; accepted by the lead's own run in the worker's copy).**
+The program gave the lead's top line at every corner before any code, and gives the
+hand figures after it: the gable house 18, 19, 18, 19, **74.00 LF** (was 72.00);
+the shed 18, 27, 35, 27, **107.00 LF** (was 72.00), its east wall's north board
+17.5 ft; the hip house 72.00, unchanged; with the 3 ft wainscot on the shed's east
+wall 21.00 LF. The figure, the figure above a wainscot and the pieces laid use one
+reading of the wall's top (`trim::height_at_end` over `gable::top_over`). Ruled on
+what the worker decided: **a wall whose roof cannot be worked has no corner-board
+figure and says why** (right: not the old top, silently); the line's old formula
+text stays on a wall with no gable, because the saved job holds that text. Boards
+under an Assumed roof read Assumed. **A beam and a column come in as a beam and a
+post**; a fitting with no size is written and comes back, so the sample house comes
+back with all 39 of its fittings' places (37 made, the two the tool refuses still
+named). **A model comes in in about 6 seconds where it took 18**: three quarters of
+the time was the same ten rooms worked out 211 times over; the rooms are now kept
+by exactly what they are worked from, and nothing they give moves (the job file, the
+reply and the takeoff are the same to the byte). Expectations moved, each listed
+with its arithmetic in the report: two tests and one of call 185's on corner
+boards, `demos/trim.sh` steps 1, 2, 3 and 6; on a model `ifc.rs`, `whole.rs`,
+`write.rs`, `demos/export.sh`, `ifc-whole.sh`, `model.sh`, `structure.sh` (the made-up
+file's ridge beam now comes in, and with it a second clash with the duct).
+`demos/trim.sh` step 7, the sample houses, did not move. **Not run**: the window;
+`trimw`, `gablew` and `gableendw` hold no figure that moves, and their pictures at
+a gable's corners are stale until they are run again. Not right: a fitting's own
+connection points are still not read back, and a fitting with no size has none
+written.
+
+### Call 205. A shape changed by hand: the model's changes, and what the bench will show (2026-11-24; the lead's design, not built)
+
+Call 203 left an item's shape as rows that can only be written in a table and
+brought in. For the bench (call 198 point 6) a shape must be changed where it is
+looked at. The window works nothing out, so the changes are the model's first.
+
+1. **A starter shape is not changed.** Thirteen shapes are in the program and every
+   job's items may be drawn as them; changing one in a job would change what an
+   old job means without a word. A shape is changed only as the job's own.
+2. **"Keep as a new shape"**: the shape an item is drawn as is copied into the job
+   under a new name and the item is drawn as the copy. The name may not be one the
+   job or the starter library already has.
+3. **A job's own shape may not take a starter shape's name**, on the way in from a
+   table as well (today the model lets it and the starter's is hidden in the model
+   and not in the window: two meanings for one name). Refused, naming it.
+4. **A block added, changed, taken away** on a job's own shape: a block added is a
+   box the whole size of the item, of the shape's first material, until its
+   figures are typed; any of its six figures, its form (box or round), what it is
+   made of and when it is there may be set; a block is taken away by its number.
+   After each, the shape is checked as it is on the way in (every figure a formula
+   in width, depth and height; inside the box at the three sizes) and a change
+   that fails is refused, with the row, the size and the reason, the shape left as
+   it was.
+5. **Each change says what follows**: how many items are drawn as the shape and how
+   many things are set down from them.
+6. **On the bench** (the window's half, after the model's): under the item's sizes,
+   "Shape" lists the blocks of what it is drawn as, each by its material and form;
+   a click on a row picks the block and marks it on the bench; its six figures are
+   rows that are typed as any value is; "Add block", "Take block away"; on a
+   starter shape those are not offered and "Keep as a new shape" is, with why. The
+   list "Drawn as" on an item's panel is the job's shapes and the starter ones,
+   not a fixed thirteen, and an item drawn as the job's own shape is drawn from
+   its rows. Pulling a face by hand comes after typing works.
+
+**Call 205, the model's half, as built (2026-11-25, by a Sonnet worker under
+`handoff/contracts/contract-205M.md`; `research/worker-report-call205M.md`; accepted by
+the lead's own run in the worker's copy).** Four changes in `editing::shapes`
+(`keep_shape_as`, `shape_block_add`, `shape_block_set`, `shape_block_take`), each
+all or nothing, each one step for Undo, each giving back what was done and what
+follows in words the window and the command line both say; a verb `plumbline shape`
+calls them. The demonstration's fourth block reads across -16 in to 16 in, back
+20 in to 21 in, up 4 in to 28 1/2 in, the lead's figures. A starter shape is not
+changed, and a table that gives a starter's name other blocks is refused.
+BIMCraft changes a copy of a family, checks the whole and refuses leaving the
+stored one alone: that is the pattern taken; nothing of it is ported. Ruled:
+- **A saved job that already holds a shape under a starter's name still opens**
+  (a saved job always opens). No program before this one could have written such
+  a job but in the hours between two commits of 2026-11-24; `plumbline check` is
+  owed a sentence for it, and it is on the list.
+- **Not right**: the rule for "priced on nothing" is written twice (`view::pricing`
+  and the new count), held together by a test; it is owed one copy.
+
+**What is set down on a level is the model's count** (call 197 point 10): a level's
+totals hold, by kind, how many things are set down on it, their names, how many
+are priced on nothing and how many cannot be drawn for want of a size; `takeoff`
+prints it under each level in the sheet window's words. Ruled: **fittings are not
+things set down** (they are counted with their runs); the window's own grouping
+counted them and dropped a thing with no size, and gives way to this at its next
+job.
+
+### Call 206. What the judge of the item's cost, the shapes, a model out and back and the corner boards found, and what is decided (2026-11-25)
+
+`research/judgment-cli-1125.md` (a Sonnet judge, cold, on the command line built from
+33d1ac0). The corner boards, an assembly changed for another, and the sample house
+to the cent of call 194's hand table held; so did the price list side by side, the
+shape table and a model brought back with its open ends. Three findings are more
+than words. Decided, point by point:
+
+**Wrong money, unsaid.**
+1. **Nothing a person typed on a line goes without a word.** A thing set down had 7
+   typed as the quantity of its item's line ($7,000.00). Its item was priced as
+   another assembly and then back: the line came back at 1 EA and $1,000.00, and
+   no reply named the 7; the replies named a typed price and not the quantity.
+   `apply --change` did the same to a typed 40 EA. Call 199 said a line taken off
+   is named "with whatever was priced on it"; the quantity was left out of
+   "whatever". **A line taken off by a change of assembly, or of what an item is
+   priced as, is named with every thing a person entered on it and its value**: a
+   quantity or formula that is not the assembly's, a price, a waste, a rate, how it
+   is ordered, that it was off. And the amount it carried, where it had one.
+
+**A promise the check did not keep.**
+2. **A shape stays inside its item's box at the item's own sizes** (call 203 point 4
+   said it and tested three sizes). A row `up to: height + max(0 in, width - 10 ft)`
+   passes the three and stands 24 in above a 144 in item. The three sizes stay as
+   the check of a table on its way in, and are said to be that. **Wherever a shape
+   meets an item, it is checked at that item's sizes**: an item drawn as a shape,
+   an item's size changed, a block of the job's own shape added or set, each is
+   refused, naming the item, the block and how far it reaches, if any item drawn as
+   the shape would have a block outside its box. `check` says so of a job that
+   already holds one.
+
+**A consequence nobody was told.**
+3. **A model brought into a job that has a building.** The file's level at the
+   height of one the job has was made a second level beside it, without a word,
+   and a 16 LF wall in the file cut the job's living room from 614.7 SF to 365.7
+   and its receptacles from 10 to 8, unsaid. Another trade's model brought into
+   one's own job is what this is for, so it is not refused. **A level in the file
+   at the height of one the job has is that level** (within an eighth of an inch),
+   under the job's name, and the reply says so; a level at a new height is added
+   and said. **The reply names every room of the job whose figures moved**, the
+   area before and after, and says that walls brought in did it.
+
+**Words and smaller refusals** (each fixed as said):
+4. Setting an item priced as what it is already says so and how many are set down
+   (it said "none is set down yet" with three).
+5. An item taken out of the chest says the prices that go with it.
+6. **An item's trade changed moves the lines on what is set down from it** that
+   took its trade (call 201 point 7 left it), and says how many.
+7. `price-item` refused for a line made of its item says how the price is given (a
+   price list, or the chest's table); a price brought in for an item priced as
+   nothing says it prices nothing yet (it did for a table row, not for this).
+8. A roof with no outline of this program's in the file is left out for that
+   reason, in those words (it read "a roof is not brought in from a model yet",
+   which a roof this program wrote disproves).
+9. A model brought in twice says so in a builder's words, by counts: no word of
+   the file's own ("distributionflowelement"), no clause for each fitting; "a
+   equipment" is "a piece of equipment".
+10. "45 of 46 tied" names the one that is loose and where.
+11. A refusal quotes what the person typed, not the program's rewriting of it
+    ("height × 0.5 ÷ 12"); `min()` with nothing in it says what `min` takes.
+12. "1 blocks" is "1 block"; "a x" where the name starts with a vowel is "an";
+    rows of one shape that do not stand together in a table are refused, naming
+    the rows (they were merged without a word).
+13. **A price of $0.00** is taken (a thing can be free) and is named in the reply
+    and marked on the estimate, never silent; **a wainscot, or any height a line
+    enters, below nothing** is refused.
+14. The command line gains `rename` for an item (the window has it; the judge had
+    no way to try it).
+
+**Held, and left**: a bare number typed as a quantity on a line priced by the foot
+is read as a count and says so; a footing widened in a file to 26 ft comes in as
+the file has it, Assumed, and its dollars put it at the head of the field list.
+
+**Call 206, as built (2026-11-25, by a Sonnet worker under `handoff/contracts/contract-206.md`;
+`research/worker-report-call206.md`; accepted by the lead's own run in the worker's
+copy).** All fourteen points.
+- **Point 1**: one function names everything a person entered on a line that comes
+  off, and a test fails if a cost line gains a thing a person can set that the
+  naming does not cover. The reply reads: `"Refrigerator" came off ..., with a
+  quantity of 7.00 EA ("7", where the assembly writes "1") entered on it (it came
+  to $7,000.00)`. It is said wherever a line comes off: an assembly changed, an
+  item priced as another thing or as nothing, a mark cleared, a line removed.
+- **Point 2**: a shape is checked at the item's own sizes in every place a shape
+  meets an item (a new item, drawn as, an item's size, a block added or set, a
+  shape kept, either table brought in), and `check` says it of a job that holds
+  one (the job still opens).
+- **Point 3**: a level in the file within an eighth of an inch of one the job has
+  is that level, and the reply says so; the model works out the rooms that moved.
+  The judge's figures were right and are now worked by hand in the report
+  (39.5 x 15.5625 = 614.72 SF; 23.5 x 15.5625 = 365.72 SF). **What the worker found
+  on the way, and it matters**: a room's figures come from every wall at the
+  level's height, whatever level the wall is on; the second level at 0 ft did not
+  cut the room, the wall did. So the fault was never the level, it was the
+  silence, and the reply now names each room.
+- Points 4 to 14 as decided, each a step of `demos/judged-1125.sh`.
+Expectations moved, each by words a point asks for and none a figure of money or
+quantity; the list is in the report. **Not right, and said**: a height below
+nothing is refused where a line enters a height; a spacing below nothing still
+goes through. Six of the points of wording were not run red against the old
+source. **Owed to the window**: an assembly changed in the window names what was
+rewritten and left (contract 197W point 16) and must now also say what was typed
+on a line that came off; it joins the next window job.
+
+### Call 207. A price is typed where it is seen: the price list in the window, and the model's change for it (2026-11-25; the lead's design, not built)
+
+Found by the window builder of contract 197W: **the window has no way to type a
+material's price, or an item's**. A line priced by a unit cost of its own takes a
+typed price on the sheet; a line made of a material, or of its item (call 201),
+takes its price from the price list, and the price list comes only from a file
+brought in. An estimator who sets a water heater down and prices it as "Bought and
+set" cannot say what it costs without making a spreadsheet first. For a program
+that every person can use, that is a hole in the money path.
+
+1. **The price list is a tab of the estimate window, "Prices", beside Estimate.**
+   One row for each material and each item that a line of the job is made of, or
+   that has a price: its name, what it is, its unit, the estimator's price, each
+   supplier's beside it (three, as on the sheet), how sure each is and where it is
+   from, how many lines it prices and the dollars riding on it. A row with no
+   price says so and is at the head: it is what the estimate is waiting for.
+2. **A price is typed on its row**, the estimator's or a supplier's, the way a
+   unit cost is typed on a line of the sheet, and is as sure as that is (the
+   window job says what that is today and follows it). A price cleared is no
+   price, never $0.00; a price of $0.00 typed is taken and marked, as call 206
+   point 13 says.
+3. **The same price is typed on an item's panel**, under "Priced as", and on the
+   bench: one home (the price list), three doors.
+4. **The model's change first.** One change sets or clears one price, the
+   estimator's or a named supplier's, for a material or an item by its name, and
+   gives back what follows in words the window and the command line both say:
+   the lines it prices, on how many things, and the job cost before and after. A
+   name that is neither is refused; a supplier not yet in the job is added and
+   said. And the model gives the price list as rows to be shown (point 1's
+   columns), worked by the model: the window counts and sums nothing.
+5. `plumbline import prices` and the chest's table keep doing what they do: the
+   same home.
+
+**Call 207, the model's half, as built (2026-11-25, by a Sonnet worker under
+`handoff/contracts/contract-207M.md`; `research/worker-report-call207M.md`; accepted by
+the lead's own run in the worker's copy).** `pricelist::set_price` sets or clears
+one price, the estimator's or a named supplier's, for a material or an item by its
+name or its number, by the same road a price list brought in takes (it makes one
+row and calls that), all or nothing, and gives back what follows in words both the
+window and the command line say. `pricelist::price_list` gives the rows: each name,
+what it is, its unit, each price with how sure and where from, the lines it prices
+and on how many things, the dollars riding, read off the estimate's own lines.
+`plumbline set <file> "<name>" price ...` and `plumbline price <file> list` are the
+command line's. The demonstration's figures are the lead's ($3,700.00; $3,580.00
+from the second supplier). What the design had wrong, and what stands:
+- **The model keeps every supplier**; three side by side is the sheet's and the
+  window's choice.
+- **A price cleared is a price never set**: no price. Nothing tells them apart and
+  nothing needs to.
+- **No starter assembly has a line made of a material**, so the Prices tab of a job
+  built from the starter library lists items only.
+**Not right, and owed one arithmetic**: an older way of setting a material's price
+by its number (`set <material> price`, `quote`) now goes by the same road, but for
+three cases where the two roads store different things, and there it keeps the old
+one, each named in the code and held by a test: a supplier's price on a material
+with no price of the estimator's (a list brought in makes it the job's price too,
+call 108; the older way does not); a supplier's name written another way (the
+older way refuses it); and an unpriced line of the same name that is not made of
+the material (a list prices it; the older way does not). The road a list takes is
+the one the window will use. The older way is to be brought to it, with every
+figure that moves listed first: a command-line job, not yet contracted.

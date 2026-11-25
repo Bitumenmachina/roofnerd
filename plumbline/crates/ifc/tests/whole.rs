@@ -126,15 +126,15 @@ fn p1_a_furnishing_comes_in_as_a_furnishing_and_a_body_it_cannot_read_leaves_its
 fn p2_fittings_come_in_on_their_runs() {
     let (mut job, text) = written();
     let (mut back, b) = brought(&text);
-    assert_eq!(count(&mut job, Kind::Fitting), 41, "the first job holds 41: 2 of them have no size and are not written");
-    assert_eq!(count(&mut back, Kind::Fitting), 37, "{:#?}", b.left_out);
-    assert_eq!(b.made.get("fittings"), Some(&37));
+    assert_eq!(count(&mut job, Kind::Fitting), 41, "the first job holds 41: 2 of them have no size and are written with their place and no body (call 204)");
+    assert_eq!(count(&mut back, Kind::Fitting), 39, "{:#?}", b.left_out);
+    assert_eq!(b.made.get("fittings"), Some(&39));
     // The two that do not: where a third run ends at the same joint (the hot main's upright piece and the riser).
     let left: Vec<&(String, usize, String)> = b.left_out.iter().filter(|(c, _, _)| c == "pipe fitting").collect();
     assert_eq!(left.len(), 2, "{:#?}", b.left_out);
     assert!(left.iter().any(|(_, n, why)| *n == 1 && why.contains("leave (16.3, 22.7) the same way, one over the other")), "{left:#?}");
-    // A fitting is what the runs that meet make it: its kind is worked out, not copied. The first job's 41 Bends
-    // less the 2 with no size (not written) and the 2 not brought in are 37; 2 of those have a third run's end at
+    // A fitting is what the runs that meet make it: its kind is worked out, not copied. The first job's 41 less the
+    // 2 not brought in are 39 (the 2 with no size are written and come back, call 204, point 6); 2 of those have a third run's end at
     // the joint (the first-floor trunk at (19, 17), the return riser at (21.2, 27), and, since the three hot-water runs
     // with no size are in the file (call 200), the hot main's elbow at the water heater, (16.3, 26.5)) and are Tees here.
     let kinds = |job: &mut Job| {
@@ -144,7 +144,7 @@ fn p2_fittings_come_in_on_their_runs() {
         v
     };
     let (a, c) = (kinds(&mut job), kinds(&mut back));
-    assert_eq!(a.iter().filter(|k| *k == "Bend").count(), c.iter().filter(|k| *k == "Bend").count() + 7, "{a:?} {c:?}");
+    assert_eq!(a.iter().filter(|k| *k == "Bend").count(), c.iter().filter(|k| *k == "Bend").count() + 5, "{a:?} {c:?}");
     assert_eq!(c.iter().filter(|k| *k == "Tee").count(), 3);
     // Each system's runs are joined as the fittings brought in join them: nothing reads more open than where a thing
     // was not brought in or a run end stands off the thing it serves (see the ignored test below).
@@ -301,7 +301,7 @@ fn p4_a_roof_without_the_programs_own_set_is_left_out_and_said() {
     let stripped: String = text.replace("'Plumbline_Roof'", "'Somebody_Elses'");
     let (mut back, b) = brought(&stripped);
     assert_eq!(count(&mut back, Kind::Roof), 0);
-    assert!(b.left_out.iter().any(|(c, n, why)| c == "roof slab" && *n == 4 && why.contains("a roof is not brought in")), "{:#?}", b.left_out);
+    assert!(b.left_out.iter().any(|(c, n, why)| c == "roof slab" && *n == 4 && why.contains("a roof with no outline of this program's in the file is not brought in")), "{:#?}", b.left_out);
     assert!(b.left_out.iter().any(|(c, n, _)| c == "roof" && *n == 1), "{:#?}", b.left_out);
 }
 
@@ -362,6 +362,6 @@ fn the_same_model_twice_counts_no_footing_and_no_roof_twice() {
     assert_eq!(count(&mut job, Kind::Roof), 1);
     assert_eq!(count(&mut job, Kind::Fixture), 22);
     assert_eq!(count(&mut job, Kind::Equipment), 5);
-    assert_eq!(count(&mut job, Kind::Fitting), 37);
+    assert_eq!(count(&mut job, Kind::Fitting), 39, "41 written, 2 not brought in: counted once (call 204)");
 }
 

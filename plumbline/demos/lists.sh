@@ -147,7 +147,7 @@ says "$T/take.txt" "Plumbing  (Domestic Cold Water; 1 straight piece, ~8.00 LF)"
 lacks "$T/take.txt" "Plumbing  (Domestic Cold Water; 1 straight piece, ~8.00 LF) as it stands"
 
 echo
-echo "== 4. A job with no mark takes off as it did before this call: the house of demos/library.sh =="
+echo "== 4. A job with no mark takes off as it did before this call (but for the two lines call 205 adds under each level, saying nothing is set down): the house of demos/library.sh =="
 H="$T/house.json"
 (
 KH=(--status Known --source "made-up plan")
@@ -183,6 +183,8 @@ ground  (level-0002)
     floors 1           384.00 SF
     rooms 2            356.50 SF  (the floor inside the walls)
     doors 1, windows 1
+  Set down on this level:
+    Nothing is set down on this level.
 
 Main roof  (roof-0019)
     roof planes 4      461.51 SF, 4.62 SQ
