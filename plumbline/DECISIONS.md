@@ -9145,3 +9145,123 @@ What it does not do, and says in its own comment: it reads what is linked on the
 machine it runs on. A build for Windows or a Mac links other crates (the lock
 file names some this build never compiles) and has to be run through the gate on
 that system before it ships.
+
+### Call 217. Patrick, 2026-11-25, on the review: the lead makes the calls; two windows stay; no more talk of another machine; what the review was for; run to the finish without him
+
+His words: "You are able to make the calls I will enforce being able to have two
+windows so I can see estimate while digitizing or look at plans / put two plans
+next to each other - please stop saying this needs a machine the environment
+with screenshots are fine - I asked the video game review and AEC tooling to
+ensure clean UI and tooling with memorable scrolls , tilts and and pans and has
+the Google earth scroll wheel macro to micro. Are you able to do all of this and
+not need me until program is finished to your capabilities and standards
+suitable for top of line 5.2".
+
+**How each clause is read, and what it settles.**
+- *"You are able to make the calls"*: the six decisions the review put to him
+  (`QUESTIONS.md` Q30 to Q35) are the lead's. That includes the order of the
+  work and taking up the review's proposals (`PROPOSALS.md` 34 to 40) where they
+  serve the mission; each is still written down as a decision before it is built.
+- *"I will enforce being able to have two windows so I can see estimate while
+  digitizing or look at plans / put two plans next to each other"*: **Q32 is
+  his, and answered: two windows stay.** The estimate is seen beside the model
+  while tracing. And a new thing asked: the second window can show plans, so two
+  plans stand side by side. One window with a tab is not built.
+- *"please stop saying this needs a machine the environment with screenshots are
+  fine"*: said once before (call 174) and broken by the lead in the review (the
+  question about what the desktop will be; the remarks on the renderer). **Q31
+  is withdrawn. It is not raised again, in a reply, a page or a record.** This
+  environment and its pictures are the evidence. What can be checked here is
+  checked here (other sizes of screen on the virtual display; the code compiled
+  for another system).
+- *"I asked the video game review and AEC tooling to ensure clean UI and tooling
+  with memorable scrolls, tilts and pans and has the Google earth scroll wheel
+  macro to micro"*: what the review was for. The first work after it is how the
+  window moves and how tools feel, not a list of new file formats.
+- *"not need me until program is finished to your capabilities and standards"*:
+  the lead runs to the release candidate without asking him anything. Three
+  things only he can give are marked pending and stop nothing: a hand estimate
+  to reproduce (deliverable item 13), the production ruling after the release
+  candidate, and any real data. The fixed rules stand as written.
+
+**The lead's calls on the rest.**
+- **Q30, the order**: (1) how the window moves: the wheel from the whole lot to
+  a hinge, tilts, pans, flights, a north arrow (call 218); (2) how tools feel: a
+  thing shown before the click with whether it fits, sizes at the pointer, turn
+  before placing, a door moved, copy, one search box; (3) the two windows on any
+  size of screen, and a plan in the second window; (4) the bench on the screen
+  (prices, connections, another trade's model: contracts 207W, 211W, 210W); (5)
+  the plan as an estimator marks it: notes, a measuring tool, one revision over
+  another (proposals 34, 35, taken up); (6) hand-offs: clashes as an issue list,
+  DXF, a shop's cut list (36, 37, 38, taken up); (7) a saved group set down
+  again (39, taken up, with copy in step 2); (8) the field companion by file
+  (40), last. Beside the window work, at the command line: the two bench steps
+  that were stopped (calls 214, 215: Q34, finished in their turn), the model's
+  side of each step above, and the long functions split with no change in what
+  they do. Work never lost (autosave) goes with step 3.
+- **Q33**: the field companion passes the job by file. The program opens no
+  connection.
+- **Q35**: "CNC" stays read as milling; he did not say otherwise.
+- Judges, as before: nothing is done until a model that did not build it has
+  tried to break it, the look and the feel the same as the money.
+
+### Call 218. How the window moves: the wheel from the whole lot to a hinge, tilts, pans and flights (2026-11-25; the lead's design, not built)
+
+Call 62 asked for the feel of Google Earth and call 63 built it from numbers:
+the wheel closes on what is under the pointer, a drag slides the ground with
+the hand, a turn is about the place under the pointer, a flick carries on, a
+double-click flies. `demos/glassw.sh` measures each. Patrick now names what he
+wants of it: "memorable scrolls, tilts and pans" and "the Google earth scroll
+wheel macro to micro". Read against what is there (`research/review-1125-
+window-behaviours.md`, point 15 and 16; `research/review-1125-games-and-
+editors-pass2.md` for Google Earth's own keys and the editors'):
+
+1. **Macro to micro on one wheel.** Today the view stops 2 ft from what it
+   looks at and 400 ft away. It is to run from the whole lot (the house small on
+   its ground) down to a single hinge or a receptacle filling a third of the
+   window, in one unbroken dive, the place under the pointer staying under it at
+   every notch. Nothing the view is closing on is cut away by coming near, and
+   nothing far is lost by going out: what is drawn near and far follows the
+   distance. Each notch still closes a tenth of the way, so the dive is quick
+   far off and fine close in. It never passes through the ground, and it stops
+   at a wall's face instead of passing through it unless the wall is switched
+   see-through.
+2. **Detail arrives as you come down.** A thing's name and size show when it is
+   big enough on the screen to be what you are looking at, and go when it is
+   not: far out the house reads as a house, close in a fixture reads with its
+   name, its size and where it connects. One rule by size on screen, not by a
+   mode.
+3. **Tilt as it dives, as Google Earth does, and a switch for it.** Coming down
+   from high above toward the ground in 3D, the view leans from looking down
+   toward looking across, a little with each notch, so the dive ends standing in
+   front of the thing and not on top of it; going back up it rights itself.
+   Google Earth has this with an option to turn it off; so does this ("Tilt as
+   I dive", on the view bar, on by default). On plan it never tilts.
+4. **Tilt and turn by hand, three ways**: the right button dragged (as today);
+   Shift and the left button dragged (Google Earth's own, and what a machine
+   with one button needs); the arrow keys (as today). The place it turns about
+   is marked while it turns.
+5. **Pans hold the ground.** The place grabbed stays under the pointer at any
+   tilt, to the edge of the window, and a flick carries on and dies away (as
+   today). A click stops a pan or a turn that is carrying on.
+6. **Flights frame what they fly to.** A double-click on a thing flies to it
+   and ends with the thing filling about half the window from the side it was
+   clicked on; on bare ground it closes on the place, as today. F frames what is
+   selected, or the whole house when nothing is. Every flight is timed by how
+   far it goes (0.4 to 1.2 s, call 63), eased in and out, and can be taken over
+   by the hand at any moment without a jerk.
+7. **A north arrow in the corner of the model**, turning as the view turns and
+   leaning as it tilts. A click on it turns the view north-up where it stands;
+   a double-click looks straight down. It is a builder's north arrow, not a
+   cube of faces.
+8. **Level to level glides** (Page Up, Page Down), and plan to 3D and back (T),
+   as one move; nothing jumps.
+9. **Every key this adds is shown on its control**, and none takes a key a tool
+   already has; the builder lists the keys in use first.
+10. **Measured, not asserted** (`demos/navw.sh`): the program writes where the
+    view is, and the time, to the map each frame it moves, so a dive, a pan and
+    a flight are read as curves and not judged from one picture. A strip of
+    pictures across each move is kept for a person to look at.
+11. Not in this call: a ghost of the thing before the click and the rest of how
+    tools feel (the next call); the second window showing a plan (the call
+    after).

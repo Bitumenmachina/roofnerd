@@ -11450,14 +11450,21 @@ step to the words the `cabinets` verb already takes):
 
 Not built yet.
 
-## Stopped for review, 2026-11-25 12:55 UTC (call 216): read this before building anything
+## Stopped for review, 2026-11-25 12:55 UTC (call 216), and started again the same day (call 217): read this first
 
 Patrick stopped the building to review everything against the tools of the trade
 (Revit, Bluebeam, CAD), the shop's CNC programs, games and the best-made software,
 and the code's fitness for other machines, remote now and a field app later.
-**Nothing new is built until he answers `QUESTIONS.md` Q30 to Q35.** The review is
-in DECISIONS.md call 216 and `research/review-1125-*.md`; the new features it
-suggests are PROPOSALS.md 34 to 40.
+The review is in DECISIONS.md call 216 and `research/review-1125-*.md`; the new
+features it suggests are PROPOSALS.md 34 to 40.
+
+**He answered the same day (call 217): the lead makes the calls; two windows
+stay and the second can show plans; this environment and its pictures are the
+evidence and another machine is not spoken of again; the review was for clean
+tools and memorable movement, the wheel from macro to micro; run to the finish
+without him.** The order of work is in call 217. In hand: how the window moves
+(call 218, `handoff/contracts/contract-218W.md`, its demonstration below), and at
+the command line the stopped bench step (call 214) taken up again.
 
 - Pushed head when he stopped: 0236018. **Pushed head now: the merge b965501**
   (everything accepted, the review's records, the gate fix, and two window fixes
@@ -11492,6 +11499,56 @@ suggests are PROPOSALS.md 34 to 40.
   program** (done the same day, proved red two ways: "Call 216, the gate put
   right"); **a typed name could stop the window, and is fixed** (reproduced in
   a test, seven places, one helper).
+
+## How the window moves: a demonstration, written before it is built (call 218; 2026-11-25)
+
+`demos/navw.sh` (contract `handoff/contracts/contract-218W.md`). The job is the
+made-up whole house (`plumbline sixteen`), 40 ft by 28 ft, two storeys, with a
+receptacle in the kitchen (a box 3 in wide and about 5 in high as drawn) and the
+front door. The program writes the view (where it stands, what it looks at, how
+far, its tilt, its turn, and the time) to the map on every frame it moves; the
+script reads those lines. By hand:
+
+1. **Out to the lot**: the wheel turned back until it stops: the house is under
+   a fifth of the window's width (40 ft seen from about 400 ft or more), nothing
+   of it is cut away, and the ground reaches the edge of the window.
+2. **The dive**: the pointer on the kitchen receptacle and the wheel turned in,
+   notch after notch, until it stops. Each notch closes a tenth of what is left,
+   so from 400 ft to 8 in is about **60 notches** (0.9 to the 60th is 0.0018;
+   400 ft times that is 0.72 ft). At every notch the receptacle is under the
+   pointer **within 3 dots**. At the end it fills **a third of the window's
+   height or more** and none of it is cut away.
+3. **Detail arrives**: far out no fixture is named; at the end of the dive the
+   receptacle's name and size are on the screen. The house's own name or price
+   is not lettered over it close in.
+4. **Tilt as it dives**: over the same dive in 3D, started looking down at 60
+   degrees from level, the view ends between **5 and 25 degrees** from level,
+   and the tilt never goes back on itself on the way (each frame's tilt is no
+   steeper than the last). With "Tilt as I dive" off the same dive ends at 60
+   degrees. On plan the tilt is 90 degrees throughout.
+5. **A pan holds the ground**: at a 30 degree tilt, a corner of the house
+   grabbed and dragged 300 dots: the corner is under the pointer **within 3
+   dots** at the end, and let go moving it carries on at least 20 dots and
+   stops.
+6. **Shift and the left button** turns the view as the right button does: the
+   same drag gives the same turn within a degree, and the place it turns about
+   is marked while it turns.
+7. **A flight frames the thing**: a double-click on the front door: the flight
+   takes between **0.4 and 1.2 s**, its speed rises and then falls (no frame
+   moves more than the one before it after the half-way, none less before it),
+   and at its end the door fills between **a third and two thirds** of the
+   window's height. A drag begun half-way through takes the view over with no
+   frame in which the view moves back.
+8. **F** with the door selected frames the door; with nothing selected, the
+   house.
+9. **The north arrow**: after a quarter turn of the view it points a quarter
+   turn off; a click on it and the view is north-up within a degree, standing
+   where it stood; a double-click and it looks straight down.
+10. **Page Down then Page Up**: the view glides (at least six frames between
+    the two heights) and ends where it began, within an inch.
+11. `demos/glassw.sh` passes unchanged: nothing it measures has moved.
+
+Not built yet.
 
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 

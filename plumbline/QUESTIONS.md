@@ -491,3 +491,8 @@ A maker's model as an item (call 214, stopped part-way) and a cabinet by rule
 Read as milling: programs that drive CNC machines. If he meant something else,
 the survey `research/review-1125-cnc-and-fabrication.md` is beside the point and
 is done again.
+
+**Q30 to Q35 are answered (2026-11-25, DECISIONS.md call 217).** Patrick: "You are
+able to make the calls". Q32 is his own ruling: two windows stay, and the second
+can show plans. Q31 is withdrawn and is not raised again. Q30, Q33, Q34 and Q35
+are the lead's calls and are written in call 217.
