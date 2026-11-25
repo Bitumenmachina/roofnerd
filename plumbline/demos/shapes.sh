@@ -195,7 +195,7 @@ ROWS
 "$P" import shapes "$J5" "$T/starter-name.csv" > "$T/name-in.txt"
 sed 's/^/    | /' "$T/name-in.txt"
 says "$T/name-in.txt" "\"base cabinet\" is a starter shape's name"
-says "$T/name-in.txt" "plain box shape: added: 1 blocks"
+says "$T/name-in.txt" "plain box shape: added: 1 block"
 echo "-- 7.6 the fourth block taken away: 3 blocks, the figures of 7.1 --"
 cp "$T/hand-two.json" "$J5"
 "$P" shape "$J5" take "vanity with a panel" 4 > "$T/take.txt"

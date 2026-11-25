@@ -202,21 +202,29 @@ impl Shape {
         };
         let c = Compiled { made: piece.made, round: piece.round, figures, when };
         for (word, size) in CHECK_SIZES {
-            let Some(b) = run_one(&self.name, n, &c, size)? else { continue };
-            for (i, axis) in ["across", "back", "up"].into_iter().enumerate() {
-                let (lo, hi) = if i == 2 { (0.0, size[2]) } else { (-size[i] / 2.0, size[i] / 2.0) };
-                let out = (lo - b.lo[i]).max(b.hi[i] - hi);
-                if out > REACH {
-                    // Which way, so a person knows which figure to pull in (call 205).
-                    let (low, high) = [("to the left", "to the right"), ("in front", "behind"), ("below", "above")][i];
-                    let way = if lo - b.lo[i] >= b.hi[i] - hi { low } else { high };
-                    let inches = format!("{:.3}", out * 12.0);
-                    let inches = inches.trim_end_matches('0').trim_end_matches('.');
-                    return Err(format!("shape {:?}, block {}: at the {word} size ({} x {} x {} ft) it reaches {out:.4} ft outside the box of the item's sizes, {axis} ({inches} in {way} the box); a shape is drawn inside its box", self.name, n + 1, size[0], size[1], size[2]));
-                }
+            if let Some((out, axis, way)) = outside_box(&self.name, n, &c, size)? {
+                let inches = format!("{:.3}", out * 12.0);
+                let inches = inches.trim_end_matches('0').trim_end_matches('.');
+                return Err(format!("shape {:?}, block {}: at the {word} size ({} x {} x {} ft) it reaches {out:.4} ft outside the box of the item's sizes, {axis} ({inches} in {way} the box); a shape is drawn inside its box", self.name, n + 1, size[0], size[1], size[2]));
             }
         }
         Ok(c)
+    }
+
+    /// The shape held to the box of one item's own sizes (call 206 point 2): the three sizes a table is tried at are
+    /// no proof that a block stays inside at another. Refused, naming the item, the block and how far it reaches.
+    /// `size` is the item's width, depth and height in feet.
+    pub fn check_at(&self, item: &str, size: P3) -> Result<(), String> {
+        let compiled = self.compile()?;
+        for (n, c) in compiled.iter().enumerate() {
+            if let Some((out, axis, way)) = outside_box(&self.name, n, c, size)? {
+                let inches = format!("{:.3}", out * 12.0);
+                let inches = inches.trim_end_matches('0').trim_end_matches('.');
+                let (w, d, h) = (inch_said(size[0]), inch_said(size[1]), inch_said(size[2]));
+                return Err(format!("{item:?} is {w} wide, {d} deep and {h} high, and drawn as {:?}, whose block {} reaches {inches} in {way} its box ({axis}); a shape is drawn inside the box of its item's sizes", self.name, n + 1));
+            }
+        }
+        Ok(())
     }
 
     /// Every block that cannot be used, by its place in the shape (from 0) and why.
@@ -255,13 +263,36 @@ impl Shape {
     }
 }
 
+/// A length in feet as inches, to the thousandth.
+fn inch_said(ft: f64) -> String {
+    let t = format!("{:.3}", ft * 12.0 + 0.0);
+    let t = t.trim_end_matches('0').trim_end_matches('.');
+    format!("{} in", if t == "-0" { "0" } else { t })
+}
+
+/// How far a block of a shape reaches outside the box of `size`, if it does: how far in feet, on which axis, and which way.
+fn outside_box(name: &str, n: usize, c: &Compiled, size: P3) -> Result<Option<(f64, &'static str, &'static str)>, String> {
+    let Some(b) = run_one(name, n, c, size)? else { return Ok(None) };
+    for (i, axis) in ["across", "back", "up"].into_iter().enumerate() {
+        let (lo, hi) = if i == 2 { (0.0, size[2]) } else { (-size[i] / 2.0, size[i] / 2.0) };
+        let out = (lo - b.lo[i]).max(b.hi[i] - hi);
+        if out > REACH {
+            // Which way, so a person knows which figure to pull in (call 205).
+            let (low, high) = [("to the left", "to the right"), ("in front", "behind"), ("below", "above")][i];
+            let way = if lo - b.lo[i] >= b.hi[i] - hi { low } else { high };
+            return Ok(Some((out, axis, way)));
+        }
+    }
+    Ok(None)
+}
+
 /// One figure worked: a length in feet.
 fn figure(shape: &str, n: usize, what: &str, expr: &Expr, size: P3) -> Result<f64, String> {
     let worked = formula::work(expr, &|name| lookup(name, size)).map_err(|why| format!("shape {shape:?}, block {}, {what}: {why}", n + 1))?;
     // A plain 0 is no distance in any unit, and is the one number that stands without a unit (ruling 2).
     let nothing = matches!(expr, Expr::Num(x) if *x == 0.0);
     if worked.dim != 1 && !nothing {
-        return Err(format!("shape {shape:?}, block {}, {what}: {} comes out as {}; a figure of a shape is a length (write a fixed size with its unit: 4 in, 100 mm; only 0 stands without one)", n + 1, worked.text, dim_said(worked.dim)));
+        return Err(format!("shape {shape:?}, block {}, {what}: {:?} comes out as {}; a figure of a shape is a length (write a fixed size with its unit: 4 in, 100 mm; only 0 stands without one)", n + 1, formula::typed(expr), dim_said(worked.dim)));
     }
     match worked.value {
         Some(x) if x.is_finite() => Ok(x),

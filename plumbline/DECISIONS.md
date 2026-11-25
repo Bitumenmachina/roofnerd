@@ -8361,3 +8361,33 @@ than words. Decided, point by point:
 **Held, and left**: a bare number typed as a quantity on a line priced by the foot
 is read as a count and says so; a footing widened in a file to 26 ft comes in as
 the file has it, Assumed, and its dollars put it at the head of the field list.
+
+**Call 206, as built (2026-11-25, by a Sonnet worker under `handoff/contracts/contract-206.md`;
+`research/worker-report-call206.md`; accepted by the lead's own run in the worker's
+copy).** All fourteen points.
+- **Point 1**: one function names everything a person entered on a line that comes
+  off, and a test fails if a cost line gains a thing a person can set that the
+  naming does not cover. The reply reads: `"Refrigerator" came off ..., with a
+  quantity of 7.00 EA ("7", where the assembly writes "1") entered on it (it came
+  to $7,000.00)`. It is said wherever a line comes off: an assembly changed, an
+  item priced as another thing or as nothing, a mark cleared, a line removed.
+- **Point 2**: a shape is checked at the item's own sizes in every place a shape
+  meets an item (a new item, drawn as, an item's size, a block added or set, a
+  shape kept, either table brought in), and `check` says it of a job that holds
+  one (the job still opens).
+- **Point 3**: a level in the file within an eighth of an inch of one the job has
+  is that level, and the reply says so; the model works out the rooms that moved.
+  The judge's figures were right and are now worked by hand in the report
+  (39.5 x 15.5625 = 614.72 SF; 23.5 x 15.5625 = 365.72 SF). **What the worker found
+  on the way, and it matters**: a room's figures come from every wall at the
+  level's height, whatever level the wall is on; the second level at 0 ft did not
+  cut the room, the wall did. So the fault was never the level, it was the
+  silence, and the reply now names each room.
+- Points 4 to 14 as decided, each a step of `demos/judged-1125.sh`.
+Expectations moved, each by words a point asks for and none a figure of money or
+quantity; the list is in the report. **Not right, and said**: a height below
+nothing is refused where a line enters a height; a spacing below nothing still
+goes through. Six of the points of wording were not run red against the old
+source. **Owed to the window**: an assembly changed in the window names what was
+rewritten and left (contract 197W point 16) and must now also say what was typed
+on a line that came off; it joins the next window job.

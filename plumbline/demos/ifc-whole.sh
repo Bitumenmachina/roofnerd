@@ -169,7 +169,7 @@ printf '    the same gable ends in both\n'
 sed "s/'Plumbline_Roof'/'Somebody_Elses'/" "$T/gable.ifc" > "$T/other.ifc"
 "$P" new "$T/other.json" "Other (not a real job)" >/dev/null
 "$P" import ifc "$T/other.json" "$T/other.ifc" --status Assumed --source "made-up model" > "$T/other-in.txt"
-says "$T/other-in.txt" "a roof is not brought in from a model yet"
+says "$T/other-in.txt" "a roof with no outline of this program's in the file is not brought in"
 
 echo
 echo "== What is left out says what follows from it (point 6) =="
@@ -229,7 +229,7 @@ says "$T/framing-structure.txt" "size 3 1/2 in × 3 1/2 in (Assumed: made-up mod
 printf '    the beam: 12 LF, 3 1/2 in by 9 1/4 in, its top 8 ft up; the post: 8 ft tall, 3 1/2 in square; every size Assumed, sourced to the file (said Known: not taken as Known)\n'
 # The same file again counts neither twice: refused, and says why.
 if "$P" import ifc "$T/framing2.json" "$T/framing.ifc" --status Known --source "made-up model" > "$T/framing-again.txt" 2>&1; then echo "FAIL: the same beam and post came in twice"; cat "$T/framing-again.txt"; exit 1; fi
-says "$T/framing-again.txt" "already on this level"
+says "$T/framing-again.txt" "this model is already in the job: nothing was brought in. 2 of its 2 things are in the very place the model has them, so a second would be counted twice (1 beam, 1 post)"
 # A beam that slopes is left out, and says why.
 "$P" new "$T/slope.json" "Slope (not a real job)" >/dev/null
 SL="$(grep -oE 'level-[0-9]+' <("$P" level "$T/slope.json" ground --elevation "0 ft" --height "9 ft" "${A[@]}") | head -1)"

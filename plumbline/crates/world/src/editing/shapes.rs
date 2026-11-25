@@ -155,6 +155,36 @@ fn own_shape(job: &Job, name: &str) -> Result<usize, String> {
     })
 }
 
+/// An item held to the shape it is drawn as, at its own sizes (call 206 point 2). The three sizes a table is tried at say
+/// nothing of the sizes an item has: a block that stays inside the box at those can stand outside it at another. Wherever
+/// a shape meets an item (the item brought in or drawn as it, its size changed, a block of the shape added or set, a table
+/// brought in) it is tried here. An item with no size has no shape to draw and passes; so does one drawn as a box.
+/// What an item says it is drawn as, else what its name says, is the shape.
+pub fn item_fits(shapes: &[Shape], name: &str, it: &Item) -> Result<(), String> {
+    let Ok((size, _, _)) = it.size_ft() else { return Ok(()) };
+    let shape = match it.form.as_deref().map(str::trim) {
+        Some(said) if said.eq_ignore_ascii_case(BOX) => return Ok(()),
+        Some(said) => shape::find(shapes, said),
+        None => crate::building::forms::form_of(name).and_then(|f| shape::starter_named(f.name())),
+    };
+    match shape {
+        Some(shape) => shape.check_at(name, size),
+        None => Ok(()),
+    }
+}
+
+/// Every item of the job that stands outside its shape's box at its own sizes, with why: what `check` says of a job that
+/// already holds one (it still opens, as a job saved before does).
+pub fn items_outside_their_boxes(job: &mut Job) -> Vec<(String, String)> {
+    let items: Vec<(String, String, Item)> = {
+        let mut q = job.world.query::<(&Node, &Item)>();
+        q.iter(&job.world).map(|(n, it)| (n.path.clone(), n.name.clone(), it.clone())).collect()
+    };
+    let mut out: Vec<(String, String)> = items.into_iter().filter_map(|(path, name, it)| item_fits(&job.shapes, &name, &it).err().map(|why| (path, why))).collect();
+    out.sort();
+    out
+}
+
 /// The items drawn as a shape (by name), and the things set down from them.
 fn followers(job: &mut Job, shape: &str) -> (Vec<(String, String)>, Vec<String>) {
     let items: Vec<(String, String)> = {
@@ -202,6 +232,15 @@ fn change(job: &mut Job, shape: &str, f: impl FnOnce(&mut Shape) -> Result<(Stri
         let mut s = job.shapes[at].clone();
         let (did, block) = f(&mut s)?;
         s.check()?;
+        // And at each item's own sizes (call 206 point 2).
+        let (items, _) = followers(job, &s.name);
+        for (path, name) in &items {
+            if let Some(it) = job.find(path).and_then(|e| job.world.get::<Item>(e)).cloned() {
+                if let Ok((size, _, _)) = it.size_ft() {
+                    s.check_at(name, size)?;
+                }
+            }
+        }
         job.shapes[at] = s;
         let name = job.shapes[at].name.clone();
         said_of(job, &name, did, block, None)
@@ -308,6 +347,9 @@ pub fn keep_shape_as(job: &mut Job, item: &str, name: &str) -> Result<ShapeChang
         }
         let copy = Shape { name: name.clone(), blocks };
         copy.check()?;
+        if let Ok((size, _, _)) = it.size_ft() {
+            copy.check_at(&item_name, size)?;
+        }
         job.shapes.push(copy);
         it.form = Some(name.to_lowercase());
         job.put(item, it)?;

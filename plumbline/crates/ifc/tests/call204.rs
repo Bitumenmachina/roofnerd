@@ -92,7 +92,7 @@ fn a_beam_and_a_column_in_a_file_come_in_as_a_beam_and_a_post_sized_from_their_b
     // The same file again counts neither twice.
     let again = import(&mut back, text.as_bytes(), "framing.ifc", HOW).unwrap_err();
     assert_eq!(segment(&mut back, Kind::Beam).len(), 1, "{again}");
-    assert!(again.contains("already on this level") && again.contains("counted twice"), "{again}");
+    assert!(again.contains("this model is already in the job") && again.contains("counted twice"), "{again}");
 }
 
 // A beam that slopes, one round in section, a post turned on the plan, a beam whose section is turned about its length: each left

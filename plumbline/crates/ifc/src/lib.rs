@@ -54,6 +54,9 @@ pub struct Brought {
     pub left_out: Vec<(String, usize, String)>,
     /// Things done that whoever brought the model in should know.
     pub notes: Vec<String>,
+    /// The rooms of the job whose figures are not what they were before the model came in, worked by the model (call 206
+    /// point 3): a wall brought in stands in a room and cuts it, and the rooms were not asked.
+    pub rooms_moved: Vec<ed::RoomMoved>,
 }
 
 type P3 = [f64; 3];
@@ -66,6 +69,67 @@ struct Frame {
     z: P3,
     o: P3,
 }
+
+/// Why a roof of a model is left out: this program reads the roofs it wrote, by the outline it put in the file (call 206 point 8).
+const NO_ROOF_OUTLINE: &str = "a roof with no outline of this program's in the file is not brought in: draw it from its footprint and its pitch";
+
+/// What a kind of thing is called with its article: "a duct", "an outlet", "a piece of equipment" (call 206 point 9).
+fn a_kind(kind: Kind) -> String {
+    let stem = kind.stem();
+    if stem == "equipment" {
+        return "a piece of equipment".to_string();
+    }
+    format!("{} {stem}", if stem.chars().next().is_some_and(|c| "aeiou".contains(c)) { "an" } else { "a" })
+}
+
+/// A model that is in the job already, said once and by counts (call 206 point 9): no word of the file's own and no clause for
+/// each fitting. It is that where most of what it has was left out as already there; what else was left out is said after, by
+/// kind, as it always was.
+fn already_in_the_job(left_out: &[(String, usize, String)]) -> Option<String> {
+    let already = |why: &str| why.contains("already") || why.contains("counted twice") || why.contains("one over the other");
+    let with_walls = |why: &str| why.contains("fills no hole in a wall that was brought in");
+    let total: usize = left_out.iter().map(|(_, n, _)| n).sum();
+    let twice: usize = left_out.iter().filter(|(_, _, why)| already(why)).map(|(_, n, _)| n).sum();
+    let openings: usize = left_out.iter().filter(|(_, _, why)| with_walls(why)).map(|(_, n, _)| n).sum();
+    if twice == 0 || twice * 2 < total {
+        return None;
+    }
+    // The file's own words for what this program calls a post and a room.
+    let plain = |class: &str| match class {
+        c if c.contains("as the model calls it") => "other things".to_string(),
+        "column" => "post".to_string(),
+        "space" => "room".to_string(),
+        c => c.to_string(),
+    };
+    let rest: Vec<String> = left_out.iter().filter(|(_, _, why)| !already(why) && !with_walls(why)).map(|(c, n, why)| format!("{n} {} ({})", plain(c), why.replace("this program would not take it: ", ""))).collect();
+    let mut said = format!(
+        "this model is already in the job: nothing was brought in. {twice} of its {total} thing{} {} in the very place the model has {}, so a second would be counted twice",
+        if total == 1 { "" } else { "s" },
+        if twice == 1 { "is" } else { "are" },
+        if twice == 1 { "it" } else { "them" }
+    );
+    // By kind: the fittings together, and no word of the file's own.
+    let mut kinds: BTreeMap<String, usize> = BTreeMap::new();
+    for (class, n, _) in left_out.iter().filter(|(_, _, why)| already(why)) {
+        let name = if class.ends_with(" fitting") { "fitting".to_string() } else { plain(class) };
+        *kinds.entry(name).or_insert(0) += n;
+    }
+    let mut kinds: Vec<(String, usize)> = kinds.into_iter().collect();
+    kinds.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(&b.0)));
+    if !kinds.is_empty() {
+        said.push_str(&format!(" ({})", kinds.iter().map(|(k, n)| format!("{n} {k}")).collect::<Vec<_>>().join(", ")));
+    }
+    if openings > 0 {
+        said.push_str(&format!("; {openings} door{} and window{} go with walls that were not brought in again", if openings == 1 { "" } else { "s" }, if openings == 1 { "" } else { "s" }));
+    }
+    if !rest.is_empty() {
+        said.push_str(&format!("; and {}", rest.join("; ")));
+    }
+    Some(said)
+}
+
+/// Two floors are at one height when they are within an eighth of an inch (call 206 point 3).
+const SAME_HEIGHT_FT: f64 = 0.125 / 12.0;
 
 /// How nearly straight up a wall's body has to be pushed, and how nearly level a floor
 /// has to lie, to be read as upright or level: within about an eighth of an inch in
@@ -741,7 +805,22 @@ pub fn import(job: &mut Job, bytes: &[u8], name: &str, how: Entered) -> Result<B
     let count = |names: &[&str]| file.entities.values().filter(|e| names.contains(&e.name.as_str())).count();
     let (property_sets, materials) = (count(&["IFCPROPERTYSET", "IFCELEMENTQUANTITY"]), count(&["IFCMATERIAL", "IFCMATERIALLAYERSET", "IFCMATERIALCONSTITUENTSET", "IFCMATERIALPROFILESET"]));
     ed::all_or_nothing(job, |job| {
+        // The rooms as they were, for the rooms the model changes to be named (call 206 point 3); a job with no room has none to change.
+        let rooms_before = if job.world.query::<&plumbline_world::Room>().iter(&job.world).next().is_some() { ed::room_figures(job) } else { Vec::new() };
         let mut out = bring(job, &r, name, how, unit_name, k)?;
+        if !rooms_before.is_empty() {
+            let after = ed::room_figures(job);
+            out.rooms_moved = ed::rooms_moved(&rooms_before, &after);
+            if !out.rooms_moved.is_empty() {
+                out.notes.push(format!(
+                    "{} of the job {} other figures now, because walls brought in from the model stand in {}: {}",
+                    if out.rooms_moved.len() == 1 { "1 room".to_string() } else { format!("{} rooms", out.rooms_moved.len()) },
+                    if out.rooms_moved.len() == 1 { "has" } else { "have" },
+                    if out.rooms_moved.len() == 1 { "it" } else { "them" },
+                    out.rooms_moved.iter().map(|m| m.said()).collect::<Vec<_>>().join("; ")
+                ));
+            }
+        }
         if said_known && assumed + unknown == 0 {
             out.notes.push("everything from this model was brought in Assumed, not Known as was said of it: a model is what its maker drew, not what was measured here. Measure it and mark it Known".to_string());
         }
@@ -917,11 +996,32 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
     };
     let heights = storey_heights(r);
     let mut storey_path: HashMap<u64, (String, f64)> = HashMap::new();
-    let mut shared = Vec::new();
+    let mut shared: Vec<String> = Vec::new();
+    // The levels the job had before this model: a level of the model at the height of one of them is that level, whatever
+    // the two are called (call 206 point 3).
+    let had: Vec<(String, String, Option<f64>)> = have.clone();
+    let mut by_height: Vec<String> = Vec::new();
     for (i, (id, called, elevation, placed)) in storeys.iter().enumerate() {
         let source = from(&r.file.entities[id], *id);
         let entered = Entered { status: how.status, source: &source };
         let mut called = if called.is_empty() { format!("level at {}", feet(*elevation)) } else { called.clone() };
+        // A level the job had at this height is that level, under the job's name, within an eighth of an inch.
+        let same_height = |(_, _, at): &&(String, String, Option<f64>)| at.is_some_and(|a| (a - elevation).abs() <= SAME_HEIGHT_FT);
+        if let Some((jname, path, _)) = had.iter().filter(same_height).find(|(n, _, _)| *n == called).or_else(|| had.iter().find(same_height)) {
+            if *jname == called {
+                shared.push(called.clone());
+            } else {
+                let theirs = heights.get(id).map(|h| h * k);
+                let ours = job.find(path).and_then(|e| job.world.get::<building::Level>(e)).and_then(|l| l.height.feet());
+                let differ = match (theirs, ours) {
+                    (Some(t), Some(o)) if (t - o).abs() > SAME_HEIGHT_FT => format!("; the model gives it as {} high and the job has it {} high, and the job's stays", feet(t), feet(o)),
+                    _ => String::new(),
+                };
+                by_height.push(format!("the model's level \"{called}\" has its floor at {}, the height of the job's \"{jname}\": it is that level, and what the model has on it was put on the job's own{differ}", feet(*elevation)));
+            }
+            storey_path.insert(*id, (path.clone(), *placed));
+            continue;
+        }
         // A storey of this name already in the job, at this height: it is that storey.
         // At another height the two cannot both be right, and the model is refused.
         if let Some((_, path, at)) = have.iter().find(|(n, _, _)| *n == called).filter(|_| !storey_path.values().any(|(p, _)| have.iter().any(|(n, hp, _)| *n == called && hp == p))) {
@@ -969,10 +1069,14 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
                 path
             }
         };
+        if !had.is_empty() {
+            out.notes.push(format!("the model's level \"{called}\" has its floor at {}, which is not the height of any level the job has: it was added as a new level", feet(*elevation)));
+        }
         have.push((called, path.clone(), Some(*elevation)));
         storey_path.insert(*id, (path, *placed));
         made("levels");
     }
+    out.notes.extend(by_height);
     if !shared.is_empty() {
         out.notes.push(format!("the job already has {}: what the model has on {} was put on the job's own, and no second level was made", shared.iter().map(|n| format!("\"{n}\"")).collect::<Vec<_>>().join(", "), if shared.len() == 1 { "it" } else { "them" }));
     }
@@ -1291,6 +1395,9 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
                 }
                 Err(why) => {
                     done.insert(id);
+                    // Its slabs are part of it: the roof says why it was left out, and they are not left out again for a reason
+                    // that is not so (they have the outline).
+                    roof_slabs.extend(slabs.iter().copied());
                     if let Some(reach) = r.reach(e) {
                         stood_on.push((said(&e.name), [reach.0[0] * k, reach.0[1] * k, reach.0[2] * k], [reach.1[0] * k, reach.1[1] * k, reach.1[2] * k]));
                     }
@@ -1311,7 +1418,7 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
             if roof_slabs.contains(&id) {
                 continue;
             }
-            leave("IFCROOFSLAB", "a roof is not brought in from a model yet: draw it from its footprint and its pitch");
+            leave("IFCROOFSLAB", NO_ROOF_OUTLINE);
             continue;
         }
         if r.pieces(e) > 1 {
@@ -1590,7 +1697,7 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
                 })
             };
             if there {
-                return Err(format!("a {} in this very place is already on this level: a second would be counted twice", kind.stem()));
+                return Err(format!("{} in this very place is already on this level: a second would be counted twice", a_kind(kind)));
             }
             let called = free_name(job, &storey, &r.name(e), kind.stem(), id);
             let path = job.add(&storey, kind, &called)?;
@@ -1906,7 +2013,7 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
                 })
             };
             if there {
-                return Err(format!("a {} in this very place is already on this level: a second would be counted twice", kind.stem()));
+                return Err(format!("{} in this very place is already on this level: a second would be counted twice", a_kind(kind)));
             }
             let size = body.as_ref().map(|b| [tidy(b.size[0] * k), tidy(b.size[1] * k), tidy(b.size[2] * k)]);
             let path = ed::place(job, &storey, kind, &what, at, &offset, size, system_of.get(&id).map(String::as_str), entered)?;
@@ -2022,6 +2129,8 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
         let (mut connections, mut joined, mut no_sort) = (0usize, 0usize, 0usize);
         let mut apart: Vec<String> = Vec::new();
         let mut refused: Vec<String> = Vec::new();
+        // The connections made that are not tied to the end of a run in the file, each by its thing and where (call 206 point 10).
+        let mut loose: Vec<String> = Vec::new();
         for (id, thing) in &thing_by_id {
             let Some(ports) = ports_of.get(id) else { continue };
             let kind = job.kind(thing);
@@ -2089,6 +2198,10 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
                         connections += 1;
                         if tie.is_some() {
                             joined += 1;
+                        } else {
+                            let name = job.find(thing).and_then(|e| job.world.get::<plumbline_world::Node>(e)).map(|n| n.name.clone()).unwrap_or_else(|| thing.clone());
+                            let port_name = r.name(port);
+                            loose.push(format!("{name}{} at ({}, {}, {})", if port_name.is_empty() { String::new() } else { format!(", {port_name}") }, tidy(at[0]), tidy(at[1]), tidy(at[2])));
                         }
                     }
                     Err(why) if why.contains("already has a connection") => {}
@@ -2103,6 +2216,18 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
                 if connections == 1 { "was" } else { "were" },
                 if joined == 1 { "was" } else { "were" },
                 if joined == 1 { "is" } else { "are" }
+            ));
+        }
+        if !loose.is_empty() {
+            let shown: Vec<String> = loose.iter().take(5).cloned().collect();
+            out.notes.push(format!(
+                "{} of the {connections} connection{} {} not tied to the end of a run in the file, and {} left loose: {}{}",
+                loose.len(),
+                if connections == 1 { "" } else { "s" },
+                if loose.len() == 1 { "is" } else { "are" },
+                if loose.len() == 1 { "is" } else { "are" },
+                shown.join("; "),
+                if loose.len() > 5 { format!("; and {} more", loose.len() - 5) } else { String::new() }
             ));
         }
         if !apart.is_empty() {
@@ -2202,7 +2327,7 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
             if let Some(reach) = reach_of(e) {
                 stood_on.push((said(&e.name), reach.0, reach.1));
             }
-            leave(&e.name, "nothing here to bring it in as");
+            leave(&e.name, if e.name == "IFCROOF" { NO_ROOF_OUTLINE } else { "nothing here to bring it in as" });
         } else if Reader::text(r.arg(e, 0)).is_some_and(|mark| mark.len() == 22) && e.args.len() >= 7 && !e.name.starts_with("IFCREL") && !e.name.ends_with("TYPE") && !e.name.ends_with("STYLE") && !e.name.ends_with("TEMPLATE") && !NOT_THINGS.contains(&e.name.as_str()) {
             leave(&e.name, "the model gives it no place, and there is nothing here to bring it in as");
         }
@@ -2240,6 +2365,9 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
     out.notes.push(format!("the model is in {}: every length was turned into feet and kept to a ten-thousandth of a foot", out.unit));
     out.left_out = left.into_iter().map(|((class, why), n)| (class, n, why)).collect();
     if out.made.iter().all(|(what, _)| what == "levels") {
+        if let Some(said) = already_in_the_job(&out.left_out) {
+            return Err(said);
+        }
         return Err(format!("nothing in the model but its levels could be brought in: {}", out.left_out.iter().map(|(c, n, why)| format!("{n} {c} ({why})")).collect::<Vec<_>>().join("; ")));
     }
     Ok(out)

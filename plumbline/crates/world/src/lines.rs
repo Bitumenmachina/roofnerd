@@ -226,6 +226,9 @@ pub fn dollars(value: Option<f64>, statuses: &[Status], formula: &str, inputs: &
     }
 }
 
+/// What a line says that is priced at $0.00 as entered (call 206 point 13): a thing can be free, and it is said.
+pub const ZERO_PRICE: &str = "its price is $0.00 as entered: nothing is charged for it";
+
 /// The note on an extension of $0.00 that is $0.00 because there is nothing to price.
 pub const ZERO_QUANTITY: &str = "the line's quantity is 0, so it comes to nothing";
 
@@ -282,9 +285,11 @@ fn extension(price: &Price, quantity: &Derived, with_waste: Option<&Derived>, or
             statuses.extend(&price.statuses);
             let mut d = dollars(Some(q * p), &statuses, &formula, inputs);
             // Nothing is silently zero: a line that prices nothing says so. A price of
-            // $0 that was entered is an answer and needs no note.
+            // $0 that was entered is an answer, and is named on the line (call 206 point 13).
             if q == 0.0 && d.value.is_some() {
                 d.note = ZERO_QUANTITY.into();
+            } else if p == 0.0 && d.value.is_some() {
+                d.note = ZERO_PRICE.into();
             }
             d
         }

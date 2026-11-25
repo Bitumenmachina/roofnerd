@@ -11040,7 +11040,14 @@ and eleven of wording. `demos/judged-1125.sh`, at the command line. By hand:
 4. Each of points 4 to 14 of call 206, one step each, the reply quoted in the
    script.
 
-Not built yet.
+**Built (2026-11-25).** `research/worker-report-call206.md`; DECISIONS.md, "Call 206, as
+built". Run by the lead in the worker's copy: the six command-line crates' tests
+pass (983: world 608, ifc 53); all 53 command-line demonstrations pass with no FAIL
+in their words, `demos/judged-1125.sh` holding its fourteen steps; the three gates,
+`portmap.sh` and `licenses.sh` pass. No figure of money or quantity moved; the
+expectations that moved gained the words a point asks for. **Not run**: the
+window. **Not right**: a spacing below nothing is still taken; the window does not
+yet say what was typed on a line that comes off when an assembly is changed there.
 
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 

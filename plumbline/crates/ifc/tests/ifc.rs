@@ -252,8 +252,10 @@ fn j15_21_another_model_stands_on_the_jobs_own_storeys() {
     // twice; it is refused, each thing with why, and the job is as it was.
     let before = save(&mut job);
     let why = import(&mut job, &model(), "made-up-house.ifc", HOW).unwrap_err();
-    assert!(why.starts_with("nothing in the model but its levels could be brought in"), "{why}");
-    for said in ["a duct in this very place is already on this level", "a pipe in this very place is already on this level", "a floor with this very outline is already on this level", "one wall drawn over another would be counted twice"] {
+    // Said once, by counts, in a builder's words (call 206 point 9): it held each thing's own reason ("a duct in this very place is
+    // already on this level" ...), and now counts them by kind.
+    assert!(why.starts_with("this model is already in the job: nothing was brought in. 10 of its 13 things are in the very place the model has them, so a second would be counted twice ("), "{why}");
+    for said in ["duct", "pipe", "floor slab", "wall"] {
         assert!(why.contains(said), "{said}: {why}");
     }
     assert_eq!(save(&mut job), before);

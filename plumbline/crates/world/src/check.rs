@@ -458,7 +458,7 @@ pub fn cost(path: &str, kind: Kind, c: &Cost) -> Result<(), String> {
                 return Err(format!("{what}: is made of the element's material and also carries an order factor; how it is ordered is the material's"));
             }
             if !CostLine::is_no_price_of_its_own(&line.unit_cost) {
-                return Err(format!("{what}: is made of the element's material and also carries a unit cost; its price is the material's"));
+                return Err(format!("{what}: is made of the element's material and also carries a unit cost; its price is the material's, or its item's: give the price there (a price list brought in, or the material's own price), not on the line"));
             }
             if line.class != Some(Class::Material) {
                 return Err(format!("{what}: is made of the element's material, so its cost type is Material"));

@@ -200,9 +200,17 @@ impl Parser {
                     // them; alone they are names, as they always were.
                     (Some(pick), Some(Tok::Open)) => {
                         self.at += 1;
+                        // Nothing in it, or nothing after a comma: said as what it takes (call 206 point 11).
+                        let empty = |p: &Parser| matches!(p.peek(), Some(Tok::Close));
+                        if empty(self) {
+                            return Err(format!("{}( takes two figures or more, with a comma between them, like {}(4 in, height); there is nothing in it", pick.word(), pick.word()));
+                        }
                         let mut args = vec![self.sum()?];
                         while matches!(self.peek(), Some(Tok::Comma)) {
                             self.at += 1;
+                            if empty(self) {
+                                return Err(format!("{}( takes two figures or more, with a comma between them, like {}(4 in, height); there is nothing after the last comma", pick.word(), pick.word()));
+                            }
                             args.push(self.sum()?);
                         }
                         match self.peek() {
@@ -359,6 +367,32 @@ pub struct Worked {
     pub text: String,
 }
 
+/// A formula as it is typed: names, numbers with their units, `+ - * /` and `min( )`, with the brackets it needs. Refusals quote
+/// this and not the worked text (`height \u{00D7} 0.5 \u{00F7} 12`), which is the program's own rewriting (call 206 point 11).
+pub fn typed(e: &Expr) -> String {
+    fn rank(e: &Expr) -> u8 {
+        match e {
+            Expr::Bin(_, '+' | '-', _) => 1,
+            Expr::Bin(..) => 2,
+            Expr::Neg(_) => 3,
+            _ => 4,
+        }
+    }
+    match e {
+        Expr::Num(x) => num_text(*x),
+        Expr::Name(n) => n.clone(),
+        Expr::Sized(x, unit) => format!("{} {}", num_text(*x), unit),
+        Expr::Neg(a) => if rank(a) < 4 { format!("-({})", typed(a)) } else { format!("-{}", typed(a)) },
+        Expr::Pick(pick, args) => format!("{}({})", pick.word(), args.iter().map(typed).collect::<Vec<_>>().join(", ")),
+        Expr::Bin(a, op, b) => {
+            let mine = rank(e);
+            let left = if rank(a) < mine { format!("({})", typed(a)) } else { typed(a) };
+            let right = if rank(b) < mine || (rank(b) == mine && matches!(op, '-' | '/')) { format!("({})", typed(b)) } else { typed(b) };
+            format!("{left} {op} {right}")
+        }
+    }
+}
+
 fn num_text(x: f64) -> String {
     format!("{x}")
 }
@@ -399,8 +433,9 @@ pub fn work(expr: &Expr, lookup: &dyn Fn(&str) -> Result<Operand, String>) -> Re
             Expr::Pick(pick, args) => {
                 let parts = args.iter().map(|a| go(a, lookup)).collect::<Result<Vec<_>, _>>()?;
                 let first = &parts[0];
-                if let Some(odd) = parts.iter().find(|p| p.dim != first.dim) {
-                    return Err(format!("takes the {} of what cannot be compared: {} is {} and {} is {}", if *pick == Pick::Min { "lesser" } else { "greater" }, first.text, dim_word(first.dim), odd.text, dim_word(odd.dim)));
+                if let Some(at) = parts.iter().position(|p| p.dim != first.dim) {
+                    let odd = &parts[at];
+                    return Err(format!("takes the {} of what cannot be compared: {} is {} and {} is {}", if *pick == Pick::Min { "lesser" } else { "greater" }, typed(&args[0]), dim_word(first.dim), typed(&args[at]), dim_word(odd.dim)));
                 }
                 // As good as its worst operand, and no value where any operand has none.
                 let status = parts.iter().map(|p| p.status).max().unwrap_or(Status::Known);
@@ -413,14 +448,14 @@ pub fn work(expr: &Expr, lookup: &dyn Fn(&str) -> Result<Operand, String>) -> Re
                 let text = if a.atom { format!("-{}", a.text) } else { format!("-({})", a.text) };
                 Ok(Part { value: a.value.map(|x| -x), dim: a.dim, status: a.status, text, tight: true, atom: false })
             }
-            Expr::Bin(a, op, b) => {
-                let (a, b) = (go(a, lookup)?, go(b, lookup)?);
+            Expr::Bin(ea, op, eb) => {
+                let (a, b) = (go(ea, lookup)?, go(eb, lookup)?);
                 let status = a.status.max(b.status);
                 let both = a.value.zip(b.value);
                 match op {
                     '+' | '-' => {
                         if a.dim != b.dim {
-                            return Err(format!("{} what cannot be {}: {} is {} and {} is {}", if *op == '+' { "adds" } else { "takes away" }, if *op == '+' { "added" } else { "taken away" }, a.text, dim_word(a.dim), b.text, dim_word(b.dim)));
+                            return Err(format!("{} what cannot be {}: {} is {} and {} is {}", if *op == '+' { "adds" } else { "takes away" }, if *op == '+' { "added" } else { "taken away" }, typed(ea), dim_word(a.dim), typed(eb), dim_word(b.dim)));
                         }
                         let right = if *op == '-' && !b.tight { format!("({})", b.text) } else { b.text.clone() };
                         let sign = if *op == '+' { '+' } else { '\u{2212}' };
@@ -433,7 +468,7 @@ pub fn work(expr: &Expr, lookup: &dyn Fn(&str) -> Result<Operand, String>) -> Re
                     }
                     _ => {
                         if b.value == Some(0.0) {
-                            return Err(format!("divides by {}, which is nothing: a quantity cannot be divided by zero", b.text));
+                            return Err(format!("divides by {}, which is nothing: a quantity cannot be divided by zero", typed(eb)));
                         }
                         let left = if a.tight { a.text.clone() } else { format!("({})", a.text) };
                         let right = if b.atom { b.text.clone() } else { format!("({})", b.text) };

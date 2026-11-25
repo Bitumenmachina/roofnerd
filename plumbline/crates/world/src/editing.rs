@@ -625,6 +625,7 @@ pub fn item(job: &mut Job, name: &str, item: Item) -> Result<String, String> {
         if let Some(said) = &item.form {
             building::shape::check_drawn_as(&job.shapes, said).map_err(|why| format!("{path} item: drawn as: {why}"))?;
         }
+        shapes::item_fits(&job.shapes, name.trim(), &item)?;
         job.put(&path, item)?;
         Ok(path)
     })
@@ -645,17 +646,94 @@ pub fn item_drawn_as(job: &mut Job, item: &str, said: Option<&str>) -> Result<()
             None => None,
         };
         building::check_item(item, Kind::Type, &it)?;
+        let name = job.world.get::<Node>(e).map(|n| n.name.clone()).unwrap_or_else(|| item.to_string());
+        shapes::item_fits(&job.shapes, &name, &it)?;
         job.put(item, it)
     })
 }
 
-/// Which trade's item it is, changed: one of the sixteen divisions, or none.
+/// Which trade's item it is, changed: one of the sixteen divisions, or none. The lines on what is set down from it that took
+/// its trade follow it (call 206 point 6).
 pub fn item_trade(job: &mut Job, item: &str, division: Option<crate::components::Division>) -> Result<(), String> {
+    item_trade_followed(job, item, division).map(|_| ())
+}
+
+/// What an item's trade changed did to what is set down from it: how many lines moved, on how many things.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct TradeFollowed {
+    pub lines: usize,
+    pub things: usize,
+    /// How many are set down from the item in all.
+    pub set_down: usize,
+}
+
+impl TradeFollowed {
+    /// "3 lines on 2 set down from it moved to Division 12 Furnishings"; empty where nothing moved.
+    pub fn said(&self, now: Option<crate::components::Division>) -> String {
+        if self.lines == 0 {
+            return String::new();
+        }
+        format!(
+            "{} on {} set down from it {} to {}",
+            if self.lines == 1 { "1 line".to_string() } else { format!("{} lines", self.lines) },
+            self.things,
+            "moved",
+            now.map(|d| format!("Division {} {}", d.number(), d.title())).unwrap_or_else(|| "the division their assembly gives them".to_string())
+        )
+    }
+}
+
+/// As `item_trade`, saying how many lines followed. A line took the item's trade where the program put it there (call 201
+/// point 3): a line in the item's old trade is taken to be one, and goes to the new; where the trade is taken away, to the
+/// division its assembly gives it. A line in another division was put there by a person, and stays.
+pub fn item_trade_followed(job: &mut Job, item: &str, division: Option<crate::components::Division>) -> Result<TradeFollowed, String> {
     all_or_nothing(job, |job| {
         let e = job.find(item).ok_or_else(|| format!("{item} is not in the job"))?;
         let mut it = job.world.get::<Item>(e).cloned().ok_or_else(|| format!("{item} is not an item"))?;
+        let old = it.division;
         it.division = division;
-        job.put(item, it)
+        job.put(item, it)?;
+        trade_follow(job, item, old, division)
+    })
+}
+
+/// What the lines on what is set down from an item do when the item's trade has gone from `old` to `new` (the item already
+/// says `new`): the lines in `old` follow.
+pub fn trade_follow(job: &mut Job, item: &str, old: Option<crate::components::Division>, division: Option<crate::components::Division>) -> Result<TradeFollowed, String> {
+    all_or_nothing(job, |job| {
+        let mut out = TradeFollowed::default();
+        let things: Vec<String> = {
+            let mut q = job.world.query::<(&Node, &Placed)>();
+            let mut v: Vec<String> = q.iter(&job.world).filter(|(_, p)| p.item.as_deref() == Some(item)).map(|(n, _)| n.path.clone()).collect();
+            v.sort();
+            v
+        };
+        out.set_down = things.len();
+        let Some(old) = old.filter(|o| Some(*o) != division) else { return Ok(out) };
+        for thing in things {
+            let te = job.find(&thing).ok_or_else(|| format!("no element {thing}"))?;
+            let Some(mut cost) = job.world.get::<Cost>(te).cloned() else { continue };
+            // The assembly's own division for a line, where the trade is taken away.
+            let recipe = job.world.get::<Condition>(te).and_then(|c| c.0.value.clone()).and_then(|have| {
+                let mut q = job.world.query::<(&Node, &Recipe)>();
+                q.iter(&job.world).find(|(n, _)| n.name == have || n.path == have).map(|(_, r)| r.clone())
+            });
+            let mut moved = 0;
+            for l in cost.lines.iter_mut().filter(|l| l.division == Some(old)) {
+                l.division = match division {
+                    Some(d) => Some(d),
+                    None => recipe.as_ref().and_then(|r| r.cost.lines.iter().find(|o| o.description == l.description || (l.of_material && o.of_material)).and_then(|o| o.division)),
+                };
+                moved += 1;
+            }
+            if moved > 0 {
+                job.world.entity_mut(te).insert(cost);
+                out.lines += moved;
+                out.things += 1;
+            }
+        }
+        job.derive();
+        Ok(out)
     })
 }
 
@@ -773,8 +851,8 @@ pub struct ItemFollowed {
     pub followed: Vec<String>,
     /// How many are set down from it in all.
     pub set_down: usize,
-    /// Each line that came off, on which thing, and what had been entered on it.
-    pub took: Vec<(String, String, String)>,
+    /// Each line that came off, on which thing, with what had been entered on it and what it came to (call 206 point 1).
+    pub took: Vec<(String, crate::entered::Took)>,
     /// Things left as they were, each with its reason.
     pub left: Vec<(String, String)>,
     /// Lines a person entered on a thing itself, which stay: the thing and each line.
@@ -785,6 +863,18 @@ impl ItemFollowed {
     /// The sentences that say it, in a builder's words.
     pub fn said(&self) -> Vec<String> {
         let mut out = Vec::new();
+        // The same again: no change, and how many are set down from it (call 206 point 4).
+        if self.was == self.now {
+            let is = match &self.now {
+                Some(a) => format!("{} is already priced as {a:?}", self.item),
+                None => format!("{} is already priced as nothing", self.item),
+            };
+            return vec![match self.set_down {
+                0 => format!("{is}; nothing changes, and none is set down yet"),
+                1 => format!("{is}; nothing changes, and the 1 set down from it keeps it"),
+                n => format!("{is}; nothing changes, and the {n} set down from it keep it"),
+            }];
+        }
         let by = match &self.now {
             Some(a) => format!("{} is now priced as {a:?}", self.item),
             None => format!("{} is now priced as nothing", self.item),
@@ -796,8 +886,8 @@ impl ItemFollowed {
             (_, 1) => format!("{by}; 1 set down from it follows ({})", self.followed[0]),
             _ => format!("{by}; {n} set down from it follow"),
         });
-        for (thing, line, entered) in &self.took {
-            out.push(format!("  {line:?} came off {thing}{}", if entered.is_empty() { String::new() } else { format!(", with {entered} entered on it") }));
+        for (thing, took) in &self.took {
+            out.push(format!("  {:?} came off {thing}{}", took.line, took.tail()));
         }
         for (thing, why) in &self.left {
             out.push(format!("  {thing} is left as it was: {why}"));
@@ -807,27 +897,6 @@ impl ItemFollowed {
         }
         out
     }
-}
-
-/// What is entered on a cost line, in the words a line is entered in: "4 hr/EA and $85.00/hr".
-fn entered_on(l: &crate::components::CostLine) -> String {
-    let mut parts = Vec::new();
-    if let Some(o) = &l.order {
-        if let Some(x) = o.factor.value {
-            parts.push(format!("{} {}", crate::view::num(x), o.factor.unit));
-        }
-    }
-    if !crate::components::CostLine::is_no_price_of_its_own(&l.unit_cost) {
-        if let Some(x) = l.unit_cost.value {
-            parts.push(format!("${}/{}", crate::view::rate(x), l.unit_cost.unit.trim_start_matches("$/")));
-        }
-    }
-    if let Some(w) = &l.waste {
-        if let Some(x) = w.value {
-            parts.push(format!("{} % waste", crate::view::num(x)));
-        }
-    }
-    parts.join(" and ")
 }
 
 /// Say what an item is priced as, or that it is priced as nothing (`None`), and let each thing already set down from
@@ -851,8 +920,12 @@ pub fn item_priced_as(job: &mut Job, item: &str, assembly: Option<&str>) -> Resu
         let now_name = new.as_ref().map(|n| n.0.clone());
         let mut out = ItemFollowed { item: name.clone(), was: was.clone(), now: now_name.clone(), ..ItemFollowed::default() };
         if was == now_name {
+            // Nothing to change; how many are set down from it is still said (call 206 point 4).
+            out.set_down = job.world.query::<&Placed>().iter(&job.world).filter(|p| p.item.as_deref() == Some(path.as_str())).count();
             return Ok(out);
         }
+        // What each line came to before, for the lines that come off to say it (call 206 point 1).
+        let before_estimate = crate::view::estimate(job);
         it.priced_as = now_name.clone();
         building::check_item(&path, Kind::Type, &it)?;
         job.put(&path, it.clone())?;
@@ -903,7 +976,7 @@ pub fn item_priced_as(job: &mut Job, item: &str, assembly: Option<&str>) -> Resu
                     }
                 }
             };
-            let mut step = || -> Result<Vec<String>, String> {
+            let mut step = || -> Result<Vec<crate::entered::Took>, String> {
                 // Back to the word the old assembly gave the item line, so that the lines it shares are found.
                 if let Some(word) = old.as_ref().and_then(|(_, r)| item_line_of(r)) {
                     if let Some(mut cost) = job.world.get::<Cost>(te).cloned() {
@@ -916,17 +989,24 @@ pub fn item_priced_as(job: &mut Job, item: &str, assembly: Option<&str>) -> Resu
                     }
                 }
                 let source = format!("the item {name}: priced as {}", now_name.as_deref().unwrap_or("nothing"));
-                let taken: Vec<String> = match &new {
+                let taken: Vec<crate::entered::Took> = match &new {
                     // It has the assembly already, by hand: only the item's line is named.
                     Some((assembly, _)) if cond.as_deref() == Some(assembly.as_str()) => Vec::new(),
-                    Some((assembly, _)) => job.change_assembly_said(&thing, assembly, Status::Known, &source)?.taken,
+                    Some((assembly, _)) => job.change_assembly_in(&thing, assembly, Status::Known, &source, it.division)?.took,
                     None => {
                         // Priced as nothing: what the old assembly brought comes off, and nothing else.
                         let Some((_, r)) = &old else { return Ok(Vec::new()) };
                         let theirs: Vec<String> = r.cost.lines.iter().map(|l| l.description.clone()).collect();
                         let mut cost = job.world.get::<Cost>(te).cloned().unwrap_or(Cost { code: r.cost.code.clone(), lines: Vec::new() });
-                        let gone: Vec<String> = cost.lines.iter().filter(|l| theirs.contains(&l.description) || (l.of_material && check::same_name(&l.description, &name))).map(|l| l.description.clone()).collect();
-                        cost.lines.retain(|l| !gone.contains(&l.description));
+                        let goes: Vec<crate::components::CostLine> = cost.lines.iter().filter(|l| theirs.contains(&l.description) || (l.of_material && check::same_name(&l.description, &name))).cloned().collect();
+                        let mut gone: Vec<crate::entered::Took> = Vec::new();
+                        for l in &goes {
+                            // Against the line as the old assembly wrote it; the item line is the assembly's one made of the material.
+                            let theirs_line = if l.of_material && check::same_name(&l.description, &name) { item_line_of(r).and_then(|w| r.cost.lines.iter().find(|o| o.description == w)) } else { r.cost.lines.iter().find(|o| o.description == l.description) };
+                            let fig = job.line_figure(&thing, l);
+                            gone.push(crate::entered::Took { line: l.description.clone(), entered: crate::entered::entered_on_item(l, theirs_line, fig.as_deref(), it.division), amount: None });
+                        }
+                        cost.lines.retain(|l| !goes.iter().any(|g| g.description == l.description));
                         let mut ent = job.world.entity_mut(te);
                         if cost.lines.is_empty() {
                             ent.remove::<Cost>();
@@ -945,11 +1025,13 @@ pub fn item_priced_as(job: &mut Job, item: &str, assembly: Option<&str>) -> Resu
             match step() {
                 Ok(taken) => {
                     let word = old.as_ref().and_then(|(_, r)| item_line_of(r));
-                    for line in taken {
+                    for mut took in taken {
                         // What was on it, by the line as it was before; the item line is called by the item's name.
-                        let is_item_line = word.as_deref() == Some(line.as_str()) || (name == line);
-                        let was_line = if is_item_line { had.iter().find(|l| l.of_material && (l.description == line || check::same_name(&l.description, &name))) } else { had.iter().find(|l| l.description == line) };
-                        out.took.push((thing.clone(), if is_item_line { name.clone() } else { line }, was_line.map(entered_on).unwrap_or_default()));
+                        let is_item_line = word.as_deref() == Some(took.line.as_str()) || (name == took.line);
+                        let before_name = if is_item_line { name.clone() } else { took.line.clone() };
+                        took.amount = before_estimate.lines.iter().find(|l| l.path == thing && l.description == before_name && !l.off).and_then(|l| l.amount.value);
+                        took.line = before_name;
+                        out.took.push((thing.clone(), took));
                     }
                     out.followed.push(thing.clone());
                 }
@@ -1706,6 +1788,8 @@ pub fn item_size(job: &mut Job, path: &str, what: &str, typed: &str, who: &str) 
             _ => it.height.status = Status::Assumed,
         }
         job.put(path, it.clone())?;
+        // Its shape held to its box at the size it has now (call 206 point 2): the size is refused, and nothing changes.
+        shapes::item_fits(&job.shapes, &name, &it)?;
         // What follows it is as sure as the item's sizes together are: where the three were all Known, the ones set
         // down said Known a moment ago, and are put right to what the model says of the item's size.
         let followed: Vec<String> = done.also.iter().filter_map(follower_of).collect();
@@ -1799,6 +1883,11 @@ pub fn price_item(job: &mut Job, item: &str, price: &str, status: Status, source
         let (mut priced, mut without) = (Vec::new(), Vec::new());
         for thing in set {
             let has = job.find(&thing).and_then(|e| job.world.get::<Cost>(e)).is_some_and(|c| c.lines.iter().any(|l| l.description == name));
+            // A line made of its item has no price of its own: the item's is in the price list (call 206 point 7).
+            let made_of_item = job.find(&thing).and_then(|e| job.world.get::<Cost>(e)).is_some_and(|c| c.lines.iter().any(|l| l.description == name && l.of_material));
+            if made_of_item {
+                return Err(format!("{thing} cost line {name:?} is made of the item itself, so its price is the item's and not the line's: give it in a price list (plumbline import prices, a row named {name:?}) or in the item table's Unit cost column, and each of it set down takes it"));
+            }
             if has {
                 if let Some(figure) = figure {
                     let on = job.find(&thing).and_then(|e| job.world.get::<Cost>(e)).and_then(|c| c.lines.iter().find(|l| l.description == name)).map(|l| l.quantity.clone());
@@ -1942,6 +2031,28 @@ pub fn remove(job: &mut Job, path: &str) -> Result<Vec<String>, String> {
         gone.push(path.to_string());
         Ok(gone)
     })
+}
+
+/// What price a thing carries that goes with it when it is taken out (an item's, a material's), said in the words the price
+/// list is read in: its own and each supplier's (call 206 point 5). None where it has none.
+pub fn prices_that_go(job: &mut Job, path: &str) -> Option<String> {
+    let e = job.find(path)?;
+    let supply = job.world.get::<crate::components::Supply>(e)?;
+    let say = |v: &Val<f64>| v.value.map(|x| format!("{}/{}", crate::view::money(x), v.unit.trim_start_matches("$/")));
+    let mut each: Vec<String> = Vec::new();
+    if let Some(p) = say(&supply.price) {
+        each.push(format!("the price {p}"));
+    }
+    for (supplier, v) in &supply.quotes {
+        if let Some(p) = say(v) {
+            each.push(format!("{supplier}'s {p}"));
+        }
+    }
+    if each.is_empty() {
+        return None;
+    }
+    let n = each.len();
+    Some(format!("its {} in the price list {} with it: {}; bring {} in again to price it", if n == 1 { "1 price".to_string() } else { format!("{n} prices") }, if n == 1 { "went" } else { "went" }, each.join(", "), if n == 1 { "it" } else { "them" }))
 }
 
 /// A name no other type in the job goes by: this one, or this and a number after it ("6 in wall 2"),
@@ -2195,8 +2306,22 @@ pub fn mark(job: &mut Job, paths: &[String], status: WorkStatus, lines: ItsLines
                             return Err(format!("{p} carries {}, and {why}. Say which: take its lines off, or keep them priced as work done to it (paint, a patch, taking it down)", crate::view::so_many(carried, "cost line")));
                         }
                         ItsLines::Clear => {
+                            // What was entered on each, and what it came to, is said before they go (call 206 point 1).
+                            let had: Vec<crate::components::CostLine> = job.world.get::<Cost>(e).map(|c| c.lines.clone()).unwrap_or_default();
+                            let estimate = crate::view::estimate(job);
+                            let mut named = Vec::new();
+                            for l in &had {
+                                let mut t = job.took_of(p, l);
+                                t.amount = estimate.lines.iter().find(|x| x.path == *p && x.description == l.description && !x.off).and_then(|x| x.amount.value);
+                                if !t.entered.is_empty() || t.amount.is_some() {
+                                    named.push(format!("{:?}{}", t.line, t.tail()));
+                                }
+                            }
                             job.world.entity_mut(e).remove::<Cost>();
                             line.push_str(&format!("; its {} taken off: {why}", crate::view::so_many(carried, "cost line")));
+                            if !named.is_empty() {
+                                line.push_str(&format!(". They had {}", named.join("; ")));
+                            }
                         }
                         ItsLines::Keep => line.push_str(&format!("; its {} kept and priced, as work done to it", crate::view::so_many(carried, "cost line"))),
                     }
@@ -2238,4 +2363,76 @@ pub fn mark(job: &mut Job, paths: &[String], status: WorkStatus, lines: ItsLines
         }
         Ok(said)
     })
+}
+
+/// A room's figures as the model works them out: what a person reads of it in the takeoff (call 206 point 3).
+#[derive(Clone, Debug, PartialEq)]
+pub struct RoomFigures {
+    pub path: String,
+    pub name: String,
+    /// The name of the level it is on.
+    pub level: String,
+    /// Its floor area in SF, where it has one.
+    pub area: Option<f64>,
+    /// Its receptacle outlets, where it has them.
+    pub receptacles: Option<f64>,
+}
+
+/// Every room's floor area and receptacles now, the figures worked out again first.
+pub fn room_figures(job: &mut Job) -> Vec<RoomFigures> {
+    job.derive();
+    let mut q = job.world.query::<(&Node, &Kind, Option<&Measure>)>();
+    let mut rooms: Vec<(String, String, Option<String>, Option<f64>, Option<f64>)> = q
+        .iter(&job.world)
+        .filter(|(_, k, _)| **k == Kind::Room)
+        .map(|(n, _, m)| (n.path.clone(), n.name.clone(), n.parent.clone(), m.and_then(|m| m.0.get("floor_area")).and_then(|d| d.value), m.and_then(|m| m.0.get("receptacles")).and_then(|d| d.value)))
+        .collect();
+    rooms.sort_by(|a, b| a.0.cmp(&b.0));
+    rooms
+        .into_iter()
+        .map(|(path, name, parent, area, receptacles)| {
+            let level = parent.and_then(|p| job.find(&p)).and_then(|e| job.world.get::<Node>(e)).map(|n| n.name.clone()).unwrap_or_default();
+            RoomFigures { path, name, level, area, receptacles }
+        })
+        .collect()
+}
+
+/// A room whose figures are not what they were.
+#[derive(Clone, Debug, PartialEq)]
+pub struct RoomMoved {
+    pub name: String,
+    pub level: String,
+    pub area: (Option<f64>, Option<f64>),
+    pub receptacles: (Option<f64>, Option<f64>),
+}
+
+impl RoomMoved {
+    /// The room, its area before and after and, if they moved, its receptacles: "living room (first floor): floor area 614.72
+    /// SF before, 365.72 SF now; receptacles 10 before, 8 now".
+    pub fn said(&self) -> String {
+        let area = |v: Option<f64>| v.map(|x| format!("{} SF", crate::view::figure2(x))).unwrap_or_else(|| "no figure".to_string());
+        let count = |v: Option<f64>| v.map(|x| format!("{}", crate::view::num(x))).unwrap_or_else(|| "no figure".to_string());
+        let mut out = format!("{} ({}): floor area {} before, {} now", self.name, self.level, area(self.area.0), area(self.area.1));
+        if self.receptacles.0 != self.receptacles.1 {
+            out.push_str(&format!("; receptacles {} before, {} now", count(self.receptacles.0), count(self.receptacles.1)));
+        }
+        out
+    }
+}
+
+/// The rooms that were in `before` whose figures are not the same in `after`, in the order they were: a figure moves when
+/// it differs at the cent (the way a quantity is shown).
+pub fn rooms_moved(before: &[RoomFigures], after: &[RoomFigures]) -> Vec<RoomMoved> {
+    let cent = |v: Option<f64>| v.map(crate::lines::cents);
+    before
+        .iter()
+        .filter_map(|b| {
+            let a = after.iter().find(|a| a.path == b.path);
+            let (area, receptacles) = match a {
+                Some(a) => ((b.area, a.area), (b.receptacles, a.receptacles)),
+                None => ((b.area, None), (b.receptacles, None)),
+            };
+            (cent(area.0) != cent(area.1) || receptacles.0 != receptacles.1).then(|| RoomMoved { name: b.name.clone(), level: b.level.clone(), area, receptacles })
+        })
+        .collect()
 }

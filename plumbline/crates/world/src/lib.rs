@@ -25,6 +25,7 @@ pub mod check;
 pub mod components;
 pub mod derive;
 pub mod editing;
+pub mod entered;
 pub mod export;
 pub mod file;
 pub mod finish;
@@ -53,6 +54,7 @@ pub mod vif;
 
 pub use building::{JoistsSpan, Stood, Item, Connector, ConnectorKind, Connectors, Discipline, Domain, Flow, Fitting, FittingKind, Floor, FloorType, Function, InSystem, Justify, Layer, Level, Location, Opening, OpeningType, Placed, Room, RoomLine, Segment, SegmentType, SystemInfo, Wall, WallType, P3};
 pub use components::*;
+pub use entered::Took;
 pub use job::{Changed, Header, Job, Left, LeftAsIs, Rewritten};
 pub use units::Len;
 pub use value::{Derived, Status, Val};

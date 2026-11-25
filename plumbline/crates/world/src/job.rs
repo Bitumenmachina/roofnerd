@@ -70,6 +70,8 @@ pub struct Left {
 pub struct Changed {
     pub added: Vec<String>,
     pub taken: Vec<String>,
+    /// Each line taken off, with what a person had entered on it (call 206 point 1); the amount is for the caller, who has the estimate.
+    pub took: Vec<crate::entered::Took>,
     pub rewritten: Vec<Rewritten>,
     pub left: Vec<Left>,
 }
@@ -665,8 +667,23 @@ impl Job {
                 }
             }
         };
+        // A height a line enters is never below nothing: a wainscot of -1 ft reads as 0 and says nothing (call 206 point 13). A
+        // height is what a formula takes by `net_area_below_<name>` or `corner_board_length_above_<name>`, or a name that says it is one.
+        let below_nothing = |name: &str, v: &Val<Len>, quantity: &str| -> Result<(), String> {
+            let heights: Vec<String> = crate::formula::parse(quantity).map(|e| crate::formula::names(&e).iter().filter_map(|n| crate::formula::height_entry(n).map(str::to_string)).collect()).unwrap_or_default();
+            let is_height = name.contains("height") || name == "wainscot" || heights.iter().any(|h| h == name);
+            let feet = v.value.as_ref().and_then(|len| len.feet(&v.unit).ok());
+            if is_height && !v.unit.is_empty() && !units::is_measure_unit(&v.unit) && feet.is_some_and(|f| f < 0.0) {
+                return Err(format!("{what}: {} is below nothing ({}): a height a line enters is nothing or more", name.replace('_', " "), units::show_length(v.value.as_ref().unwrap_or(&Len::One(0.0)), &v.unit)));
+            }
+            Ok(())
+        };
         match field {
-            "stretch_out" => l.stretch_out = Some(typed_length(value, l.stretch_out.as_ref(), status, source)?),
+            "stretch_out" => {
+                let v = typed_length(value, l.stretch_out.as_ref(), status, source)?;
+                below_nothing("stretch_out", &v, &l.quantity.clone())?;
+                l.stretch_out = Some(v);
+            }
             "quantity" => {
                 let Some(text) = value else {
                     return Err(format!("{what}: a quantity is a formula, not a value; it cannot be marked unknown. Mark what it uses unknown instead"));
@@ -674,9 +691,12 @@ impl Job {
                 l.quantity = text.trim().to_string();
                 for (name, typed) in with {
                     if name == lines::STRETCH_OUT {
-                        l.stretch_out = Some(typed_length(Some(typed), l.stretch_out.as_ref(), status, source)?);
+                        let v = typed_length(Some(typed), l.stretch_out.as_ref(), status, source)?;
+                        below_nothing(name, &v, &l.quantity.clone())?;
+                        l.stretch_out = Some(v);
                     } else {
                         let v = named(name, Some(typed), l.inputs.get(name))?;
+                        below_nothing(name, &v, &l.quantity.clone())?;
                         l.inputs.insert(name.clone(), v);
                     }
                 }
@@ -763,6 +783,7 @@ impl Job {
             }
             name => {
                 let v = named(name, value, l.inputs.get(name))?;
+                below_nothing(name, &v, &l.quantity.clone())?;
                 l.inputs.insert(name.to_string(), v);
             }
         }
@@ -866,6 +887,12 @@ impl Job {
     /// compared with, or the new quantity comes out in another unit than the line is priced in, it stays as it is. Each
     /// is named, with the figure before and after.
     pub fn change_assembly_said(&mut self, path: &str, assembly: &str, status: Status, source: &str) -> Result<Changed, String> {
+        self.change_assembly_in(path, assembly, status, source, None)
+    }
+
+    /// As `change_assembly_said`, for a thing set down from an item: the lines the program puts in the item's trade
+    /// (`trade`) were not entered by a person, and are not named as if they were (call 206 point 1).
+    pub fn change_assembly_in(&mut self, path: &str, assembly: &str, status: Status, source: &str, trade: Option<Division>) -> Result<Changed, String> {
         let e = self.find(path).ok_or_else(|| format!("no element {path}"))?;
         let kind = *self.world.get::<Kind>(e).ok_or_else(|| format!("{path} has no kind"))?;
         let mut all: Vec<(String, String, Recipe)> = Vec::new();
@@ -891,6 +918,20 @@ impl Job {
         let will: Vec<String> = new.2.cost.lines.iter().map(|l| l.description.clone()).collect();
         let mut cost = self.world.get::<Cost>(e).cloned().unwrap_or_else(|| Cost { code: new.2.cost.code.clone(), lines: Vec::new() });
         let taken: Vec<String> = cost.lines.iter().filter(|l| was.contains(&l.description) && !will.contains(&l.description)).map(|l| l.description.clone()).collect();
+        // What a person had entered on each line that comes off, against the line as the old assembly wrote it (call 206 point 1).
+        let measure = self.world.get::<Measure>(e).cloned();
+        let height = self.world.get::<Height>(e).cloned();
+        let on = lines::On { kind, measure: measure.as_ref(), height: height.as_ref() };
+        let took: Vec<crate::entered::Took> = cost
+            .lines
+            .iter()
+            .filter(|l| taken.contains(&l.description))
+            .map(|l| {
+                let theirs = old.and_then(|r| r.2.cost.lines.iter().find(|o| o.description == l.description));
+                let fig = lines::read(&on, l).ok().and_then(|r| r.worked.value.map(|v| format!("{} {}", crate::view::figure2(v), r.unit)));
+                crate::entered::Took { line: l.description.clone(), entered: crate::entered::entered_on_item(l, theirs, fig.as_deref(), trade), amount: None }
+            })
+            .collect();
         cost.lines.retain(|l| !taken.contains(&l.description));
         // The code the old assembly brought gives way to the new one's.
         if old.is_some_and(|r| r.2.cost.code.value == cost.code.value) {
@@ -898,9 +939,6 @@ impl Job {
         }
         // The lines both have: each keeps what was entered on it; its quantity is the new assembly's where it still reads as
         // the old assembly wrote it (call 199).
-        let measure = self.world.get::<Measure>(e).cloned();
-        let height = self.world.get::<Height>(e).cloned();
-        let on = lines::On { kind, measure: measure.as_ref(), height: height.as_ref() };
         let figure = |l: &CostLine| -> (Option<f64>, Option<&'static str>) {
             match lines::read(&on, l) {
                 Ok(read) => (read.worked.value, Some(read.unit)),
@@ -994,7 +1032,36 @@ impl Job {
         }
         self.world.entity_mut(e).insert((cost, assigned));
         self.derive();
-        Ok(Changed { added, taken, rewritten, left })
+        Ok(Changed { added, taken, took, rewritten, left })
+    }
+
+    /// A line that is on, or has just come off, a thing: what a person entered on it, against the line as the thing's assembly
+    /// writes it, and its figure; the amount is for the caller, who has the estimate (call 206 point 1). The thing's item's
+    /// trade, if it is set down from one, is the program's and not entered.
+    pub fn took_of(&mut self, path: &str, l: &CostLine) -> crate::entered::Took {
+        let theirs: Option<CostLine> = (|| {
+            let e = self.find(path)?;
+            let have = self.world.get::<Condition>(e)?.0.value.clone()?;
+            let mut q = self.world.query::<(&Node, &Recipe)>();
+            let recipe = q.iter(&self.world).find(|(n, _)| n.name == have || n.path == have).map(|(_, r)| r.clone())?;
+            // The item line of a thing set down from an item carries the item's name, not the assembly's word.
+            let made: Vec<&CostLine> = recipe.cost.lines.iter().filter(|o| o.of_material).collect();
+            recipe.cost.lines.iter().find(|o| o.description == l.description).or(if l.of_material && made.len() == 1 { Some(made[0]) } else { None }).cloned()
+        })();
+        let from_item: Option<String> = self.find(path).and_then(|e| self.world.get::<crate::Placed>(e)).and_then(|p| p.item.clone());
+        let trade = from_item.and_then(|i| self.find(&i)).and_then(|ie| self.world.get::<crate::Item>(ie).and_then(|i| i.division));
+        let fig = self.line_figure(path, l);
+        crate::entered::Took { line: l.description.clone(), entered: crate::entered::entered_on_item(l, theirs.as_ref(), fig.as_deref(), trade), amount: None }
+    }
+
+    /// A line as a figure with its unit ("7 EA"), as it comes out on the thing it is on: None where it comes to none.
+    pub fn line_figure(&mut self, path: &str, l: &CostLine) -> Option<String> {
+        let e = self.find(path)?;
+        let kind = *self.world.get::<Kind>(e)?;
+        let measure = self.world.get::<Measure>(e).cloned();
+        let height = self.world.get::<Height>(e).cloned();
+        let on = lines::On { kind, measure: measure.as_ref(), height: height.as_ref() };
+        lines::read(&on, l).ok().and_then(|r| r.worked.value.map(|v| format!("{} {}", crate::view::figure2(v), r.unit)))
     }
 
     /// The unit a cost line comes out in, and the unit it is priced in.
@@ -1068,7 +1135,7 @@ fn same_stretch(a: &Option<Val<Len>>, b: &Option<Val<Len>>) -> bool {
 }
 
 /// A line's quantity as it is written: its formula, and the entries and stretch-out it takes.
-fn written(l: &CostLine) -> String {
+pub(crate) fn written(l: &CostLine) -> String {
     let mut out = l.quantity.clone();
     if let Some(so) = &l.stretch_out {
         if let Some(len) = &so.value {

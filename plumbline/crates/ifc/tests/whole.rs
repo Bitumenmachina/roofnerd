@@ -301,7 +301,7 @@ fn p4_a_roof_without_the_programs_own_set_is_left_out_and_said() {
     let stripped: String = text.replace("'Plumbline_Roof'", "'Somebody_Elses'");
     let (mut back, b) = brought(&stripped);
     assert_eq!(count(&mut back, Kind::Roof), 0);
-    assert!(b.left_out.iter().any(|(c, n, why)| c == "roof slab" && *n == 4 && why.contains("a roof is not brought in")), "{:#?}", b.left_out);
+    assert!(b.left_out.iter().any(|(c, n, why)| c == "roof slab" && *n == 4 && why.contains("a roof with no outline of this program's in the file is not brought in")), "{:#?}", b.left_out);
     assert!(b.left_out.iter().any(|(c, n, _)| c == "roof" && *n == 1), "{:#?}", b.left_out);
 }
 

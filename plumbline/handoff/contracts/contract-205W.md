@@ -47,7 +47,12 @@ Notes as you go to SCRATCH/review/W-205W-report.md. Commit nothing, push nothing
    have made by the same steps, byte for byte.
 8. Every word is a builder's (`tools/gate-language.sh`); every new control is on
    the map by name; every existing control keeps its name.
-9. `demos/shapebenchw.sh` (new) to the steps in STATUS.md, its pictures in
+9. **With it, one point of call 206 that is the window's**: when an assembly is
+   changed in the window and a line comes off that carried something a person
+   typed, the message names it, in the model's words (`change_assembly_said().took`
+   and its `tail()`; `research/worker-report-call206.md`, "Window"). One step of the
+   demonstration: the judge's case, 7 typed on a line, named with its $7,000.00.
+10. `demos/shapebenchw.sh` (new) to the steps in STATUS.md, its pictures in
    `demos/captured/shapebenchw/`, its row in `plumbline/README.md`.
 
 ## Rules
