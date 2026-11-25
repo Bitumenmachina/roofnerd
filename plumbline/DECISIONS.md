@@ -8589,3 +8589,34 @@ rename and for what a file left out, and counts the chest in the top bar; the ca
 it must make are in the report and in `contract-207W.md`, Part 2. **Not right**: a
 fitting brought in as another kind than the file says is named by its place in
 feet from the job's zero, which is not how a builder finds it.
+
+### Call 210. Another trade's model into a job that has a building: only its runs and equipment (2026-11-25; the lead's design, not built)
+
+Call 209 point 11. The mission is to show the clashes the drawings hid, and the
+commonest way a clash arrives is a mechanical or electrical designer's model laid
+into the estimator's own building. Today that is refused whole: the designer's file
+carries its own copy of the walls and floors, they lie over the job's, and nothing
+is brought in. The person is told to make a job of its own for the model, which is
+the opposite of what they came for.
+
+1. **What is brought in is chosen when the file is picked**: everything in it (as
+   today, and still refused where it lies over what the job has), or **only its
+   runs and what they serve**: ducts, pipes, conduit, cable, their fittings, the
+   fixtures and equipment they reach, their systems and what is connected to
+   what. Walls, floors, roofs, footings, doors, windows and rooms in the file are
+   then not asked for, and the reply counts them as that, by kind.
+2. **Levels**: a level in the file at the height of one the job has is that level
+   (call 206); at a height the job does not have, the run or thing is put on the
+   job's level it stands within and the reply says so; a level is not added for
+   runs alone.
+3. Everything brought in is Assumed and sourced to the file, as always. A second
+   bringing-in of the same file is refused as it is today.
+4. **The reply ends with what it was done for**: how many clashes the things
+   brought in now make with what the job already had, by kind (a conflict, a hole
+   to cut, a thing against its wall), worked by the model's own clash list before
+   and after, and where to see them.
+5. **Not in this call**: "only what the job lacks" (telling a wall in the file from
+   the same wall in the job) and choosing by one trade or one system. Said so they
+   are not built round.
+6. In the window the choice is asked when "Designer's model" is picked and the job
+   already has a level with something on it; an empty job is not asked.

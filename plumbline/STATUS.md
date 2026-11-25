@@ -11116,6 +11116,34 @@ starter tool chest brought in; "Water heater, 50 gal" set down twice and priced 
 
 Not built yet.
 
+## Another trade's model into my job: a demonstration, written before it is built (call 210; 2026-11-25)
+
+`demos/ifc-runs.sh`, at the command line. The job is the sample whole house
+(`plumbline sixteen`). The model is made in the script by the program itself, so
+its figures are known: a job of its own with four walls on the sample's outside
+line on the first floor (40 ft by 28 ft: they lie over the sample's own), one floor,
+one duct 12 ft long, 14 in by 8 in, run through the line of one of the sample's
+partitions at 8 ft above the floor, and one air handler standing clear of every
+wall; written out as a BIM model. By hand:
+
+1. Brought in whole: refused as today, saying what lies over what and that the
+   runs and equipment can be brought in alone.
+2. Brought in as **only its runs and what they serve**: **1 duct and 1 piece of
+   equipment** come in; **4 walls and 1 floor are counted as not asked for**; the
+   reply says the model's level is the job's first floor; no level is added.
+3. The sample's own figures do not move: walls, rooms, floors, roof and the price
+   are what `takeoff` and `estimate` gave before ($468,050.22; the duct and the
+   air handler carry no cost line, and the estimate says two more things are
+   priced on nothing).
+4. The reply says how many clashes the two things make with the house, and
+   `clashes` lists them: **the duct through the partition is one of them, a hole
+   to cut**, at the place the script put it; the count before and after differ by
+   exactly what the reply says.
+5. The same file again: refused, nothing doubled.
+6. Everything brought in reads Assumed, sourced to the file.
+
+Not built yet.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **As of 2026-11-25, 06:00 UTC (the lead). Read this block first; what is below it is
@@ -11210,8 +11238,9 @@ above):
    builder was started on it at 07:30 UTC on 2026-11-25: if no
    `research/worker-report-call205W.md` is in the tree, it did not land) and Part 2
    of `contract-207W.md` (the sentences the window must take from the model). **Another trade's model brought into a job that
-   has a building** (point 11: only what the job lacks, or only the runs and
-   equipment) is the next call on a model, and is not designed.
+   has a building** is designed (call 210: only its runs and what they serve;
+   `handoff/contracts/contract-210M.md`, its demonstration above); its window half
+   (the choice asked when the file is picked) is not contracted.
 2. **Small, and said where found**: the per-level count of what is set down is
    the model's now (call 205M) and the sheet window still counts it itself
    (`sheet.rs`, `set_down`: one call to change); after the Cabinets tool is put
