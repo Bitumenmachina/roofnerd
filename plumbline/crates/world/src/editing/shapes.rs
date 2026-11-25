@@ -185,6 +185,20 @@ pub fn items_outside_their_boxes(job: &mut Job) -> Vec<(String, String)> {
     out
 }
 
+/// Every shape of the job's own that is held under a starter shape's name, with what to do: what `check` says of a job saved in the
+/// hours between two commits of 2026-11-24, when a job's shape could take a starter's name (it still opens). The job's own shape is the one
+/// drawn, ahead of the starter's of that name; it is to be kept under another name.
+pub fn shapes_under_starter_names(job: &mut Job) -> Vec<(String, String)> {
+    let mut out: Vec<(String, String)> = job
+        .shapes
+        .iter()
+        .filter(|s| shape::starter_named(&s.name).is_some())
+        .map(|s| (s.name.clone(), format!("{:?} is a starter shape's name, and this job holds a shape of its own under it, which is drawn ahead of the starter's: keep it under another name (plumbline shape <file> keep \"<an item drawn as it>\" \"<new name>\"), so that the name is the starter's again", s.name)))
+        .collect();
+    out.sort();
+    out
+}
+
 /// The items drawn as a shape (by name), and the things set down from them.
 fn followers(job: &mut Job, shape: &str) -> (Vec<(String, String)>, Vec<String>) {
     let items: Vec<(String, String)> = {

@@ -442,24 +442,6 @@ impl Job {
         Ok(())
     }
 
-    /// A supplier's price for a material. `None` marks it unknown; the quote stays, as a
-    /// price that was asked for and has not come.
-    pub fn set_quote(&mut self, path: &str, supplier: &str, value: Option<&str>, status: Status, source: &str) -> Result<(), String> {
-        let e = self.find(path).ok_or_else(|| format!("no element {path}"))?;
-        let kind = *self.world.get::<Kind>(e).ok_or_else(|| format!("{path} has no kind"))?;
-        let mut new = self.world.get::<Supply>(e).cloned().ok_or_else(|| format!("{path} is {kind:#}, not a material; a supplier quotes a material"))?;
-        // A supplier already in the job is named the way it is named there.
-        let mut q = self.world.query::<&Supply>();
-        if let Some(known) = q.iter(&self.world).flat_map(|s| s.quotes.keys()).find(|k| *k != supplier && check::same_name(k, supplier)) {
-            return Err(format!("{supplier:?} is {known:?} written another way; a supplier has one name in a job, so use {known:?}"));
-        }
-        let per = new.price.unit.clone();
-        new.quotes.insert(supplier.to_string(), Val { value: value.map(|t| units::parse_price(t, &per)).transpose()?, unit: per, status, source: source.into() });
-        check::supply(path, kind, &new)?;
-        self.world.entity_mut(e).insert(new);
-        Ok(())
-    }
-
     /// A new material, bought and priced by `unit` (lb, sheet, SF). Its price is Unknown
     /// until it is entered. Returns its path.
     pub fn add_material(&mut self, name: &str, unit: &str) -> Result<String, String> {
@@ -667,14 +649,17 @@ impl Job {
                 }
             }
         };
-        // A height a line enters is never below nothing: a wainscot of -1 ft reads as 0 and says nothing (call 206 point 13). A
-        // height is what a formula takes by `net_area_below_<name>` or `corner_board_length_above_<name>`, or a name that says it is one.
+        // A length a line enters is never below nothing: a wainscot of -1 ft reads as 0 and says nothing (call 206 point 13), and a spacing
+        // of -12 in or a turn-up of -8 in is no length at all (call 208 point 4). A height is what a formula takes by
+        // `net_area_below_<name>` or `corner_board_length_above_<name>`, or a name that says it is one; any other value typed with a
+        // length unit is a length. (A stretch-out of nothing is refused in its own words, as more than nothing; a measure typed outright, 60 LF, as
+        // a measure below zero; a plain number is no length.)
         let below_nothing = |name: &str, v: &Val<Len>, quantity: &str| -> Result<(), String> {
             let heights: Vec<String> = crate::formula::parse(quantity).map(|e| crate::formula::names(&e).iter().filter_map(|n| crate::formula::height_entry(n).map(str::to_string)).collect()).unwrap_or_default();
             let is_height = name.contains("height") || name == "wainscot" || heights.iter().any(|h| h == name);
             let feet = v.value.as_ref().and_then(|len| len.feet(&v.unit).ok());
-            if is_height && !v.unit.is_empty() && !units::is_measure_unit(&v.unit) && feet.is_some_and(|f| f < 0.0) {
-                return Err(format!("{what}: {} is below nothing ({}): a height a line enters is nothing or more", name.replace('_', " "), units::show_length(v.value.as_ref().unwrap_or(&Len::One(0.0)), &v.unit)));
+            if !v.unit.is_empty() && !units::is_measure_unit(&v.unit) && feet.is_some_and(|f| f < 0.0) {
+                return Err(format!("{what}: {} is below nothing ({}): a {} a line enters is nothing or more", name.replace('_', " "), units::show_length(v.value.as_ref().unwrap_or(&Len::One(0.0)), &v.unit), if is_height { "height" } else { "length" }));
             }
             Ok(())
         };

@@ -125,6 +125,8 @@ pub struct PriceSet {
     /// What the road the price took said besides (a line named for it that took the price, the job taking a
     /// supplier's price for its own), each in full.
     pub done: Vec<String>,
+    /// The lines of the same name, not made of it, that this price priced (each as "<name>" on <thing>).
+    pub named_lines: Vec<String>,
     /// What else it has to say, in full.
     pub notes: Vec<String>,
 }
@@ -147,7 +149,12 @@ impl PriceSet {
             out.push(format!("that price is $0.00: it is taken, as a thing can be free; nothing is charged for {}{}, and the estimate marks each line made of it", self.name, self.whose.as_deref().map(|s| format!(" at {s}'s price")).unwrap_or_default()));
         }
         if self.lines == 0 {
-            out.push(format!("{} prices nothing on the job yet: no line is made of it", self.name));
+            if self.named_lines.is_empty() {
+                out.push(format!("{} prices nothing on the job yet: no line is made of it", self.name));
+            } else {
+                let n = self.named_lines.len();
+                out.push(format!("no line is made of {}, and {} of that name {} priced by it: {}", self.name, view::so_many(n, "line"), if n == 1 { "is" } else { "are" }, self.named_lines.join(", ")));
+            }
         } else {
             let mut priced = format!("{whose} for {} prices {} on {}", self.name, view::so_many(self.lines, "line"), view::so_many(self.things, "thing"));
             if self.waiting > 0 {
@@ -349,8 +356,15 @@ pub fn set_price(job: &mut Job, name: &str, whose: Option<&str>, price: Option<&
             left_out_before: before.1,
             left_out_after: before.1,
             done: Vec::new(),
+            named_lines: Vec::new(),
             notes: Vec::new(),
         };
+        // A supplier written another way from the job's own is taken as the job's spelling, and said which (call 208).
+        if let (Some(typed), Some(job_has)) = (whose, resolved.as_deref()) {
+            if typed.trim() != job_has {
+                result.notes.push(format!("{:?} is {job_has:?} written another way: a supplier has one name in a job, and the job's is taken", typed.trim()));
+            }
+        }
         // Clearing what was never there changes nothing, and gives an item no entry it had not.
         let nothing_there = price.is_none() && held.as_ref().map_or(true, |v| v.value.is_none());
         if nothing_there {
@@ -375,9 +389,10 @@ pub fn set_price(job: &mut Job, name: &str, whose: Option<&str>, price: Option<&
         }
         result.same = brought.done.is_empty() && brought.same > 0;
         result.at_nothing = price.is_some() && brought.notes.iter().any(|n| n.contains("priced at $0.00"));
+        result.named_lines = brought.done.iter().filter_map(|d| d.starts_with('"').then(|| d.split_once(": priced at ").map(|(who, _)| who.to_string())).flatten()).collect();
         result.done = brought.done;
         // What the price list's own wording says of a whole list is not said of one price: it is said here, of this one.
-        result.notes = brought.notes.into_iter().filter(|n| !n.contains("as the list says") && !n.contains("of this list's items")).collect();
+        result.notes.extend(brought.notes.into_iter().filter(|n| !n.contains("as the list says") && !n.contains("of this list's items")));
         if result.same {
             result.done = vec![format!("{} already has {} as {}", entry.name, held.as_ref().map(|v| v.value.map(|x| format!("${}/{unit}", view::rate(x))).unwrap_or_else(|| "no price".into())).unwrap_or_default(), match &resolved { None => "the estimator's price".to_string(), Some(s) => format!("{s}'s price") })];
         }
@@ -401,30 +416,4 @@ fn follow(job: &mut Job, entry: &Entry, supplier: Option<&str>) -> (usize, usize
         total.filter(|_| n > 0)
     });
     (made.len(), things.len(), made.iter().filter(|l| l.amount.value.is_none()).count(), at)
-}
-
-/// Where setting a price by `set_price` would store something the older `set <material> price` or `quote` does not (call 207 ruling 1):
-/// the reason in words, or None where the two store the same. The cases:
-/// - a supplier's price on a material the job has no price for: `prices_in` (call 108) makes the supplier's price the job's own too;
-///   `quote` stores the quote alone;
-/// - a supplier written another way from the one the job has: `quote` refuses it; `set_price` takes the job's spelling;
-/// - a cost line that is not made of the material, named as it is and with no price: `prices_in` gives it the material's price;
-///   `price` leaves it.
-pub fn stores_more_than_a_plain_price(job: &mut Job, name: &str, whose: Option<&str>) -> Option<String> {
-    let entry = find(job, name).ok()?;
-    if let Some(w) = whose {
-        let known: Vec<String> = {
-            let mut q = job.world.query::<&Supply>();
-            q.iter(&job.world).flat_map(|s| s.quotes.keys().cloned()).collect()
-        };
-        if known.iter().any(|k| k != w && check::same_name(k, w)) {
-            return Some(format!("{w:?} is a supplier the job has under another spelling: a quote refuses it, a price taken by the price list takes the job's spelling"));
-        }
-        if entry.supply.as_ref().is_none_or(|s| s.price.value.is_none()) {
-            return Some(format!("{} has no price of the job's own: the price list takes the first supplier's price for the job's too (call 108), and a quote does not", entry.name));
-        }
-    }
-    let mut q = job.world.query::<&crate::Cost>();
-    let named = q.iter(&job.world).flat_map(|c| c.lines.iter()).any(|l| !l.of_material && l.unit_cost.value.is_none() && check::plain_name(&l.description) == check::plain_name(&entry.name));
-    named.then(|| format!("a cost line named {:?} has no price and is not made of it: the price list gives it this price, and a price typed on the material does not", entry.name))
 }

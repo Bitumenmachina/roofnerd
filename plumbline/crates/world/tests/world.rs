@@ -1546,12 +1546,10 @@ fn lines_says_what_is_so_about_overlaps_steps_and_lines_entered_twice() {
 #[test]
 fn a_count_below_zero_is_refused_not_rounded_up_to_nothing() {
     let mut job = parapet_job();
-    // A spacing typed with a minus: 20 x 2 / (-12 in / 12) = -40. Not zero fasteners.
-    job.set_on_line("parapet-0024", "spacing", Some("Cleat fasteners"), Some("-12 in"), Status::Known, "typo").unwrap();
-    job.derive();
-    let f = figures(&mut job, "parapet-0024", "Cleat fasteners").quantity;
-    assert_eq!((f.value, f.status), (None, Status::Unknown));
-    assert!(f.note.contains("below zero"), "{}", f.note);
+    // A spacing typed with a minus: 20 x 2 / (-12 in / 12) = -40, not zero fasteners. Since call 208 (point 4) a length below nothing is
+    // refused as it is entered, so the typo never reaches the quantity; the quantity's own refusal below is held by the formula that follows.
+    let err = job.set_on_line("parapet-0024", "spacing", Some("Cleat fasteners"), Some("-12 in"), Status::Known, "typo").unwrap_err();
+    assert!(err.contains("spacing is below nothing (-12 in): a length a line enters is nothing or more"), "{err}");
     // The same without a typo: a formula that takes off more than there is.
     // (20 - 2 x 17) x 2 / (16 in / 12) = -21.
     job.set_formula("parapet-0024", Some("Cleat fasteners"), "(plan_length - 2 * end_gap) * sides / spacing", &[("end_gap".to_string(), "17 ft".to_string()), ("spacing".to_string(), "16 in".to_string())], Status::Known, "x").unwrap();
@@ -4086,17 +4084,19 @@ fn suppliers_stand_side_by_side_and_a_total_names_what_it_leaves_out() {
     assert!(tinners.left_out.iter().all(|(_, why)| why.contains("has not quoted \"Copper, 20 oz\"")), "{:?}", tinners.left_out);
     // A quote is entered for the unit the material is bought by, and no other.
     let m20 = job.index().into_iter().map(|(p, _)| p).find(|p| job.find(p).and_then(|e| job.world.get::<Node>(e).map(|n| n.name == "Copper, 20 oz")).unwrap_or(false)).unwrap();
-    assert!(job.set_quote(&m20, "Tinners Yard", Some("$9.40/SF"), Status::Known, "x").unwrap_err().contains("does not carry from one unit to another"));
-    assert!(job.set_quote("plane-0003", "Tinners Yard", Some("9.40"), Status::Known, "x").unwrap_err().contains("not a material"));
+    // (Since call 208 a quote goes by the price list's road, `pricelist::set_price`, the only road; its words for the two refusals.)
+    let how = |status, source| plumbline_world::editing::Entered { status, source };
+    assert!(plumbline_world::pricelist::set_price(&mut job, &m20, Some("Tinners Yard"), Some("$9.40/SF"), how(Status::Known, "x")).unwrap_err().contains("priced by the SF"));
+    assert!(plumbline_world::pricelist::set_price(&mut job, "plane-0003", Some("Tinners Yard"), Some("9.40"), how(Status::Known, "x")).unwrap_err().contains("neither a material nor an item"));
     // Entered: 123.6931 x 9.40 = 1,162.71514 -> 1,162.72; 30 x 9.40 = 282.00.
     // Tinners Yard is now over all four: 6,714.91 + 1,162.72 + 282.00 = 8,159.63.
-    job.set_quote(&m20, "Tinners Yard", Some("$9.40/lb"), Status::Assumed, "made-up quote, by telephone").unwrap();
+    plumbline_world::pricelist::set_price(&mut job, &m20, Some("Tinners Yard"), Some("$9.40/lb"), how(Status::Assumed, "made-up quote, by telephone")).unwrap();
     job.derive();
     let est = view::estimate(&mut job);
     let tinners = est.at_supplier.iter().find(|x| x.0 == "Tinners Yard").unwrap().1.clone();
     assert_eq!((tinners.value, tinners.members, tinners.left_out.len()), (Some(8159.63), 4, 0));
     // A quote asked for and not come is a quote with no figure, named: not a price of nothing.
-    job.set_quote(&m20, "Tinners Yard", None, Status::Unknown, "asked for, not received").unwrap();
+    plumbline_world::pricelist::set_price(&mut job, &m20, Some("Tinners Yard"), None, how(Status::Unknown, "asked for, not received")).unwrap();
     job.derive();
     let est = view::estimate(&mut job);
     let tinners = est.at_supplier.iter().find(|x| x.0 == "Tinners Yard").unwrap().1.clone();
@@ -4924,9 +4924,9 @@ fn j11_10_to_14_the_smaller_findings() {
     assert_eq!(est.job_cost.value, None);
     // 12: one supplier, one name; one material, one name.
     let mut job = sample::priced();
-    let m20 = job.index().into_iter().map(|(p, _)| p).find(|p| job.find(p).and_then(|e| job.world.get::<Node>(e).map(|n| n.name == "Copper, 20 oz")).unwrap_or(false)).unwrap();
-    assert!(job.set_quote(&m20, "harbor metals", Some("9"), Status::Known, "x").unwrap_err().contains("written another way"));
-    assert!(job.set_quote(&m20, "Ridge  Supply", Some("9"), Status::Known, "x").unwrap_err().contains("written another way"));
+    // (Call 208 point 1(b): the two refusals of a supplier written another way, held here (item 12 of `j11_10_to_14_the_smaller_findings`) by the older
+    // road `Job::set_quote`, are gone with it: a supplier written another way is taken as the job's spelling, and said; that is held in
+    // crates/cli/tests/call208.rs `a_suppliers_name_written_another_way_is_taken_as_the_jobs_and_said`.)
     assert!(job.add_material("copper, 16 OZ", "lb").unwrap_err().contains("already has a material called \"Copper, 16 oz\""));
     // 13: hours are not rounded up to whole hours.
     assert!(job.set_on_line("plane-0003", "order", Some("Install panels"), Some("25 SF/hr whole"), Status::Known, "x").unwrap_err().contains("hours are not bought whole"));

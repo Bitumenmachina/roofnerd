@@ -8453,3 +8453,44 @@ older way refuses it); and an unpriced line of the same name that is not made of
 the material (a list prices it; the older way does not). The road a list takes is
 the one the window will use. The older way is to be brought to it, with every
 figure that moves listed first: a command-line job, not yet contracted.
+
+### Call 208. Four things left with two readings, brought to one (2026-11-25)
+
+Each was said as "not right" by the worker who met it, and each is two ways of
+doing one thing.
+
+1. **A price has one road, whoever sets it** (call 207, as built, left three cases
+   on an older one). The road a price list brought in takes is the one the window
+   will use, and it wins: `set <material> price` and `quote` go by it in every
+   case. So (a) a supplier's price on a material the estimator has not priced
+   becomes the job's price for it too, as it does from a list (call 108), and the
+   reply says so; (b) a supplier's name written another way is taken as the job's
+   own spelling, and the reply says which; (c) an unpriced line of the same name
+   that is not made of the material is priced by it, as a list prices it, and the
+   reply names the line. **Every figure of money that moves in a test or a
+   demonstration is listed first, with the arithmetic**: one moves only where a
+   thing that had no price now has the price a list would have given it.
+2. **"Priced on nothing" is worked in one place.** The estimate's own rule and the
+   count of what is set down and not priced (call 205) are one function.
+3. **`check` says of a job that holds a shape under a starter shape's name** that
+   it does, and that the shape is to be kept under another name (call 205 left the
+   job opening, rightly, and silent).
+4. **Any length a line enters, below nothing, is refused**, a spacing as well as a
+   height (call 206 point 13 stopped at heights).
+
+**Call 208, as built (2026-11-25, by a Sonnet worker under `handoff/contracts/contract-208.md`;
+`research/worker-report-call208.md`; accepted by the lead's own run in the worker's
+copy).** All four points. Before changing anything the worker listed every test and
+demonstration that sets a price by the older road (five places) and logged which of
+the three cases each met while running them all: one did, and no figure of money
+moved in it (a supplier's price on a sheet nothing is made of). The older road is
+the list's road in every case, the function that kept them apart is gone, and so is
+`Job::set_quote`, a third road nothing but its own tests still used; the two checks
+that a supplier's name written another way is refused went with it, by point 1(b),
+and a test of the new rule (the job's spelling is taken, and said) stands in their
+place. A price set for a name no line is made of, where a line of that name is
+priced by it, says exactly that, and "prices nothing on the job yet" is said only
+when it prices nothing. "Priced on nothing" is one function. `check` names a shape
+held under a starter shape's name. A spacing, a turn-up or any other length a line
+enters is refused below nothing; the test that entered a spacing of -12 in on
+purpose now meets the refusal where the spacing is entered, and says so.

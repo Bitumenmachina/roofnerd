@@ -274,4 +274,30 @@ fails "$T/said.txt" 'another item is called "wine cooler" already' -- "$P" renam
 says "$T/sheet.txt" "Icebox"
 
 echo
+echo "== 15. A job that holds a shape under a starter shape's name still opens, and check says it does (call 208 point 3) =="
+"$P" new "$T/s.json" "Shapes (not a real job)" >/dev/null
+printf 'Shape,Made of,Form,Across from,Across to,Back from,Back to,Up from,Up to,There when\nzzmine,timber,box,-width / 2,width / 2,0,depth,0,height,\n' > "$T/zz.csv"
+"$P" import shapes "$T/s.json" "$T/zz.csv" >/dev/null
+sed -i 's/"zzmine"/"Bathtub"/' "$T/s.json"
+"$P" check "$T/s.json" > "$T/said.txt"
+sed 's/^/    | /' "$T/said.txt"
+says "$T/said.txt" "reads, its figures agree with what is drawn"
+says "$T/said.txt" '! "Bathtub" is a starter shape'"'"'s name, and this job holds a shape of its own under it'
+says "$T/said.txt" "keep it under another name"
+
+echo
+echo "== 16. Any length a line enters is refused below nothing, a spacing as a height (call 208 point 4) =="
+"$P" new "$T/lw.json" "Lengths (not a real job)" >/dev/null
+"$P" level "$T/lw.json" ground --elevation "0 ft" --height "9 ft" "${K[@]}" >/dev/null
+"$P" type "$T/lw.json" wall w6 --thickness "6 in" "${K[@]}" >/dev/null
+"$P" wall "$T/lw.json" level-0002 type-0003 --points "0,0 20,0" --height "8 ft" "${K[@]}" >/dev/null
+"$P" line "$T/lw.json" wall-0004 Studs plan_length --cost-type material --division 6 >/dev/null
+"$P" set "$T/lw.json" wall-0004 quantity "plan_length / spacing" --line Studs --with "spacing=16 in" "${K[@]}" >/dev/null
+fails "$T/said.txt" "spacing is below nothing (-12 in): a length a line enters is nothing or more" -- "$P" set "$T/lw.json" wall-0004 spacing "-12 in" --line Studs "${K[@]}"
+fails "$T/said.txt" "spacing is below nothing (-16 in): a length a line enters is nothing or more" -- "$P" set "$T/lw.json" wall-0004 quantity "plan_length / spacing" --line Studs --with "spacing=-16 in" "${K[@]}"
+"$P" estimate "$T/lw.json" | tr -s ' ' > "$T/sheet.txt"
+# 20 ft of plan length at 16 in (1.3333 ft): the figure the refusals left as it was, 15 (the line's own count of studs it names).
+says "$T/sheet.txt" "Studs"
+
+echo
 echo "judged-1125: every step held"
