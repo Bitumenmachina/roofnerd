@@ -9265,3 +9265,308 @@ editors-pass2.md` for Google Earth's own keys and the editors'):
 11. Not in this call: a ghost of the thing before the click and the rest of how
     tools feel (the next call); the second window showing a plan (the call
     after).
+
+### Call 219. How tools feel: the thing shown before the click, sizes at the pointer, a door moved, a copy, one search (2026-11-25; the lead's design, not built)
+
+Step 2 of call 217's order. What the review found the window lacks beside the
+best-made games and editors (`research/review-1125-window-behaviours.md`, points
+1 to 14), each read against what a builder needs and not what a game does:
+
+1. **A thing is shown before the click.** With a tool in hand, what the next
+   click would make is drawn where it would go, as the thing itself seen
+   through: a wall at its thickness and height from the last corner to the
+   pointer; a door or a window in the wall under the pointer, sliding along it;
+   an item, a fixture or a piece of equipment at its sizes where it would stand;
+   a run at its section and height; a run of cabinets along its wall. It is
+   drawn by what draws the real thing, from what the model says the click would
+   make, so the picture before and after the click is the same thing.
+2. **Whether it fits is said before the click.** The model tries the change and
+   takes it back (BIMCraft tries a script this way; ours is one change): what it
+   would make, what it would be in the same space as, what hole it would cut,
+   and, where the model would refuse it, the refusal word for word. The thing
+   seen through is drawn in the ink of a clash where it would clash and the
+   words stand at the pointer. A click the model would refuse is refused as it
+   is today. The saved job is never touched by a try. Tried when the pointer
+   rests a moment, not on every frame.
+3. **Sizes at the pointer.** Drawing a wall or a run: the length so far and the
+   angle of this leg, lettered at the pointer as the estimate writes a length. A
+   door or a window: how far it is from each end of its wall. Typing still takes
+   the length over, as today.
+4. **Turned before it is set down, and to any angle after.** The key that turns
+   a thing a quarter after it is set down turns the thing in hand before; a
+   typed angle turns it to that; a thing set down takes a typed angle on its
+   panel (the model already turns by any angle; the window offered a quarter).
+5. **A door or a window is moved**: along its wall, and to another wall. It is
+   refused where it would overrun its wall or lie over another opening, saying by
+   how much; each wall's face less openings follows.
+6. **A copy, and a row of copies.** A thing selected is copied into the hand and
+   set down as many times as wanted; or repeated in a row, so many, so far
+   apart. **A copy is Assumed**, whatever the thing it was copied from: its place
+   is new and nobody has measured it, and it says what it was copied from. It
+   carries the same type, sizes and cost lines. A wall is copied with its doors
+   and windows. And "like this one": a thing clicked with a key held puts its
+   tool in hand with its type and sizes.
+7. **One search.** A box that finds, as it is typed: every command the window
+   has (by the word on its button, with its key), every item of the tool chest,
+   everything in the job that has a name (a level, a room, a fixture, a wall
+   type), and the lines of the estimate. Enter does the command, takes the item
+   in hand, or flies to the thing.
+8. **Snaps can be let go.** Each kind of snap has a switch, and a key held frees
+   the pointer from all of them while it is held. What was caught is still named
+   at the pointer.
+9. **Games' habits that are not taken** (the review, list B): the program never
+   picks the result for the builder, never snaps to a grid a house does not
+   have, never shows trouble as a colour without the words and the size, and
+   never forgives a bad fit in silence.
+10. **Built in this order**: the model's side first at the command line
+    (trying a change; moving an opening; copy and repeat; find), under
+    `handoff/contracts/contract-219M.md`; then the window in three jobs: shown
+    before the click with sizes at the pointer and the turn (points 1 to 4, 8);
+    move, copy and like-this-one (5, 6); the search (7).
+
+### Call 220. Patrick, 2026-11-25: the main thing to remember (any common file in and out; they own their database; full depth without overwhelming; clean code, clean screens)
+
+His words: "Main thing to remember here is user will be able to bring any of their
+file types that are common to AEC in , export out similar , they own their
+database and it has the depth of a full high end home custom build but without
+overwhelming field guys and new users , clean code clean screens".
+
+It is folded into CLAUDE.md as four tests for anything built. How each clause is
+read against what there is, and what follows.
+
+**1. "bring any of their file types that are common to AEC in, export out
+similar".** What comes in and goes out today, and what does not:
+
+| A builder has | In today | Out today | Ruled |
+|---|---|---|---|
+| PDF plans, drawn or scanned | yes | the plan set, as PDF | held |
+| Pictures of plans (PNG, JPEG) | yes | | TIFF is how scanned sets are kept: taken in |
+| A Bluebeam-marked PDF (its measured lengths, areas and counts are kept in the PDF as ordinary PDF notes) | the page, not the marks | | **the marks read in as quantities, Assumed, each naming its mark** |
+| CAD drawings: DXF | no | no | **in as a sheet to trace with its lines caught and its own scale; out as the plan of a level** (call 221) |
+| CAD drawings: DWG | no | no | cannot be read with code this program may link (the free reader is GPL; the other is a paid, closed kit). The program says so when one is picked and says to save it as DXF, which every CAD program does |
+| A Revit model | by IFC | by IFC | Revit's own file is closed; IFC is its way in and out, and the program says so |
+| A SketchUp model | no | no | its own file is closed; it comes in as DXF or as a mesh (below) |
+| Another trade's or a designer's model (IFC 2x3, IFC4) | yes | IFC4, checked | held; clashes also go out as an issue list (BCF) |
+| A maker's sheet (PDF) | yes, into an item | | held |
+| A maker's model (IFC) | being built (call 214) | | |
+| Price lists, prior estimates, assembly and item libraries (CSV, XLSX) | yes | yes; the estimate as a workbook with live formulas | held |
+| A phone scan: points (PLY) | yes | | **LAS and E57 taken in** if a reader under a permitted licence exists; said if not |
+| A scan or a model as a mesh (OBJ, glTF) | no | no | **in as a thing to trace over; the house out as glTF** to look at anywhere |
+| A phone's room scan (Apple's own: walls, doors, windows with sizes) | no | | taken in as a first tracing (proposal 40) |
+| The job itself | yes | yes | held, without loss |
+
+Every reader and writer added is behind a table the lead fixes first, is a
+worker's job, links only code under a permitted licence, and reports what it
+could not carry; nothing is lost in silence (the fixed rule). **These go to the
+command-line builder beside the window work, starting now with DXF.**
+
+**2. "they own their database".** Every table the program works from is the
+user's own, in the open: items, shapes, where items connect, cabinet rules,
+assemblies, prices by supplier. Each is written out and brought back today, one
+table at a time. **Ruled: also as one thing.** "My database" written out is one
+workbook with a tab for each table (and the same as a folder of CSV), and
+brought back whole it is, tab for tab, what was written. Nothing in it is in a
+form only this program reads. The job stays a readable text file.
+
+**3. "the depth of a full high end home custom build but without overwhelming
+field guys and new users".** The depth is the sixteen divisions with their
+assemblies, the trades drawn, the bench. **Ruled: depth is shown on demand, and
+there are three ways to stand in front of the same job**, chosen by one control
+that reads at a glance: *Field* (the verify-in-field list, where each question
+is, a measurement typed or lasered, a photo; nothing else), *Estimate* (the
+drawing tools, the sheet, the lists), and *Everything* (the bench, formulas,
+every panel). Nothing is hidden for good and no number changes with the view; a
+panel a view leaves out is a switch away. A new job opens in Estimate with the
+ten next steps. This goes with the two windows on any screen (step 3 of call
+217's order).
+
+**4. "clean code clean screens".** Clean screens: every screen is judged by a
+model that did not build it against one question a builder would ask, "what on
+this screen do I not need right now", and what it names is put away or removed.
+Clean code: the long functions and the files that do several jobs are split
+with no change in what they do, a worker's job with the tests as its check; the
+window is driven from inside for its tests; nothing is added to a function
+already over 250 lines.
+
+### Call 221. A CAD drawing in and out: DXF (2026-11-25; the lead's design, not built)
+
+Call 220, point 1. DXF is the one CAD format that is published (Autodesk's own
+reference) and that every CAD program writes; a scan app's floor plan and a
+cabinet shop's parts go by it too.
+
+1. **In, as a sheet to trace.** A DXF picked under Bring in becomes a drawing on
+   a level, as a PDF page does: its lines, arcs, circles and polylines are the
+   sheet's lines, caught by the pointer as a drawn PDF's are; its text is its
+   text; a block is drawn where it is inserted. Curves are kept as curves where
+   the sheet can hold them and as short straight pieces where it cannot, said
+   with how many.
+2. **Its scale is its own.** A DXF says what unit it is drawn in. Where it does,
+   the sheet comes in at true size with nothing to calibrate, the scale Assumed
+   and sourced to the file's own units; where it does not, the sheet asks for
+   one dimension as a PDF does. Nothing is guessed.
+3. **Its layers come with it**: each layer is a switch on the sheet, so walls can
+   be traced with the furniture layer off. Layer names are the file's own.
+4. **The walls finder runs on it** as it runs on a drawn PDF (call 188); what it
+   finds is offered, not made.
+5. **Out: the plan of a level** as DXF, in feet and inches at true size: walls as
+   they are drawn on plan, doors and windows, rooms' names and areas, fixtures
+   and equipment as their outlines, runs as their centerlines, each on a layer
+   named the way US practice names layers (the AIA and National CAD Standard's
+   names, checked against a source and not written from memory; where none is
+   found for a thing, a plain name and the list says so).
+6. **What does not go and what did not come is said**: a 3D solid, an image in
+   the drawing, a hatch, a dimension object (its text comes, its arrows do not,
+   or whatever the reader can and cannot do) are counted in the reply by kind.
+7. **DWG is refused by name**: a file picked that is DWG says it is a closed
+   format this program cannot read, and to save it from the CAD program as DXF.
+   The same for a Revit file (IFC) and a SketchUp file (DXF or a mesh).
+8. The reader and writer are a crate under a permitted licence if one reads what
+   is needed (`tools/licenses.sh` decides), else written here from the published
+   reference. The saved job holds a DXF sheet as it holds a PDF sheet: the file's
+   name and where it stands, not a copy of its insides.
+9. Not in this call: the window's entry under Bring in and Write out (a small
+   window job after); parts for a cabinet shop (with the cut list, proposal 38).
+
+### Call 222. Two windows on any screen, work never lost, three ways to stand in front of a job, a plan in the second window (2026-11-25; the lead's design, not built)
+
+Step 3 of call 217's order, with call 220's third point (depth without
+overwhelming) and Patrick's ruling that two windows stay and the second can show
+plans. What the read of the code found (`research/review-1125-code-audit.md`):
+the two windows open at fixed sizes side by side and need a screen 2,490 wide;
+nothing follows a window that is resized; the panels are fixed widths; only Ctrl
+is read; there is no setting of any kind and nothing is saved for the user.
+Built in three jobs, in this order.
+
+**A. Any screen, and work never lost.**
+1. **Both windows open whole on the screen they are given.** Where there is room
+   they stand side by side as today; where there is not, the model takes the
+   screen and the second window stands over its right side at its own size, to
+   be moved. Neither opens with any part off the screen.
+2. **A window resized is followed.** The model fills it; the panels keep to its
+   edges; as it narrows the Details panel and then the Job panel fold to their
+   switches by themselves and come back as it widens; the build bar keeps every
+   tool reachable (it wraps or slides, the builder says which); the frosted
+   glass is right at every size. No window is smaller than a size at which every
+   control can still be reached, and the builder finds that size.
+3. **What a person set is kept**: where each window stood and how big, which
+   panels were put away, the size of the lettering, in one small text file of
+   the program's own on that machine. It is the program's, not the job's: a job
+   opened elsewhere is the same job. The demonstrations run without it.
+4. **Lettering can be made larger**: one setting, in steps, that scales every
+   word and control together.
+5. **The Command key does what Ctrl does** on a keyboard that has one.
+6. **Work is never lost.** While a job is open and has changes not saved, a
+   recovery copy is written beside it every minute and after every tenth change,
+   never over the job itself. Saving, or closing with nothing unsaved, removes
+   it. A job opened with a recovery copy newer than itself says so in one
+   sentence with the time, and offers "Take the recovered work" and "Leave it";
+   nothing is taken without the click. The recovery copy is the job as Save
+   would have written it, byte for byte.
+
+**B. Three ways to stand in front of the same job** (call 220, point 3): one
+control on the top bar that reads at a glance.
+7. **Field**: the verify-in-field list, one question at a time in large
+   lettering: where it is (the model flies there), what is asked, the dollars
+   riding on it, a place to type or laser the measurement, and the next. Nothing
+   else is on the screen but the model.
+8. **Estimate**: the drawing tools, the Job and Details panels, the sheet, the
+   lists. What a first-time user and an estimator need. A new job opens here,
+   with its ten next steps.
+9. **Everything**: also the bench and what belongs to it, the tool chest's own
+   editing, the formulas and the layouts.
+10. **No number, no saved job and no file written out differs between the three.**
+    Nothing is removed from the program: a thing a view leaves out is one click
+    away, and the window says which view has it when someone looks for it
+    (with the search of call 219).
+
+**C. A plan in the second window.**
+11. The second window shows **the estimate or a plan**, by a control at its top.
+    As a plan it shows any level of the job or any drawing sheet, with its own
+    wheel and drag, its own layers, and the same catches when it is looked at.
+    **Two plans stand side by side**: the first floor beside the second, or the
+    architect's sheet beside the tracing.
+12. What is selected in one window is marked in the other, and a double-click in
+    either flies both to it.
+13. Drawing stays in the first window in this call; the second is for looking.
+    Said on the screen where someone tries.
+
+### Call 223. "They own their database": every table written out as one workbook and brought back whole (2026-11-25; the lead's design, not built)
+
+Call 220, point 2. Every table the program works from already goes out and comes
+back one at a time (items, shapes, where items connect, assemblies, prices by
+supplier; cabinet rules when call 215 is built). A person who is told they own
+their database should be able to pick it up in one hand.
+
+1. **"My database" written out is one workbook**, a tab for each table, each tab
+   exactly what that table's own writing-out gives: the same headings, the same
+   rows, in the same order. The same as a folder of plain tables for whoever
+   wants them so.
+2. **Brought back, it is brought back whole**: each tab by the reader its own
+   table already has, in the order they depend on one another (shapes, then
+   items, then where they connect; assemblies; prices), all of it or none of it.
+   The reply says, tab by tab, how many rows were added, how many were the same
+   as the job already has, and how many were refused, each refusal with its row
+   and its reason.
+3. **Out, in to an empty job, and out again gives the same workbook**, cell for
+   cell, and the same folder byte for byte.
+4. **What it cannot read is said**: a tab it does not know and a column it does
+   not know are named in the reply and left alone, never dropped in silence and
+   never a reason to refuse the rest.
+5. **The starter database comes in the same way**: every table the program comes
+   with, in one bringing-in.
+6. Nothing in it is in a form only this program reads: a workbook any
+   spreadsheet opens, headings in a builder's words, no codes of the program's
+   own. Every value keeps how sure it is and where it came from, as each table
+   already does.
+7. In the window: "My database" under Write out and under Bring in. A small
+   window job after the command line's.
+
+### Call 214, as built, and two rulings made on the way (2026-11-25)
+
+Built by a Sonnet worker under `handoff/contracts/contract-214M.md`
+(`research/worker-report-call214M.md`), in three rounds, and accepted by the
+lead's own run in the worker's copy: 1,128 tests in the six command-line crates
+(672, 45, 6, 111, 122, 172), 58 command-line demonstrations with
+`demos/maker-model.sh` among them, no output with FAIL in it, the gates,
+`tools/portmap.sh`, `tools/licenses.sh`; the sample whole house's saved job is
+what it was, byte for byte. (Six of the demonstrations failed in the lead's
+first run in the minutes the disk was full and passed when run again; nothing
+of theirs was changed.)
+
+1. **Points 1 to 8 are built as written**: `import maker-model <job> <file>
+   [--as fixture|equipment|furnishing]` makes items in the tool chest and sets
+   nothing down; one item for each type in the file; sizes from the extent of the
+   body, Assumed and naming the file; maker and model from the manufacturer's
+   property set, Assumed, or Unknown, "not said in the model"; each connection
+   point a row of the item; drawn as a box, saying the body's own shape was not
+   kept; a proxy left out and named unless the person says what it is; the same
+   file again refused by name with the job untouched.
+2. **Which bodies are read**: pushed outlines, solids of faces, face sets, shapes
+   shared by a type, a box, and a clipped solid as the solid it was cut from,
+   following BIMCraft's structure and written here. **Not read, and said so each
+   time**: a solid turned about an axis, a swept or tapered solid, and curved
+   solids of the advanced kind. Their sizes stay Unknown: sampling a curve would
+   give a size nobody could vouch for.
+3. **Ruled in the second and third rounds: a connection point that does not say
+   which way it faces is kept.** The lead's second-round instruction lost such a
+   point altogether, which was wrong: where a thing connects is worth more than
+   which way it faces. An item's connection may now say nothing of its facing
+   (the key is absent in the saved job; the table's cell is empty; a job written
+   before reads and writes back byte for byte). A maker's point whose placement
+   gives no axis, or one along none of the six, is a row with no facing, and the
+   reply counts them.
+4. **Ruled: this program's own model files tell no lie about facing.** The
+   writer gave every connection point an axis straight up whatever it was. It now
+   writes the axis from the connection's own facing, and none where it has none.
+   So which way a connection faces is carried by the file and comes back when it
+   is read, onto a thing and onto an item's row. This replaces point 5 of "Call
+   211, the model's side, as built" (facing not written). One expectation moved
+   with it and was listed first: `demos/connections.sh` step 9 now checks that
+   the old line is gone and "faces back" returns.
+5. Not right, and said: the standard's own text on how a connection point's
+   facing is given could not be read; the placement's own axis is used and the
+   reply says so and says to check one against the maker's sheet. A shared
+   shape placed away from its own origin is not read. Weight, material, price
+   and classification are not read. The third round's tests were written after
+   its code and were never seen to fail. The window's entry under Bring in is not
+   built.

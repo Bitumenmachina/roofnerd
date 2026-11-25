@@ -184,6 +184,13 @@ impl Out {
         let (o, z, x) = (self.point(o), self.dir(z), self.dir(x));
         self.add(format!("IFCAXIS2PLACEMENT3D(#{o},#{z},#{x})"))
     }
+    /// A place with no turn given: where it is and nothing of which way it points (the standard's default is not a statement).
+    fn placed_alone(&mut self, within: Option<u64>, o: P3) -> u64 {
+        let o = self.point(o);
+        let axes = self.add(format!("IFCAXIS2PLACEMENT3D(#{o},$,$)"));
+        let within = within.map(|w| format!("#{w}")).unwrap_or_else(|| "$".to_string());
+        self.add(format!("IFCLOCALPLACEMENT({within},#{axes})"))
+    }
     fn placed(&mut self, within: Option<u64>, o: P3, z: P3, x: P3) -> u64 {
         let axes = self.axes(o, z, x);
         let within = within.map(|w| format!("#{w}")).unwrap_or_else(|| "$".to_string());
@@ -643,8 +650,8 @@ pub fn export(job: &mut Job, file: &str, when: &str) -> Result<Written, String> 
     // `IfcRelConnectsPorts`. A third end at one place is joined by being there, as the model joins it.
     let mut port_of: HashMap<(String, usize), u64> = HashMap::new();
     let mut ports_made = 0usize;
-    // Which way a connection faces is not written (call 211): the port stands where the connection is, and the model file keeps that.
-    let mut faced = 0usize;
+    // Which way a connection faces is the port's own axis (call 214, round 3), in the thing's own axes like its place: written where the
+    // connection has a facing, and no axis given where it has none, so the file says nothing it does not know.
     {
         let class_of = |job: &mut Job, system: &Option<String>| -> Option<String> { system.as_ref().and_then(|s| job.find(s)).and_then(|e| job.world.get::<SystemInfo>(e)).map(|i| i.classification.clone()) };
         for p in &placed {
@@ -676,10 +683,13 @@ pub fn export(job: &mut Job, file: &str, when: &str) -> Result<Written, String> 
                     let its = class_of(job, &p.system).and_then(|c| system_word(&c));
                     for (i, c) in connectors.0.iter().enumerate() {
                         let Some(at) = c.at_ft() else { continue };
-                        if c.facing.is_some() {
-                            faced += 1;
-                        }
-                        let place = o.placed(Some(parent), at, [0.0, 0.0, 1.0], [1.0, 0.0, 0.0]);
+                        let place = match c.facing {
+                            Some(f) => {
+                                let z = f.vector();
+                                o.placed(Some(parent), at, z, if z[0].abs() < 0.9 { [1.0, 0.0, 0.0] } else { [0.0, 1.0, 0.0] })
+                            }
+                            None => o.placed_alone(Some(parent), at),
+                        };
                         let flow = match c.flow {
                             Flow::Out => "SOURCE",
                             Flow::In => "SINK",
@@ -706,9 +716,6 @@ pub fn export(job: &mut Job, file: &str, when: &str) -> Result<Written, String> 
         }
         for _ in 0..ports_made {
             count("connections");
-        }
-        if faced > 0 {
-            not_written.push(("connection".into(), faced, "which way it faces is not written: the model file keeps where it is".into()));
         }
         // The ties, from where the model has two of them at one place.
         let mut ties = 0usize;

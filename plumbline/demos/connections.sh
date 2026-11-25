@@ -157,7 +157,9 @@ cat "$T/ifc.txt" | sed 's/^/    | /'
 n=$(grep -c "IFCDISTRIBUTIONPORT" "$T/lav.ifc" || true)
 [ "$n" -ge 3 ] || { echo "FAIL: the file has $n connection points on the lavatory and the pipes' ends; wanted at least 3"; exit 1; }
 echo "    the file holds $n connection points (3 on the lavatory, 2 on each of 2 pipes)"
-says "$T/ifc.txt" "3 connections: which way it faces is not written"
+# Round 3 (call 214): which way a connection faces is carried by the file (the port's own axis), so the line saying it was not written is gone.
+if grep -qF "which way it faces is not written" "$T/ifc.txt"; then echo "FAIL: the reply still says which way it faces is not written"; cat "$T/ifc.txt"; exit 1; fi
+printf '    (not said: which way it faces is not written)\n'
 "$P" new "$T/back.json" "Read back (not a real job)" >/dev/null
 "$P" import ifc "$T/back.json" "$T/lav.ifc" --status Assumed --source "a made-up model" > "$T/read.txt" 2>&1 || { cat "$T/read.txt"; exit 1; }
 says "$T/read.txt" "3 connections on fixtures and equipment were brought in from the file's connection points"
@@ -166,6 +168,8 @@ sed 's/^/    | /' "$T/read.txt" | head -12
 k=$(grep -c "^ *~ connection [0-9]*: " "$T/shown.txt" || true)
 [ "$k" -eq 3 ] || { echo "FAIL: the lavatory read back has $k connections, not three"; head -60 "$T/shown.txt"; exit 1; }
 echo "    read back, the lavatory has $k connections"
+grep -qF "faces back" "$T/shown.txt" || { echo "FAIL: the facing did not come back with the file"; head -60 "$T/shown.txt"; exit 1; }
+echo "    and each faces the way it did (faces back)"
 
 echo
 echo "== 10. The sample whole house is as it was: plumbline sixteen byte for byte, and its price and open ends =="

@@ -28,6 +28,8 @@
 
 pub mod step;
 pub mod write;
+mod maker;
+pub use maker::{maker_model, MadeItem, MakerModel};
 
 use std::collections::{BTreeMap, HashMap, HashSet};
 
@@ -2533,7 +2535,11 @@ fn bring(job: &mut Job, r: &Reader, name: &str, how: Entered, unit_name: String,
                 };
                 let source = from(port, *pid);
                 let entered = Entered { status: how.status, source: &source };
-                let said = ed::PortSaid { name: r.name(port), kind: sort, domain, flow };
+                let facing = r.file.entities.get(id).map(|t| r.placed(r.arg(t, 5))).and_then(|frame| match maker::way_of(&r, port, &frame) {
+                    maker::Way::Is(f) => Some(f),
+                    _ => None,
+                });
+                let said = ed::PortSaid { name: r.name(port), kind: sort, domain, flow, facing };
                 match ed::connect_port(job, thing, tie.as_ref().map(|(run, end)| (run.as_str(), *end)), at, &said, entered) {
                     Ok(_) => {
                         connections += 1;

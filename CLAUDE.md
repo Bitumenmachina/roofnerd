@@ -8,7 +8,10 @@ does. Each rule is here once. Patrick's rulings of 2026-11-11 are folded in and 
 anything older that conflicts (`plumbline/DECISIONS.md` call 42 has them as he gave them);
 so are his of 2026-11-12 (call 57) and of later that day (call 62, which replaced the
 look and asked for this file's last section). His of 2026-11-13 (calls 75 and 76: a
-harness for each division) are folded in below.
+harness for each division) are folded in below. His of 2026-11-25 are folded in too:
+call 217 (the lead makes the calls and runs to the finish without him; **two windows
+stay, and the second can show plans**; the order of work) and call 220 (the main thing
+to remember).
 
 ## What this is
 
@@ -30,6 +33,16 @@ simple field tools then confirms or clears each one. Things are put in the house
 their makers' sheets (mechanicals, fixtures, furniture), picked up and moved, and the
 clashes light and clear as they move: "the whole point of clash is also moving a
 bathroom vanity around". The building goes out as a BIM file (IFC).
+
+**The main thing to remember** (Patrick, 2026-11-25, `plumbline/DECISIONS.md` call
+220): "user will be able to bring any of their file types that are common to AEC in,
+export out similar, they own their database and it has the depth of a full high end
+home custom build but without overwhelming field guys and new users, clean code clean
+screens". Four tests for anything built: does a file a builder already has come in,
+and go out again in a form another program takes; is every table of the program (items,
+shapes, assemblies, prices, rules) theirs, in the open, written out and brought back
+whole; is the depth there for the estimator and out of the way of the man in the
+field and the first-time user; is the screen clean and the code clean.
 
 **How it should feel** (Patrick, call 62): "editing software for construction that
 feels like playing a hyper realistic video game"; "more like an Apple product with
@@ -291,9 +304,11 @@ they go. They find; they do not decide.
 
 **Where the cost went, so it is not paid again.** Most of the lead's effort on this
 branch was not judgment: it was waiting on window runs at a frame a second, reading
-contact sheets, and keeping the record. All of that is a worker's. The largest single
-saving is a machine with a real graphics card and a screen: a check that takes hours
-here takes minutes there, and feel can be judged at all.
+contact sheets, and keeping the record. All of that is a worker's. **This
+environment and its pictures are the evidence** (Patrick, calls 174 and 217: "please
+stop saying this needs a machine the environment with screenshots are fine"): another
+machine is not spoken of to him, in a reply, a page or a record. Feel is judged here by
+measuring the view's path frame by frame and by strips of pictures across a move.
 
 ## For whoever builds next
 

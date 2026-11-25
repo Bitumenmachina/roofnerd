@@ -1,0 +1,2299 @@
+{
+  "header": {
+    "id": "plumbline/a-job-made-up",
+    "ifcxVersion": "ifcx_alpha",
+    "dataVersion": "1.0.0",
+    "author": "plumbline",
+    "timestamp": "2026-11-25"
+  },
+  "imports": [],
+  "schemas": {
+    "pl::allowance": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::class": {
+      "value": {
+        "dataType": "String"
+      }
+    },
+    "pl::condition": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::connectors": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::cost": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::drawing": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::fitting": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::floor": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::floor_type": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::footprint": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::height": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::in_system": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::item": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::item_connections": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::job": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::level": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::line_quantities": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::markup": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::material": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::measure": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::opening": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::opening_type": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::outline": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::pitch": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::placed": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::priced": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::prior": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::recipe": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::room": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::room_line": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::run": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::schedule": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::segment": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::segment_type": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::solve": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::solved": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::supply": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::system": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::taper": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::wall": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::wall_type": {
+      "value": {
+        "dataType": "Object"
+      }
+    },
+    "pl::work": {
+      "value": {
+        "dataType": "Object"
+      }
+    }
+  },
+  "data": [
+    {
+      "path": "job-0001",
+      "children": {
+        "Air handler": "type-0048",
+        "B12": "type-0015",
+        "B15": "type-0016",
+        "B18": "type-0017",
+        "B21": "type-0018",
+        "B24": "type-0019",
+        "B27": "type-0020",
+        "B30": "type-0021",
+        "B33": "type-0022",
+        "B36": "type-0023",
+        "BLB36": "type-0029",
+        "Base cabinet, 36 in": "type-0007",
+        "Bathtub, 5 ft": "type-0044",
+        "Bed, queen": "type-0013",
+        "Chair": "type-0011",
+        "DB18": "type-0027",
+        "DB24": "type-0028",
+        "Desk": "type-0012",
+        "Dishwasher": "type-0004",
+        "Dryer": "type-0006",
+        "F3": "type-0041",
+        "Heat pump, outdoor unit": "type-0047",
+        "Kitchen sink, double bowl": "type-0045",
+        "LS36": "type-0030",
+        "Lavatory": "type-0043",
+        "Northgate NL-2018": "type-0050",
+        "Panelboard, 200 A": "type-0049",
+        "Range, 30 in": "type-0002",
+        "Refrigerator": "type-0003",
+        "SB30": "type-0024",
+        "SB33": "type-0025",
+        "SB36": "type-0026",
+        "Sofa": "type-0014",
+        "T1884": "type-0039",
+        "T2484": "type-0040",
+        "Table": "type-0010",
+        "Vanity, 36 in": "type-0008",
+        "W1230": "type-0031",
+        "W1530": "type-0032",
+        "W1830": "type-0033",
+        "W2430": "type-0034",
+        "W3018": "type-0037",
+        "W3030": "type-0035",
+        "W3612": "type-0038",
+        "W3630": "type-0036",
+        "Wardrobe": "type-0009",
+        "Washer": "type-0005",
+        "Water closet": "type-0042",
+        "Water heater, 50 gal": "type-0046"
+      },
+      "attributes": {
+        "pl::class": "Job",
+        "pl::job": {
+          "title": "A job (made up)",
+          "length_unit": "ft",
+          "next_id": 51
+        }
+      }
+    },
+    {
+      "path": "type-0002",
+      "attributes": {
+        "pl::class": "Type",
+        "pl::item": {
+          "category": "Equipment",
+          "maker": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "model": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "width": {
+            "value": 30.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "a typical size; the product is not chosen"
+          },
+          "depth": {
+            "value": 26.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "a typical size; the product is not chosen"
+          },
+          "height": {
+            "value": 36.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "a typical size; the product is not chosen"
+          },
+          "division": 11,
+          "form": "box"
+        }
+      }
+    },
+    {
+      "path": "type-0003",
+      "attributes": {
+        "pl::class": "Type",
+        "pl::item": {
+          "category": "Equipment",
+          "maker": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "model": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "width": {
+            "value": 36.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "a typical size; the product is not chosen"
+          },
+          "depth": {
+            "value": 30.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "a typical size; the product is not chosen"
+          },
+          "height": {
+            "value": 70.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "a typical size; the product is not chosen"
+          },
+          "division": 11,
+          "form": "box"
+        }
+      }
+    },
+    {
+      "path": "type-0004",
+      "attributes": {
+        "pl::class": "Type",
+        "pl::item": {
+          "category": "Equipment",
+          "maker": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "model": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "width": {
+            "value": 24.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "a typical size; the product is not chosen"
+          },
+          "depth": {
+            "value": 24.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "a typical size; the product is not chosen"
+          },
+          "height": {
+            "value": 34.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "a typical size; the product is not chosen"
+          },
+          "division": 11,
+          "form": "box"
+        }
+      }
+    },
+    {
+      "path": "type-0005",
+      "attributes": {
+        "pl::class": "Type",
+        "pl::item": {
+          "category": "Equipment",
+          "maker": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "model": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "width": {
+            "value": 27.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "a typical size; the product is not chosen"
+          },
+          "depth": {
+            "value": 30.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "a typical size; the product is not chosen"
+          },
+          "height": {
+            "value": 38.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "a typical size; the product is not chosen"
+          },
+          "division": 11,
+          "form": "box"
+        }
+      }
+    },
+    {
+      "path": "type-0006",
+      "attributes": {
+        "pl::class": "Type",
+        "pl::item": {
+          "category": "Equipment",
+          "maker": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "model": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "width": {
+            "value": 27.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "a typical size; the product is not chosen"
+          },
+          "depth": {
+            "value": 30.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "a typical size; the product is not chosen"
+          },
+          "height": {
+            "value": 38.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "a typical size; the product is not chosen"
+          },
+          "division": 11,
+          "form": "box"
+        }
+      }
+    },
+    {
+      "path": "type-0007",
+      "attributes": {
+        "pl::class": "Type",
+        "pl::item": {
+          "category": "Furnishing",
+          "maker": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "model": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "width": {
+            "value": 36.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "a typical size; the product is not chosen"
+          },
+          "depth": {
+            "value": 24.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "a typical size; the product is not chosen"
+          },
+          "height": {
+            "value": 34.5,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "a typical size; the product is not chosen"
+          },
+          "division": 12,
+          "form": "base cabinet"
+        }
+      }
+    },
+    {
+      "path": "type-0008",
+      "attributes": {
+        "pl::class": "Type",
+        "pl::item": {
+          "category": "Furnishing",
+          "maker": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "model": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "width": {
+            "value": 36.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "a typical size; the product is not chosen"
+          },
+          "depth": {
+            "value": 21.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "a typical size; the product is not chosen"
+          },
+          "height": {
+            "value": 34.5,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "a typical size; the product is not chosen"
+          },
+          "division": 12,
+          "form": "base cabinet"
+        }
+      }
+    },
+    {
+      "path": "type-0009",
+      "attributes": {
+        "pl::class": "Type",
+        "pl::item": {
+          "category": "Furnishing",
+          "maker": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "model": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "width": {
+            "value": 36.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "a typical size; the product is not chosen"
+          },
+          "depth": {
+            "value": 24.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "a typical size; the product is not chosen"
+          },
+          "height": {
+            "value": 72.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "a typical size; the product is not chosen"
+          },
+          "division": 12,
+          "form": "wardrobe"
+        }
+      }
+    },
+    {
+      "path": "type-0010",
+      "attributes": {
+        "pl::class": "Type",
+        "pl::item": {
+          "category": "Furnishing",
+          "maker": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "model": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "width": {
+            "value": 72.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "a typical size; the product is not chosen"
+          },
+          "depth": {
+            "value": 36.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "a typical size; the product is not chosen"
+          },
+          "height": {
+            "value": 30.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "a typical size; the product is not chosen"
+          },
+          "division": 12,
+          "form": "table"
+        }
+      }
+    },
+    {
+      "path": "type-0011",
+      "attributes": {
+        "pl::class": "Type",
+        "pl::item": {
+          "category": "Furnishing",
+          "maker": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "model": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "width": {
+            "value": 18.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "a typical size; the product is not chosen"
+          },
+          "depth": {
+            "value": 20.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "a typical size; the product is not chosen"
+          },
+          "height": {
+            "value": 34.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "a typical size; the product is not chosen"
+          },
+          "division": 12,
+          "form": "chair"
+        }
+      }
+    },
+    {
+      "path": "type-0012",
+      "attributes": {
+        "pl::class": "Type",
+        "pl::item": {
+          "category": "Furnishing",
+          "maker": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "model": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "width": {
+            "value": 60.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "a typical size; the product is not chosen"
+          },
+          "depth": {
+            "value": 30.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "a typical size; the product is not chosen"
+          },
+          "height": {
+            "value": 30.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "a typical size; the product is not chosen"
+          },
+          "division": 12,
+          "form": "desk"
+        }
+      }
+    },
+    {
+      "path": "type-0013",
+      "attributes": {
+        "pl::class": "Type",
+        "pl::item": {
+          "category": "Furnishing",
+          "maker": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "model": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "width": {
+            "value": 60.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "a typical size; the product is not chosen"
+          },
+          "depth": {
+            "value": 80.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "a typical size; the product is not chosen"
+          },
+          "height": {
+            "value": 36.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "a typical size; the product is not chosen"
+          },
+          "division": 12,
+          "form": "bed"
+        }
+      }
+    },
+    {
+      "path": "type-0014",
+      "attributes": {
+        "pl::class": "Type",
+        "pl::item": {
+          "category": "Furnishing",
+          "maker": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "model": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "width": {
+            "value": 84.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "a typical size; the product is not chosen"
+          },
+          "depth": {
+            "value": 36.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "a typical size; the product is not chosen"
+          },
+          "height": {
+            "value": 32.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "a typical size; the product is not chosen"
+          },
+          "division": 12,
+          "form": "sofa"
+        }
+      }
+    },
+    {
+      "path": "type-0015",
+      "attributes": {
+        "pl::class": "Type",
+        "pl::item": {
+          "category": "Furnishing",
+          "maker": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "model": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "width": {
+            "value": 12.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "depth": {
+            "value": 24.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "height": {
+            "value": 34.5,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "division": 12,
+          "form": "base cabinet"
+        }
+      }
+    },
+    {
+      "path": "type-0016",
+      "attributes": {
+        "pl::class": "Type",
+        "pl::item": {
+          "category": "Furnishing",
+          "maker": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "model": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "width": {
+            "value": 15.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "depth": {
+            "value": 24.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "height": {
+            "value": 34.5,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "division": 12,
+          "form": "base cabinet"
+        }
+      }
+    },
+    {
+      "path": "type-0017",
+      "attributes": {
+        "pl::class": "Type",
+        "pl::item": {
+          "category": "Furnishing",
+          "maker": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "model": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "width": {
+            "value": 18.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "depth": {
+            "value": 24.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "height": {
+            "value": 34.5,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "division": 12,
+          "form": "base cabinet"
+        }
+      }
+    },
+    {
+      "path": "type-0018",
+      "attributes": {
+        "pl::class": "Type",
+        "pl::item": {
+          "category": "Furnishing",
+          "maker": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "model": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "width": {
+            "value": 21.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "depth": {
+            "value": 24.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "height": {
+            "value": 34.5,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "division": 12,
+          "form": "base cabinet"
+        }
+      }
+    },
+    {
+      "path": "type-0019",
+      "attributes": {
+        "pl::class": "Type",
+        "pl::item": {
+          "category": "Furnishing",
+          "maker": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "model": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "width": {
+            "value": 24.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "depth": {
+            "value": 24.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "height": {
+            "value": 34.5,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "division": 12,
+          "form": "base cabinet"
+        }
+      }
+    },
+    {
+      "path": "type-0020",
+      "attributes": {
+        "pl::class": "Type",
+        "pl::item": {
+          "category": "Furnishing",
+          "maker": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "model": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "width": {
+            "value": 27.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "depth": {
+            "value": 24.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "height": {
+            "value": 34.5,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "division": 12,
+          "form": "base cabinet"
+        }
+      }
+    },
+    {
+      "path": "type-0021",
+      "attributes": {
+        "pl::class": "Type",
+        "pl::item": {
+          "category": "Furnishing",
+          "maker": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "model": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "width": {
+            "value": 30.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "depth": {
+            "value": 24.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "height": {
+            "value": 34.5,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "division": 12,
+          "form": "base cabinet"
+        }
+      }
+    },
+    {
+      "path": "type-0022",
+      "attributes": {
+        "pl::class": "Type",
+        "pl::item": {
+          "category": "Furnishing",
+          "maker": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "model": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "width": {
+            "value": 33.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "depth": {
+            "value": 24.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "height": {
+            "value": 34.5,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "division": 12,
+          "form": "base cabinet"
+        }
+      }
+    },
+    {
+      "path": "type-0023",
+      "attributes": {
+        "pl::class": "Type",
+        "pl::item": {
+          "category": "Furnishing",
+          "maker": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "model": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "width": {
+            "value": 36.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "depth": {
+            "value": 24.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "height": {
+            "value": 34.5,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "division": 12,
+          "form": "base cabinet"
+        }
+      }
+    },
+    {
+      "path": "type-0024",
+      "attributes": {
+        "pl::class": "Type",
+        "pl::item": {
+          "category": "Furnishing",
+          "maker": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "model": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "width": {
+            "value": 30.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "depth": {
+            "value": 24.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "height": {
+            "value": 34.5,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "division": 12,
+          "form": "base cabinet"
+        }
+      }
+    },
+    {
+      "path": "type-0025",
+      "attributes": {
+        "pl::class": "Type",
+        "pl::item": {
+          "category": "Furnishing",
+          "maker": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "model": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "width": {
+            "value": 33.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "depth": {
+            "value": 24.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "height": {
+            "value": 34.5,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "division": 12,
+          "form": "base cabinet"
+        }
+      }
+    },
+    {
+      "path": "type-0026",
+      "attributes": {
+        "pl::class": "Type",
+        "pl::item": {
+          "category": "Furnishing",
+          "maker": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "model": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "width": {
+            "value": 36.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "depth": {
+            "value": 24.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "height": {
+            "value": 34.5,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "division": 12,
+          "form": "base cabinet"
+        }
+      }
+    },
+    {
+      "path": "type-0027",
+      "attributes": {
+        "pl::class": "Type",
+        "pl::item": {
+          "category": "Furnishing",
+          "maker": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "model": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "width": {
+            "value": 18.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "depth": {
+            "value": 24.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "height": {
+            "value": 34.5,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "division": 12,
+          "form": "base cabinet"
+        }
+      }
+    },
+    {
+      "path": "type-0028",
+      "attributes": {
+        "pl::class": "Type",
+        "pl::item": {
+          "category": "Furnishing",
+          "maker": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "model": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "width": {
+            "value": 24.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "depth": {
+            "value": 24.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "height": {
+            "value": 34.5,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "division": 12,
+          "form": "base cabinet"
+        }
+      }
+    },
+    {
+      "path": "type-0029",
+      "attributes": {
+        "pl::class": "Type",
+        "pl::item": {
+          "category": "Furnishing",
+          "maker": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "model": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "width": {
+            "value": 36.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "depth": {
+            "value": 24.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "height": {
+            "value": 34.5,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "division": 12,
+          "form": "base cabinet"
+        }
+      }
+    },
+    {
+      "path": "type-0030",
+      "attributes": {
+        "pl::class": "Type",
+        "pl::item": {
+          "category": "Furnishing",
+          "maker": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "model": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "width": {
+            "value": 36.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "depth": {
+            "value": 36.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "height": {
+            "value": 34.5,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "division": 12,
+          "form": "base cabinet"
+        }
+      }
+    },
+    {
+      "path": "type-0031",
+      "attributes": {
+        "pl::class": "Type",
+        "pl::item": {
+          "category": "Furnishing",
+          "maker": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "model": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "width": {
+            "value": 12.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "depth": {
+            "value": 12.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "height": {
+            "value": 30.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "division": 12,
+          "form": "box"
+        }
+      }
+    },
+    {
+      "path": "type-0032",
+      "attributes": {
+        "pl::class": "Type",
+        "pl::item": {
+          "category": "Furnishing",
+          "maker": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "model": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "width": {
+            "value": 15.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "depth": {
+            "value": 12.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "height": {
+            "value": 30.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "division": 12,
+          "form": "box"
+        }
+      }
+    },
+    {
+      "path": "type-0033",
+      "attributes": {
+        "pl::class": "Type",
+        "pl::item": {
+          "category": "Furnishing",
+          "maker": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "model": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "width": {
+            "value": 18.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "depth": {
+            "value": 12.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "height": {
+            "value": 30.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "division": 12,
+          "form": "box"
+        }
+      }
+    },
+    {
+      "path": "type-0034",
+      "attributes": {
+        "pl::class": "Type",
+        "pl::item": {
+          "category": "Furnishing",
+          "maker": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "model": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "width": {
+            "value": 24.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "depth": {
+            "value": 12.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "height": {
+            "value": 30.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "division": 12,
+          "form": "box"
+        }
+      }
+    },
+    {
+      "path": "type-0035",
+      "attributes": {
+        "pl::class": "Type",
+        "pl::item": {
+          "category": "Furnishing",
+          "maker": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "model": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "width": {
+            "value": 30.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "depth": {
+            "value": 12.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "height": {
+            "value": 30.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "division": 12,
+          "form": "box"
+        }
+      }
+    },
+    {
+      "path": "type-0036",
+      "attributes": {
+        "pl::class": "Type",
+        "pl::item": {
+          "category": "Furnishing",
+          "maker": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "model": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "width": {
+            "value": 36.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "depth": {
+            "value": 12.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "height": {
+            "value": 30.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "division": 12,
+          "form": "box"
+        }
+      }
+    },
+    {
+      "path": "type-0037",
+      "attributes": {
+        "pl::class": "Type",
+        "pl::item": {
+          "category": "Furnishing",
+          "maker": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "model": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "width": {
+            "value": 30.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "depth": {
+            "value": 12.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "height": {
+            "value": 18.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "division": 12,
+          "form": "box"
+        }
+      }
+    },
+    {
+      "path": "type-0038",
+      "attributes": {
+        "pl::class": "Type",
+        "pl::item": {
+          "category": "Furnishing",
+          "maker": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "model": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "width": {
+            "value": 36.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "depth": {
+            "value": 12.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "height": {
+            "value": 12.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "division": 12,
+          "form": "box"
+        }
+      }
+    },
+    {
+      "path": "type-0039",
+      "attributes": {
+        "pl::class": "Type",
+        "pl::item": {
+          "category": "Furnishing",
+          "maker": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "model": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "width": {
+            "value": 18.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "depth": {
+            "value": 24.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "height": {
+            "value": 84.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "division": 12,
+          "form": "wardrobe"
+        }
+      }
+    },
+    {
+      "path": "type-0040",
+      "attributes": {
+        "pl::class": "Type",
+        "pl::item": {
+          "category": "Furnishing",
+          "maker": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "model": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "width": {
+            "value": 24.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "depth": {
+            "value": 24.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "height": {
+            "value": 84.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "division": 12,
+          "form": "wardrobe"
+        }
+      }
+    },
+    {
+      "path": "type-0041",
+      "attributes": {
+        "pl::class": "Type",
+        "pl::item": {
+          "category": "Furnishing",
+          "maker": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "model": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "width": {
+            "value": 3.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "depth": {
+            "value": 24.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "height": {
+            "value": 34.5,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "the trade's stock sizes; the maker's catalog decides"
+          },
+          "division": 12,
+          "form": "box"
+        }
+      }
+    },
+    {
+      "path": "type-0042",
+      "attributes": {
+        "pl::class": "Type",
+        "pl::item": {
+          "category": "Fixture",
+          "maker": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "model": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "width": {
+            "value": 20.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "a typical size; the product is not chosen"
+          },
+          "depth": {
+            "value": 28.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "a typical size; the product is not chosen"
+          },
+          "height": {
+            "value": 30.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "a typical size; the product is not chosen"
+          },
+          "division": 15,
+          "form": "water closet"
+        },
+        "pl::item_connections": [
+          {
+            "name": "Waste",
+            "kind": "pipe",
+            "carries": "waste",
+            "flow": "out",
+            "across": "0",
+            "back": "12 in",
+            "up": "0",
+            "faces": "down",
+            "place": "Assumed",
+            "place_from": "a typical rough-in; the product is not chosen"
+          },
+          {
+            "name": "Cold water",
+            "kind": "pipe",
+            "carries": "cold",
+            "flow": "in",
+            "across": "-6 in",
+            "back": "0",
+            "up": "6 in",
+            "faces": "back",
+            "place": "Assumed",
+            "place_from": "a typical rough-in; the product is not chosen"
+          }
+        ]
+      }
+    },
+    {
+      "path": "type-0043",
+      "attributes": {
+        "pl::class": "Type",
+        "pl::item": {
+          "category": "Fixture",
+          "maker": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "model": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "width": {
+            "value": 20.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "a typical size; the product is not chosen"
+          },
+          "depth": {
+            "value": 18.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "a typical size; the product is not chosen"
+          },
+          "height": {
+            "value": 34.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "a typical size; the product is not chosen"
+          },
+          "division": 15,
+          "form": "lavatory"
+        },
+        "pl::item_connections": [
+          {
+            "name": "Hot water",
+            "kind": "pipe",
+            "carries": "hot",
+            "flow": "in",
+            "across": "-4 in",
+            "back": "0",
+            "up": "21 in",
+            "faces": "back",
+            "place": "Assumed",
+            "place_from": "a typical rough-in; the product is not chosen"
+          },
+          {
+            "name": "Cold water",
+            "kind": "pipe",
+            "carries": "cold",
+            "flow": "in",
+            "across": "4 in",
+            "back": "0",
+            "up": "21 in",
+            "faces": "back",
+            "place": "Assumed",
+            "place_from": "a typical rough-in; the product is not chosen"
+          },
+          {
+            "name": "Waste",
+            "kind": "pipe",
+            "carries": "waste",
+            "flow": "out",
+            "across": "0",
+            "back": "0",
+            "up": "19 in",
+            "faces": "back",
+            "place": "Assumed",
+            "place_from": "a typical rough-in; the product is not chosen"
+          }
+        ]
+      }
+    },
+    {
+      "path": "type-0044",
+      "attributes": {
+        "pl::class": "Type",
+        "pl::item": {
+          "category": "Fixture",
+          "maker": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "model": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "width": {
+            "value": 60.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "a typical size; the product is not chosen"
+          },
+          "depth": {
+            "value": 30.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "a typical size; the product is not chosen"
+          },
+          "height": {
+            "value": 16.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "a typical size; the product is not chosen"
+          },
+          "division": 15,
+          "form": "bathtub"
+        }
+      }
+    },
+    {
+      "path": "type-0045",
+      "attributes": {
+        "pl::class": "Type",
+        "pl::item": {
+          "category": "Fixture",
+          "maker": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "model": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "width": {
+            "value": 33.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "a typical size; the product is not chosen"
+          },
+          "depth": {
+            "value": 22.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "a typical size; the product is not chosen"
+          },
+          "height": {
+            "value": 8.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "a typical size; the product is not chosen"
+          },
+          "division": 15,
+          "form": "sink"
+        }
+      }
+    },
+    {
+      "path": "type-0046",
+      "attributes": {
+        "pl::class": "Type",
+        "pl::item": {
+          "category": "Equipment",
+          "maker": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "model": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "width": {
+            "value": 22.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "a typical size; the product is not chosen"
+          },
+          "depth": {
+            "value": 22.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "a typical size; the product is not chosen"
+          },
+          "height": {
+            "value": 60.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "a typical size; the product is not chosen"
+          },
+          "division": 15,
+          "form": "tank"
+        }
+      }
+    },
+    {
+      "path": "type-0047",
+      "attributes": {
+        "pl::class": "Type",
+        "pl::item": {
+          "category": "Equipment",
+          "maker": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "model": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "width": {
+            "value": 36.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "a typical size; the product is not chosen"
+          },
+          "depth": {
+            "value": 36.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "a typical size; the product is not chosen"
+          },
+          "height": {
+            "value": 36.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "a typical size; the product is not chosen"
+          },
+          "division": 15,
+          "form": "outdoor unit"
+        }
+      }
+    },
+    {
+      "path": "type-0048",
+      "attributes": {
+        "pl::class": "Type",
+        "pl::item": {
+          "category": "Equipment",
+          "maker": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "model": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "width": {
+            "value": 24.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "a typical size; the product is not chosen"
+          },
+          "depth": {
+            "value": 22.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "a typical size; the product is not chosen"
+          },
+          "height": {
+            "value": 48.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "a typical size; the product is not chosen"
+          },
+          "division": 15,
+          "form": "box"
+        }
+      }
+    },
+    {
+      "path": "type-0049",
+      "attributes": {
+        "pl::class": "Type",
+        "pl::item": {
+          "category": "Equipment",
+          "maker": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "model": {
+            "value": null,
+            "status": "Unknown",
+            "source": "not chosen"
+          },
+          "width": {
+            "value": 15.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "a typical size; the product is not chosen"
+          },
+          "depth": {
+            "value": 4.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "a typical size; the product is not chosen"
+          },
+          "height": {
+            "value": 30.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "a typical size; the product is not chosen"
+          },
+          "division": 16,
+          "form": "box"
+        }
+      }
+    },
+    {
+      "path": "type-0050",
+      "attributes": {
+        "pl::class": "Type",
+        "pl::item": {
+          "category": "Fixture",
+          "maker": {
+            "value": "Northgate Fixtures",
+            "status": "Assumed",
+            "source": "nl-2018.ifc, #62: Pset_ManufacturerTypeInformation, Manufacturer (on the type)"
+          },
+          "model": {
+            "value": "NL-2018",
+            "status": "Assumed",
+            "source": "nl-2018.ifc, #62: Pset_ManufacturerTypeInformation, ModelLabel (on the type)"
+          },
+          "width": {
+            "value": 20.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "nl-2018.ifc, #100 plumbing fixture \"NL-2018\": the extent of its body, across"
+          },
+          "depth": {
+            "value": 18.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "nl-2018.ifc, #100 plumbing fixture \"NL-2018\": the extent of its body, front to back"
+          },
+          "height": {
+            "value": 8.0,
+            "unit": "in",
+            "status": "Assumed",
+            "source": "nl-2018.ifc, #100 plumbing fixture \"NL-2018\": the extent of its body, up"
+          },
+          "sheet": "nl-2018.ifc",
+          "form": "box"
+        },
+        "pl::item_connections": [
+          {
+            "name": "Cold water",
+            "kind": "pipe",
+            "carries": "cold",
+            "flow": "in",
+            "across": "4 in",
+            "back": "0",
+            "up": "2 in",
+            "faces": "back",
+            "place": "Assumed",
+            "place_from": "nl-2018.ifc, #85: connection point \"Cold water\" on plumbing fixture \"NL-2018\", where it is in the thing's own axes and the way its own axis points"
+          },
+          {
+            "name": "Hot water",
+            "kind": "pipe",
+            "carries": "hot",
+            "flow": "in",
+            "across": "-4 in",
+            "back": "0",
+            "up": "2 in",
+            "faces": "back",
+            "place": "Assumed",
+            "place_from": "nl-2018.ifc, #89: connection point \"Hot water\" on plumbing fixture \"NL-2018\", where it is in the thing's own axes and the way its own axis points"
+          },
+          {
+            "name": "Waste",
+            "kind": "pipe",
+            "carries": "waste",
+            "flow": "out",
+            "across": "0",
+            "back": "0",
+            "up": "0",
+            "faces": "down",
+            "place": "Assumed",
+            "place_from": "nl-2018.ifc, #93: connection point \"Waste\" on plumbing fixture \"NL-2018\", where it is in the thing's own axes and the way its own axis points"
+          }
+        ]
+      }
+    }
+  ]
+}

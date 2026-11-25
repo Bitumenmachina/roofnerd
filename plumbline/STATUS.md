@@ -11418,7 +11418,21 @@ at (254, 457.2, 0) facing down. By hand:
 10. File 1 with a fourth connection point 100 mm outside the body: three rows are
     written and the fourth is named as outside the item and not written.
 
-Not built yet.
+**Built (2026-11-25).** Accepted by the lead's own run in the worker's copy: 1,128
+tests in the six command-line crates (672, 45, 6, 111, 122, 172), 58 command-line
+demonstrations, no output with FAIL in it, the gates, portmap and licences; the
+sample whole house unchanged to the byte.
+- Steps 1 and 2 came to the lead's figures: 20 in, 18 in and 8 in; cold water
+  4 in to one side, at the back, 2 in up; hot 4 in to the other; waste on the
+  middle at the foot, facing down.
+- Step 8's unreadable body is a solid turned about an axis (a round pedestal):
+  its sizes are Unknown and it is not drawn until it has sizes.
+- Step 10: the fourth point is named as standing 3 15/16 in behind the body and
+  is not written.
+- Beyond the steps: a point that does not say which way it faces is kept as a
+  row with no facing; and this program's own model files now carry each
+  connection's real facing out and back (DECISIONS.md, "Call 214, as built").
+- Not right: curved solids are not read; the window has no entry for it yet.
 
 ## A cabinet by rule: a demonstration, written before it is built (call 215; 2026-11-25)
 
@@ -11547,6 +11561,160 @@ script reads those lines. By hand:
 10. **Page Down then Page Up**: the view glides (at least six frames between
     the two heights) and ends where it began, within an inch.
 11. `demos/glassw.sh` passes unchanged: nothing it measures has moved.
+
+Not built yet.
+
+## How tools feel, the model's side: a demonstration, written before it is built (call 219; 2026-11-25)
+
+`demos/tools-feel.sh`, at the command line (contract
+`handoff/contracts/contract-219M.md`). Every figure is made up. A new job: one
+level, floor at 0 ft, 9 ft high; four outside walls 6 in thick on a 20 ft by 12 ft
+line; a door 3 ft wide and 6 ft 8 in high in the south wall, 4 ft from its west
+end; the starter items brought in. By hand (the worker fits each step to the
+words the verbs already take, and says where a figure of the lead's is wrong):
+
+1. **Tried and taken back.** A partition from (10, 0) to (10, 12), tried: the
+   reply says what it would make (1 wall, and its length as `takeoff` would give
+   it), and the saved job is byte for byte what it was; `takeoff` is unchanged.
+2. **Tried where it would clash.** A duct 14 in by 8 in from (-2, 6) to (22, 6),
+   8 ft up, tried: it would pass through the west and the east walls: the reply
+   says **2 holes to cut**, naming each wall, and nothing is made.
+3. **Tried where it would be refused.** A wall drawn over the south wall, tried:
+   the reply is the refusal the real change gives, word for word, and nothing is
+   made.
+4. **A door moved along its wall.** Moved 5 ft east: it is 9 ft from the west
+   end; the wall's face less openings is what it was. Moved 15 ft east from
+   where it began: refused, it would overrun the 20 ft wall by **2 ft** (4 and
+   15 and 3 is 22); the job is byte for byte what it was.
+5. **A door moved to another wall.** To the north wall, 6 ft from its west end:
+   the south wall's face less openings grows by **20.00 SF** (3 ft by 6 ft 8 in)
+   and the north wall's shrinks by 20.00 SF; the estimate's lines priced by
+   those faces follow.
+6. **A copy is Assumed.** A Lavatory set down at (5, 5) and its place measured
+   Known; copied to (8, 5): two lavatories; the copy's place and sizes are
+   Assumed and say what it was copied from; it carries the same cost lines; the
+   estimate counts 2.
+7. **A row of copies.** With the copy of step 6 taken back, the first repeated
+   4 times, 3 ft apart, eastward: copies at (8, 5), (11, 5), (14, 5) and
+   (17, 5); five lavatories in all, each copy Assumed. Repeated 6 times the same
+   way, the sixth would stand at (23, 5), outside the house: it is made (a thing
+   outside a wall is not refused), and the reply says which copy stands in the
+   same space as a wall: the fifth, at (20, 5), on the east wall's line.
+8. **A wall copied with its openings.** The south wall copied 12 ft north (onto
+   the north wall's line): refused, it would lie over the north wall. Copied 6 ft
+   north: a wall 20 ft long with a door 4 ft from its west end.
+9. **Find.** `lav` finds the item Lavatory in the tool chest and each lavatory
+   set down, with its level; `south` finds nothing if no wall is so named and
+   says so; a level's name finds the level; a word in an estimate line finds the
+   line with its amount. Exact names come first.
+10. Nothing of the sample whole house moves: `plumbline sixteen` writes the job
+    it wrote, byte for byte.
+
+Not built yet.
+
+## A CAD drawing in and out: a demonstration, written before it is built (call 221; 2026-11-25)
+
+`demos/dxf.sh`, at the command line (contract `handoff/contracts/contract-221M.md`).
+Every figure is made up. The drawing is written by hand for the demonstration and
+kept beside it: a DXF in inches holding, on layer WALLS, four lines round a
+rectangle 240 by 144 (20 ft by 12 ft); on layer FURNITURE, a circle of radius 18 at
+(120, 72); a line of text "KITCHEN" at (60, 72); and one block of two lines
+inserted twice. By hand:
+
+1. Brought in on a level: **a sheet at true size with nothing to calibrate**; its
+   scale Assumed, saying the file is drawn in inches. The sheet is 20 ft by 12 ft:
+   a wall traced corner to corner along the bottom line is **20 ft** long.
+2. Its lines: **4 on WALLS**, the circle on FURNITURE, the block's 2 lines
+   twice (4), so 8 straight lines and 1 circle; the reply counts them by layer
+   and says the text line it found.
+3. FURNITURE switched off: the circle is not among the sheet's lines; the
+   pointer no longer catches its center.
+4. The same file with its units line taken out: it comes in with no scale and
+   says one dimension is wanted; given "this line is 20 ft" on the bottom line,
+   it is the same sheet as step 1.
+5. The walls finder on it finds the rectangle's four sides as wall lines (the
+   worker says what it offers; a single line is a wall's face or its center as
+   the finder already rules).
+6. A file named `.dwg`, and a file that is DWG whatever its name: refused by
+   name, saying to save it as DXF; nothing is brought in.
+7. Out: a job of four walls 20 ft by 12 ft, 6 in thick, with one door 3 ft wide
+   and one room named Kitchen, written as DXF: read back by the program's own
+   reader it holds the walls' outlines on the walls layer (**8 long lines**: two
+   faces to each of four walls, less where the door cuts one; the worker gives
+   the count and shows it), the door on the doors layer, and the text "Kitchen"
+   with its area exactly as `takeoff` gives the room's (the worker quotes it; 20
+   ft by 12 ft on the walls' line is 240 SF, and the room is measured as the
+   program already measures a room), at true size: the outer rectangle reads
+   20 ft by 12 ft.
+8. Written out and brought in again as a sheet: tracing the outer line gives the
+   same 20 ft by 12 ft.
+9. A drawing with things the reader cannot carry (a hatch, an image, a 3D
+   solid): each is counted in the reply as not brought in, by kind.
+
+Not built yet.
+
+## Any screen, and work never lost: a demonstration, written before it is built (call 222, part A; 2026-11-25)
+
+`demos/screensw.sh` (contract `handoff/contracts/contract-222WA.md`). The job is
+the made-up whole house. The program writes each window's place and size to the
+map; the script reads them. Three screens are made on the virtual display, one
+after another.
+
+1. **A screen 2,560 by 1,440**: the two windows stand side by side, each wholly
+   on the screen (every corner of each inside 0 to 2,560 and 0 to 1,440), and
+   they do not lie over one another.
+2. **A screen 1,920 by 1,080**: the same, or the second over the right side of
+   the first; each wholly on the screen.
+3. **A screen 1,366 by 768**: the model window takes the screen; the second
+   window is wholly on the screen; **every control the map names in either
+   window lies inside its window**, or is in a panel that scrolls and says so.
+4. **Resized**: on the largest screen the model window is drawn in from 1,600
+   wide to 1,000 and back, in steps of 100: at each step the picture shows no
+   panel over another, the Details panel is folded below the width the builder
+   names and back above it, the Job panel below its width, every tool of the
+   build bar can be reached, and the glass has no seam or stale strip (the
+   builder gives the measure it uses).
+5. **Kept**: a window moved and resized, a panel put away, the lettering set one
+   step larger; the program closed and opened: each is as it was left. Opened on
+   another job: the same. With the settings file removed: as the program first
+   opens.
+6. **Larger lettering**: one step larger, the word "Wall" on its button is
+   taller by the step (the builder names the step; between a tenth and a
+   quarter) and nothing is cut off.
+7. **Work never lost**: a wall drawn and a door put in it, not saved; the
+   program is stopped dead after 70 seconds (not closed); opened again on the
+   same job it says there is recovered work with its time, and "Take the
+   recovered work" gives a job that is, byte for byte, the job the command line
+   makes by drawing the same wall and door. "Leave it" gives the job as last
+   saved. After a Save there is no recovery copy.
+8. Every window demonstration that ran before runs as it did (the builder runs
+   `glassw`, `moneyw`, `benchw` and `pricew` and says so).
+
+Not built yet.
+
+## The database in one hand: a demonstration, written before it is built (call 223; 2026-11-25)
+
+`demos/database.sh`, at the command line (contract to be written when its turn
+comes). A new job with the starter tables brought in (the worker gives the counts
+the program holds on the day: at call 211 they were 48 items, 13 shapes, 5 rows of
+where items connect, 42 assemblies of 202 lines), a made-up price list of three
+suppliers, and one shape and one item of the job's own.
+
+1. Written out as "my database": one workbook with a tab for each table; each
+   tab is, row for row, what that table's own writing-out gives (the script
+   writes each table singly and compares).
+2. Brought into a new, empty job: the reply gives each tab's count, and they are
+   the counts of step 1.
+3. Written out again from the second job: the same workbook, cell for cell; as
+   a folder, the same files byte for byte.
+4. Brought into a job that already has it all: every row is "the same as the
+   job already has", nothing is added, the job is byte for byte what it was.
+5. A tab added by hand named "Notes" and a column added to Items named "My
+   code": both are named in the reply as not read; everything else comes in.
+6. A workbook with one bad row (an item with a width that is not a length):
+   nothing at all is brought in, and the reply names the tab, the row and why.
+7. The starter database in one bringing-in gives the same job as the starter
+   tables brought in one by one, byte for byte.
 
 Not built yet.
 
