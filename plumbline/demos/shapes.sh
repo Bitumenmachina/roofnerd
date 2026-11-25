@@ -172,13 +172,13 @@ says "$T/figures.txt" "Block 4 reads, at Vanity, 36 in's sizes (36 in x 21 in x 
 says "$T/vanity4.txt" "its shape is 4 blocks"
 says "$T/vanity4.txt" "block 4, timber: across -16 in to 16 in; back 20 in to 21 in; up 4 in to 28.5 in"
 cp "$J5" "$T/hand-two.json"
-echo "-- 7.3 its Up to set as height + 1 in: refused, naming the block, the size it was tried at and that it reaches 1 in above the box; the job as it was --"
+echo "-- 7.3 its Up to set as height + 1 in: refused, naming the block, the item's sizes it was tried at, in inches, and that it would stand 1 in above the top; the job as it was --"
 cp "$J5" "$T/hand-before.json"
 "$P" shape "$J5" set "vanity with a panel" 4 "up to" "height + 1 in" > "$T/over.txt" 2>&1 || true
 sed 's/^/    | /' "$T/over.txt"
 says "$T/over.txt" "block 4"
-says "$T/over.txt" "small size (0.4 x 0.3 x 0.5 ft)"
-says "$T/over.txt" "1 in above the box"
+says "$T/over.txt" "on an item 4 13/16 in wide, 3 5/8 in deep and 6 in high it would stand 1 in above the top"
+lacks "$T/over.txt" "small size"
 cmp "$J5" "$T/hand-before.json" && echo "    the job is the same to the byte"
 echo "-- 7.4 a block added to base cabinet: refused, a starter shape is not changed --"
 "$P" shape "$J5" add "base cabinet" > "$T/starter.txt" 2>&1 || true

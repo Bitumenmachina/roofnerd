@@ -643,6 +643,8 @@ pub fn export(job: &mut Job, file: &str, when: &str) -> Result<Written, String> 
     // `IfcRelConnectsPorts`. A third end at one place is joined by being there, as the model joins it.
     let mut port_of: HashMap<(String, usize), u64> = HashMap::new();
     let mut ports_made = 0usize;
+    // Which way a connection faces is not written (call 211): the port stands where the connection is, and the model file keeps that.
+    let mut faced = 0usize;
     {
         let class_of = |job: &mut Job, system: &Option<String>| -> Option<String> { system.as_ref().and_then(|s| job.find(s)).and_then(|e| job.world.get::<SystemInfo>(e)).map(|i| i.classification.clone()) };
         for p in &placed {
@@ -674,6 +676,9 @@ pub fn export(job: &mut Job, file: &str, when: &str) -> Result<Written, String> 
                     let its = class_of(job, &p.system).and_then(|c| system_word(&c));
                     for (i, c) in connectors.0.iter().enumerate() {
                         let Some(at) = c.at_ft() else { continue };
+                        if c.facing.is_some() {
+                            faced += 1;
+                        }
                         let place = o.placed(Some(parent), at, [0.0, 0.0, 1.0], [1.0, 0.0, 0.0]);
                         let flow = match c.flow {
                             Flow::Out => "SOURCE",
@@ -701,6 +706,9 @@ pub fn export(job: &mut Job, file: &str, when: &str) -> Result<Written, String> 
         }
         for _ in 0..ports_made {
             count("connections");
+        }
+        if faced > 0 {
+            not_written.push(("connection".into(), faced, "which way it faces is not written: the model file keeps where it is".into()));
         }
         // The ties, from where the model has two of them at one place.
         let mut ties = 0usize;

@@ -414,7 +414,7 @@ pub fn house() -> Job {
                 };
                 // An elbow joins the piece that ends here to the one that starts here: a
                 // connector for each, both on the joint, of the run's size.
-                let end = Connector { name: String::new(), kind: ConnectorKind::for_run(kind).expect(OK), domain: None, flow: Flow::Both, at: Val::known([0.0, 0.0, tidy(deep / 2.0)], "in", "on the joint"), size: section.as_ref().map(|t| t.width.clone()) };
+                let end = Connector { name: String::new(), kind: ConnectorKind::for_run(kind).expect(OK), domain: None, flow: Flow::Both, at: Val::known([0.0, 0.0, tidy(deep / 2.0)], "in", "on the joint"), size: section.as_ref().map(|t| t.width.clone()), facing: None, of_item: None };
                 job.put(&f, Connectors(vec![end.clone(), end])).expect(OK);
                 job.put(&f, Fitting { kind: FittingKind::Bend }).expect(OK);
                 job.put(&f, Placed { what, at: Val::known([b[0], b[1]], "ft", src), offset: ft(tidy(b[2] - base - deep / 24.0), src), angle: None, size, item: None }).expect(OK);
@@ -556,7 +556,7 @@ pub fn house() -> Job {
         let mine: Vec<Connector> = plugs
             .iter()
             .filter(|p| p.0 == name)
-            .map(|(_, label, kind, domain, flow, to)| Connector { name: label.to_string(), kind: *kind, domain: *domain, flow: *flow, at: Val::known([tidy(to[0] - at[0]), tidy(to[1] - at[1]), tidy(to[2] - at[2])], "ft", "where the plan shows the run arriving"), size: None })
+            .map(|(_, label, kind, domain, flow, to)| Connector { name: label.to_string(), kind: *kind, domain: *domain, flow: *flow, at: Val::known([tidy(to[0] - at[0]), tidy(to[1] - at[1]), tidy(to[2] - at[2])], "ft", "where the plan shows the run arriving"), size: None, facing: None, of_item: None })
             .collect();
         if !mine.is_empty() {
             job.put(&path, Connectors(mine)).expect(OK);

@@ -239,6 +239,41 @@ BIMCraft: https://github.com/IPedrax/bimcraft at
 | `connect_at` | ours |  |  | `connect`, for a point picked on the plan; `grep -rn 'fn connect_at' crates/core/src`: nothing |
 | `PortSaid` | ours |  |  | what a model brought in says of one connection on a thing (a port): its name, its sort, what it carries, which way it goes (call 200); `grep -rn 'struct PortSaid' crates/core/src`: nothing, and BIMCraft reads no port: `grep -rn 'IFCDISTRIBUTIONPORT' crates/core/src` finds only the line that leaves ports out of what is brought in (`import.rs:63`) |
 | `connect_port` | ours |  |  | `connect`, opened to what a file's ports say: told which end of a run, or a place where there is no run, and Assumed, sourced to the file (call 200); `grep -rn 'fn connect_port' crates/core/src`: nothing |
+| `Facing` | ported | `direction` | `crates/core/src/family.rs:453` | BIMCraft's connector `direction` (a vector out of the family: the way a pipe leaves it) kept to the six words a tradesman says: back, front, left, right, up, down (call 211) |
+| `check_item_connections` | ported | `check_connectors` | `crates/core/src/family.rs:1353` | the rules it holds on a family's connectors (only a pipe has a domain; a place and a size that are lengths, a bound on how many: 8 there, 64 here) applied to an item's rows; a place that is Assumed is ours |
+| `ItemConnection` | ours |  |  | a row of an item: where it connects, as across, back and up from the item's sizes; `grep -rn 'item.*connect\|connector' crates/core/src` over BIMCraft: its connectors are a family's (family.rs 430 to 475), never an item's row; BIMCraft's `at` is a formula of a family's parameters in mm, here of width, depth and height |
+| `ItemConnections` | ours |  |  | the rows an item holds as a component (`pl::item_connections`); BIMCraft's are on a family: `grep -rn 'item.*connect\|connector' crates/core/src` over BIMCraft: its connectors are a family's (family.rs 430 to 475), never an item's row |
+| `K_ITEM_CONNECTIONS` | ours |  |  | the saved job's `pl::` keys are this program's (handoff 7.9); `grep -rn pl:: crates/core/src`: nothing |
+| `PLACE_WORDS` | ours |  |  | the three words of a place in a refusal; `grep -rn PLACE_WORDS crates/core/src`: nothing |
+| `inches_of` | ours |  |  | a length in feet as inches to the thousandth, for a refusal and a reply; `grep -rn 'fn inches_of' crates/core/src`: nothing |
+| `size_in_inches` | ours |  |  | the item's sizes said in inches; `grep -rn 'fn size_in_inches' crates/core/src`: nothing |
+| `placed` | ours |  |  | a row's place worked and held to the item's box at its own size; BIMCraft holds no connector to a family's box: `grep -n 'reach\|outside' crates/core/src/family.rs` finds only forms |
+| `made` | ours |  |  | the connection a thing set down from an item has; BIMCraft's `component_connectors` (model.rs:3313) works a family's connectors for a component and turns them; here the turn is network.rs's (already ported) and the connection says its item; `grep -rn 'fn made(`grep -rn 'fn made(&self, item' crates/core/src`: nothingself, item' crates/core/src`: nothing |
+| `said_at` | ours |  |  | a row said in inches at the item's sizes for a person; `grep -rn 'fn said_at' crates/core/src`: nothing |
+| `kind_word` | ours |  |  | what a connection takes, as the table says it; `grep -rn kind_word crates/core/src`: nothing |
+| `domain_word` | ours |  |  | what a pipe carries, as the table says it; `grep -rn domain_word crates/core/src`: nothing |
+| `flow_word` | ours |  |  | which way a connection goes, as the table says it; `grep -rn flow_word crates/core/src`: nothing |
+| `vector` | ours |  |  | a facing as a unit vector in the thing's axes; BIMCraft's `direction` is the vector itself (family.rs:453), here it is one of six words; `grep -rn 'fn vector' crates/core/src`: nothing |
+| `thing_axes` | ours |  |  | across, back and up into the thing's own axes: the one function a block's figures and a connection's go through (call 211); BIMCraft's family has no 'back from the back' frame (its y is 0 at the wall and minus the depth at the front): `grep -rn 'fn thing_axes' crates/core/src`: nothing |
+| `connection_row` | ours |  |  | a row made from what is typed; `grep -rn 'fn connection_row' crates/core/src`: nothing |
+| `connection_add` | ours |  |  | a row added to an item, held, and what is set down from the item following; BIMCraft's `family` command changes a copy, checks the whole and refuses leaving the stored one alone (commands.rs:10588, the pattern taken as call 205 took it), and never draws a pipe to a connector (`grep -rn connector` in plumbing.rs, runs.rs, snap.rs: nothing) |
+| `connection_set` | ours |  |  | as connection_add, one thing about a row changed; `grep -rn connection_set crates/core/src`: nothing |
+| `connection_take` | ours |  |  | as connection_add, a row taken away; `grep -rn connection_take crates/core/src`: nothing |
+| `FIELDS` | ours |  |  | the fields of a row a person may change by hand; `grep -rn 'const FIELDS' crates/core/src`: nothing |
+| `ConnectionDone` | ours |  |  | what a change to an item's rows did, said alike by the window and the command line; as ShapeChanged; `grep -rn ConnectionDone crates/core/src`: nothing |
+| `ConnectionsFollowed` | ours |  |  | what following did on the things set down from an item; `grep -rn ConnectionsFollowed crates/core/src`: nothing |
+| `StandsOff` | ours |  |  | a run that stood at a connection and no longer does; BIMCraft has no clash and no run drawn to a connector; `grep -rn StandsOff crates/core/src`: nothing |
+| `Standing` | ours |  |  | a connection of a thing in the world and which runs end at it, read from the network (already ported); nothing is stored; `grep -rn 'struct Standing' crates/core/src`: nothing |
+| `Near` | ours |  |  | the open connection a run's end stands nearest to and how far; `grep -rn 'struct Near ' crates/core/src`: nothing |
+| `WorkedConnection` | ours |  |  | a row worked at the item's sizes; `grep -rn WorkedConnection crates/core/src`: nothing |
+| `item_connections_worked` | ours |  |  | an item's rows worked at its own sizes; `grep -rn 'fn item_connections_worked' crates/core/src`: nothing |
+| `item_rows` | ours |  |  | the rows an item holds; `grep -rn item_rows crates/core/src`: nothing |
+| `connections_outside_their_boxes` | ours |  |  | what `check` says of an item whose rows reach outside its box; as items_outside_their_boxes; `grep -rn connections_outside_their_boxes crates/core/src`: nothing |
+| `connections_standing` | ours |  |  | where each connection of a thing stands and what ends at it; read from the network; `grep -rn connections_standing crates/core/src`: nothing |
+| `run_end_near_connection` | ours |  |  | the open connection a run that ends inside a thing is nearest to, for the clash's line; BIMCraft has no clash (`grep -rni clash crates/core/src`: two comments) |
+| `connection_words` | ours |  |  | what a clash says of a thing's open connection (call 211 point 7); BIMCraft has no clash; `grep -rn connection_words crates/core/src`: nothing |
+| `lines` | ours |  |  | what a reply adds about connections left where measured and runs standing off their connection; `grep -rn 'fn lines(&self) -> Vec<String>' crates/core/src`: nothing |
+| `away` | ours |  |  | how far away a nearest connection is, as a person says it; `grep -rn 'fn away' crates/core/src`: nothing |
 | `ITEM_SIZE_TYPED` | ours |  |  | where an item's size typed in a window comes from, said once (contract 200P); `grep -rn 'ITEM_SIZE_TYPED' crates/core/src`: nothing |
 | `HowSized` | ours |  |  | what typing a size on an item did: the item changed, or the check; `grep -rn 'enum HowSized' crates/core/src`: nothing |
 | `ItemSizeDone` | ours |  |  | what `item_size` did, for a window and a command line to say alike; `grep -rn 'struct ItemSizeDone' crates/core/src`: nothing |

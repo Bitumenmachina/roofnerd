@@ -62,6 +62,7 @@ use crate::value::{Derived, Status, Val};
 use crate::view::{self, Row, Sum, WorkSplit};
 
 pub mod clash;
+pub mod connections;
 mod footings;
 pub mod forms;
 pub mod shape;
@@ -75,6 +76,7 @@ pub mod rooms;
 pub mod runs;
 pub mod walls;
 
+pub use connections::{Facing, ItemConnection, ItemConnections};
 pub use model::*;
 
 /// A point in space: east, north, height above the datum.
@@ -86,6 +88,7 @@ pub const K_WALL_TYPE: &str = "pl::wall_type";
 pub const K_OPENING: &str = "pl::opening";
 pub const K_OPENING_TYPE: &str = "pl::opening_type";
 pub const K_ITEM: &str = "pl::item";
+pub const K_ITEM_CONNECTIONS: &str = "pl::item_connections";
 pub const K_FLOOR: &str = "pl::floor";
 pub const K_FLOOR_TYPE: &str = "pl::floor_type";
 pub const K_SEGMENT: &str = "pl::segment";
@@ -3073,7 +3076,7 @@ pub fn rows(w: &World, e: Entity, path: &str, names: &HashMap<String, String>) -
     }
     if let Some(c) = w.get::<Connectors>(e) {
         for (i, k) in c.0.iter().enumerate() {
-            let what = [Some(format!("{:?}", k.kind).to_lowercase()), k.domain.map(|d| format!("{d:?}").to_lowercase()), (k.flow != Flow::Both).then(|| format!("{:?}", k.flow).to_lowercase())].into_iter().flatten().collect::<Vec<_>>().join(", ");
+            let what = [Some(format!("{:?}", k.kind).to_lowercase()), k.domain.map(|d| format!("{d:?}").to_lowercase()), (k.flow != Flow::Both).then(|| format!("{:?}", k.flow).to_lowercase()), k.facing.map(|f| format!("faces {}", f.word()))].into_iter().flatten().collect::<Vec<_>>().join(", ");
             let label = if k.name.is_empty() { format!("connection {} ({what})", i + 1) } else { format!("connection {}: {} ({what})", i + 1, k.name) };
             rows.push(view::entered(path, &label, &k.at, |p| format!("({}, {}, {})", view::num(p[0]), view::num(p[1]), view::num(p[2]))));
             if let Some(size) = &k.size {

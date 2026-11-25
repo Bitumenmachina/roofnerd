@@ -188,6 +188,26 @@ impl Clashes {
     }
 }
 
+/// What a clash says of a thing's connections (call 211, point 7): where a run ends inside a thing whose item says where it
+/// connects, and the thing has an open connection of the run's sort, which connection and how far away it is ("Test lavatory's Hot
+/// water connection is 3 in away"). Nothing else about the clash moves: not a count, not a kind. None where the clash is not a run
+/// ending inside a fixture or a piece of equipment, or the thing has no such connection open.
+pub fn connection_words(job: &mut Job, c: &Clash) -> Option<String> {
+    if c.how != ClashKind::Hard || c.through {
+        return None;
+    }
+    let placed = |k: Kind| matches!(k, Kind::Fixture | Kind::Equipment);
+    let (run, thing, name) = if c.a_kind.is_segment() && placed(c.b_kind) {
+        (&c.a, &c.b, &c.b_name)
+    } else if c.b_kind.is_segment() && placed(c.a_kind) {
+        (&c.b, &c.a, &c.a_name)
+    } else {
+        return None;
+    };
+    let near = crate::editing::connections::run_end_near_connection(job, thing, run).ok()??;
+    Some(format!("{name}'s {} connection is {}", near.name, near.away()))
+}
+
 /// Where each clash and each hole of `found` is, to the room: the name of the room whose
 /// outline holds the place on the storey the thing in it is on, or "outside any room"
 /// where none does (call 177). One for each of `found.found`, then one for each of

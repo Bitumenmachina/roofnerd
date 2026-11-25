@@ -171,7 +171,7 @@ fn a_block_that_reaches_outside_the_box_is_refused_with_its_row_and_the_size() {
     let said = in_(&mut j, &format!("{HEAD}wide,timber,box,-width / 2,width / 2,0,depth,0,height,\nwide,timber,box,-width / 2,width / 2 + 1 in,0,depth,0,height,\n"));
     assert!(j.shapes.is_empty());
     let (n, why) = said.not_used.iter().find(|(n, _)| *n == 3).unwrap();
-    assert!(why.contains("block 2") && why.contains("small size (0.4 x 0.3 x 0.5 ft)") && why.contains("outside the box") && why.contains("across"), "row {n}: {why}");
+    assert!(why.contains("block 2") && why.contains("on an item 4 13/16 in wide, 3 5/8 in deep and 6 in high it would stand 1 in past the right side") && why.contains("a shape is held inside its item at every size") && !why.contains("small") && !why.contains(" ft"), "row {n}: {why}");
     // A block whose condition does not hold at a size is not tested there: this one is outside only when it is there.
     let said = in_(&mut j, &format!("{HEAD}tall,timber,box,-width / 2,width / 2,0,depth,0,height,\ntall,timber,box,-width / 2,width,0,depth,0,height,width > 100 in\n"));
     assert!(j.shapes.iter().any(|s| s.name == "tall"), "{said:?}");

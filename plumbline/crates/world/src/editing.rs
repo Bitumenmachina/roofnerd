@@ -26,6 +26,7 @@
 //!   attaching a wall's top or base, moving one end, moving or removing several at once.
 
 pub mod carry;
+pub mod connections;
 pub mod history;
 pub mod join;
 pub mod measure;
@@ -33,6 +34,7 @@ pub mod shapes;
 pub mod snap;
 pub mod stretch;
 
+pub use connections::{connection_add, connection_row, connection_set, connection_take, connections_outside_their_boxes, connections_standing, item_connections_worked, item_rows, ConnectionDone, ConnectionsFollowed, Near, Standing, StandsOff, WorkedConnection};
 pub use history::{History, UNDO_LIMIT};
 pub use shapes::{keep_shape_as, shape_block_add, shape_block_set, shape_block_take, BlockSet, ShapeChanged};
 pub use stretch::{move_wall, read_move, way_said, Followed, Moved, Resized, RoofMoved};
@@ -776,8 +778,11 @@ pub fn place_item_said(job: &mut Job, storey: &str, item: &str, at: P2, offset: 
     all_or_nothing(job, |job| {
         let offset = how.length(offset)?;
         let item = item_by_name(job, item)?;
-        let path = place_item_in(job, storey, &item, at, offset, how)?;
-        let notes = price_as_its_item(job, &path, &item)?.into_iter().collect();
+        let (path, connections) = place_item_in(job, storey, &item, at, offset, how)?;
+        let mut notes: Vec<String> = price_as_its_item(job, &path, &item)?.into_iter().collect();
+        // Where the item says where it connects, the thing has its connections from now (call 211); where its sizes are not all
+        // known it has none, and this says so.
+        notes.extend(connections);
         Ok((path, notes))
     })
 }
@@ -1091,7 +1096,7 @@ fn item_by_name(job: &mut Job, typed: &str) -> Result<String, String> {
 }
 
 /// One of an item set down, within a change that is all or nothing already.
-fn place_item_in(job: &mut Job, storey: &str, item: &str, at: P2, offset: Val<Len>, how: Entered) -> Result<String, String> {
+fn place_item_in(job: &mut Job, storey: &str, item: &str, at: P2, offset: Val<Len>, how: Entered) -> Result<(String, Option<String>), String> {
     storey_of(job, storey)?;
     let e = job.find(item).ok_or_else(|| format!("{item} is not in the job"))?;
     let (name, it) = match (job.world.get::<Node>(e), job.world.get::<Item>(e)) {
@@ -1106,7 +1111,8 @@ fn place_item_in(job: &mut Job, storey: &str, item: &str, at: P2, offset: Val<Le
     let path = add_called(job, storey, it.category, &name, 2, true)?;
     building::check_placed(&path, it.category, &placed)?;
     job.put(&path, placed)?;
-    Ok(path)
+    let note = connections::set_down(job, &path, item)?;
+    Ok((path, note))
 }
 
 /// What a run of cabinet boxes came to (call 155).
@@ -1315,7 +1321,7 @@ pub fn cabinets(job: &mut Job, storey: &str, wall: &str, room: &str, from: &str,
                 Some(up) => Val { value: Some(units::Len::One(up)), unit: "ft".into(), status: assumed.status, source: "wall boxes hang with their bottoms 54 in up, 18 in over a 36 in counter; the maker's catalog decides".into() },
                 None => how.length("0 ft")?,
             };
-            let path = place_item_in(job, storey, item, mid, offset, Entered { status: sure, source: &by })?;
+            let (path, _) = place_item_in(job, storey, item, mid, offset, Entered { status: sure, source: &by })?;
             to_wall(job, &path)?;
             job.add_line(&path, code, "1", Some(crate::Class::Material), false)?;
             job.set_division(&path, Some(code), b.division.or(crate::components::Division::of_number(12)).ok_or("Division 12 is not there")?)?;
@@ -1727,6 +1733,9 @@ fn rename_item_inner(job: &mut Job, path: &str, name: &str) -> Result<Renamed, S
                 }
             }
         }
+        // Where the item says where it connects, what is set down from it says the item's new name in the source of each (call 211);
+        // where each is does not move.
+        connections::follow(job, path)?;
         Ok(done)
     }
 }

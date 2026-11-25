@@ -8735,3 +8735,87 @@ conflict". A survey of both programs was made first
    a connection's load or fixture units; sizing a run from what it serves. The
    window's half is its own job after this: connection points drawn and changed
    on the bench, and a run's end catching one as it is drawn.
+
+### Call 212. A shape's refusal in a builder's words (2026-11-25; wording only)
+
+The window builder of contract 205W met the model's refusal on the bench when a
+block of a shape was typed 1 in above its item: "at the small size (0.4 × 0.3 ×
+0.5 ft) it reaches 0.0833 ft outside the box of the item's sizes, up (1 in above
+the box); a shape is drawn inside its box". The check is right (a shape is held
+inside its item at the sizes it is tried at, so a figure written as a plain
+length is caught on a small item). The words are not a builder's: nobody on site
+thinks of "the small size", of 0.0833 ft, or of a box.
+
+It is to read: `shape "vanity with a panel", block 4: on an item 4 3/4 in wide,
+3 5/8 in deep and 6 in high it would stand 1 in above the top; a shape is held
+inside its item at every size, so write the figure from the item's sizes`. The
+size it was tried at is said as an item's three sizes in inches, the way the
+program writes inches; the six ways out are above the top, below the foot, past
+the left side, past the right side, in front of the front, behind the back; the
+amount is in inches. Only the words change: what is refused and what is let
+through are the same, and each test or demonstration that held the old words is
+listed with the new before it is changed (`research/worker-report-call211M.md`,
+"Round 2").
+
+### Call 211, the model's side, as built, and what was ruled on the way; call 212 as built (2026-11-25)
+
+Built by a Sonnet worker under `handoff/contracts/contract-211M.md`
+(`research/worker-report-call211M.md`), in two rounds, and accepted by the lead's
+own run in the worker's copy: 1,052 tests in the six command-line crates (655, 28,
+6, 69, 122, 172), 56 command-line demonstrations, no output with FAIL in it, the
+gates, `tools/portmap.sh`, `tools/licenses.sh`, and `plumbline sixteen` writing
+the job it wrote before, byte for byte.
+
+1. **Points 1 to 9 are built as written**, with these made exact:
+   - **Joined is the network's own answer** (a run and a connection in one node,
+     within 0.01 ft), not the 0.05 ft the design said: 0.05 ft is only how far a
+     model's tie may stand from a run's end. There is one way of knowing it and
+     everything reads it: `takeoff`'s open list, `connect`'s refusal, the count
+     of runs left standing off, the clash's words. **A run that passes over a
+     connection's place is joined to it**, as the network has always held (a
+     branch taken off a main). The first round had two answers to that; the
+     second has one, held by a test on four cases.
+   - **A place is held to the item's box at the item's own size**, not at the
+     sizes a shape is tried at: a connection is one item's, where a shape is
+     many items'. A size typed on the item that would put a connection outside
+     it is refused, naming the connection.
+   - **A connection somebody measured on a thing stays where it was measured**
+     when the item changes, and the reply says so.
+   - An item cannot be removed while a thing is set down from it (as before), so
+     no connection is left that is nobody's. A renamed item keeps its
+     connections on every thing, and each says the new name.
+2. **The rows are kept beside the item, not in it**, so nothing that builds an
+   item changed. A connection gains which way it faces and which row of its item
+   it came from, each written only where there is one. `SPEC.md` has the keys.
+3. **Verbs**: `connection <job> <item> add|set|take`, `import connections`,
+   `export connections`, and `turn` (there was no way to turn a thing at the
+   command line). The starter rows come with `import connections <job> starter`
+   and not with the starter items, so no demonstration that brings the starter
+   items in moved.
+4. **Starter rows: two fixtures, five rows, and that is all a source gave.** The
+   water closet (waste 12 in from the back at the floor; cold water 6 in to the
+   left, 6 in up) and the lavatory (hot and cold 4 in each side of the middle,
+   21 in up; waste 19 in up), each from a published page named and quoted in
+   `research/connection-places.md`, each Assumed. No size is written for any:
+   none was sourced. The bathtub, the kitchen sink, the water heater and the
+   rest have none: the pages could not be read, or the place stands outside the
+   item (a tub's valve is above the tub). `items` counts the ones with none.
+   Which side is hot and which way "left" is read are the program's, and are
+   said there.
+5. **Which way a connection faces is not written to a BIM model**, and the reply
+   to writing one says how many.
+6. **Three test literals gained the two new fields so that they build**; no
+   expectation in them moved.
+7. **Call 212 is built with it**: the refusal now reads `shape "vanity with a
+   panel", block 4: on an item 4 13/16 in wide, 3 5/8 in deep and 6 in high it
+   would stand 1 in above the top; a shape is held inside its item at every
+   size, so write the figure from the item's sizes` (4 13/16, not the 4 3/4 the
+   call guessed: the program's own way of writing 4.8 in). Three expectations
+   held the old words and moved to the new, listed in the worker's report before
+   they were changed: one line in each of two test files and two lines of
+   `demos/shapes.sh`.
+8. Not right, and said: two connections at one place with no run are open by the
+   new function and not by `takeoff` (an edge nobody has drawn); a note on a
+   model read back still gives a place as three figures in feet; the window's
+   half is not built (`handoff/contracts/contract-211W.md`, STATUS.md has its
+   demonstration).

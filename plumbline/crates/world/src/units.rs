@@ -699,6 +699,30 @@ pub fn parse_number(text: &str) -> Result<f64, String> {
 /// A thing's size, wide by deep by high, given in feet and written the way its maker's
 /// sheet and the trade write it: in inches while every side is under 8 ft (`16 × 16 ×
 /// 8 in`, `24 × 30 × 60 in`), to the sixteenth; in feet and inches when a side is longer.
+/// A length in feet as inches to the sixteenth, no unit written: `4 13/16`, `6`, `3 5/8`.
+fn sixteenths(feet: f64) -> String {
+    let parts = (feet.abs() * 12.0 * 16.0).round() as u64;
+    let (whole, mut top, mut bottom) = (parts / 16, parts % 16, 16);
+    while top > 0 && top % 2 == 0 {
+        top /= 2;
+        bottom /= 2;
+    }
+    match (whole, top) {
+        (w, 0) => format!("{w}"),
+        (0, t) => format!("{t}/{bottom}"),
+        (w, t) => format!("{w} {t}/{bottom}"),
+    }
+}
+
+/// A length in feet as a person says inches in a sentence, to the sixteenth: "4 13/16 in", "6 in". A distance too small to reach
+/// a sixteenth is said so, and never as nothing.
+pub fn inches_said(feet: f64) -> String {
+    if feet.is_finite() && feet.abs() > 0.0 && (feet.abs() * 12.0 * 16.0).round() < 1.0 {
+        return "less than 1/16 in".to_string();
+    }
+    format!("{} in", sixteenths(feet))
+}
+
 pub fn size_said(sides: [f64; 3]) -> String {
     if sides.iter().any(|x| !x.is_finite()) {
         return "unknown".into();
@@ -706,20 +730,7 @@ pub fn size_said(sides: [f64; 3]) -> String {
     if sides.iter().any(|x| x.abs() >= 8.0) {
         return sides.map(|x| feet_as_ft_in(x, 16)).join(" × ");
     }
-    let inches = |feet: f64| {
-        let parts = (feet.abs() * 12.0 * 16.0).round() as u64;
-        let (whole, mut top, mut bottom) = (parts / 16, parts % 16, 16);
-        while top > 0 && top % 2 == 0 {
-            top /= 2;
-            bottom /= 2;
-        }
-        match (whole, top) {
-            (w, 0) => format!("{w}"),
-            (0, t) => format!("{t}/{bottom}"),
-            (w, t) => format!("{w} {t}/{bottom}"),
-        }
-    };
-    format!("{} in", sides.map(inches).join(" × "))
+    format!("{} in", sides.map(sixteenths).join(" × "))
 }
 
 /// A number of feet written as feet and inches to the nearest `denominator`th of an inch

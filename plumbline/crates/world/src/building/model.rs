@@ -614,6 +614,14 @@ pub struct Connector {
     /// Its size: a pipe connector's nominal diameter.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub size: Option<Val<Len>>,
+    /// Which way it faces, in the thing's own axes (call 211): the way a pipe leaves it. None where nobody said, as it is on a
+    /// connection a run made.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub facing: Option<super::connections::Facing>,
+    /// The connection of the item it was made from, by the row's name, where the thing was set down from an item (call 211): what
+    /// the thing follows when the item's rows or sizes change. None on a connection a run or a model brought in made.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub of_item: Option<String>,
 }
 
 impl Connector {
