@@ -342,3 +342,45 @@ today.
 
 It is a new value on every thing in the saved job and a new way the estimate is
 read, so it waits for Patrick's word. About 3 to 5 days, not prototyped.
+
+## 34 to 40. From the review of 2026-11-25 (call 216): each waits for Patrick's word
+
+Sources and what each tool does are in `research/review-1125-*.md`.
+
+**34. Notes on a plan, a measuring tool, counting.** A note, a cloud or an arrow
+kept with the job on a plan or on the model; a length or an area measured without
+making a wall or a room; symbols counted by clicking. What every Bluebeam user
+reaches for first.
+
+**35. One revision of a drawing laid over another.** Today the program only says
+the file changed. Laid over, what moved shows, and what was traced from the old
+one can be checked against the new.
+
+**36. Clashes handed over as an issue list (BCF, buildingSMART's open format).**
+How a designer in another trade is told. Small; the clash list, its certainty and
+its dollars are already there.
+
+**37. DXF in and out.** In: a CAD drawing or a scan app's floor plan as a sheet
+to trace, with its lines caught. Out: the plan, and a cabinet's parts for a shop.
+DWG stays out (no reader under a permitted licence). A permissive Rust crate for
+DXF exists.
+
+**38. The shop's cut list** (answers part of Q28). From a cabinet's blocks: each
+part with its size and material; then sheets counted by laying the parts out
+instead of a waste percentage, both figures shown; then the list handed over as a
+table or DXF. Never a machine's own code.
+
+**39. A saved group set down again.** A bathroom or a kitchen run kept as one
+thing, in this job or the next, as games keep a blueprint and The Sims a styled
+room. With copy and repeat-in-a-row, which the window lacks.
+
+**40. A field companion, and a phone's room scan read in.** The verify-in-field
+list carried to the site with measurements and photos brought back by file (Q33);
+and Apple's room scanner's own file (walls, doors and windows with sizes) read
+in as a first tracing.
+
+Not proposals, because they are the standing brief and not new features: what
+call 62 asks of the feel (a thing shown before the click, live sizes at the
+pointer, one search box) and what call 216 asks of the code (sound on another
+machine, one window that follows its size, input that touch can feed). Their
+order is Q30.

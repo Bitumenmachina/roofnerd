@@ -9060,3 +9060,71 @@ the old and the new program side by side).
    a block is worked from millimetres; to be ruled); the window's list of
    connections does not yet show a run that passes over a connection (it is
    named at the command line), which goes with the window's half of call 211.
+
+### Call 216. Patrick, 2026-11-25: stop and review everything against the tools of the trade, the shop, games and the best-made software; clean code that runs on other machines; remote now, a field app later
+
+His words: "I would like to stop and review everything with you preforming online
+searches of AEC tools like revit , bluebeam , and CAD tools as well as mailing
+programs like CNC. Then I would like another pass through video games and software
+that is cutting edge tooling and ensuring that this program is functional with
+clean code that can run on different machine setups the intent would be to have a
+field app in the future but for now it will be on a dekstop and access remotely".
+
+**How each clause was read.**
+- *"stop"*: building stopped the minute it was read. The worker on call 214 (a
+  maker's model as an item) was stopped part-way; its unfinished files are in the
+  scratch copy and not on the branch. Call 215 was not started. What kept running
+  was only the checking of work already accepted (the window demonstrations on
+  the last merge).
+- *"mailing programs like CNC"*: read as milling, the programs that drive CNC
+  machines; said to him at once so he can correct it.
+- *"review everything with you"*: a written review he can read and rule on, with
+  what is recommended and what is his to decide. No decision of scope, order or
+  look is taken in this call.
+- *"clean code that can run on different machine setups"*: a read of all the code
+  for what ties it to this one machine, with file and line.
+- *"a field app in the future ... a desktop and access remotely"*: what remote
+  access needs today without the program opening a connection (the fixed rule
+  stands), and what keeps a field app possible.
+
+**What was done** (Sonnet agents, two at a time, every claim with the address it
+was read at; several makers' sites refused to be read and the notes say which):
+`research/review-1125-aec-tools.md`, `review-1125-cnc-and-fabrication.md`,
+`review-1125-games-tooling-remote.md`, `review-1125-games-and-editors-pass2.md`,
+`review-1125-code-audit.md` (the code, read only), and
+`review-1125-window-behaviours.md` (each behaviour the best tools have, checked
+against the window's code, yes, partly or no).
+
+**What was found, in brief** (the review page given to Patrick has it whole):
+1. Nothing looked at marks values Known, Assumed and Unknown or sorts field
+   questions by dollars. The named tools cost $260 to $3,005 a year a seat, and
+   their users' commonest complaints (price; Revit too heavy for houses; no
+   offline field app; exports that lose things silently; takeoff apart from the
+   model) are ones this program answers by its design.
+2. Behind them: nothing is shown before the click (no ghost, no length at the
+   pointer, no turn before placing), no copy, a door cannot be moved, no search,
+   no notes or measuring tool on a plan, no revision laid over another, no
+   autosave, no settings, no touch, fixed panel widths.
+3. The code: 116,599 lines in seven crates, 1,133 tests, no unsafe, no stubs, no
+   outside program started, fonts bundled, no money summed in the window. Eight
+   things would trip it on another machine (two windows at fixed sizes needing a
+   2,490-wide screen; nothing follows a resize; only Ctrl read; a Windows path
+   written into a job; no setting for a weak graphics card and no fallback
+   backend; walk mode's look stopping at the screen edge; a slice of the first
+   letter of a typed shape name that can panic; an install page for one Linux).
+4. **`tools/gate-egress.sh` reads only the earlier program at the root, not
+   `plumbline/crates`**: the rule that the program opens no connection is not
+   gate-enforced for this program. The lead checked by hand: the Linux build
+   links nothing that can open one. To be put right whatever else is decided.
+5. Six functions of 800 to 1,700 lines; the window testable only by a pointer
+   robot on one kind of Linux screen with pass marks in dots.
+6. Remote now: outside tools (Sunshine and Moonlight over Tailscale were the
+   set-up found that serves from Linux with 3D); the program stays offline.
+7. A field app later: cheapest as a small companion for the verify-in-field
+   list; five changes to the code keep every road open.
+
+**What waits for his word** is in `QUESTIONS.md` Q30 to Q35, and the new features
+the review suggests are in `PROPOSALS.md` 34 to 40. Until he rules, nothing new
+is built. Two things are put right regardless, because each is a fault against a
+fixed rule or a crash and neither is a choice: the gate of point 4, and the
+panic on a typed shape name.

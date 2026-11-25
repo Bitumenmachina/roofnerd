@@ -11450,6 +11450,29 @@ step to the words the `cabinets` verb already takes):
 
 Not built yet.
 
+## Stopped for review, 2026-11-25 12:55 UTC (call 216): read this before building anything
+
+Patrick stopped the building to review everything against the tools of the trade
+(Revit, Bluebeam, CAD), the shop's CNC programs, games and the best-made software,
+and the code's fitness for other machines, remote now and a field app later.
+**Nothing new is built until he answers `QUESTIONS.md` Q30 to Q35.** The review is
+in DECISIONS.md call 216 and `research/review-1125-*.md`; the new features it
+suggests are PROPOSALS.md 34 to 40.
+
+- Pushed head when he stopped: 0236018 (command line: 1,085 tests, 57
+  demonstrations, verified in the worker's copy). The window was last built on
+  e3aedff plus one uncommitted wording fix in the main checkout
+  (`crates/app/src/bring.rs`, built, the window's 48 tests pass).
+- Window demonstrations on that build: `shapebenchw`, `benchw` and `fixes197w`
+  passed; `fixes209w` fails step 6 twice at its margin (56 dots with Plumbing on,
+  15 with it off, against a limit of 14) while its picture shows every pipe gone:
+  not diagnosed, not loosened. The rest of the set was still running.
+- Stopped part-way and NOT on the branch: the worker of call 214 (scratch copy
+  only). Not started: call 215; the window jobs 207W, 211W, 210W.
+- Put right regardless of his answers (each a fault against a fixed rule or a
+  crash, DECISIONS.md call 216 at its end): the egress gate reads the wrong
+  program; a typed shape name can crash the item's panel.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **As of 2026-11-25, 06:00 UTC (the lead). Read this block first; what is below it is
