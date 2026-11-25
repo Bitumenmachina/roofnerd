@@ -11049,6 +11049,36 @@ expectations that moved gained the words a point asks for. **Not run**: the
 window. **Not right**: a spacing below nothing is still taken; the window does not
 yet say what was typed on a line that comes off when an assembly is changed there.
 
+## A price typed where it is seen: a demonstration, written before it is built (call 207, the model's half; 2026-11-25)
+
+`demos/pricelist.sh`, at the command line. An empty job, the starter assemblies and
+the starter tool chest. Every price is made up. By hand:
+
+1. "Water heater, 50 gal" priced as "Bought and set" and set down twice. The price
+   list as the model gives it has the heater at its head with **no price**, 2 lines
+   waiting on 2 things, and no dollars.
+2. The estimator's price set to $1,850.00: the reply says **2 lines on 2 things**
+   are priced and the job cost goes from no figure for them to **$3,700.00** (the
+   labor lines still wait and are said). The row reads $1,850.00, 2 lines,
+   $3,700.00 riding.
+3. A supplier "Northside Supply" set at $1,790.00 for it: the reply says the
+   supplier is new to the job; the row shows both; side by side the supplier's
+   column for the two lines reads **$3,580.00**.
+4. The estimator's price cleared: the row is at the head again with no price; the
+   two lines read no price; nothing reads $0.00. Set again to $1,850.00.
+5. $0.00 set for it: taken, and the row and the reply mark it as entered at
+   nothing; the lines read **$0.00** marked, not blank.
+6. A name that is neither a material nor an item: refused, naming what the job
+   has that is near it. A price of `abc`, and one below nothing: refused.
+7. A material a line of a wall is made of (the script picks one the starter
+   library has, and works its dollars by hand beside it): priced the same way, by
+   the same change.
+8. The price list written out with `export prices` after all of it, brought into a
+   second job with the same things: the two jobs' price lists are the same row for
+   row.
+
+Not built yet. Its window half is call 207 points 1 to 3.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **As of 2026-11-24, 22:10 UTC (the lead). Read this block first; what is below it is
@@ -11124,13 +11154,12 @@ above):
      shape kept as the job's own; a block added, set, taken away). **Owed: its
      window half**: `handoff/contracts/contract-205W.md`, its demonstration above
      ("A shape on the bench"). It is the next window job after 197W.
-   - **A price typed in the window.** The window has no way to type a material's
-     price, or an item's: both come only from a price list brought in (found by
-     197W's builder, 2026-11-25). An estimator who sets a water heater down and
-     prices it as "Bought and set" cannot say what it costs without a file. It
-     wants a call (where the price list is seen and typed in the window: a tab of
-     the sheet beside Estimate is the lead's working answer), a demonstration and
-     a window job. Not designed.
+   - **A price typed in the window** (call 207). The window has no way to type a
+     material's price, or an item's: both come only from a price list brought in.
+     Decided: a "Prices" tab of the estimate window, and the same price on an
+     item's panel. The model's change comes first
+     (`handoff/contracts/contract-207M.md`, its demonstration above); the window's
+     half is not contracted.
    - D (where an item connects: the model now holds connections and the BIM file
      writes them, call 202, so this is a window job and a column of the chest), E
      (a maker's BIM object brought in as an item), F (a cabinet by rule): not

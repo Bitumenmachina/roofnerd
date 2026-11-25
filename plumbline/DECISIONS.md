@@ -8391,3 +8391,36 @@ goes through. Six of the points of wording were not run red against the old
 source. **Owed to the window**: an assembly changed in the window names what was
 rewritten and left (contract 197W point 16) and must now also say what was typed
 on a line that came off; it joins the next window job.
+
+### Call 207. A price is typed where it is seen: the price list in the window, and the model's change for it (2026-11-25; the lead's design, not built)
+
+Found by the window builder of contract 197W: **the window has no way to type a
+material's price, or an item's**. A line priced by a unit cost of its own takes a
+typed price on the sheet; a line made of a material, or of its item (call 201),
+takes its price from the price list, and the price list comes only from a file
+brought in. An estimator who sets a water heater down and prices it as "Bought and
+set" cannot say what it costs without making a spreadsheet first. For a program
+that every person can use, that is a hole in the money path.
+
+1. **The price list is a tab of the estimate window, "Prices", beside Estimate.**
+   One row for each material and each item that a line of the job is made of, or
+   that has a price: its name, what it is, its unit, the estimator's price, each
+   supplier's beside it (three, as on the sheet), how sure each is and where it is
+   from, how many lines it prices and the dollars riding on it. A row with no
+   price says so and is at the head: it is what the estimate is waiting for.
+2. **A price is typed on its row**, the estimator's or a supplier's, the way a
+   unit cost is typed on a line of the sheet, and is as sure as that is (the
+   window job says what that is today and follows it). A price cleared is no
+   price, never $0.00; a price of $0.00 typed is taken and marked, as call 206
+   point 13 says.
+3. **The same price is typed on an item's panel**, under "Priced as", and on the
+   bench: one home (the price list), three doors.
+4. **The model's change first.** One change sets or clears one price, the
+   estimator's or a named supplier's, for a material or an item by its name, and
+   gives back what follows in words the window and the command line both say:
+   the lines it prices, on how many things, and the job cost before and after. A
+   name that is neither is refused; a supplier not yet in the job is added and
+   said. And the model gives the price list as rows to be shown (point 1's
+   columns), worked by the model: the window counts and sums nothing.
+5. `plumbline import prices` and the chest's table keep doing what they do: the
+   same home.
