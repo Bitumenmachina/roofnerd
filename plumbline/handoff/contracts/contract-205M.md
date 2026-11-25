@@ -36,6 +36,25 @@ When done: `git add -N . && git diff --binary -- plumbline > SCRATCH/review/call
 - **Every existing expectation that moves is listed before one is changed**; one
   moves only where it relied on a job's shape taking a starter's name.
 
+## Part 2, after the above is whole: what is set down on a level, counted by the model (call 197, point 10)
+The sheet window lists the things set down on each level by kind, and counts them
+itself from the model's list (`crates/app/src/sheet.rs`, `set_down`, with a comment
+saying the count is owed to the model). A count is a figure and is the model's.
+- Add to a level's totals (`building::storey_totals`, what `takeoff` prints for a
+  level) how many things are set down on it, by kind (equipment, fixtures,
+  furnishings), with the names, and how many of them are priced on nothing. Each
+  as sure as the rest of a level's counts.
+- `plumbline takeoff` prints it under the level, in the words the sheet window
+  uses (read them in `crates/app/src/sheet.rs`; do not edit that file).
+- Tests first, run red, quoted: a level with nothing set down says none; two
+  vanities and a water heater; a thing in a cabinet run is not counted twice; the
+  same job's count by the model equals what the window's grouping gives (state the
+  window's rule from its code and test the model against it).
+- Say in the report the call the window will make in place of its own grouping.
+- **Every expectation that moves is listed before one is changed**: `takeoff`'s
+  output gains lines, so demonstrations that hold its whole text will move; say
+  each and move only those.
+
 ## Rules
 - Files you may touch: `crates/world/src/` (the shape, the editing changes, the
   tables' refusal of a starter's name), `crates/world/tests/` (a new test file),
