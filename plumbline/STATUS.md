@@ -11140,14 +11140,13 @@ rows, the model's half (207); four loose ends (208).
   passed**: `fixes197w`, `benchw`, `dressw`, `pricew`, `itemlibw`, `itemneww`,
   `cabinetsw`, `bringw`, `moneyw`, `gablew`, `gableendw`, `glassw`, `tradesw` on
   their first run and `trimw` on its second. Their pictures are committed.
-- **`tools/committed.sh`** is run on the commit that carries this note (it last
-  passed on eeca2b7); the commit after says what it showed. If none does, run it
-  first.
+- **`tools/committed.sh` passed on 767d7f5** (2026-11-25, 06:04 UTC; 77 test
+  runs), the commit that carried this note first.
 - **Judged**: the window twice (2026-11-24: calls 193 and 197, every point fixed);
   the command line of 2026-11-24's work once (call 206, every point fixed).
-  **Not judged by anyone but its builder**: the bench, "Priced as" on the panel,
-  the window's nine fixes, a model brought in through the window with its
-  connections, corner boards to the roof as drawn. A third window judge is owed.
+  The window a third time on 2026-11-25 (call 209): the bench, "Priced as", a
+  model brought in, the nine fixes and the trim held; eleven points decided, two
+  of them faults (a count said two ways; a rename that left a name behind).
 It is not a release candidate and is not tagged.
 
 **Checks that sit on their edge** (a single failure of either is run again, alone,
@@ -11204,9 +11203,11 @@ above):
    - Then D (where an item connects: the model holds connections and the BIM file
      writes them, so it is a column of the chest and a window job), E (a maker's
      BIM object brought in as an item), F (a cabinet by rule): not designed.
-1. **A third window judge**, cold (`handoff/judge-brief-window.md`), on what the
-   list above says nobody but its builder has tried, when the window is free
-   between two builders.
+1. **The third window judge's points** (call 209, `research/judgment-window-1125.md`):
+   the model's side is `handoff/contracts/contract-209M.md`; the window's side is
+   Part 2 of `contract-205W.md`. **Another trade's model brought into a job that
+   has a building** (point 11: only what the job lacks, or only the runs and
+   equipment) is the next call on a model, and is not designed.
 2. **Small, and said where found**: the per-level count of what is set down is
    the model's now (call 205M) and the sheet window still counts it itself
    (`sheet.rs`, `set_down`: one call to change); after the Cabinets tool is put

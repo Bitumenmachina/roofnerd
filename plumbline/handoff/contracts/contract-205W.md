@@ -55,6 +55,29 @@ Notes as you go to SCRATCH/review/W-205W-report.md. Commit nothing, push nothing
 10. `demos/shapebenchw.sh` (new) to the steps in STATUS.md, its pictures in
    `demos/captured/shapebenchw/`, its row in `plumbline/README.md`.
 
+## Part 2, after the above is whole: the third window judge's points that are the window's (call 209)
+Read plumbline/DECISIONS.md "### Call 209" and plumbline/research/judgment-window-1125.md
+(its pictures are in SCRATCH/judges/window-1125/, READ ONLY). For each: the finding
+shown on the frozen build first, the fix, a step of `demos/fixes209w.sh` (new).
+- **1**: the estimate window's list of what is set down reads the model's count
+  (`building::storey_totals(job)[i].set_down`, `.said()`): a thing with no size is
+  counted and said to be not drawn; fittings are not things set down. The window's
+  own grouping in `sheet.rs` goes.
+- **3, the window's part**: where the model's sentence speaks of the estimate being
+  written out, the window says where (Estimate workbook, under Write out).
+- **6**: find what draws the red dashed line on the sample house's north wall with
+  Clashes off (the judge's picture `pics-d4/zoomred.png`), say what it is, and put
+  it under the switch that owns it, with a word where it is listed.
+- **7**: the square at the lower left of the model window: say what it is in your
+  report; give it its word, or take it away if it carries nothing.
+- **8**: the top bar counts the building's values; the tool chest's are not in it
+  (the model gives the two apart once contract 209M is merged: if it is not in
+  the tree when you start, leave this point and say so).
+- **9**: "Priced as" stands once on the bench's panel.
+- **10**: the item's Price row says where its price comes from and how it is
+  changed today (a price list brought in), and does not look like a field that
+  can be typed in until it can be.
+
 ## Rules
 - Files you may touch: `crates/app/src/*.rs`, `demos/shapebenchw.sh`,
   `demos/captured/shapebenchw/`, `demos/window.sh` (only to add a helper, changing

@@ -8494,3 +8494,69 @@ when it prices nothing. "Priced on nothing" is one function. `check` names a sha
 held under a starter shape's name. A spacing, a turn-up or any other length a line
 enters is refused below nothing; the test that entered a spacing of -12 in on
 purpose now meets the refusal where the spacing is entered, and says so.
+
+### Call 209. What the third judge who drove the window found, and what is decided (2026-11-25)
+
+`research/judgment-window-1125.md` (a Sonnet judge, cold, on the build of 767d7f5: the
+bench and an item's cost, a model brought in through the window, the nine fixes of
+contract 197W, the trim). **Held**: the bench in and out, typed sizes Assumed then
+checked, "Priced as" with every line that came off named with its dollars, two
+heaters at $3,700.00, a model's runs connected as they were system by system, the
+Cabinets card clear of a small room and a large one (78 in, 13.81 SF), a refused
+corner, a mark left unanswered, the wall over a wainscot (140, 14 and 112 by hand,
+a typed quantity kept and said), corner boards 74.00 LF equal to their pieces and
+reaching the roof at the gable's corners. Decided, point by point:
+
+**A count said two ways.**
+1. **The estimate window's list of what is set down drops a thing with no size**
+   (a stool from a maker's sheet that gives none): the list said 1 furnishing, the
+   takeoff 2, the estimate page 2. The window counted for itself (call 197 point
+   10, owed since). **The window reads the model's count** (`StoreyTotals::set_down`,
+   call 205M) and says, as the model does, which cannot be drawn for want of a
+   size. With the next window job.
+
+**A sentence that was not true.**
+2. **An item renamed renames every thing set down from it.** The window said "The 2
+   set down are called that too" and the second kept "Vanity, 36 in 2". A thing set
+   down is called by its item and, after the first, its number; renamed, it is the
+   new name and the same number. The reply is the count that was renamed, worked
+   by the model.
+
+**Words that are not a builder's, where a builder reads them.**
+3. What a file written out or brought in says is said in a builder's words in the
+   window and at the command line both: no command's name on a screen ("write it
+   out with `export estimate`" is "the estimate is written out as a workbook"; the
+   window adds where: Estimate workbook, under Write out); "connection point ties",
+   "31 x type", "432 x cost line", "this program would not take it", "stands
+   upright: it has no length on the plan to be cut along" each said plainly.
+4. **A refusal says what to do next.** The same model brought in twice, and a model
+   whose floor lies over a floor the job has, are refused, rightly, and said only
+   that nothing was brought in.
+5. **"12-6" is twelve feet six** wherever a length is typed, as the trades write it;
+   where a field cannot take it, the refusal says why in words that are true (it
+   spoke of commas, and there are none). "Is now priced as nothing" is "is not
+   priced now". "Item width: must be more than zero" says what to type.
+
+**The look.**
+6. A red dashed line on the sample house's north wall with Clashes off: **nothing
+   is drawn that no switch owns and no word explains.** Found, named, and put under
+   its switch.
+7. The square at the lower left of the model window with nothing beside it: said
+   what it is, or taken away.
+8. **The top bar counts the building**: an empty job with a tool chest brought in
+   read "149 known, 165 assumed, 96 unknown". The chest's values are the chest's and
+   are counted there.
+9. "Priced as" stands twice on the bench's panel: once.
+
+**Decided, and a job of its own.**
+10. **A price typed in the window** (call 207): the judge went to the item's Price
+    row first, as any estimator would, and found it dead. Until the Prices tab is
+    built the row says where its price comes from and how it is changed.
+11. **Another trade's model into my job** is what bringing a model in is for, and a
+    designer's file usually carries walls and floors the job already has, so today
+    it is refused whole. **Wanted: bring in only what the job lacks, or only the
+    runs, fittings, fixtures and equipment**, chosen when the file is picked. Not
+    designed; it is the next call on a model.
+
+**Left, and said**: a steep swing from above can put the roof's edge under the
+right panel; one round trip of a swing drifted 41 dots once and did not repeat.
