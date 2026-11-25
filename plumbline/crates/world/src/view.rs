@@ -922,9 +922,9 @@ fn finish_total(mut t: MoneyTotal) -> MoneyTotal {
 }
 
 /// Whether nothing is priced on a thing that could be: no cost line, no allowance, and not existing to remain (which is
-/// not bought: nothing is owed on it, call 148). The one rule `pricing` counts what is "not priced at all" by, and a level's
+/// not bought: nothing is owed on it, call 148). The ONE rule `pricing` counts what is "not priced at all" by, and a level's
 /// set-down count by (contract 205M).
-pub(crate) fn nothing_priced_on(w: &bevy_ecs::world::World, e: bevy_ecs::entity::Entity) -> bool {
+pub fn nothing_priced_on(w: &bevy_ecs::world::World, e: bevy_ecs::entity::Entity) -> bool {
     let has_lines = w.get::<Cost>(e).is_some_and(|c| !c.lines.is_empty());
     w.get::<Allowance>(e).is_none() && !has_lines && !w.get::<Work>(e).is_some_and(|x| x.status.value == Some(WorkStatus::Existing))
 }
@@ -944,11 +944,9 @@ pub fn pricing(job: &mut Job) -> Pricing {
         let has_lines = w.get::<Cost>(e).is_some_and(|c| !c.lines.is_empty());
         let all_off = has_lines && w.get::<Cost>(e).is_some_and(|c| c.lines.iter().all(|l| l.off));
         let rate = w.get::<Allowance>(e).map(|a| a.rate.clone());
-        if rate.is_none() && !has_lines {
-            // What is existing to remain is not bought: nothing is owed on it (call 148).
-            if w.get::<Work>(e).is_some_and(|x| x.status.value == Some(WorkStatus::Existing)) {
-                continue;
-            }
+        // Nothing priced on it is worked in one place (`nothing_priced_on`, call 208 point 2); what is existing to remain is
+        // not bought and nothing is owed on it (call 148), so it is neither priced nor counted.
+        if nothing_priced_on(w, e) {
             // It could be priced and is not: by its area or length, or by the each.
             if kind.priced_by().is_some() || matches!(kind, Kind::Door | Kind::Window | Kind::Fitting | Kind::Fixture | Kind::Furnishing | Kind::Equipment) {
                 match bare.iter_mut().find(|b| b.0 == kind) {
@@ -956,6 +954,9 @@ pub fn pricing(job: &mut Job) -> Pricing {
                     None => bare.push((kind, 1)),
                 }
             }
+            continue;
+        }
+        if rate.is_none() && !has_lines {
             continue;
         }
         let figure = kind.priced_by().map(|(name, unit)| {

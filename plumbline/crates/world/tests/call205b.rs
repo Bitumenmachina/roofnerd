@@ -106,10 +106,27 @@ fn two_vanities_and_a_water_heater_are_two_furnishings_and_a_piece_of_equipment_
     ]);
     // The same as what the window works out for itself.
     assert_eq!(d.kinds.iter().map(models).collect::<Vec<_>>(), windows_grouping(&mut job, &level));
-    // And the whole job's own figure for what is not priced says the same three.
+    // And the whole job's own figure for what is not priced says the same three: both are worked by the one function
+    // `view::nothing_priced_on` (call 208 point 2), asked of each thing set down.
     let p = pricing(&mut job);
     let all: usize = p.not_priced.iter().filter(|(k, _)| k.is_placed()).map(|x| x.1).sum();
     assert_eq!(all, d.not_priced());
+    let order = job.order.clone();
+    let asked = order.iter().filter(|&&e| matches!(job.world.get::<Kind>(e), Some(Kind::Equipment | Kind::Fixture | Kind::Furnishing)) && plumbline_world::view::nothing_priced_on(&job.world, e)).count();
+    assert_eq!(asked, 3, "the one function says so of each of the three");
+}
+
+/// Call 208 point 2: the one function, case by case. Nothing priced on a thing: no cost line, no allowance, and not existing to remain.
+#[test]
+fn nothing_priced_on_is_one_rule_asked_of_a_thing() {
+    use plumbline_world::view::nothing_priced_on;
+    let (mut job, _) = three();
+    let things: Vec<_> = job.order.clone().into_iter().filter(|&e| matches!(job.world.get::<Kind>(e), Some(Kind::Equipment))).collect();
+    assert_eq!(things.len(), 1);
+    let e = things[0];
+    assert!(nothing_priced_on(&job.world, e), "set down, no line, no allowance");
+    ed::item_priced_as(&mut job, HEATER, Some("Bought and set")).unwrap();
+    assert!(!nothing_priced_on(&job.world, e), "a line is something priced on it");
 }
 
 #[test]

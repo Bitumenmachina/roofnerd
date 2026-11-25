@@ -302,18 +302,10 @@ fn a_name_written_another_way_or_a_path_is_found() {
     assert!(err.contains("already something called"), "{err}");
 }
 
-/// Call 207 ruling 1: where the price list would store what a plain price does not, it says so (and the command line keeps the
-/// older road there); everywhere else the two store the same.
+/// A plain price and the price list store the same figure, unit, status and source (call 207 ruling 1; since call 208 there is one road
+/// and the function that said where the two differed is gone).
 #[test]
-fn where_the_price_list_would_store_more_than_a_plain_price_it_says_so() {
-    use plumbline_world::pricelist::stores_more_than_a_plain_price as more;
-    let mut job = sample::priced();
-    assert_eq!(more(&mut job, "Copper, 16 oz", None), None);
-    assert_eq!(more(&mut job, "Copper, 16 oz", Some("Corner Supply")), None);
-    assert_eq!(more(&mut job, "Copper, 16 oz", Some("harbor  metals")).map(|s| s.contains("another spelling")), Some(true));
-    job.add_material("Zinc sheet (made up)", "sheet").unwrap();
-    assert_eq!(more(&mut job, "Zinc sheet (made up)", None), None);
-    assert!(more(&mut job, "Zinc sheet (made up)", Some("Corner Supply")).unwrap().contains("call 108"));
+fn a_plain_price_and_the_price_list_store_the_same() {
     // A plain price and the price list store the same figure, unit, status and source on a material that has none of the three differences.
     let mut a = sample::priced();
     let mut b = sample::priced();

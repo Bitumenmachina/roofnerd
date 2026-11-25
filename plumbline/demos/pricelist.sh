@@ -194,13 +194,36 @@ cmp "$T/out.csv" "$T/out2.csv" && echo "    the two jobs' price lists are the sa
 "$P" price "$J2" list > "$T/l2.txt"
 cmp "$T/l1.txt" "$T/l2.txt" && echo "    and the price list as rows reads the same in both"
 echo
-echo "== 13. A material given by its path goes by the same change; a supplier's first price on a material with none of the job's own keeps the older road =="
+echo "== 13. A material given by its path goes by the same change; a supplier's first price on a material with none of the job's own is the job's price too (call 208, case a) =="
 "$P" set "$J" "$MAT" price '$20.00' "${A[@]}" > "$T/said.txt"
 sed 's/^/    | /' "$T/said.txt"
 says "$T/said.txt" "prices 1 line on 1 thing"
 says "$T/said.txt" 'is now $3,820.00'
 LEAD="$("$P" material "$J" "Lead sheet (made up)" sheet | sed 's/.*as \(material-[0-9]*\).*/\1/')"
 "$P" set "$J" "$LEAD" quote '$30.00' --supplier "Northside Supply" "${A[@]}" > "$T/said.txt"
-says "$T/said.txt" "set $LEAD quote from Northside Supply = \$30.00 (Assumed)"
+# Call 208 (a): the quote used to be stored alone; now the job takes it for its own too, as a price list brought in does (call 108). No line is made of
+# the lead sheet, so no figure of money moves: the job cost is as it was, $3,820.00.
+says "$T/said.txt" "Lead sheet (made up) from Northside Supply: \$30.00/sheet, which Northside Supply had not quoted; the job had no price for it and takes Northside Supply's"
+says "$T/said.txt" "the job cost is as it was: \$3,820.00"
+list
+says "$T/list.txt" "~ \$30.00/sheet (Northside Supply's price list: made-up quote)"
+echo
+echo "== 14. A supplier written another way is the job's spelling, and says which (call 208, case b) =="
+"$P" set "$J" "$LEAD" quote '$28.00' --supplier "northside  supply" "${A[@]}" > "$T/said.txt"
+sed 's/^/    | /' "$T/said.txt"
+says "$T/said.txt" "\"northside  supply\" is \"Northside Supply\" written another way: a supplier has one name in a job, and the job's is taken"
+says "$T/said.txt" "\$30.00/sheet becomes \$28.00/sheet"
+list
+lacks "$T/list.txt" "northside  supply"
+echo
+echo "== 15. A line of the same name with no price, not made of the material, is priced and named (call 208, case c): 4 EA x \$12.00 = \$48.00, \$3,820.00 + \$48.00 = \$3,868.00 =="
+"$P" material "$J" "Pitch pan (made up)" EA >/dev/null
+"$P" line "$J" "$WALL" "Pitch pan (made up)" 4 --cost-type material --division 7 >/dev/null
+"$P" set "$J" "Pitch pan (made up)" price '$12.00' "${A[@]}" > "$T/said.txt"
+sed 's/^/    | /' "$T/said.txt"
+says "$T/said.txt" "\"Pitch pan (made up)\" on wall 1: priced at \$12.00/EA"
+says "$T/said.txt" "is now \$3,868.00"
+says "$T/said.txt" 'no line is made of Pitch pan (made up), and 1 line of that name is priced by it: "Pitch pan (made up)" on wall 1'
+lacks "$T/said.txt" "prices nothing on the job yet"
 echo
 echo "pricelist: every step said what it should."

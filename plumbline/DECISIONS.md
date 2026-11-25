@@ -8477,3 +8477,20 @@ doing one thing.
    job opening, rightly, and silent).
 4. **Any length a line enters, below nothing, is refused**, a spacing as well as a
    height (call 206 point 13 stopped at heights).
+
+**Call 208, as built (2026-11-25, by a Sonnet worker under `handoff/contracts/contract-208.md`;
+`research/worker-report-call208.md`; accepted by the lead's own run in the worker's
+copy).** All four points. Before changing anything the worker listed every test and
+demonstration that sets a price by the older road (five places) and logged which of
+the three cases each met while running them all: one did, and no figure of money
+moved in it (a supplier's price on a sheet nothing is made of). The older road is
+the list's road in every case, the function that kept them apart is gone, and so is
+`Job::set_quote`, a third road nothing but its own tests still used; the two checks
+that a supplier's name written another way is refused went with it, by point 1(b),
+and a test of the new rule (the job's spelling is taken, and said) stands in their
+place. A price set for a name no line is made of, where a line of that name is
+priced by it, says exactly that, and "prices nothing on the job yet" is said only
+when it prices nothing. "Priced on nothing" is one function. `check` names a shape
+held under a starter shape's name. A spacing, a turn-up or any other length a line
+enters is refused below nothing; the test that entered a spacing of -12 in on
+purpose now meets the refusal where the spacing is entered, and says so.
