@@ -8424,3 +8424,32 @@ that every person can use, that is a hole in the money path.
    columns), worked by the model: the window counts and sums nothing.
 5. `plumbline import prices` and the chest's table keep doing what they do: the
    same home.
+
+**Call 207, the model's half, as built (2026-11-25, by a Sonnet worker under
+`handoff/contracts/contract-207M.md`; `research/worker-report-call207M.md`; accepted by
+the lead's own run in the worker's copy).** `pricelist::set_price` sets or clears
+one price, the estimator's or a named supplier's, for a material or an item by its
+name or its number, by the same road a price list brought in takes (it makes one
+row and calls that), all or nothing, and gives back what follows in words both the
+window and the command line say. `pricelist::price_list` gives the rows: each name,
+what it is, its unit, each price with how sure and where from, the lines it prices
+and on how many things, the dollars riding, read off the estimate's own lines.
+`plumbline set <file> "<name>" price ...` and `plumbline price <file> list` are the
+command line's. The demonstration's figures are the lead's ($3,700.00; $3,580.00
+from the second supplier). What the design had wrong, and what stands:
+- **The model keeps every supplier**; three side by side is the sheet's and the
+  window's choice.
+- **A price cleared is a price never set**: no price. Nothing tells them apart and
+  nothing needs to.
+- **No starter assembly has a line made of a material**, so the Prices tab of a job
+  built from the starter library lists items only.
+**Not right, and owed one arithmetic**: an older way of setting a material's price
+by its number (`set <material> price`, `quote`) now goes by the same road, but for
+three cases where the two roads store different things, and there it keeps the old
+one, each named in the code and held by a test: a supplier's price on a material
+with no price of the estimator's (a list brought in makes it the job's price too,
+call 108; the older way does not); a supplier's name written another way (the
+older way refuses it); and an unpriced line of the same name that is not made of
+the material (a list prices it; the older way does not). The road a list takes is
+the one the window will use. The older way is to be brought to it, with every
+figure that moves listed first: a command-line job, not yet contracted.

@@ -11077,7 +11077,44 @@ the starter tool chest. Every price is made up. By hand:
    second job with the same things: the two jobs' price lists are the same row for
    row.
 
-Not built yet. Its window half is call 207 points 1 to 3.
+**Built (2026-11-25), the model's half.** `research/worker-report-call207M.md`;
+DECISIONS.md, "Call 207, the model's half, as built". Run by the lead in the worker's
+copy: the six command-line crates' tests pass (999: world 624); all 54 command-line
+demonstrations pass with no FAIL in their words, `demos/pricelist.sh` among them;
+the three gates, `portmap.sh` and `licenses.sh` pass. No figure of money or quantity
+moved; one refusal in `demos/d5.sh` reads in other words. **Not run**: the window.
+Its window half is call 207 points 1 to 3, contracted
+(`handoff/contracts/contract-207W.md`), its demonstration below.
+
+## The price list in the window: a demonstration, written before it is built (call 207, points 1 to 3; 2026-11-25)
+
+`demos/pricesw.sh`, in the window. An empty job, the starter assemblies and the
+starter tool chest brought in; "Water heater, 50 gal" set down twice and priced as
+"Bought and set" from its panel. Every price is made up. By hand:
+
+1. The estimate window has a **Prices** tab. Its first row is the water heater,
+   **no price**, 2 lines on 2 things; nothing on the tab reads $0.00. The top bar
+   reads no figure.
+2. $1,850.00 typed on the heater's price: the window says 2 lines on 2 things are
+   priced; the row reads $1,850.00 and **$3,700.00** riding; the Estimate tab's two
+   heater lines read $1,850.00 each.
+3. A supplier added, `Northside Supply`, and $1,790.00 typed for the heater under
+   it: the row shows both; the Estimate tab's column for that supplier reads
+   **$3,580.00** for the two lines.
+4. The estimator's price cleared: "no price" again, the row back at the head, the
+   two lines without a price. **Undo**: $1,850.00 again.
+5. `abc` typed: refused in words; the cell reads $1,850.00.
+6. The heater's panel, under "Priced as", reads $1,850.00; $1,900.00 typed there:
+   the Prices tab's row reads $1,900.00 and **$3,800.00** riding. The same from the
+   bench.
+7. $0.00 typed: taken, marked as entered at nothing on the row and on the
+   Estimate tab; set back to $1,850.00.
+8. Saved with F2: `plumbline price <job> list` prints the heater at $1,850.00,
+   Northside Supply at $1,790.00, 2 lines on 2 things, $3,700.00 riding; and the
+   same prices set with the command line on a copy of the starting job give the
+   same file, to the byte.
+
+Not built yet.
 
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
@@ -11157,9 +11194,9 @@ above):
    - **A price typed in the window** (call 207). The window has no way to type a
      material's price, or an item's: both come only from a price list brought in.
      Decided: a "Prices" tab of the estimate window, and the same price on an
-     item's panel. The model's change comes first
-     (`handoff/contracts/contract-207M.md`, its demonstration above); the window's
-     half is not contracted.
+     item's panel. The model's change is **built**; the window's half is
+     contracted (`handoff/contracts/contract-207W.md`, its demonstration above: "The
+     price list in the window") and follows the shape on the bench.
    - D (where an item connects: the model now holds connections and the BIM file
      writes them, call 202, so this is a window job and a column of the chest), E
      (a maker's BIM object brought in as an item), F (a cabinet by rule): not

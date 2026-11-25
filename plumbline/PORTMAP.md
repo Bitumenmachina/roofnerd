@@ -293,6 +293,11 @@ from BIMCraft at the same commit is listed here by hand, and is checked by its o
   anywhere in BIMCraft, and no relation between ports.** Nothing is ported; NOTICE unchanged. What a port is and how it is put on an
   element and tied is read from IfcOpenShell's own IFC4 schema and the buildingSMART texts it carries (buildingSMART's own pages
   could not be reached from this machine); IfcOpenShell is run as the checker and never linked.
+- `crates/world/src/pricelist.rs` (call 207, contract 207M: `PriceCell`, `PriceRow`, `PriceList`, `PriceSet`, `price_list`, `set_price`) is
+  ours, and `tools/portmap.sh` does not read it. Searched all of BIMCraft (`/home/user/ipedrax/bimcraft`): `grep -rniE "price|\$/|unit_cost|supplier"
+  --include=*.rs .` finds a test that renames a user parameter "Cost" to "Price" (`crates/core/src/tests.rs:1041`) and a "Supplier" parameter in
+  an import test (`crates/core/src/import.rs:4251`): a name a person gives a parameter, no money, no supplier, no price list. BIMCraft carries none
+  (call 196's survey of all of it says the same). Nothing is ported; NOTICE unchanged.
 - `crates/world/src/gable.rs` (call 192: a wall under a rake rises to the roof) is ours, and `tools/portmap.sh` does not read
   it. Searched all of BIMCraft: `grep -rli 'gable' crates apps` (21 files: the roof tool's gable ends, `rvt/src/roofs.rs`,
   `core/src/{commands,model,skeleton,sketch,walls,import,ifc}.rs`) and `grep -rli 'attach_top\|top_profile' crates apps`. What is

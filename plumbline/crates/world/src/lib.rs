@@ -36,6 +36,7 @@ pub mod hidden;
 pub mod job;
 pub mod lines;
 pub mod paper;
+pub mod pricelist;
 pub mod plan_set;
 pub mod plans;
 pub mod tables;

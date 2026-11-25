@@ -199,7 +199,7 @@ PY
 )"
 refused "is not in hours" "$P" class "$J" plane-0003 labor --line "Underlayment"
 refused "only a Labor line" "$P" labor "$J" plane-0003 off --line "Fabricate panels"
-refused "a price does not carry from one unit to another" "$P" set "$J" "$MAT" quote '$9.40/SF' --supplier "Tinners Yard" $K "x"
+refused "it is bought by the lb and priced by the SF" "$P" set "$J" "$MAT" quote '$9.40/SF' --supplier "Tinners Yard" $K "x"
 refused "its price is the material's" "$P" set "$J" plane-0004 unit_cost 9 --line "Standing seam panels" $K "x"
 refused "is not a number" "$P" set "$J" job-0001 overhead ten $K "x"
 # A material the job does not have is not refused at the door (the name may be on its way);
