@@ -8288,3 +8288,76 @@ prints it under each level in the sheet window's words. Ruled: **fittings are no
 things set down** (they are counted with their runs); the window's own grouping
 counted them and dropped a thing with no size, and gives way to this at its next
 job.
+
+### Call 206. What the judge of the item's cost, the shapes, a model out and back and the corner boards found, and what is decided (2026-11-25)
+
+`research/judgment-cli-1125.md` (a Sonnet judge, cold, on the command line built from
+33d1ac0). The corner boards, an assembly changed for another, and the sample house
+to the cent of call 194's hand table held; so did the price list side by side, the
+shape table and a model brought back with its open ends. Three findings are more
+than words. Decided, point by point:
+
+**Wrong money, unsaid.**
+1. **Nothing a person typed on a line goes without a word.** A thing set down had 7
+   typed as the quantity of its item's line ($7,000.00). Its item was priced as
+   another assembly and then back: the line came back at 1 EA and $1,000.00, and
+   no reply named the 7; the replies named a typed price and not the quantity.
+   `apply --change` did the same to a typed 40 EA. Call 199 said a line taken off
+   is named "with whatever was priced on it"; the quantity was left out of
+   "whatever". **A line taken off by a change of assembly, or of what an item is
+   priced as, is named with every thing a person entered on it and its value**: a
+   quantity or formula that is not the assembly's, a price, a waste, a rate, how it
+   is ordered, that it was off. And the amount it carried, where it had one.
+
+**A promise the check did not keep.**
+2. **A shape stays inside its item's box at the item's own sizes** (call 203 point 4
+   said it and tested three sizes). A row `up to: height + max(0 in, width - 10 ft)`
+   passes the three and stands 24 in above a 144 in item. The three sizes stay as
+   the check of a table on its way in, and are said to be that. **Wherever a shape
+   meets an item, it is checked at that item's sizes**: an item drawn as a shape,
+   an item's size changed, a block of the job's own shape added or set, each is
+   refused, naming the item, the block and how far it reaches, if any item drawn as
+   the shape would have a block outside its box. `check` says so of a job that
+   already holds one.
+
+**A consequence nobody was told.**
+3. **A model brought into a job that has a building.** The file's level at the
+   height of one the job has was made a second level beside it, without a word,
+   and a 16 LF wall in the file cut the job's living room from 614.7 SF to 365.7
+   and its receptacles from 10 to 8, unsaid. Another trade's model brought into
+   one's own job is what this is for, so it is not refused. **A level in the file
+   at the height of one the job has is that level** (within an eighth of an inch),
+   under the job's name, and the reply says so; a level at a new height is added
+   and said. **The reply names every room of the job whose figures moved**, the
+   area before and after, and says that walls brought in did it.
+
+**Words and smaller refusals** (each fixed as said):
+4. Setting an item priced as what it is already says so and how many are set down
+   (it said "none is set down yet" with three).
+5. An item taken out of the chest says the prices that go with it.
+6. **An item's trade changed moves the lines on what is set down from it** that
+   took its trade (call 201 point 7 left it), and says how many.
+7. `price-item` refused for a line made of its item says how the price is given (a
+   price list, or the chest's table); a price brought in for an item priced as
+   nothing says it prices nothing yet (it did for a table row, not for this).
+8. A roof with no outline of this program's in the file is left out for that
+   reason, in those words (it read "a roof is not brought in from a model yet",
+   which a roof this program wrote disproves).
+9. A model brought in twice says so in a builder's words, by counts: no word of
+   the file's own ("distributionflowelement"), no clause for each fitting; "a
+   equipment" is "a piece of equipment".
+10. "45 of 46 tied" names the one that is loose and where.
+11. A refusal quotes what the person typed, not the program's rewriting of it
+    ("height × 0.5 ÷ 12"); `min()` with nothing in it says what `min` takes.
+12. "1 blocks" is "1 block"; "a x" where the name starts with a vowel is "an";
+    rows of one shape that do not stand together in a table are refused, naming
+    the rows (they were merged without a word).
+13. **A price of $0.00** is taken (a thing can be free) and is named in the reply
+    and marked on the estimate, never silent; **a wainscot, or any height a line
+    enters, below nothing** is refused.
+14. The command line gains `rename` for an item (the window has it; the judge had
+    no way to try it).
+
+**Held, and left**: a bare number typed as a quantity on a line priced by the foot
+is read as a count and says so; a footing widened in a file to 26 ft comes in as
+the file has it, Assumed, and its dollars put it at the head of the field list.

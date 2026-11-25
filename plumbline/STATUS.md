@@ -11013,6 +11013,35 @@ cabinet) set down twice. By hand:
 
 Not built yet.
 
+## The command line judged (2026-11-25), and its findings fixed: a demonstration, written before it is built (call 206)
+
+`research/judgment-cli-1125.md`: no wrong money in the corner boards, an assembly
+changed for another or the sample house; three findings that are more than words,
+and eleven of wording. `demos/judged-1125.sh`, at the command line. By hand:
+
+1. The starter chest and assemblies; "Refrigerator" priced as "Bought and set", set
+   down once, $1,000.00 in the price list; **7** typed as the quantity of its line:
+   **$7,000.00**. Priced as "Mechanical equipment": the reply names the line taken
+   off, **the 7 typed by hand where the assembly writes 1, and its $7,000.00**.
+   Priced as "Bought and set" again: 1 EA, **$1,000.00**. The same with
+   `apply --change` on a wall's line with 40 typed.
+2. A shape of the job's own with a block up to `height + max(0 in, width - 10 ft)`:
+   the table comes in (it is inside the box at the three sizes, and the reply says
+   that is what was tried). An item 144 in wide drawn as it: **refused**, naming
+   the item and the block and that it reaches **24 in** above the box (144 in is
+   12 ft; 2 ft over 10). An item 100 in wide drawn as it, then sized to 144 in:
+   the size is refused the same way. `check` on a job made to hold one says it.
+3. The sample whole house, and a made-up model of one level at 0 ft with one wall
+   16 ft long standing in the living room, brought in: the job has the levels it
+   had (no second level at 0 ft); the reply says the file's level is the job's
+   first floor; and it names the living room, its area before and after as
+   `takeoff` gives them (the judge read 614.7 and 365.7 SF) and its receptacles
+   (10 and 8).
+4. Each of points 4 to 14 of call 206, one step each, the reply quoted in the
+   script.
+
+Not built yet.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **As of 2026-11-24, 22:10 UTC (the lead). Read this block first; what is below it is
