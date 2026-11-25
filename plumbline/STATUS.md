@@ -11142,6 +11142,113 @@ wall; written out as a BIM model. By hand:
 5. The same file again: refused, nothing doubled.
 6. Everything brought in reads Assumed, sourced to the file.
 
+**Built (2026-11-25), and two of the lead's hand figures were wrong.** Accepted by
+the lead's own run in the worker's copy: 1,029 tests in the six command-line crates
+(632, 28, 6, 69, 122, 172), 55 command-line demonstrations, no output with FAIL in
+it, the three gates, `tools/portmap.sh` and `tools/licenses.sh`.
+- Step 1 as written was wrong: a model brought in whole into a job that has a
+  building **is not refused whole**. The duct and the air handler come in, and the
+  4 walls and the floor are left out and named, each with what it lies over. The
+  demonstration shows that, and the reply now adds that only its runs and the
+  equipment they serve can be chosen. A refusal comes only where nothing but
+  levels could come in. Ruled in DECISIONS.md, "Call 210, the model's side, as
+  built": that stands as it is.
+- The duct is **10 ft**, not 12: from where the script puts it a 12 ft duct runs
+  into the sample's own branch to the office and makes a second clash. At 10 ft it
+  makes the one the demonstration is about.
+- As built: 1 duct and 1 piece of equipment in; 4 walls and 1 floor not asked for;
+  the model's "Level 1" is the job's first floor and the job has 3 levels before
+  and after; the price is $468,050.22 before and after; the clash list goes from
+  11 in the same space, 10 set against a wall and 47 holes to cut to 11, 10 and
+  **48**, the one new line the duct through the partition at 24, 14.00 in by 8.00
+  in. Two more steps than were written: a level at a height the job does not have
+  (a "Mezzanine" at 4 ft and a duct 3 ft above it go on the first floor 7 ft up,
+  and no level is added), and a model of walls alone brought in as only its runs
+  (nothing comes in, and it says so).
+- Not right: bringing a model in whole at the command line now works the clash
+  list twice and ends with the count; the window still calls the older way and
+  says no clashes until its half is built. The designer's duct type comes in as
+  "14 in by 8 in" beside the sample's own duct type of the same size: two types
+  of one size.
+
+## Another trade's model, from the window: a demonstration, written before it is built (call 210, point 6; 2026-11-25)
+
+`demos/ifcrunsw.sh` (contract `handoff/contracts/contract-210W.md`). The designer's
+file is the one `demos/ifc-runs.sh` makes (4 walls, 1 floor, a duct 10 ft long 14 in
+by 8 in from (20, 20) to (30, 20) at 8 ft, an air handler at (30, 8)), made by the
+script with the program before the window opens. The job is the sample whole house.
+
+1. Bring in, "Designer's model", the file picked: **the window asks**, "Bring in
+   everything" or "Only its runs and equipment", each with a line saying what it
+   means. Nothing has come in yet: the saved job is byte for byte what it was.
+2. "Only its runs and equipment": the message says **1 duct and 1 piece of
+   equipment** came in, **4 walls and 1 floor were not asked for**, that the
+   model's level is the first floor, and that the two things make **1 clash** with
+   the house, a hole to cut. The words are the model's own.
+3. The duct and the air handler are drawn in the house. The top bar's price is
+   what it was, $468,050.22.
+4. The Clashes tab lists **48 holes to cut** where it listed 47; the new one is
+   the duct through the partition, 14.00 in by 8.00 in; a double-click on it flies
+   to it.
+5. Undo: the duct and the air handler go, the Clashes tab is back to 47, and the
+   job saved then is byte for byte the job before.
+6. The same file picked again after the undo and "Bring in everything": the duct
+   and the air handler come in, the 4 walls and the floor are named as left out
+   with what each lies over, and the same one clash is said.
+7. A new, empty job and the same file: **not asked**; it comes in whole, walls
+   and all.
+
+Not built yet.
+
+## Where an item connects: a demonstration, written before it is built (call 211, the model's side; 2026-11-25)
+
+`demos/connections.sh`, at the command line (contract
+`handoff/contracts/contract-211M.md`). Every figure is made up. A new job with one
+level, its floor at 0 ft. An item made in the script, "Test lavatory", 24 in wide,
+18 in deep, 34 in high, a fixture. Three rows:
+
+| Connection | Takes | Carries | Goes | Across | Back | Up | Faces | Size |
+|---|---|---|---|---|---|---|---|---|
+| Cold water | pipe | cold | in | `-4 in` | `0` | `height - 12 in` | back | 1/2 in |
+| Hot water | pipe | hot | in | `4 in` | `0` | `height - 12 in` | back | 1/2 in |
+| Waste | pipe | waste | out | `0` | `0` | `height - 16 in` | back | 1 1/2 in |
+
+By hand (the lead's figures; where the program's own way of turning across, back
+and up into a place differs, the worker says which is right before building on
+either):
+
+1. The item shows its three connections, each with where it is at the item's
+   sizes: cold 4 in one side of the middle, at the back, **22 in** up; hot 4 in
+   the other side, 22 in up; waste on the middle, **18 in** up.
+2. Set down with its middle at (10, 20), not turned, on the floor: the thing has
+   **3 connections**, all Assumed, each naming the item. In feet: cold
+   (9.6667, 20.75, 1.8333), hot (10.3333, 20.75, 1.8333), waste (10, 20.75, 1.5)
+   (the back is 9 in from the middle: 20 + 0.75). `takeoff` names all three open.
+3. A cold-water pipe drawn to end at (9.6667, 20.75, 1.8333): `takeoff` no longer
+   names the cold connection; two of the thing's are open. The pipe and the
+   lavatory are not a clash.
+4. A hot-water pipe drawn to end at (10.3333, 20.5, 1.8333), inside the lavatory
+   and **3 in** in front of its hot connection: it is a clash, in the same space,
+   and the line says the hot water connection is 3 in away. `connect` on it is
+   refused with the same 3 in. The hot connection is still open.
+5. The item's height typed as 36 in: the thing follows; its cold connection is now
+   **24 in** up (2 ft), 2 in above where the cold pipe ends. The reply says 1
+   thing set down follows and **1 run now stands off its connection**; `takeoff`
+   names the cold connection open again. Typed back to 34 in: joined again.
+6. The thing turned a quarter turn: its connections turn with it (the worker
+   gives the three places and shows the sum; by the lead's reading cold goes to
+   (9.25, 19.6667, 1.8333)).
+7. Refused, each naming the item, the connection and the figure in inches: a row
+   whose Up is `height + 2 in` (2 in above the item); a second row named Cold
+   water; a duct that says it carries cold.
+8. The rows written out as a table and brought back into a new job with the same
+   item: the two tables are byte for byte alike.
+9. Written out as a BIM model and read back: the lavatory has three connection
+   points in the file and three when read.
+10. The sample whole house: `plumbline sixteen` writes, byte for byte, the job it
+    wrote before this work; its price is $468,050.22 and its open ends are what
+    they were (supply air 4, cold water 1, sanitary 1, vent 1, power 1).
+
 Not built yet.
 
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
@@ -11238,9 +11345,15 @@ above):
    builder was started on it at 07:30 UTC on 2026-11-25: if no
    `research/worker-report-call205W.md` is in the tree, it did not land) and Part 2
    of `contract-207W.md` (the sentences the window must take from the model). **Another trade's model brought into a job that
-   has a building** is designed (call 210: only its runs and what they serve;
-   `handoff/contracts/contract-210M.md`, its demonstration above); its window half
-   (the choice asked when the file is picked) is not contracted.
+   has a building** is built at the command line (call 210, "as built": only its
+   runs and what they serve, the reply ending with the clashes it makes; 1,029
+   command-line tests, 55 demonstrations); its window half (the choice asked when
+   the file is picked) is contracted and not started
+   (`handoff/contracts/contract-210W.md`, its demonstration above). **The bench's
+   next step, where an item connects** (call 211; step D of call 195), is designed
+   and not built: `handoff/contracts/contract-211M.md` for the model's side, its
+   demonstration above, and a survey of what both programs hold
+   (`research/survey-connections.md`); its window half is not contracted.
 2. **Small, and said where found**: the per-level count of what is set down is
    the model's now (call 205M) and the sheet window still counts it itself
    (`sheet.rs`, `set_down`: one call to change); after the Cabinets tool is put

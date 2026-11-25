@@ -295,6 +295,16 @@ from BIMCraft at the same commit is listed here by hand, and is checked by its o
   anywhere in BIMCraft, and no relation between ports.** Nothing is ported; NOTICE unchanged. What a port is and how it is put on an
   element and tied is read from IfcOpenShell's own IFC4 schema and the buildingSMART texts it carries (buildingSMART's own pages
   could not be reached from this machine); IfcOpenShell is run as the checker and never linked.
+- `crates/ifc/src/lib.rs`, a model brought in as only its runs and what they serve (call 210, contract 210M: `Bring`, `import_choosing`,
+  `ClashCounts`, `ClashChange`, `Brought::not_asked_said`, `Brought::clashes_said`, `one_of`) is ours, and `tools/portmap.sh` does not read it
+  (none of these is in `crates/world/src/building*` or `editing*`). Searched all of BIMCraft (`/home/user/ipedrax/bimcraft`):
+  `grep -rn "filter\|only\|categories\|disciplines" crates/core/src/import.rs crates/core/src/ifc.rs` finds `filter(...)` on iterators and the
+  word "categories" for project parameters (`import.rs:165`, `3271` to `3303`: the categories a user parameter applies to), and no choice of
+  what an import brings in; `grep -rn "ImportOptions\|ImportFilter\|IfcOptions" crates` finds nothing; `import::ifc(bytes, name)`
+  (`import.rs:1664`) reads the whole file into a model, and its `NOT_GENERIC` list (`import.rs:44` to `80`) is what is never made a thing, not a
+  choice. So BIMCraft has nothing to port for the choice; it is written fresh over this program's reader. What is counted after is the model's
+  own clash list (`building/clash.rs`: `clashes`, `Clashes::in_the_same_space`, `set_against`, `hole_rows`, `laid_in`), the same one
+  `plumbline clashes` lists, called before and after. NOTICE unchanged.
 - `crates/world/src/pricelist.rs` (call 207, contract 207M: `PriceCell`, `PriceRow`, `PriceList`, `PriceSet`, `price_list`, `set_price`) is
   ours, and `tools/portmap.sh` does not read it. Searched all of BIMCraft (`/home/user/ipedrax/bimcraft`): `grep -rniE "price|\$/|unit_cost|supplier"
   --include=*.rs .` finds a test that renames a user parameter "Cost" to "Price" (`crates/core/src/tests.rs:1041`) and a "Supplier" parameter in
