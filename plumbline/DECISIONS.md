@@ -8905,3 +8905,158 @@ judge's):
    stops on it and says which.
 16. Not changed: a price to a fraction of a cent is taken (unit prices are
    written so); lines are rounded and then added, as before.
+
+### Call 214. A maker's model brought in as an item: the bench, step E (2026-11-25; the lead's design, not built)
+
+Call 195, step E: "an IFC object from a manufacturer read into the chest, its
+sizes Assumed and sourced to the file". A survey of both programs was made first
+(`research/survey-maker-model-and-cabinets.md`). What it found:
+
+- Bringing a model in never makes an item. It sets a thing down on a level, and a
+  file with no level is refused: a maker's file has no building, so today it
+  cannot be read at all.
+- A thing's size is read only from an upright pushed shape. A maker's object is
+  nearly always a solid of faces, or one shape shared by its type; today that
+  comes in with its size Unknown.
+- The maker and the model number a file carries are not read. A proxy (the class
+  many makers write everything as) and an electric appliance are left out.
+- BIMCraft reads all those bodies and makes a family of each product; it reads no
+  maker, no model number and no connection.
+- The pattern to follow is the maker's sheet (`import spec`): each value read is
+  Assumed and says the file and where in it; what the file does not say is
+  Unknown and says so.
+
+1. **A new bringing-in, "a maker's model"** (`import maker-model <job> <file>`;
+   in the window beside "Maker's sheet"). It needs no building and no level in
+   the file and sets nothing down: **it makes items in the tool chest**.
+2. **One item for each kind of product in the file**: named by its type where the
+   file gives it one, otherwise by its own name; several of one type make one
+   item and the reply counts them. A name the chest already has is refused for
+   that item, as bringing an item table in refuses it, and the rest come in.
+3. **What kind of thing it is** comes from its class, as for a model brought into
+   a building (a fixture, a piece of equipment, a furnishing), with electric
+   appliances read as equipment. A proxy says nothing of what it is: it is left
+   out and named unless the person says what such things are (`--as fixture`,
+   `equipment` or `furnishing`), and then every proxy in the file is that.
+4. **Its sizes are the extent of its body**, in its own axes: across its x, front
+   to back its y, up its z. The body is read as BIMCraft reads it (pushed shapes,
+   solids of faces, shared shapes, face sets, a bounding box where the file gives
+   only that), which is ported. Each size is Assumed and says the file and that
+   it is the extent of the body. A body that cannot be read leaves the three
+   sizes Unknown, saying why. Nothing is guessed.
+5. **Its maker and model** come from the manufacturer's property set where the
+   file has it, on the type or on the product: Assumed, saying the file and the
+   property. Where it has none they are Unknown, "not said in the model".
+6. **Where it connects** (call 211): each connection point the file puts on the
+   product becomes a row of the item: what it takes and carries and which way it
+   goes as a model's connection is read today; its place as three plain lengths,
+   across from the middle of the body, back from its back, up from its foot; the
+   way it faces only where the file's direction lies along one of the six; each
+   Assumed, saying the file. A point outside the body is not written and is
+   named.
+7. **It is drawn as a box of its sizes, and the reply says the body's own shape
+   was not kept.** A shape here is blocks written from the item's sizes; a
+   maker's body is thousands of faces at one size. Keeping it is its own step.
+8. **The same file again changes nothing**: every item is refused by name and the
+   job is byte for byte what it was. Nothing in the saved job's format changes:
+   what is made are items and connection rows as they are held today.
+9. **Not in this call**: the body kept as the item's shape; a product's weight,
+   material, classification or price; a maker's model in any format but IFC. The
+   window's entry under Bring in is its own small job after this.
+
+### Call 215. A cabinet by rule: the bench, step F (2026-11-25; the lead's design, not built)
+
+Call 195, step F: "a base, wall or tall box of any width from one row, as the
+trade orders them, so the chest is not one row a width". The survey
+(`research/survey-maker-model-and-cabinets.md`) found: the chest has one row for
+each of thirty-five codes and nothing reads a code; a code the chest lacks (B42,
+W3342) is refused with the list of the ones it has; a wall box is hung because
+its name begins with W, which is written in the program and not in any table;
+and call 155 already said the codes are "the trade's by habit and each maker's
+by catalog", resting on no standard.
+
+1. **A table of rules in the tool chest** (`library/cabinet-rules.csv`; `import
+   cabinet-rules`, `export cabinet-rules`). A row is one family of boxes: the
+   letters of its code (B, SB, DB, BLB, LS, W, T, F); what it is (a base, a wall
+   box, a tall box, a filler); how its number reads (the width; or the width
+   then the height, two digits each); its width, depth and height, each either a
+   length or taken from the number; where it stands (on the floor, or hung with
+   its foot so high); what it is drawn as; the widths the trade stocks; how sure
+   and where from. Every row is Assumed: "the trade's stock sizes by habit; the
+   maker's catalog decides".
+2. **The starter rules make exactly the starter boxes.** Each of the chest's
+   thirty-five cabinet rows is, size for size and shape for shape, what its rule
+   makes from its code; a test holds all thirty-five. If one is not, the worker
+   stops on it and the row or the rule is ruled on; neither is bent.
+3. **A code the chest lacks is made by its rule when it is asked for.** The rule
+   is the one whose letters are the code's letters, the longest first (SB36 is a
+   sink base, not a base). The item is made in the chest under its code, its
+   sizes Assumed and saying the rule and how the number was read, and it is then
+   an item like any other: listed, changed, written out, brought back. The reply
+   says it was made, by which rule, and its sizes.
+4. **A width the rule does not list as stocked is made and flagged**, not
+   refused: the estimator may well mean a custom box, and the reply and the
+   item's source say it is not a stocked width.
+5. **A code no rule reads is refused as it is today**, and the refusal adds the
+   letters the rules know and how the nearest one reads its number ("W reads four
+   digits, the width then the height: W3342 is 33 in wide and 42 in high").
+6. **Where a box stands comes from its rule**, not from its first letter. The
+   starter rule for W hangs it where the program hangs it today. A box whose
+   code no rule reads stands on the floor.
+7. **The rules are the job's once they are brought in or changed, and the
+   program's own otherwise.** A saved job gains them only then, so a job that
+   never touched them is byte for byte what it was, and laying the starter codes
+   gives byte for byte the job it gave before.
+8. **Not in this call**: a price that follows the width; corner boxes and fillers
+   worked from the wall's length (call 155 owes them); doors, drawers and
+   hardware as parts of a box. The window's Cabinets tool calls the same change
+   and needs no building for this; one step is added to its demonstration when
+   the window is next worked on.
+
+### Call 213, as built, and what was ruled on the way (2026-11-25)
+
+Built by a Sonnet worker under `handoff/contracts/contract-213M.md`
+(`research/worker-report-call213M.md`), in two rounds, and accepted by the lead's
+own run in the worker's copy: 1,085 tests in the six command-line crates (667, 45,
+6, 73, 122, 172), 57 command-line demonstrations with `demos/judged-1125b.sh`
+among them, no output with FAIL in it, the gates, `tools/portmap.sh`,
+`tools/licenses.sh`. The sample whole house's saved job, takeoff, clashes,
+estimate, verify list and item list are what they were, to the byte (the lead ran
+the old and the new program side by side).
+
+1. **Every finding was reproduced before it was fixed**, and one was the judge's
+   misreading: in F2's first case the pipes ended on their connections and the
+   program was right. What was wrong there was only the words, now fixed (point 3).
+2. **Points 1 to 14 are built as written.** Made exact on the way:
+   - a run "stands off" a connection when its end is within a foot of an open
+     connection of its sort and is not at it (the reach a model's note already
+     uses);
+   - an angle is said from 0 to 360 wherever it is said; the number in a saved
+     job is what it was;
+   - behind the "(CSV)" said of a workbook was a real fault: three tables written
+     out under a workbook's name were written as plain text. They are workbooks
+     now;
+   - a length inside a figure: 24,358 figures (every one in the library and the
+     tests) read the same before and after.
+3. **Point 15 is built narrower than written, and that is the ruling.** Refusing a
+   flat or backwards block at the sizes a shape is tried at would refuse blocks
+   the program itself came with a week ago and jobs already saved (a panel from 4
+   in up to `height - 6 in` is backwards on a 6 in item). It is refused when a
+   shape is changed, at each item's own size, and where the block is flat at all
+   the tried sizes. A table brought in and a job opened are not refused.
+4. **Point 14, the words**: a figure that fails at the item's own size reads as
+   call 212 reads: `on Vanity, 36 in (36 in wide, 21 in deep and 34 1/2 in high)
+   it would stand 12 in above the top; a shape is held inside its item`. Inches
+   as the program writes them; no "box".
+5. **Expectations moved, each listed in the worker's report before it changed**,
+   all of them words named in this call or sizes typed twice at the command line:
+   in `call205.rs`, `call206b.rs`, `call211m.rs`, `tables.rs`, the command line's
+   `cli.rs`, the model reader's `call210.rs`, and the demonstrations `shapes.sh`,
+   `connections.sh`, `ifc-runs.sh` and `judged-1125.sh`.
+6. Not right, and said: a thing far above a level the job does have is not
+   flagged (only one above the job's highest level or below its lowest); a
+   shape's worked blocks and an item's sizes inside a shape's reply are still
+   said with a decimal point ("34.5 in", shown to the thousandth on purpose where
+   a block is worked from millimetres; to be ruled); the window's list of
+   connections does not yet show a run that passes over a connection (it is
+   named at the command line), which goes with the window's half of call 211.

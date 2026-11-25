@@ -204,6 +204,11 @@ pub fn connection_words(job: &mut Job, c: &Clash) -> Option<String> {
     } else {
         return None;
     };
+    // A run joined to a connection of the thing that goes on inside it: said as that, so that the clash and `takeoff` read as one fact
+    // (call 213 point 3).
+    if let Ok(Some((connection, inside))) = crate::editing::connections::run_joined_and_inside(job, thing, run) {
+        return Some(format!("joined to {name}'s {connection} connection and goes on {} inside it", crate::units::inches_said(inside)));
+    }
     let near = crate::editing::connections::run_end_near_connection(job, thing, run).ok()??;
     Some(format!("{name}'s {} connection is {}", near.name, near.away()))
 }

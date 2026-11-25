@@ -175,6 +175,22 @@ impl Job {
         self.order.iter().filter(|x| **x != e).filter(|x| self.world.get::<Kind>(**x) == Some(&kind) && self.world.get::<Solved>(**x).is_some_and(|s| s.from == from)).filter_map(|x| self.world.get::<Node>(*x).map(|n| n.path.clone())).collect()
     }
 
+    /// Whether no child of `parent` but `except` goes by `name`: two children of one parent cannot share a name (the file lists a parent's
+    /// children by name, so a second would take the first's place and one of the two could never be read again). The one rule that
+    /// adding a thing and calling a thing something else both hold (call 213 point 1).
+    pub fn name_free(&mut self, parent: &str, name: &str, except: Option<&str>) -> Result<(), String> {
+        let taken = {
+            let mut q = self.world.query::<&Node>();
+            q.iter(&self.world).any(|n| n.parent.as_deref() == Some(parent) && n.name == name && except != Some(n.path.as_str()))
+        };
+        if taken {
+            let root = self.root();
+            let at = self.find(parent).filter(|e| *e != root).and_then(|e| self.world.get::<Node>(e)).map(|n| format!("under {}", n.name)).unwrap_or_else(|| "in the job".to_string());
+            return Err(format!("there is already something called \"{name}\" {at}: two things in one place cannot go by one name"));
+        }
+        Ok(())
+    }
+
     /// Add an element under `parent`. Its path is its kind and the job's next number,
     /// and it keeps that path for good. Two children of one parent cannot share a name.
     pub fn add(&mut self, parent: &str, kind: Kind, name: &str) -> Result<String, String> {
@@ -190,15 +206,7 @@ impl Job {
         if self.find(parent).is_none() {
             return Err(format!("no element {parent} to add under"));
         }
-        let taken = {
-            let mut q = self.world.query::<&Node>();
-            q.iter(&self.world).any(|n| n.parent.as_deref() == Some(parent) && n.name == name)
-        };
-        if taken {
-            let root = self.root();
-            let at = self.find(parent).filter(|e| *e != root).and_then(|e| self.world.get::<Node>(e)).map(|n| format!("under {}", n.name)).unwrap_or_else(|| "in the job".to_string());
-            return Err(format!("there is already something called \"{name}\" {at}: two things in one place cannot go by one name"));
-        }
+        self.name_free(parent, name, None)?;
         let root = self.root();
         // A path number is never given out twice, whatever the counter says: the next
         // number is past every number already in use.

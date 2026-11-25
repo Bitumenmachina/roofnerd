@@ -409,7 +409,17 @@ fn put(job: &mut Job, e: Entity, path: &str, kind: Kind, name: &str, what: &str,
                 let said = apply(slot, &name, what, reading, source)?;
                 building::check_item(path, kind, &c)?;
                 // Where the item says where it connects, a size that puts a connection outside its box is refused (call 211).
-                super::connections::item_fits(job, path, &c)?;
+                super::connections::item_fits(job, path, &c).map_err(|why| {
+                    // The size typed, and what to do first (call 213 point 10): the connection is moved, then the size is typed.
+                    let now = match what {
+                        "width" => &c.width,
+                        "depth" => &c.depth,
+                        _ => &c.height,
+                    };
+                    let typed = now.value.as_ref().map(|l| units::show_length(l, &now.unit)).unwrap_or_default();
+                    let why = why.strip_prefix(&format!("{name:?}: ")).unwrap_or(&why);
+                    format!("{what} {typed} for {name}: {why}; move the connection first (change its Up, Back or Across figure), then type the size")
+                })?;
                 job.put(path, c.clone())?;
                 if !matches!(reading, Do::Probe) {
                     for at in super::placed_follow(job, path, &name, &c)? {

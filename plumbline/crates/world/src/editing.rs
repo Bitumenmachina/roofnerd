@@ -34,7 +34,7 @@ pub mod shapes;
 pub mod snap;
 pub mod stretch;
 
-pub use connections::{connection_add, connection_row, connection_set, connection_take, connections_outside_their_boxes, connections_standing, item_connections_worked, item_rows, ConnectionDone, ConnectionsFollowed, Near, Standing, StandsOff, WorkedConnection};
+pub use connections::{connection_add, connection_row, connection_set, connection_set_how, connection_take, connections_outside_their_boxes, connections_standing, item_connections_worked, item_rows, ConnectionDone, ConnectionsFollowed, Near, Standing, StandsHow, StandsOff, WorkedConnection};
 pub use history::{History, UNDO_LIMIT};
 pub use shapes::{keep_shape_as, shape_block_add, shape_block_set, shape_block_take, BlockSet, ShapeChanged};
 pub use stretch::{move_wall, read_move, way_said, Followed, Moved, Resized, RoofMoved};
@@ -1588,8 +1588,12 @@ pub fn turn(job: &mut Job, path: &str, degrees: f64, how: Entered) -> Result<f64
     all_or_nothing(job, |job| {
         let e = job.find(path).ok_or_else(|| format!("no element {path}"))?;
         let kind = job.kind(path).ok_or_else(|| format!("{path} has no kind"))?;
-        if !degrees.is_finite() || degrees == 0.0 {
-            return Err("how far to turn it is not a figure, or is nothing".into());
+        if !degrees.is_finite() {
+            return Err("how far to turn it is not a figure".into());
+        }
+        // Nothing, or whole turns: it stands as it stood.
+        if (degrees % 360.0).abs() < 1.0e-9 {
+            return Err(format!("turning it by {} degrees changes nothing", crate::view::num(degrees)));
         }
         let Some(mut p) = job.world.get::<Placed>(e).cloned() else {
             return Err(format!("{kind:#} is not turned this way; a fixture, a piece of equipment or a furnishing is"));
@@ -1683,6 +1687,9 @@ fn rename_item_inner(job: &mut Job, path: &str, name: &str) -> Result<Renamed, S
         if taken {
             return Err(format!("another item is called {name:?} already"));
         }
+        // Nothing else in the item's place goes by that name either (a material, say): the rule bringing a thing in holds (call 213 point 1).
+        let parent = job.world.get::<Node>(e).and_then(|n| n.parent.clone()).unwrap_or_default();
+        job.name_free(&parent, name, Some(path))?;
         if let Some(mut node) = job.world.get_mut::<Node>(e) {
             node.name = name.to_string();
         }
@@ -1767,13 +1774,35 @@ pub(crate) fn placed_follow(job: &mut Job, item_path: &str, item_name: &str, ite
 /// Where an item's size typed in a window comes from: said once, here, for New item and for a size typed over.
 pub const ITEM_SIZE_TYPED: &str = "typed in the window; not yet checked against its maker's sheet";
 
+/// Who is asking for a size to be typed (call 213 point 5): where a size was typed is said by who typed it, and what typing the same size
+/// again means depends on it. In the window a person is looking at the item and the message says what happened, so the same size again is
+/// the check. At the command line the same line run twice would mark a value Known that nobody measured, so there it changes nothing.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Asked {
+    Window,
+    CommandLine,
+}
+
+impl Asked {
+    /// Where the size was typed, as the source of a size says it.
+    pub fn typed_source(self) -> &'static str {
+        match self {
+            Asked::Window => ITEM_SIZE_TYPED,
+            Asked::CommandLine => "typed at the command line; not yet checked against its maker's sheet",
+        }
+    }
+}
+
 /// What typing a size on an item did.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum HowSized {
     /// A size that differs from the item's: the item is changed, and is Assumed.
     Changed,
-    /// The same size again, or the word "same": the check, Known, checked on site.
+    /// The same size again, or the word "same", in the window: the check, Known, checked on site. At the command line: a size measured, Known,
+    /// with where it is from.
     Checked,
+    /// The same size again at the command line: nothing changes, and it says so.
+    Unchanged,
 }
 
 /// What `item_size` did, for a window and a command line to say alike.
@@ -1795,15 +1824,22 @@ pub struct ItemSizeDone {
     pub name_carries_old: bool,
     /// What else the measuring change had to say (a run pulled off a joint, say).
     pub also: Vec<String>,
+    /// Who asked.
+    pub asked: Asked,
+    /// Where a measured size is from (a measurement at the command line); empty otherwise.
+    pub from: String,
 }
 
 impl ItemSizeDone {
     /// What happened, in the words a window and the command line both use.
     pub fn said(&self) -> String {
         let (name, what, now) = (&self.item, &self.what, &self.new);
-        let mut said = match self.how {
-            HowSized::Checked => format!("{name}: {what} {now} is checked: Known, checked on site."),
-            HowSized::Changed => {
+        let how_to_know = format!("To make it Known, say how sure and where from: plumbline set <file> \"{name}\" {what} \"{now}\" --status Known --source \"<who measured, or with what>\"");
+        let mut said = match (self.how, self.asked) {
+            (HowSized::Checked, Asked::Window) => format!("{name}: {what} {now} is checked: Known, checked on site."),
+            (HowSized::Checked, Asked::CommandLine) => format!("{name}: {what} {now} is Known: {}.", self.from),
+            (HowSized::Unchanged, _) => format!("{name}: {what} is {now} already: nothing changed. Typing a size again is not a check. {how_to_know}."),
+            (HowSized::Changed, asked) => {
                 let follow = match self.followed.len() {
                     0 => "Nothing is set down from it yet.".to_string(),
                     1 => "1 thing set down from it follows.".to_string(),
@@ -1814,7 +1850,11 @@ impl ItemSizeDone {
                     (Some(old), true) => format!(" Its name still reads {old}: Rename item changes it."),
                     _ => String::new(),
                 };
-                format!("{name}: {what} is now {now}{note}. Assumed: {ITEM_SIZE_TYPED}. {follow} To check it, type {now} again on its {what}: that makes it Known, checked on site.{renamed}")
+                let check = match asked {
+                    Asked::Window => format!("To check it, type {now} again on its {what}: that makes it Known, checked on site."),
+                    Asked::CommandLine => format!("{how_to_know}."),
+                };
+                format!("{name}: {what} is now {now}{note}. Assumed: {}. {follow} {check}{renamed}", asked.typed_source())
             }
         };
         for line in &self.also {
@@ -1833,7 +1873,14 @@ impl ItemSizeDone {
 /// - every thing set down from the item follows, its size and how sure that is, as sure as the item's three
 ///   sizes together are (`placed_follow`);
 /// - a size that is not a length changes nothing and says why.
+/// This is the window's way (`Asked::Window`): a person is looking at the item. The command line asks `item_size_asked`.
 pub fn item_size(job: &mut Job, path: &str, what: &str, typed: &str, who: &str) -> Result<ItemSizeDone, String> {
+    item_size_asked(job, path, what, typed, who, Asked::Window)
+}
+
+/// `item_size`, told who is asking (call 213 points 5 and 6). The window's answer is `item_size`'s; at the command line a size that
+/// differs is the item changed, Assumed, said to be typed there, and the same size again, or the word "same", changes nothing and says so.
+pub fn item_size_asked(job: &mut Job, path: &str, what: &str, typed: &str, who: &str, asked: Asked) -> Result<ItemSizeDone, String> {
     all_or_nothing(job, |job| {
         let e = job.find(path).ok_or_else(|| format!("no element {path}"))?;
         let item = job.world.get::<Item>(e).cloned().ok_or_else(|| format!("{path} is not an item"))?;
@@ -1859,14 +1906,24 @@ pub fn item_size(job: &mut Job, path: &str, what: &str, typed: &str, who: &str) 
             v.and_then(|v| v.value.as_ref().map(|len| units::show_length(len, &v.unit))).unwrap_or_default()
         };
         let follower_of = |a: &String| a.strip_suffix(" is one of it and is now that size").map(str::to_string);
+        if again && asked == Asked::CommandLine {
+            // Nothing changes, and nothing is checked by being typed again.
+            if was_text.is_none() {
+                return Err(format!("{name} has no {what} to be the same as: type the size"));
+            }
+            let new = was_text.clone().unwrap_or_default();
+            return Ok(ItemSizeDone { item: name, what: what.to_string(), how: HowSized::Unchanged, old: was_text, new, followed: Vec::new(), name_carries_old: false, also: Vec::new(), asked, from: String::new() });
+        }
         if again {
             let source = if who.is_empty() { "checked on site".to_string() } else { format!("checked on site: {who}") };
             let done = measure(job, path, what, Reading::Same, None, &source)?;
             let followed: Vec<String> = done.also.iter().filter_map(follower_of).collect();
             let also: Vec<String> = done.also.iter().filter(|a| follower_of(a).is_none()).cloned().collect();
-            return Ok(ItemSizeDone { item: name, what: what.to_string(), how: HowSized::Checked, old: was_text.clone(), new: was_text.unwrap_or_else(|| text_of(job, what)), followed, name_carries_old: false, also });
+            return Ok(ItemSizeDone { item: name, what: what.to_string(), how: HowSized::Checked, old: was_text.clone(), new: was_text.unwrap_or_else(|| text_of(job, what)), followed, name_carries_old: false, also, asked, from: String::new() });
         }
-        let done = measure(job, path, what, Reading::Length(typed), None, ITEM_SIZE_TYPED)?;
+        // At the command line a size typed with where it is from (Assumed) says that; with nothing it says it was typed there.
+        let source = if asked == Asked::CommandLine && !who.trim().is_empty() { who.trim().to_string() } else { asked.typed_source().to_string() };
+        let done = measure(job, path, what, Reading::Length(typed), None, &source)?;
         // The size is the item changed, and what is not yet checked is Assumed.
         let mut it = job.world.get::<Item>(e).cloned().unwrap_or(item);
         match what {
@@ -1877,7 +1934,7 @@ pub fn item_size(job: &mut Job, path: &str, what: &str, typed: &str, who: &str) 
         job.put(path, it.clone())?;
         // Its shape held to its box at the size it has now (call 206 point 2): the size is refused, and nothing changes.
         shapes::item_fits(&job.shapes, &name, &it)?;
-        // What follows it is as sure as the item's sizes together are: where the three were all Known, the ones set
+        // What follows it is as sure as the item's three sizes together are: where the three were all Known, the ones set
         // down said Known a moment ago, and are put right to what the model says of the item's size.
         let followed: Vec<String> = done.also.iter().filter_map(follower_of).collect();
         if let Ok((feet, status, from)) = it.size_ft() {
@@ -1892,8 +1949,53 @@ pub fn item_size(job: &mut Job, path: &str, what: &str, typed: &str, who: &str) 
         job.derive();
         let also: Vec<String> = done.also.iter().filter(|a| follower_of(a).is_none()).cloned().collect();
         let name_carries_old = was_text.as_ref().is_some_and(|old| !old.is_empty() && name.contains(old.as_str()));
-        Ok(ItemSizeDone { item: name, what: what.to_string(), how: HowSized::Changed, old: was_text, new: text_of(job, what), followed, name_carries_old, also })
+        Ok(ItemSizeDone { item: name, what: what.to_string(), how: HowSized::Changed, old: was_text, new: text_of(job, what), followed, name_carries_old, also, asked, from: String::new() })
     })
+}
+
+/// An item's size given as measured (call 213 point 6): how sure and where from, as every value is made Known. The size is what the
+/// person read, the item changed to it where it differs, Known, its source what they say, and everything set down from the item follows.
+/// Where the item has the size already, it is the same size, now Known. Refused with no source: a measurement says who made it.
+pub fn item_size_known(job: &mut Job, path: &str, what: &str, typed: &str, who: &str) -> Result<ItemSizeDone, String> {
+    all_or_nothing(job, |job| {
+        if who.trim().is_empty() {
+            return Err(format!("a size is Known where somebody measured it, and a measurement says where it is from: add --source \"<who measured, or with what>\""));
+        }
+        let e = job.find(path).ok_or_else(|| format!("no element {path}"))?;
+        let item = job.world.get::<Item>(e).cloned().ok_or_else(|| format!("{path} is not an item"))?;
+        let name = job.world.get::<Node>(e).map(|n| n.name.clone()).unwrap_or_else(|| path.to_string());
+        let was = match what {
+            "width" => &item.width,
+            "depth" => &item.depth,
+            "height" => &item.height,
+            other => return Err(format!("an item has a width, a depth and a height: {other:?} is none of them")),
+        };
+        let was_text = was.value.as_ref().map(|len| units::show_length(len, &was.unit));
+        let same = typed.trim().eq_ignore_ascii_case("same");
+        let done = measure(job, path, what, if same { Reading::Same } else { Reading::Length(typed) }, None, who.trim())?;
+        let it = job.world.get::<Item>(e).cloned().unwrap_or(item);
+        shapes::item_fits(&job.shapes, &name, &it)?;
+        let follower_of = |a: &String| a.strip_suffix(" is one of it and is now that size").map(str::to_string);
+        let followed: Vec<String> = done.also.iter().filter_map(follower_of).collect();
+        let also: Vec<String> = done.also.iter().filter(|a| follower_of(a).is_none()).cloned().collect();
+        job.derive();
+        let now = {
+            let v = match what {
+                "width" => &it.width,
+                "depth" => &it.depth,
+                _ => &it.height,
+            };
+            v.value.as_ref().map(|len| units::show_length(len, &v.unit)).unwrap_or_default()
+        };
+        Ok(ItemSizeDone { item: name, what: what.to_string(), how: HowSized::Checked, old: was_text, new: now, followed, name_carries_old: false, also, asked: Asked::CommandLine, from: who.trim().to_string() })
+    })
+}
+
+/// How far a thing is turned, said as a builder says it, from 0 up to 360 degrees counter-clockwise from east (call 213 point 7). The model
+/// keeps it between -180 and 180; a turn is said one way everywhere, and this is it.
+pub fn turned_said(degrees: f64) -> f64 {
+    let d = (degrees.rem_euclid(360.0) * 1.0e6).round() / 1.0e6;
+    if d >= 360.0 { 0.0 } else { d + 0.0 }
 }
 
 /// A source after something was done to the value it stands on: where the value came

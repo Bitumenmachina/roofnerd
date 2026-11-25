@@ -354,14 +354,16 @@ fn point_5_a_thing_follows_its_item_and_a_run_that_is_left_is_counted() {
     assert!(said.contains("1 thing set down from it follows"), "{said}");
     assert!(said.contains("1 run now stands off its connection"), "{said}");
     assert!(said.contains(&cold) || said.contains("Cold water"), "{said}");
-    assert!(!said.contains(&hot), "the hot pipe was never joined: {said}");
+    // The hot pipe was never joined: it stood 3 in off its connection, and the connection went up 2 in, so it still stands off, by another amount.
+    assert!(said.contains("1 run still stands off its connection") && said.contains(&hot), "{said}");
     let stood = ed::connections_standing(&mut job, &thing).unwrap();
     assert!(near(stood[0].at, [9.0 + 2.0 / 3.0, 20.75, 2.0]), "{:?}", stood[0].at);
     assert!(near(stood[2].at, [10.0, 20.75, 20.0 / 12.0]), "waste: 36 - 16 = 20 in: {:?}", stood[2].at);
     assert_eq!(open_names(&mut job, &thing), ["Cold water", "Hot water", "Waste"]);
     // Typed back to 34 in: joined again.
     let back = ed::item_size(&mut job, &item, "height", "34 in", "").unwrap();
-    assert!(!back.said().contains("stands off"), "{}", back.said());
+    // The cold pipe is joined again; the hot one, which stood off all along, still does and is said so.
+    assert!(back.said().contains("is now joined to its connection") && back.said().contains(&cold), "{}", back.said());
     assert_eq!(open_names(&mut job, &thing), ["Hot water", "Waste"]);
     // The run was not moved.
     let e = job.find(&cold).unwrap();

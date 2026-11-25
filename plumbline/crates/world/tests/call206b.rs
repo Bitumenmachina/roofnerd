@@ -45,7 +45,7 @@ fn an_item_drawn_as_the_shape_at_its_own_sizes_is_refused_naming_the_item_the_bl
     // 100 in wide: inside. 144 in wide: 24 in above the box.
     ed::item(&mut job, "Narrow thing", item_of(100.0, Some("x"))).unwrap();
     let why = ed::item(&mut job, "Wide thing", item_of(144.0, Some("x"))).unwrap_err();
-    assert!(why.contains("\"Wide thing\"") && why.contains("block 1") && why.contains("24 in above its box"), "{why}");
+    assert!(why.contains("on Wide thing (") && why.contains("block 1") && why.contains("24 in above the top"), "{why}");
     assert!(job.find("type-0002").is_none() || path_of_opt(&mut job, "Wide thing").is_none(), "nothing was added");
 }
 
@@ -60,7 +60,7 @@ fn an_item_drawn_as_the_shape_and_then_sized_to_144_in_is_refused_and_left_as_it
     ed::item(&mut job, "Narrow thing", item_of(100.0, Some("x"))).unwrap();
     let path = path_of(&mut job, "Narrow thing");
     let why = ed::item_size(&mut job, &path, "width", "144 in", "me").unwrap_err();
-    assert!(why.contains("\"Narrow thing\"") && why.contains("24 in above its box"), "{why}");
+    assert!(why.contains("on Narrow thing (") && why.contains("24 in above the top"), "{why}");
     let e = job.find(&path).unwrap();
     assert_eq!(job.world.get::<Item>(e).unwrap().width.feet(), Some(100.0 / 12.0), "the size is as it was");
 }
@@ -71,7 +71,7 @@ fn an_item_drawn_as_a_box_and_then_drawn_as_the_shape_is_refused() {
     ed::item(&mut job, "Wide thing", item_of(144.0, None)).unwrap();
     let path = path_of(&mut job, "Wide thing");
     let why = ed::item_drawn_as(&mut job, &path, Some("x")).unwrap_err();
-    assert!(why.contains("\"Wide thing\"") && why.contains("24 in above its box"), "{why}");
+    assert!(why.contains("on Wide thing (") && why.contains("24 in above the top"), "{why}");
 }
 
 #[test]
@@ -80,7 +80,7 @@ fn a_block_of_the_jobs_own_shape_set_so_that_an_item_stands_outside_is_refused_n
     tables::shapes_in(&mut job, &[row(&["Shape", "Made of", "Form", "Across from", "Across to", "Back from", "Back to", "Up from", "Up to", "There when"]), row(&["y", "timber", "box", "-width / 2", "width / 2", "0", "depth", "0", "height", ""])], None).unwrap();
     ed::item(&mut job, "Wide thing", item_of(144.0, Some("y"))).unwrap();
     let why = sh::shape_block_set(&mut job, "y", 1, sh::BlockSet::Figure(5, X_UP.into())).unwrap_err();
-    assert!(why.contains("\"Wide thing\"") && why.contains("24 in above its box"), "{why}");
+    assert!(why.contains("on Wide thing (") && why.contains("24 in above the top"), "{why}");
     assert_eq!(job.shapes[0].blocks[0].up[1], "height", "the shape is as it was");
     // A block added is the whole box and stays inside.
     sh::shape_block_add(&mut job, "y", None).unwrap();
@@ -94,7 +94,7 @@ fn a_shape_table_that_changes_a_shape_an_item_is_drawn_as_is_not_used_where_the_
     ed::item(&mut job, "Wide thing", item_of(144.0, Some("y"))).unwrap();
     let brought = tables::shapes_in(&mut job, &table(X_UP), None).unwrap();
     assert_eq!(brought.not_used.len(), 1, "{:?}", brought.not_used);
-    assert!(brought.not_used[0].1.contains("\"Wide thing\"") && brought.not_used[0].1.contains("24 in above its box"), "{:?}", brought.not_used);
+    assert!(brought.not_used[0].1.contains("on Wide thing (") && brought.not_used[0].1.contains("24 in above the top"), "{:?}", brought.not_used);
     assert_eq!(job.shapes[0].blocks[0].up[1], "height");
 }
 
@@ -108,7 +108,7 @@ fn an_items_table_row_drawn_as_the_shape_is_not_used_where_its_sizes_put_a_block
     ];
     let brought = tables::items_in(&mut job, &items, None).unwrap();
     assert_eq!(brought.not_used.len(), 1, "{:?}", brought.not_used);
-    assert!(brought.not_used[0].1.contains("\"Wide thing\"") && brought.not_used[0].1.contains("24 in above its box"), "{:?}", brought.not_used);
+    assert!(brought.not_used[0].1.contains("on Wide thing (") && brought.not_used[0].1.contains("24 in above the top"), "{:?}", brought.not_used);
     assert!(path_of_opt(&mut job, "Narrow thing").is_some() && path_of_opt(&mut job, "Wide thing").is_none());
 }
 
@@ -124,7 +124,7 @@ fn a_job_that_already_holds_one_says_so_and_still_opens() {
     job.put(&path, it).unwrap();
     let said = sh::items_outside_their_boxes(&mut job);
     assert_eq!(said.len(), 1, "{said:?}");
-    assert!(said[0].1.contains("\"Narrow thing\"") && said[0].1.contains("24 in above its box"), "{said:?}");
+    assert!(said[0].1.contains("on Narrow thing (") && said[0].1.contains("24 in above the top"), "{said:?}");
 }
 
 #[test]

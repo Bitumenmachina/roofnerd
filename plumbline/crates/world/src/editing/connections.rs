@@ -21,7 +21,7 @@ use std::collections::BTreeMap;
 
 use super::join::run_info;
 use super::{all_or_nothing, Entered};
-use crate::building::connections::{check_item_connections, domain_word, flow_word, inches_of, kind_word, Facing, ItemConnection, ItemConnections};
+use crate::building::connections::{check_item_connections, domain_word, flow_word, kind_word, Facing, ItemConnection, ItemConnections};
 use crate::building::network::{self, thing_to_world, Joint};
 use crate::building::{self};
 use crate::check::FIT_TOLERANCE_FT;
@@ -124,6 +124,14 @@ fn item_of(job: &mut Job, typed: &str) -> Result<(String, String, Item, Vec<Item
     Ok((path, name, it, rows))
 }
 
+/// Why one row of a table cannot be used on its own, for the item at `item_path` (a figure that is not a length, a place that is Known, a
+/// place outside the item's box at its own size), without the item's name before it. None where the row is usable by itself.
+pub(crate) fn row_fault(job: &mut Job, item_path: &str, row: &ItemConnection) -> Option<String> {
+    let (_, name, it, _) = item_of(job, item_path).ok()?;
+    let why = held(&name, &it, std::slice::from_ref(row)).err()?;
+    Some(why.strip_prefix(&format!("{name:?}: ")).map(str::to_string).unwrap_or(why))
+}
+
 /// The rows an item holds, as they are kept.
 pub fn item_rows(job: &mut Job, item: &str) -> Result<Vec<ItemConnection>, String> {
     item_of(job, item).map(|(_, _, _, rows)| rows)
@@ -190,7 +198,18 @@ fn put_rows(job: &mut Job, path: &str, rows: Vec<ItemConnection>) -> Result<(), 
 
 // ---------------------------------------------------------------- what follows
 
-/// A run that stood at a connection and no longer does.
+/// How a run's end stands from a connection now that a change has been made (call 213 point 2).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum StandsHow {
+    /// It was joined and now stands off.
+    Off,
+    /// It stood off and still does, by another amount.
+    Still,
+    /// It stood off (or was far) and is now joined.
+    Joined,
+}
+
+/// A run's end and a connection: what a change to the item did to how they stand.
 #[derive(Clone, Debug, PartialEq)]
 pub struct StandsOff {
     pub run: String,
@@ -198,13 +217,21 @@ pub struct StandsOff {
     pub thing: String,
     pub thing_name: String,
     pub connection: String,
-    /// Where the run's end stands from the connection, in the thing's own words ("3 in in front of").
+    /// Where the run's end stands from the connection as both now stand, in the thing's own words ("2 3/8 in behind"); "at" where joined.
     pub from: String,
+    /// What happened.
+    pub which: StandsHow,
+    /// How far off the run's end stood before, where it stood off ("2 3/8 in").
+    pub was: Option<String>,
 }
 
 impl StandsOff {
     fn said(&self) -> String {
-        format!("{} [{}] is {} {}'s {} connection", self.run_name, self.run, self.from, self.thing_name, self.connection)
+        match self.which {
+            StandsHow::Off => format!("{} [{}] is {} {}'s {} connection", self.run_name, self.run, self.from, self.thing_name, self.connection),
+            StandsHow::Still => format!("{} [{}] is {} {}'s {} connection (it was {})", self.run_name, self.run, self.from, self.thing_name, self.connection, self.was.clone().unwrap_or_default()),
+            StandsHow::Joined => format!("{} [{}] at {}'s {} connection", self.run_name, self.run, self.thing_name, self.connection),
+        }
     }
 }
 
@@ -216,7 +243,7 @@ fn way_from(delta: P3) -> (f64, String) {
     let parts: Vec<String> = [(delta[0], "to the right of", "to the left of"), (delta[1], "behind", "in front of"), (delta[2], "above", "below")]
         .into_iter()
         .filter(|(d, _, _)| d.abs() * 12.0 >= 0.125)
-        .map(|(d, plus, minus)| format!("{} {}", inches_of(d.abs()), if d > 0.0 { plus } else { minus }))
+        .map(|(d, plus, minus)| format!("{} {}", units::inches_said(d.abs()), if d > 0.0 { plus } else { minus }))
         .collect();
     (far, if parts.is_empty() { "at".to_string() } else { parts.join(" and ") })
 }
@@ -238,29 +265,83 @@ impl ConnectionsFollowed {
     /// measured them, and how many runs now stand off their connection.
     pub fn lines(&self) -> Vec<String> {
         let mut out: Vec<String> = self.left_alone.clone();
-        match self.off.len() {
-            0 => {}
-            1 => out.push(format!("1 run now stands off its connection: {}", self.off[0].said())),
-            n => out.push(format!("{n} runs now stand off their connections: {}", self.off.iter().map(StandsOff::said).collect::<Vec<_>>().join("; "))),
+        let of = |which: StandsHow| -> Vec<&StandsOff> { self.off.iter().filter(|o| o.which == which).collect() };
+        let said = |list: &[&StandsOff]| list.iter().map(|o| o.said()).collect::<Vec<_>>().join("; ");
+        match of(StandsHow::Off).as_slice() {
+            [] => {}
+            [one] => out.push(format!("1 run now stands off its connection: {}", one.said())),
+            many => out.push(format!("{} runs now stand off their connections: {}", many.len(), said(many))),
+        }
+        match of(StandsHow::Still).as_slice() {
+            [] => {}
+            [one] => out.push(format!("1 run still stands off its connection: {}", one.said())),
+            many => out.push(format!("{} runs still stand off their connections: {}", many.len(), said(many))),
+        }
+        match of(StandsHow::Joined).as_slice() {
+            [] => {}
+            [one] => out.push(format!("1 run is now joined to its connection: {}", one.said())),
+            many => out.push(format!("{} runs are now joined to their connections: {}", many.len(), said(many))),
         }
         out
     }
 }
 
-/// Which runs end at which connection, by the thing's path and the connection's name, and where that was.
-fn joins(job: &mut Job) -> BTreeMap<(String, String), Vec<(String, P3)>> {
-    let Ok(net) = network::network(job, None, None, network::TOLERANCE_FT) else { return BTreeMap::new() };
-    let mut out: BTreeMap<(String, String), Vec<(String, P3)>> = BTreeMap::new();
-    for node in &net.nodes {
-        let ends: Vec<(String, P3)> = node.joints.iter().filter_map(|j| if let Joint::RunEnd { run, .. } | Joint::RunSide { run } = j { Some((run.clone(), node.at)) } else { None }).collect();
-        if ends.is_empty() {
-            continue;
-        }
-        for j in &node.joints {
-            if let Joint::Connector { element, index, .. } = j {
-                let name = job.find(element).and_then(|e| job.world.get::<Connectors>(e)).and_then(|c| c.0.get(*index)).map(|c| c.name.clone());
-                if let Some(name) = name {
-                    out.entry((element.clone(), name)).or_default().extend(ends.iter().cloned());
+/// How near a run's end has to stand to a connection to be said to stand off it, in feet: a run is the connection's when its end is
+/// within a foot of it (or joined to it, as the network says).
+const REACH_FT: f64 = 1.0;
+
+/// How one run's end stands from one connection of a thing.
+#[derive(Clone, Debug, PartialEq)]
+struct Rel {
+    joined: bool,
+    /// How far the run's end is from the connection, in feet (the end nearer to it).
+    far: f64,
+    /// Where it stands from it, in the thing's own words ("2 3/8 in behind"); "at" where it is at it.
+    from: String,
+}
+
+/// Every run of a sort a connection takes, by its path, with its two ends and what it is.
+fn run_ends(job: &mut Job) -> Vec<(String, ConnectorKind, [P3; 2])> {
+    let paths: Vec<String> = {
+        let mut q = job.world.query::<(&Node, &Kind)>();
+        q.iter(&job.world).filter(|(_, k)| k.is_segment()).map(|(n, _)| n.path.clone()).collect()
+    };
+    paths.into_iter().filter_map(|p| run_info(job, &p).ok().and_then(|r| ConnectorKind::for_run(r.kind).map(|k| (p, k, [r.a, r.b])))).collect()
+}
+
+fn dist(a: P3, b: P3) -> f64 {
+    ((a[0] - b[0]).powi(2) + (a[1] - b[1]).powi(2) + (a[2] - b[2]).powi(2)).sqrt()
+}
+
+/// How each run stands from each connection of these things now. A run belongs to the connections it is joined to; a run joined to none
+/// belongs to the connection of its sort that its end is nearest to, where that is within a foot. Keyed by the thing, the connection's
+/// name and the run. `only` names relations to be given whatever the distance (those that stood before the change).
+fn relations(job: &mut Job, things: &[String], only: Option<&[(String, String, String)]>) -> BTreeMap<(String, String, String), Rel> {
+    let runs = run_ends(job);
+    let mut out = BTreeMap::new();
+    for thing in things {
+        let (Ok(standing), Ok(frame)) = (connections_standing(job, thing), frame_of(job, thing)) else { continue };
+        let rel = |c: &Standing, ends: &[P3; 2], run: &str| -> Rel {
+            let end = if dist(ends[0], c.at) <= dist(ends[1], c.at) { ends[0] } else { ends[1] };
+            let (_, from) = way_from(sub(frame.local(end), c.local));
+            Rel { joined: c.joined_to.iter().any(|j| j == run), far: dist(end, c.at), from }
+        };
+        for (run, kind, ends) in &runs {
+            let of_sort: Vec<&Standing> = standing.iter().filter(|c| c.kind == *kind).collect();
+            let joined: Vec<&&Standing> = of_sort.iter().filter(|c| c.joined_to.iter().any(|j| j == run)).collect();
+            if !joined.is_empty() {
+                for c in joined {
+                    out.insert((thing.clone(), c.name.clone(), run.clone()), rel(c, ends, run));
+                }
+            } else if let Some(c) = of_sort.iter().min_by(|a, b| dist(ends[0], a.at).min(dist(ends[1], a.at)).total_cmp(&dist(ends[0], b.at).min(dist(ends[1], b.at)))) {
+                if dist(ends[0], c.at).min(dist(ends[1], c.at)) <= REACH_FT {
+                    out.insert((thing.clone(), c.name.clone(), run.clone()), rel(c, ends, run));
+                }
+            }
+            for c in &of_sort {
+                let key = (thing.clone(), c.name.clone(), run.clone());
+                if !out.contains_key(&key) && only.is_some_and(|keys| keys.contains(&key)) {
+                    out.insert(key, rel(c, ends, run));
                 }
             }
         }
@@ -329,7 +410,8 @@ pub(crate) fn follow(job: &mut Job, item_path: &str) -> Result<ConnectionsFollow
     if !any_before {
         return Ok(done);
     }
-    let before = joins(job);
+    let all_things: Vec<String> = things.iter().map(|(t, _)| t.clone()).collect();
+    let before = relations(job, &all_things, None);
     let size = it.size_ft().ok().map(|(feet, status, _)| (feet, status));
     for (thing, thing_name) in &things {
         let e = job.find(thing).ok_or_else(|| format!("no element {thing}"))?;
@@ -386,21 +468,30 @@ pub(crate) fn follow(job: &mut Job, item_path: &str) -> Result<ConnectionsFollow
     if done.things.is_empty() {
         return Ok(done);
     }
-    // Which runs stood at a connection and now stand off it.
-    let after = joins(job);
-    for ((thing, connection), ends) in before {
-        let still: Vec<&String> = after.get(&(thing.clone(), connection.clone())).map(|v| v.iter().map(|(r, _)| r).collect()).unwrap_or_default();
-        let now = connections_standing(job, &thing).unwrap_or_default();
-        let frame = frame_of(job, &thing).ok();
-        for (run, at) in ends {
-            if still.contains(&&run) {
-                continue;
-            }
-            let (Some(frame), Some(c)) = (&frame, now.iter().find(|s| s.name == connection)) else { continue };
-            let (_, from) = way_from(sub(frame.local(at), c.local));
-            let thing_name = called(job, &thing);
-            let run_name = called(job, &run);
-            done.off.push(StandsOff { run, run_name, thing: thing.clone(), thing_name, connection: connection.clone(), from });
+    // How each run's end stood from each connection before, and stands now (call 213 point 2): measured from where both now stand, and not by how
+    // far the connection moved. Said: a run that now stands off, a run that stood off and still does by another amount, a run that is now joined.
+    let asked: Vec<(String, String, String)> = before.keys().cloned().collect();
+    let after = relations(job, &all_things, Some(&asked));
+    let mut seen: Vec<(String, String, String)> = Vec::new();
+    for (key, b) in &before {
+        let Some(a) = after.get(key) else { continue };
+        seen.push(key.clone());
+        let which = match (b.joined, a.joined) {
+            (true, false) => StandsHow::Off,
+            (false, false) if b.from != a.from => StandsHow::Still,
+            (false, true) => StandsHow::Joined,
+            _ => continue,
+        };
+        let (thing, connection, run) = key.clone();
+        let (thing_name, run_name) = (called(job, &thing), called(job, &run));
+        done.off.push(StandsOff { run, run_name, thing, thing_name, connection, from: if a.joined { "at".to_string() } else { a.from.clone() }, which, was: (!b.joined).then(|| units::inches_said(b.far)) });
+    }
+    // A run that was nowhere near and is joined now.
+    for (key, a) in &after {
+        if a.joined && !seen.contains(key) && !before.contains_key(key) {
+            let (thing, connection, run) = key.clone();
+            let (thing_name, run_name) = (called(job, &thing), called(job, &run));
+            done.off.push(StandsOff { run, run_name, thing, thing_name, connection, from: "at".to_string(), which: StandsHow::Joined, was: None });
         }
     }
     Ok(done)
@@ -425,7 +516,7 @@ pub struct Near {
 impl Near {
     /// How far, as a person says it: "3 in away".
     pub fn away(&self) -> String {
-        format!("{} away", inches_of(self.by))
+        format!("{} away", units::inches_said(self.by))
     }
 }
 
@@ -477,11 +568,63 @@ pub(super) fn run_domain(job: &mut Job, r: &super::join::RunInfo) -> Option<Doma
 pub(crate) fn refuse_if_off(job: &mut Job, thing: &str, run: &str, end: P3, kind: ConnectorKind, domain: Option<Domain>) -> Result<(), String> {
     match nearest_open(job, thing, end, kind, domain)? {
         None => Ok(()),
-        Some(n) => {
-            let thing_name = called(job, thing);
-            Err(format!("{run} does not end at a connection of {thing_name}: its end is {} from the nearest one that is open, the {} connection ({} it). A run is joined where it stands at the connection (its end there, or passing over it), not where it is near: draw its end to the connection", n.away(), n.name, n.from))
+        Some(n) => Err(off_said(job, thing, run, &n)),
+    }
+}
+
+fn off_said(job: &mut Job, thing: &str, run: &str, n: &Near) -> String {
+    let thing_name = called(job, thing);
+    format!("{run} does not end at a connection of {thing_name}: its end is {} from the nearest one that is open, the {} connection ({} it). A run is joined where it stands at the connection (its end there, or passing over it), not where it is near: draw its end to the connection", n.away(), n.name, n.from)
+}
+
+/// `connect` on a run with neither end inside the thing, where an end stands within a foot of an open connection of the run's sort: refused,
+/// saying which connection and how far, in inches, as it does for an end inside the thing (call 213 point 4). Nothing where no end is near one
+/// or the thing has no such connection open: what `connect` said before stands.
+pub(crate) fn refuse_if_near_outside(job: &mut Job, thing: &str, run: &str, ends: [P3; 2], kind: ConnectorKind, domain: Option<Domain>) -> Result<(), String> {
+    let mut best: Option<Near> = None;
+    for end in ends {
+        if let Some(n) = nearest_open(job, thing, end, kind, domain)? {
+            if n.by <= REACH_FT && best.as_ref().is_none_or(|b| n.by < b.by) {
+                best = Some(n);
+            }
         }
     }
+    match best {
+        None => Ok(()),
+        Some(n) => Err(off_said(job, thing, run, &n)),
+    }
+}
+
+/// A run joined to a connection of a thing that goes on inside the thing: the connection's name and how much of the run's length lies inside
+/// the thing's box (feet). None where no connection of the thing is joined to the run or none of it is inside (call 213 point 3).
+pub fn run_joined_and_inside(job: &mut Job, thing: &str, run: &str) -> Result<Option<(String, f64)>, String> {
+    let r = run_info(job, run)?;
+    let frame = frame_of(job, thing)?;
+    let e = job.find(thing).ok_or_else(|| format!("no element {thing}"))?;
+    let size = job.world.get::<Placed>(e).and_then(|p| p.size_ft()).ok_or_else(|| format!("{thing}'s size is not known"))?;
+    let standing = connections_standing(job, thing)?;
+    let Some(joined) = standing.into_iter().find(|s| s.joined_to.iter().any(|x| x == run)) else { return Ok(None) };
+    let (p, q) = (frame.local(r.a), frame.local(r.b));
+    let (lo, hi) = ([-size[0] / 2.0, -size[1] / 2.0, 0.0], [size[0] / 2.0, size[1] / 2.0, size[2]]);
+    let (mut t0, mut t1) = (0.0_f64, 1.0_f64);
+    for i in 0..3 {
+        let d = q[i] - p[i];
+        if d.abs() < 1.0e-12 {
+            if p[i] < lo[i] - FIT_TOLERANCE_FT || p[i] > hi[i] + FIT_TOLERANCE_FT {
+                return Ok(None);
+            }
+        } else {
+            let (u, v) = ((lo[i] - p[i]) / d, (hi[i] - p[i]) / d);
+            t0 = t0.max(u.min(v));
+            t1 = t1.min(u.max(v));
+        }
+    }
+    if t0 >= t1 {
+        return Ok(None);
+    }
+    let inside = (t1 - t0) * dist(p, q);
+    // An eighth of an inch is what two places are told apart by: less than that is at the surface, not inside it.
+    Ok((inside * 12.0 >= 0.125).then_some((joined.name, inside)))
 }
 
 // ---------------------------------------------------------------- the changes
@@ -565,6 +708,13 @@ pub const FIELDS: [&str; 8] = ["takes", "carries", "goes", "across", "back", "up
 /// out, both), across, back, up (formulas of the item's width, depth and height), faces (back, front, left, right, up, down) or
 /// size (a length, or none). A place changed is Assumed, `how` saying who changed it.
 pub fn connection_set(job: &mut Job, item: &str, connection: &str, field: &str, value: &str) -> Result<ConnectionDone, String> {
+    connection_set_how(job, item, connection, field, value, super::Asked::Window, None)
+}
+
+/// `connection_set`, told who is asking and, where they say so, how sure and where from (call 213 point 9): a size typed on a connection
+/// says it was typed there ("typed at the command line; not checked against the maker's sheet") unless it is given how sure and where from;
+/// it is never the place's source, and never Known on a say-so.
+pub fn connection_set_how(job: &mut Job, item: &str, connection: &str, field: &str, value: &str, asked: super::Asked, how: Option<Entered>) -> Result<ConnectionDone, String> {
     all_or_nothing(job, |job| {
         let (path, name, it, mut rows) = item_of(job, item)?;
         let at = rows.iter().position(|r| r.name.eq_ignore_ascii_case(connection.trim())).ok_or_else(|| {
@@ -610,7 +760,16 @@ pub fn connection_set(job: &mut Job, item: &str, connection: &str, field: &str, 
                     r.size = None;
                 } else {
                     let (len, unit) = units::parse_length(value).map_err(|why| format!("the {shown_name} connection's size: {why}"))?;
-                    let source = r.size.as_ref().map(|s| s.source.clone()).unwrap_or_else(|| r.place_from.clone());
+                    if how.is_some_and(|h| h.status != Status::Assumed) {
+                        return Err(format!("the {shown_name} connection's size is Assumed: a size on a connection is Known only where somebody measures it on the thing, and a measurement of a connection is not taken here"));
+                    }
+                    let source = match how {
+                        Some(h) if !h.source.trim().is_empty() => h.source.trim().to_string(),
+                        _ => format!("typed {}; not checked against the maker's sheet", match asked {
+                            super::Asked::Window => "in the window",
+                            super::Asked::CommandLine => "at the command line",
+                        }),
+                    };
                     r.size = Some(crate::value::Val { value: Some(len), unit: unit.to_string(), status: Status::Assumed, source });
                 }
                 format!("the {shown_name} connection's size is {} now", if none { "not said".to_string() } else { value.to_string() })

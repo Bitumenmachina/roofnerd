@@ -69,7 +69,7 @@ fn a_suppliers_own_list_sets_what_it_can_and_says_what_it_could_not() {
         [
             (6, "the job has no material called \"Zinc, 0.7 mm\"".to_string()),
             (7, "Copper, 16 oz: priced by the sheet; the job buys Copper, 16 oz by the lb".to_string()),
-            (8, "Lead-coated copper: its price, \"call\", is not a figure".to_string()),
+            (8, "Lead-coated copper: its price, \"call\", is not a figure; write a price as dollars, like $4.25/SF or $180/EA".to_string()),
         ]
     );
     assert_eq!(b.columns_not_used, ["Lead time"]);

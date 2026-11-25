@@ -11361,6 +11361,93 @@ Each step starts from an empty job unless it says otherwise.
 14. A block's Up from typed `height` with its Up to `height`: refused, no
     thickness. Across from `width / 2` and Across to `0`: refused, backwards.
 
+**Built (2026-11-25).** Accepted by the lead's own run in the worker's copy: 1,085
+tests in the six command-line crates (667, 45, 6, 73, 122, 172), 57 command-line
+demonstrations, no output with FAIL in it, the gates, `tools/portmap.sh` and
+`tools/licenses.sh`; the sample whole house unchanged to the byte.
+- Step 4 reads "joined to Lavatory's Waste connection and goes on 18 in inside
+  it": the pipe runs the whole depth of the lavatory.
+- Step 7: a thing turned 450 degrees reads 90; turned again it reads 270 where it
+  read -90.
+- Step 13 reads as written, in call 212's words (ruled in the second round; the
+  first round kept older words).
+- Step 14 is refused at the item's own size, and where the block is flat at all
+  the sizes a shape is tried at; a block backwards only on a very small item is
+  not refused (DECISIONS.md, "Call 213, as built", point 3).
+- Not right: a thing far above a level the job has is not flagged; decimal
+  inches are still said in a shape's worked blocks.
+
+## A maker's model brought in as an item: a demonstration, written before it is built (call 214; 2026-11-25)
+
+`demos/maker-model.sh`, at the command line (contract
+`handoff/contracts/contract-214M.md`). The maker, the product and every figure are
+made up. The files are written by hand for the demonstration, kept beside the
+tests, and each is passed by IfcOpenShell run as an outside checker before the
+program reads it.
+
+File 1, in millimetres, no building and no level: one sanitary terminal of the
+type "Northgate NL-2018", its body a solid of six faces from (0, 0, 0) to
+(508, 457.2, 203.2); the manufacturer's property set on the type says Manufacturer
+"Northgate Fixtures" and ModelLabel "NL-2018"; three connection points on it: cold
+water in at (355.6, 457.2, 50.8), hot water in at (152.4, 457.2, 50.8), waste out
+at (254, 457.2, 0) facing down. By hand:
+
+1. A new job; the file brought in as a maker's model: **1 item, "Northgate
+   NL-2018", a fixture, 20 in wide, 18 in deep, 8 in high** (508, 457.2 and 203.2
+   mm), each Assumed and naming the file; maker Northgate Fixtures and model
+   NL-2018, Assumed; nothing is set down; the job has no level and needs none.
+2. Its connections: **cold water 4 in to one side of the middle** (355.6 less 254
+   is 101.6 mm), at the back, **2 in up**; hot water 4 in to the other side, 2 in
+   up; waste on the middle, at the back, at the foot, facing down. Three rows,
+   Assumed, naming the file.
+3. The reply says it is drawn as a box and that the body's own shape was not kept.
+4. A level made and the item set down: `takeoff` names its three connections
+   open, as for any item.
+5. The same file again: refused by name, and the job is byte for byte what it
+   was.
+6. File 2: the same product written as a proxy. Brought in plainly: left out,
+   named, saying how to say what it is. With `--as fixture`: 1 item.
+7. File 3: the same product with its body as one shape shared by its type, two of
+   them in the file: **1 item**, and the reply says 2 of that type were in the
+   file.
+8. File 4: a body the reader cannot read (the worker says which kind it chose and
+   why): the item comes in with its three sizes Unknown, saying why, and is said
+   not to be drawn until it has sizes.
+9. File 5: no manufacturer's property set: maker and model Unknown, "not said in
+   the model".
+10. File 1 with a fourth connection point 100 mm outside the body: three rows are
+    written and the fourth is named as outside the item and not written.
+
+Not built yet.
+
+## A cabinet by rule: a demonstration, written before it is built (call 215; 2026-11-25)
+
+`demos/cabinet-rules.sh`, at the command line (contract
+`handoff/contracts/contract-215M.md`). Every figure is made up or a starter row's.
+A new job, the starter items brought in, one level. By hand (the worker fits each
+step to the words the `cabinets` verb already takes):
+
+1. Every starter cabinet code is what its rule makes: **35 of 35**, sizes and
+   what it is drawn as (B12 to B36 are 24 in deep and 34 1/2 in high; W1230 is
+   12 in wide, 12 in deep, 30 in high; W3018 is 30 wide and 18 high; T1884 is 18
+   wide, 24 deep, 84 high; LS36 is 36 wide and 36 deep; F3 is 3 in wide).
+2. A run of B15, B30 and B42: B42 is not in the chest and **is made by the rule
+   for B: 42 in wide, 24 in deep, 34 1/2 in high**, Assumed, saying the rule; the
+   reply flags 42 in as not a stocked width. Three boxes are set, **87 in** of
+   run (15 and 30 and 42: 7 ft 3 in). The chest has one more item.
+3. W3342: made, **33 in wide, 12 in deep, 42 in high**, hung where the starter
+   wall boxes hang. T2490: 24 in wide, 24 in deep, 90 in high, on the floor.
+4. SB42 is made by the rule for SB, not the rule for B (it says which).
+5. Refused, each saying how to write it: W33 (the rule for W reads four digits),
+   B (no number), X42 (no rule reads X; the letters the rules know are listed).
+6. `items` lists B42, W3342, T2490 and SB42 with the rest; written out and
+   brought into a new job they are the same rows, byte for byte.
+7. The rules written out as a table, the rule for B changed there to 21 in deep,
+   and brought back: B45 asked for afterwards is 21 in deep; B42, made before,
+   is still 24 in deep.
+8. The saved job of a run of starter codes only (B15, B30, SB36 with a
+   countertop) is byte for byte the job the program wrote before this work.
+
 Not built yet.
 
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
@@ -11468,7 +11555,15 @@ above):
    drawn and changed on the bench, a pipe's end catching one) is contracted and
    not started (`handoff/contracts/contract-211W.md`, its demonstration above).
    Window jobs written and waiting, in the order to take them: `contract-207W.md`
-   (the Prices tab), `contract-211W.md`, `contract-210W.md`.
+   (the Prices tab), `contract-211W.md`, `contract-210W.md`. **The command line
+   was judged a second time on 2026-11-25** (`research/judgment-cli-1125b.md`,
+   twenty-two findings, the worst a rename that left a job unopenable): ruled in
+   call 213 and fixed ("Call 213, as built"; 1,085 command-line tests, 57
+   demonstrations). **The bench's last two steps are designed and not built**:
+   a maker's model brought in as an item (call 214, `contract-214M.md`) and a
+   cabinet by rule (call 215, `contract-215M.md`), each with its demonstration
+   above and the survey both rest on
+   (`research/survey-maker-model-and-cabinets.md`).
 2. **Small, and said where found**: the per-level count of what is set down is
    the model's now (call 205M) and the sheet window still counts it itself
    (`sheet.rs`, `set_down`: one call to change); after the Cabinets tool is put

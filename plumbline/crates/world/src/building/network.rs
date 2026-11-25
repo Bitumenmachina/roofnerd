@@ -105,11 +105,13 @@ pub struct Group {
 
 #[derive(Clone, Debug)]
 pub struct Warning {
-    /// `systems_meet`, `domains_meet`, `joined_mid_run` or `smaller_downstream`.
+    /// `systems_meet`, `domains_meet`, `joined_mid_run`, `over_connection` or `smaller_downstream`.
     pub kind: &'static str,
     pub at: Option<P3>,
     pub elements: Vec<String>,
     pub message: String,
+    /// For `over_connection`: the connection a run passes over, by its thing's path and its place in the thing's list.
+    pub connector: Option<(String, usize)>,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -365,11 +367,11 @@ pub fn network(job: &mut Job, system: Option<&str>, storey: Option<&str>, tolera
         let at = ns.first().map(|&n| nodes[n].at);
         if systems.len() > 1 {
             let names: Vec<String> = systems.iter().map(|s| tree.called(s)).collect();
-            warnings.push(Warning { kind: "systems_meet", at, elements: elements.iter().cloned().collect(), message: format!("runs of the systems {} are joined in one network", names.join(", ")) });
+            warnings.push(Warning { kind: "systems_meet", connector: None, at, elements: elements.iter().cloned().collect(), message: format!("runs of the systems {} are joined in one network", names.join(", ")) });
         }
         if domains.len() > 1 {
             let names: Vec<String> = domains.iter().map(|d| format!("{d:?}").to_lowercase()).collect();
-            warnings.push(Warning { kind: "domains_meet", at, elements: elements.iter().cloned().collect(), message: format!("connections of {} are joined in one network", names.join(", ")) });
+            warnings.push(Warning { kind: "domains_meet", connector: None, at, elements: elements.iter().cloned().collect(), message: format!("connections of {} are joined in one network", names.join(", ")) });
         }
     }
     for (n, node) in nodes.iter().enumerate() {
@@ -379,7 +381,14 @@ pub fn network(job: &mut Job, system: Option<&str>, storey: Option<&str>, tolera
         if node.joints.iter().any(|j| matches!(j, Joint::RunSide { .. })) {
             let mut elements: Vec<String> = node.joints.iter().map(|j| j.element().to_string()).collect();
             elements.dedup();
-            warnings.push(Warning { kind: "joined_mid_run", at: Some(node.at), elements, message: "a run or a connection meets another run along its length, with no fitting there".into() });
+            // Where the other is a thing's connection and no run ends there, a run passes over a connection: joined to it, as the network always
+            // held, and said as that (call 213 point 3).
+            let over = node.joints.iter().find_map(|j| if let Joint::Connector { element, index, .. } = j { Some((element.clone(), *index)) } else { None }).filter(|_| !node.joints.iter().any(|j| matches!(j, Joint::RunEnd { .. })));
+            if over.is_some() {
+                warnings.push(Warning { kind: "over_connection", connector: over, at: Some(node.at), elements, message: "a run passes over a thing's connection, with no fitting there".into() });
+            } else {
+                warnings.push(Warning { kind: "joined_mid_run", connector: None, at: Some(node.at), elements, message: "a run or a connection meets another run along its length, with no fitting there".into() });
+            }
         }
     }
     // A drain (a group with a waste connector) flows down: no pipe leaving a node downhill is narrower than one coming down to it.
@@ -419,7 +428,7 @@ pub fn network(job: &mut Job, system: Option<&str>, storey: Option<&str>, tolera
                 let mut elements: Vec<String> = up.iter().map(|x| x.0.to_string()).collect();
                 elements.push(path.to_string());
                 let inches = |feet: f64| crate::view::num((feet * 12.0 * 1.0e4).round() / 1.0e4);
-                warnings.push(Warning { kind: "smaller_downstream", at: Some(node.at), elements, message: format!("a drain narrows downstream: {} in leaving where {} in comes in", inches(*w), inches(widest_in)) });
+                warnings.push(Warning { kind: "smaller_downstream", connector: None, at: Some(node.at), elements, message: format!("a drain narrows downstream: {} in leaving where {} in comes in", inches(*w), inches(widest_in)) });
             }
         }
     }
