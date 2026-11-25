@@ -717,8 +717,28 @@ pub fn clash_to_verify() -> Color {
     Color::srgb(0.95, 0.60, 0.05)
 }
 
+/// A sentence or a name with its first letter made a capital. A name is what a person typed and may be
+/// empty or begin with a letter of more than one byte (an accent): taking the first BYTE of it, as seven
+/// places in the window did until call 216's read of the code, stops the program on such a name.
+pub fn capital(s: &str) -> String {
+    let mut rest = s.chars();
+    match rest.next() {
+        Some(first) => first.to_uppercase().collect::<String>() + rest.as_str(),
+        None => String::new(),
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn a_capital_is_put_on_any_name_a_person_can_type() {
+        assert_eq!(super::capital("vanity with a panel"), "Vanity with a panel");
+        assert_eq!(super::capital("Wall"), "Wall");
+        assert_eq!(super::capital(""), "");
+        assert_eq!(super::capital("\u{e9}tag\u{e8}re"), "\u{c9}tag\u{e8}re");
+        assert_eq!(super::capital("\u{df}"), "SS");
+    }
+
     use super::*;
 
     #[test]

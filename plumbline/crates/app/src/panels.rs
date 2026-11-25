@@ -2816,7 +2816,7 @@ fn item_bench(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Sna
     heading(p, fonts, "Drawn as");
     hint(p, "Click one. Every one of this item already placed is drawn that way, inside the box of its sizes.");
     let by_name = drawn.contains("by its name") || drawn.contains("its name saying");
-    let cap = |name: &str| format!("{}{}", name[..1].to_uppercase(), &name[1..]);
+    let cap = |name: &str| theme::capital(name);
     // The job's own shapes first, marked as the job's (call 205), then what the program has.
     let mut choices: Vec<(String, Option<String>, bool)> = doc.job.shapes.iter().map(|s| (cap(&s.name), Some(s.name.clone()), true)).collect();
     choices.push(("What its name says".to_string(), None, false));

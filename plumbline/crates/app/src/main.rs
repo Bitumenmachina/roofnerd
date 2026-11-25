@@ -366,7 +366,7 @@ fn change(doc: &mut Doc, what: &str, change: impl FnOnce(&mut Doc, &str, usize) 
             if !lost.is_empty() {
                 more.push_str(&format!("\nLost with them: the assembly or cost lines on {}", lost.join(", ")));
                 if let Some(went) = plumbline_world::view::went_with_said(&priced_before, &mut doc.job) {
-                    more.push_str(&format!("\n{}{}", went[..1].to_uppercase(), &went[1..]));
+                    more.push_str(&format!("\n{}", theme::capital(&went)));
                 }
                 // The planes that stay change size when one goes, and what is priced on
                 // them changes with it: a hip made a gable drops a plane's dollars and
@@ -1262,7 +1262,7 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
                 Ok((added, taken, rewritten, kept, took)) => {
                     doc.job.derive();
                     // What the lines that came off took out of the job cost (J23-5).
-                    let money = plumbline_world::view::came_off_said(&priced_before, &mut doc.job).filter(|s| s.contains('$')).and_then(|s| s.split_once(": ").map(|(_, rest)| format!(" {}{}", rest[..1].to_uppercase(), &rest[1..]))).unwrap_or_default();
+                    let money = plumbline_world::view::came_off_said(&priced_before, &mut doc.job).filter(|s| s.contains('$')).and_then(|s| s.split_once(": ").map(|(_, rest)| format!(" {}", theme::capital(rest)))).unwrap_or_default();
                     doc.edit("applied an assembly");
                     // Its lines are on the estimate: the sheet turns to it.
                     doc.tab = model::Tab::Estimate;

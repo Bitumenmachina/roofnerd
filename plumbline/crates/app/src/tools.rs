@@ -1989,7 +1989,7 @@ pub fn delete(doc: &mut Doc) {
         doc.edit("deleted it");
         let said = format!("Deleted {}: {}.", plumbline_world::view::so_many(gone.len(), "thing"), gone.join(", "));
         match went {
-            Some(went) => doc.say(Tone::Warned, format!("{said} {}{}", went[..1].to_uppercase(), &went[1..])),
+            Some(went) => doc.say(Tone::Warned, format!("{said} {}", theme::capital(&went))),
             None => doc.say(Tone::Done, said),
         }
         doc.redraw();
@@ -2018,7 +2018,7 @@ pub fn delete(doc: &mut Doc) {
                     _ => format!("Deleted {}.", gone.join(", ")),
                 };
                 match went {
-                    Some(went) => doc.say(Tone::Warned, format!("{said} {}{}", went[..1].to_uppercase(), &went[1..])),
+                    Some(went) => doc.say(Tone::Warned, format!("{said} {}", theme::capital(&went))),
                     None => doc.say(Tone::Done, said),
                 }
             }

@@ -506,8 +506,9 @@ fn scan_file(doc: &mut Doc, name: &str, units: plumbline_plans::scan::Units, up:
 pub fn where_written(why: &str) -> String {
     const WHERE: &str = "Estimate workbook, under Write out";
     let why = why.replace("write it out with `export estimate`", &format!("write it out with {WHERE}"));
-    if why.contains("the estimate is written out as a workbook") && !why.contains(WHERE) {
-        return why.replace("the estimate is written out as a workbook", &format!("the estimate is written out as a workbook ({WHERE})"));
+    // The model's sentence since call 209 ends "it is written out as a workbook" (`crates/ifc/src/write.rs`).
+    if why.contains("written out as a workbook") && !why.contains(WHERE) {
+        return why.replace("written out as a workbook", &format!("written out as a workbook ({WHERE})"));
     }
     why
 }
@@ -521,8 +522,9 @@ mod tests {
         // The model's sentence as it is now, and as call 209 point 3 words it: either way the window says where, and no command.
         let was = where_written("the estimate is not part of a building model: write it out with `export estimate`");
         assert_eq!(was, "the estimate is not part of a building model: write it out with Estimate workbook, under Write out");
-        let now = where_written("the estimate is not part of a building model; the estimate is written out as a workbook");
-        assert_eq!(now, "the estimate is not part of a building model; the estimate is written out as a workbook (Estimate workbook, under Write out)");
+        // (The sentence here is the model's own, word for word; the test first held a guess at it, and the guess was wrong.)
+        let now = where_written("the estimate is not part of a building model: it is written out as a workbook");
+        assert_eq!(now, "the estimate is not part of a building model: it is written out as a workbook (Estimate workbook, under Write out)");
         // Said once: a sentence that already says where is left as it is.
         assert_eq!(where_written(&now), now);
         // Any other sentence is left alone.

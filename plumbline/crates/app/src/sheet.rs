@@ -358,7 +358,7 @@ fn planes(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsho
                     None => match snap.dress.roofs.get(&plane.path) {
                         Some(said) => {
                             let name = said.what.said();
-                            words(c, fonts, format!("{}{}", name[..1].to_uppercase(), &name[1..]), 12.5, Weight::Regular, theme::ink());
+                            words(c, fonts, theme::capital(name), 12.5, Weight::Regular, theme::ink());
                         }
                         None => words(c, fonts, "none priced yet", 12.5, Weight::Regular, theme::ink_faint()),
                     },
@@ -399,7 +399,7 @@ fn lines(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot
         Some((only, _)) => only.clone(),
         None => String::new(),
     };
-    let title = format!("{}{}", title[..1].to_uppercase(), &title[1..]);
+    let title = theme::capital(&title);
     table(p, fonts, &title, format!("{}", snap.lines.len()), |t| {
         header_row(t, fonts, &[("", 7.0, false), ("Name", 0.0, false), ("Kind", 130.0, false), ("On the tape", 120.0, true), ("Length", 110.0, true)]);
         for line in &snap.lines {
