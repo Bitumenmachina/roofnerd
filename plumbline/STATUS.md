@@ -11598,6 +11598,47 @@ words the verbs already take, and says where a figure of the lead's is wrong):
 
 Not built yet.
 
+## A CAD drawing in and out: a demonstration, written before it is built (call 221; 2026-11-25)
+
+`demos/dxf.sh`, at the command line (contract `handoff/contracts/contract-221M.md`).
+Every figure is made up. The drawing is written by hand for the demonstration and
+kept beside it: a DXF in inches holding, on layer WALLS, four lines round a
+rectangle 240 by 144 (20 ft by 12 ft); on layer FURNITURE, a circle of radius 18 at
+(120, 72); a line of text "KITCHEN" at (60, 72); and one block of two lines
+inserted twice. By hand:
+
+1. Brought in on a level: **a sheet at true size with nothing to calibrate**; its
+   scale Assumed, saying the file is drawn in inches. The sheet is 20 ft by 12 ft:
+   a wall traced corner to corner along the bottom line is **20 ft** long.
+2. Its lines: **4 on WALLS**, the circle on FURNITURE, the block's 2 lines
+   twice (4), so 8 straight lines and 1 circle; the reply counts them by layer
+   and says the text line it found.
+3. FURNITURE switched off: the circle is not among the sheet's lines; the
+   pointer no longer catches its center.
+4. The same file with its units line taken out: it comes in with no scale and
+   says one dimension is wanted; given "this line is 20 ft" on the bottom line,
+   it is the same sheet as step 1.
+5. The walls finder on it finds the rectangle's four sides as wall lines (the
+   worker says what it offers; a single line is a wall's face or its center as
+   the finder already rules).
+6. A file named `.dwg`, and a file that is DWG whatever its name: refused by
+   name, saying to save it as DXF; nothing is brought in.
+7. Out: a job of four walls 20 ft by 12 ft, 6 in thick, with one door 3 ft wide
+   and one room named Kitchen, written as DXF: read back by the program's own
+   reader it holds the walls' outlines on the walls layer (**8 long lines**: two
+   faces to each of four walls, less where the door cuts one; the worker gives
+   the count and shows it), the door on the doors layer, and the text "Kitchen"
+   with its area exactly as `takeoff` gives the room's (the worker quotes it; 20
+   ft by 12 ft on the walls' line is 240 SF, and the room is measured as the
+   program already measures a room), at true size: the outer rectangle reads
+   20 ft by 12 ft.
+8. Written out and brought in again as a sheet: tracing the outer line gives the
+   same 20 ft by 12 ft.
+9. A drawing with things the reader cannot carry (a hatch, an image, a 3D
+   solid): each is counted in the reply as not brought in, by kind.
+
+Not built yet.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **As of 2026-11-25, 06:00 UTC (the lead). Read this block first; what is below it is

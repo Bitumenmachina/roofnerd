@@ -9323,3 +9323,106 @@ best-made games and editors (`research/review-1125-window-behaviours.md`, points
     `handoff/contracts/contract-219M.md`; then the window in three jobs: shown
     before the click with sizes at the pointer and the turn (points 1 to 4, 8);
     move, copy and like-this-one (5, 6); the search (7).
+
+### Call 220. Patrick, 2026-11-25: the main thing to remember (any common file in and out; they own their database; full depth without overwhelming; clean code, clean screens)
+
+His words: "Main thing to remember here is user will be able to bring any of their
+file types that are common to AEC in , export out similar , they own their
+database and it has the depth of a full high end home custom build but without
+overwhelming field guys and new users , clean code clean screens".
+
+It is folded into CLAUDE.md as four tests for anything built. How each clause is
+read against what there is, and what follows.
+
+**1. "bring any of their file types that are common to AEC in, export out
+similar".** What comes in and goes out today, and what does not:
+
+| A builder has | In today | Out today | Ruled |
+|---|---|---|---|
+| PDF plans, drawn or scanned | yes | the plan set, as PDF | held |
+| Pictures of plans (PNG, JPEG) | yes | | TIFF is how scanned sets are kept: taken in |
+| A Bluebeam-marked PDF (its measured lengths, areas and counts are kept in the PDF as ordinary PDF notes) | the page, not the marks | | **the marks read in as quantities, Assumed, each naming its mark** |
+| CAD drawings: DXF | no | no | **in as a sheet to trace with its lines caught and its own scale; out as the plan of a level** (call 221) |
+| CAD drawings: DWG | no | no | cannot be read with code this program may link (the free reader is GPL; the other is a paid, closed kit). The program says so when one is picked and says to save it as DXF, which every CAD program does |
+| A Revit model | by IFC | by IFC | Revit's own file is closed; IFC is its way in and out, and the program says so |
+| A SketchUp model | no | no | its own file is closed; it comes in as DXF or as a mesh (below) |
+| Another trade's or a designer's model (IFC 2x3, IFC4) | yes | IFC4, checked | held; clashes also go out as an issue list (BCF) |
+| A maker's sheet (PDF) | yes, into an item | | held |
+| A maker's model (IFC) | being built (call 214) | | |
+| Price lists, prior estimates, assembly and item libraries (CSV, XLSX) | yes | yes; the estimate as a workbook with live formulas | held |
+| A phone scan: points (PLY) | yes | | **LAS and E57 taken in** if a reader under a permitted licence exists; said if not |
+| A scan or a model as a mesh (OBJ, glTF) | no | no | **in as a thing to trace over; the house out as glTF** to look at anywhere |
+| A phone's room scan (Apple's own: walls, doors, windows with sizes) | no | | taken in as a first tracing (proposal 40) |
+| The job itself | yes | yes | held, without loss |
+
+Every reader and writer added is behind a table the lead fixes first, is a
+worker's job, links only code under a permitted licence, and reports what it
+could not carry; nothing is lost in silence (the fixed rule). **These go to the
+command-line builder beside the window work, starting now with DXF.**
+
+**2. "they own their database".** Every table the program works from is the
+user's own, in the open: items, shapes, where items connect, cabinet rules,
+assemblies, prices by supplier. Each is written out and brought back today, one
+table at a time. **Ruled: also as one thing.** "My database" written out is one
+workbook with a tab for each table (and the same as a folder of CSV), and
+brought back whole it is, tab for tab, what was written. Nothing in it is in a
+form only this program reads. The job stays a readable text file.
+
+**3. "the depth of a full high end home custom build but without overwhelming
+field guys and new users".** The depth is the sixteen divisions with their
+assemblies, the trades drawn, the bench. **Ruled: depth is shown on demand, and
+there are three ways to stand in front of the same job**, chosen by one control
+that reads at a glance: *Field* (the verify-in-field list, where each question
+is, a measurement typed or lasered, a photo; nothing else), *Estimate* (the
+drawing tools, the sheet, the lists), and *Everything* (the bench, formulas,
+every panel). Nothing is hidden for good and no number changes with the view; a
+panel a view leaves out is a switch away. A new job opens in Estimate with the
+ten next steps. This goes with the two windows on any screen (step 3 of call
+217's order).
+
+**4. "clean code clean screens".** Clean screens: every screen is judged by a
+model that did not build it against one question a builder would ask, "what on
+this screen do I not need right now", and what it names is put away or removed.
+Clean code: the long functions and the files that do several jobs are split
+with no change in what they do, a worker's job with the tests as its check; the
+window is driven from inside for its tests; nothing is added to a function
+already over 250 lines.
+
+### Call 221. A CAD drawing in and out: DXF (2026-11-25; the lead's design, not built)
+
+Call 220, point 1. DXF is the one CAD format that is published (Autodesk's own
+reference) and that every CAD program writes; a scan app's floor plan and a
+cabinet shop's parts go by it too.
+
+1. **In, as a sheet to trace.** A DXF picked under Bring in becomes a drawing on
+   a level, as a PDF page does: its lines, arcs, circles and polylines are the
+   sheet's lines, caught by the pointer as a drawn PDF's are; its text is its
+   text; a block is drawn where it is inserted. Curves are kept as curves where
+   the sheet can hold them and as short straight pieces where it cannot, said
+   with how many.
+2. **Its scale is its own.** A DXF says what unit it is drawn in. Where it does,
+   the sheet comes in at true size with nothing to calibrate, the scale Assumed
+   and sourced to the file's own units; where it does not, the sheet asks for
+   one dimension as a PDF does. Nothing is guessed.
+3. **Its layers come with it**: each layer is a switch on the sheet, so walls can
+   be traced with the furniture layer off. Layer names are the file's own.
+4. **The walls finder runs on it** as it runs on a drawn PDF (call 188); what it
+   finds is offered, not made.
+5. **Out: the plan of a level** as DXF, in feet and inches at true size: walls as
+   they are drawn on plan, doors and windows, rooms' names and areas, fixtures
+   and equipment as their outlines, runs as their centerlines, each on a layer
+   named the way US practice names layers (the AIA and National CAD Standard's
+   names, checked against a source and not written from memory; where none is
+   found for a thing, a plain name and the list says so).
+6. **What does not go and what did not come is said**: a 3D solid, an image in
+   the drawing, a hatch, a dimension object (its text comes, its arrows do not,
+   or whatever the reader can and cannot do) are counted in the reply by kind.
+7. **DWG is refused by name**: a file picked that is DWG says it is a closed
+   format this program cannot read, and to save it from the CAD program as DXF.
+   The same for a Revit file (IFC) and a SketchUp file (DXF or a mesh).
+8. The reader and writer are a crate under a permitted licence if one reads what
+   is needed (`tools/licenses.sh` decides), else written here from the published
+   reference. The saved job holds a DXF sheet as it holds a PDF sheet: the file's
+   name and where it stands, not a copy of its insides.
+9. Not in this call: the window's entry under Bring in and Write out (a small
+   window job after); parts for a cabinet shop (with the cut list, proposal 38).
