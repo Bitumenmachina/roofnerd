@@ -8819,3 +8819,89 @@ the job it wrote before, byte for byte.
    model read back still gives a place as three figures in feet; the window's
    half is not built (`handoff/contracts/contract-211W.md`, STATUS.md has its
    demonstration).
+
+### Call 213. The command line judged a second time on 2026-11-25: twenty-two findings ruled on
+
+A Sonnet judge that built none of it tried the last day's command-line work
+(calls 205 to 212) on a frozen copy of 3338f9a, from empty jobs
+(`research/judgment-cli-1125b.md`). What held: every place a connection stands
+after a turn, by hand; things following their item; a measured connection staying
+put; every table out and back byte for byte; another trade's runs brought in with
+every count agreeing with `takeoff`, `clashes` and the verify list and the price
+unmoved; a price set by name agreeing in the estimate, the price list, the
+workbook and the table. What did not, and what is ruled (F numbers are the
+judge's):
+
+1. **F16, a job destroyed. An item renamed to the name of a material is taken,
+   and the job can never be opened again.** A rename holds the rule bringing-in
+   already holds: two things in one place cannot go by one name. It is refused
+   and the job is byte for byte what it was. Every kind of thing that can be
+   renamed is held to it, by test.
+2. **F1, F7: how far a run stands off its connection is measured, not carried
+   over.** The reply gave how far the connection moved. It gives how far the
+   run's end is from the connection as both now stand. A run that already stood
+   off and is carried farther is said too, and so is a run that the change
+   brings onto its connection: the reply says who now stands off, who still
+   does and by how much, and who is now joined.
+3. **F2: a run that passes over a connection is joined to it, and that stands**
+   (the network has always held it: a trunk passing a register's connection
+   feeds it). But two things are said wrongly. `takeoff` calls it "a run meets
+   another along its length with no fitting" where the other is a thing's
+   connection: it says so, naming the thing and the connection. And where a run
+   joined to a thing goes on inside it, the clash's line says it is joined to
+   that connection and goes on so many inches inside, so the two lists read as
+   one fact.
+4. **F3: `connect` refused where a run's end is near an open connection of its
+   sort and outside the thing** says which connection and how far, in inches,
+   as it does inside the thing.
+5. **F4: where a size was typed is said by who typed it**: the window says
+   "typed in the window", the command line "typed at the command line". One
+   function, told by its caller.
+6. **F5: at the command line, the same size typed again is not a check.** Call
+   197 made the second typing of a size the check, for the window, where the
+   message says what happened and a person is looking at the item. At the
+   command line the same line run twice would mark a value Known that nobody
+   measured. There, the same size again changes nothing and says so, and a
+   value becomes Known the way every other does: with how sure and where from.
+   The window's way is unchanged. Each demonstration that typed twice at the
+   command line to make a size Known is listed and moved to the stated way.
+7. **F6**: a turn is said one way everywhere (from 0 up to 360 degrees,
+   counter-clockwise from east); a turn by nothing says it changes nothing.
+8. **F8, F20: a length inside a figure is written the way a length is written
+   anywhere**: `1/2 in`, `5 1/2 in`, `3 ft 6 in`, `3'6"`. A number, a slash, a
+   number and a unit is a fraction of that unit; nothing that was a figure
+   before reads otherwise. A refusal says how to write it and shows no stray
+   marks. A minus is always a minus.
+9. **F9: a size typed on a connection says it was typed**: it takes how sure
+   and where from as every value does, and without them is Assumed, "typed at
+   the command line; not checked against the maker's sheet". It never wears the
+   place's source.
+10. **F10, F11, F12, F14, F17, F19: words.** A workbook is not called CSV; rows
+   the job already has are counted as that, not as no rows; each bad row of a
+   table gives its own reason, once; a refused size names the size typed, and
+   says to move the connection first; counts take their plural ("4 walls", "1
+   of them stands") and a thing has one word in every reply (a piece of
+   equipment, a fixture); a price that is not a figure says how to write one,
+   and `1e3` is not a price; "take the item's shape off" names the way that
+   exists to draw the item as something else.
+11. **F13: a thing above the top of the job's highest level is flagged.** The
+   note speaks of the things, not the level ("each was put on the level it
+   stands within"), and things that stand above the top of the highest level,
+   or below the lowest, are counted and named with how far, and the reply says
+   to check the model's heights against the job's.
+12. **F15: `--only runs` brings every fixture and piece of equipment, reached by
+   a run or not** (an air handler is wanted before its ducts are drawn). That
+   is what was built; the usage line said "they reach" and is corrected. The
+   stray "?none" beside a thing on no system goes.
+13. **F18: a shape of the job's own that no item is drawn as is written out with
+   the rest**, and the reply counts them. Out and back stays byte for byte.
+14. **F21: a refused figure is tried at the item's own size first.** Where it
+   fails there, the refusal speaks of that item and its sizes. Only where it
+   holds there and fails on the smaller item a shape is also tried on does it
+   say so, and why: a shape has to hold on a smaller item too.
+15. **F22: a block with no thickness, or written backwards, is refused**, naming
+   the figure and both ends, at the item's own size and at the sizes a shape is
+   tried at. If a starter shape has such a block at a tried size, the worker
+   stops on it and says which.
+16. Not changed: a price to a fraction of a cent is taken (unit prices are
+   written so); lines are rounded and then added, as before.

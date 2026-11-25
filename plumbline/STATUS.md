@@ -11306,6 +11306,63 @@ middle, at the back, 19 in up.
 
 Not built yet.
 
+## The command line judged a second time (2026-11-25), and its findings fixed: a demonstration, written before it is built (call 213)
+
+`demos/judged-1125b.sh`, at the command line (contract
+`handoff/contracts/contract-213M.md`; the judge's notes with each way to reproduce
+are `research/judgment-cli-1125b.md`). Every figure is made up or a starter row's.
+Each step starts from an empty job unless it says otherwise.
+
+1. Starter items brought in; a price list with a material "Plywood" brought in;
+   the Refrigerator renamed "Plywood": **refused**, and the job is byte for byte
+   what it was; `check` reads it.
+2. The starter Lavatory (20 in wide, 18 in deep) at (10, 20) with its starter
+   connections; its cold water is at (10.3333, 20.75). A pipe ended at
+   (10.3333, 20.95). The item's depth typed 24 in and back to 18 in: the reply
+   says the pipe's end is **2 3/8 in** from the cold water connection (0.2 ft is
+   2.4 in; the program writes inches to the sixteenth), not 3 in.
+3. The same with a second pipe ended exactly at the hot water connection, and
+   the depth typed 12 in: the back is then 6 in from the middle, 3 in nearer;
+   the reply says the second pipe now stands **3 in** off, and that the first
+   still stands off, now **5 3/8 in** (2.4 in and 3 in). Typed back to 18 in:
+   the second is said joined again.
+4. A pipe drawn through the lavatory from (10, 25) to (10, 18) at 19 in up, over
+   its waste connection at (10, 20.75): `takeoff` does not call the waste open
+   and names the lavatory's waste connection where it said a run meets another;
+   `clashes` says the pipe is joined to the waste connection and goes on inside
+   the lavatory.
+5. `connect` with a pipe's end 1/2 in outside the lavatory from its cold
+   connection: refused, naming the cold water connection and **1/2 in**.
+6. A size typed at the command line says "typed at the command line". The same
+   size typed again: nothing changes and it says so; it is not Known. With how
+   sure and where from it is Known.
+7. A thing turned by 450 degrees reads 90 degrees everywhere; by 0, it says
+   nothing changes.
+8. A connection's Up typed as `1/2 in`, `5 1/2 in`, `3 ft 6 in` and `3'6"`: each
+   taken, and shown as 1/2 in, 5 1/2 in and 42 in (the last two the same). On
+   an item 34 in high the 42 in is then refused as 8 in above the item.
+9. A connection's size typed with nothing else: Assumed, typed at the command
+   line. With how sure and where from: as said.
+10. A designer's model with a level at 25 ft and a duct 3 ft above it, brought
+    into the sample whole house (first floor at 0 ft, second at 10 ft and 9 ft
+    high, so its top is at 19 ft): the duct is 28 ft up, **9 ft above the top of
+    the second floor**, and the reply says so and says to check the heights.
+11. A model with one fixture and no run, as only its runs: the fixture comes in,
+    and the usage line says fixtures and equipment come whether a run reaches
+    them or not.
+12. A shape kept three times under three names with the item drawn as the last:
+    `export shapes` writes all three and says two are drawn by no item; brought
+    into a new job, all three are there.
+13. On the 36 in vanity (36 in wide, 21 in deep, 34 1/2 in high), a block's Up to
+    typed `height + 1 ft`: refused speaking of the vanity itself, **12 in above
+    the top**. Typed `36 in`: refused on the vanity itself, **1 1/2 in above the
+    top**. Typed `30 in`: it holds on the vanity and is refused for the smaller
+    item a shape is also tried on, saying why a shape is tried there.
+14. A block's Up from typed `height` with its Up to `height`: refused, no
+    thickness. Across from `width / 2` and Across to `0`: refused, backwards.
+
+Not built yet.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **As of 2026-11-25, 06:00 UTC (the lead). Read this block first; what is below it is
