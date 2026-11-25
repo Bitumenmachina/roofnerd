@@ -114,6 +114,8 @@ pub struct Orbit {
     pub wish: f32,
     /// A flight in the air: the view is carried from one pose to another and a hand takes it over (point 6).
     pub flight: Option<crate::nav::Flight>,
+    /// When the north arrow was last clicked (real seconds), for telling a double-click.
+    pub arrow_click: f32,
 }
 
 pub const HOME_YAW: f32 = -0.66;
@@ -121,7 +123,7 @@ pub const HOME_PITCH: f32 = 0.27;
 
 impl Orbit {
     pub fn new() -> Orbit {
-        Orbit { target: Vec3::ZERO, yaw: HOME_YAW, pitch: HOME_PITCH, distance: 120.0, now: (Vec3::ZERO, HOME_YAW, HOME_PITCH, 120.0), home: (Vec3::ZERO, 120.0), wish: HOME_PITCH, flight: None }
+        Orbit { target: Vec3::ZERO, yaw: HOME_YAW, pitch: HOME_PITCH, distance: 120.0, now: (Vec3::ZERO, HOME_YAW, HOME_PITCH, 120.0), home: (Vec3::ZERO, 120.0), wish: HOME_PITCH, flight: None, arrow_click: -10.0 }
     }
     /// Where the view is going, as a pose.
     pub fn pose(&self) -> crate::nav::Pose {
@@ -324,7 +326,7 @@ pub fn setup(mut commands: Commands, mut store: ResMut<GizmoConfigStore>, mut me
     broken.depth_bias = -0.004;
     broken.render_layers = RenderLayers::layer(0);
     let (grid, _) = store.config_mut::<GridLines>();
-    grid.line.width = 1.0;
+    grid.line.width = 1.6;
     grid.render_layers = RenderLayers::layer(0);
     // A room line is not a wall and not a run: dashed, in dark blue, in front of whatever
     // it lies on (it was lost over the pink of a demolished wall).
@@ -665,7 +667,7 @@ pub fn rebuild(
                 Some(before) => orbit.now.0 += to_view(origin, before),
             }
             *framed_about = Some(origin);
-            drawing.reach = (whole * 2.4 / 10.0).ceil() * 10.0;
+            drawing.reach = (whole * 4.0 / 10.0).ceil() * 10.0;
             for e in &ground {
                 commands.entity(e).despawn();
             }
@@ -3047,7 +3049,7 @@ mod move_tests {
         for _ in 0..70 {
             notch(&mut o, place, 1.0, true);
         }
-        while o.distance < 400.0 {
+        while o.distance < 299.0 {
             notch(&mut o, place, -1.0, true);
             assert!(dots_off(&o, &w, cursor, place) < 3.0);
         }

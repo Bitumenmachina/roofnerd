@@ -10,15 +10,16 @@ use bevy::prelude::*;
 pub const NOTCH: f32 = 0.9;
 /// The nearest the eye comes to what it looks at, in feet: 8 in, a hinge or a receptacle fills the window.
 pub const MIN_DISTANCE: f32 = 8.0 / 12.0;
-/// Out the wheel goes at least this far, in feet, whatever the size of the job: the whole lot.
-pub const LOT: f32 = 400.0;
+/// Out the wheel goes this many times the distance the job is framed at (1.6 sizes, so the house is about a sixth of the width): the house is then a tenth to a fifth of the window's width.
+pub const OUT: f32 = 3.0;
 /// Looking nearly straight down, in 3D (a plan is another view).
 pub const STRAIGHT_DOWN: f32 = 1.52;
 
-/// How far out the wheel will go: six times the distance the job is framed at, never under the
-/// lot, never over 6000 ft, and never less than where the eye already is.
+/// How far out the wheel will go: 3 times the distance the job is framed at (that is 1.6 times the building's size, so the
+/// building is 0.17 x (its longer side / its size) of the window's width: a tenth to a fifth, on its ground), never under 40 ft,
+/// never over 6000 ft, and never less than where the eye already is.
 pub fn furthest(home: f32, was: f32) -> f32 {
-    (home * 6.0).clamp(LOT, 6000.0).max(was)
+    (home * OUT).clamp(40.0, 6000.0).max(was)
 }
 
 /// The nearest and the furthest of what is drawn, in feet, for an eye this far from what it
@@ -131,6 +132,13 @@ pub fn pull_in(at: Vec2, dots: f32, lo: Vec2, hi: Vec2) -> Vec2 {
     }
 }
 
+/// Whether the name and size of a placed thing are written over it with no layer switched on (call 218, round 2): the thing that is
+/// selected, or the one that fills the middle of the view. `dots` is its size on the screen, `off_middle` how far its middle is from the
+/// middle of the clear part of the window, `height` the window's height, both in dots. Everything else waits for the Sizes layer.
+pub fn name_without_layer(selected: bool, dots: f32, off_middle: f32, height: f32) -> bool {
+    dots >= 48.0 && dots <= 1.5 * height && (selected || (dots >= 0.25 * height && off_middle <= 0.2 * height))
+}
+
 /// How big a thing of `feet` looks, in dots.
 pub fn dots_across(feet: f32, away: f32, height: f32) -> f32 {
     feet * height / (2.0 * away.max(0.01) * (crate::scene::LENS / 2.0).tan())
@@ -175,16 +183,45 @@ mod tests {
     fn the_wheel_runs_from_the_whole_lot_to_a_hinge() {
         // The nearest is eight inches, the furthest is never under the lot, and a big job goes further, to 6000 ft.
         assert_eq!(MIN_DISTANCE, 8.0 / 12.0);
-        assert_eq!(furthest(60.0, 60.0), 400.0);
-        assert_eq!(furthest(70.0, 70.0), 420.0);
+        assert_eq!(furthest(10.0, 10.0), 40.0);
         assert_eq!(furthest(5000.0, 5000.0), 6000.0);
         // Where the eye already is, it is not pulled in by a limit.
         assert_eq!(furthest(60.0, 900.0), 900.0);
         // A tenth of what is left each notch: from the lot to eight inches is about sixty notches.
         let n = notches_between(400.0, 8.0 / 12.0);
         assert!((59..=62).contains(&n), "{n} notches");
+        // From the farthest of the made-up house (92.8 ft framed, 2.5 times that out): about 55.
+        assert!((56..=60).contains(&notches_between(278.0, 8.0 / 12.0)));
         // 0.9 to the 60th of 400 ft is 0.72 ft, the lead's own working.
         assert!((400.0 * NOTCH.powi(60) - 0.7).abs() < 0.1);
+    }
+
+    #[test]
+    fn at_the_farthest_the_house_is_a_tenth_to_a_fifth_of_the_windows_width_whatever_its_shape() {
+        // The view is framed at 1.6 times the building's size (plan diagonal and height): `scene.rs`, where `home` is set.
+        for (w, d, h) in [(24.0_f32, 16.0, 17.0), (42.0, 30.0, 25.0), (120.0, 40.0, 30.0), (60.0, 60.0, 12.0)] {
+            let size = (w * w + d * d + h * h).sqrt();
+            let home = size * 1.6;
+            let far = furthest(home, home);
+            let across = 2.0 * far * (crate::scene::LENS / 2.0).tan() * (1600.0 / 960.0);
+            let fraction = w.max(d) / across;
+            assert!((0.1..=0.2).contains(&fraction), "{w} x {d} x {h}: {fraction} of the width at {far} ft");
+        }
+        // And never pulled in by a limit below where it is.
+        assert_eq!(furthest(60.0, 900.0), 900.0);
+    }
+
+    #[test]
+    fn the_name_and_size_of_what_is_selected_or_fills_the_middle_need_no_layer() {
+        let window = 960.0;
+        // Selected and big enough: named. Selected and a speck: not.
+        assert!(name_without_layer(true, 120.0, 400.0, window));
+        assert!(!name_without_layer(true, 10.0, 0.0, window));
+        // Not selected, filling the middle: named.
+        assert!(name_without_layer(false, 300.0, 40.0, window));
+        // Not selected, in a corner or small: left to the Sizes layer.
+        assert!(!name_without_layer(false, 300.0, 600.0, window));
+        assert!(!name_without_layer(false, 60.0, 0.0, window));
     }
 
     #[test]

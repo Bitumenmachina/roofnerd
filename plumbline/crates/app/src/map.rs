@@ -303,7 +303,8 @@ pub fn write(
     // The north arrow: how far its needle is turned (degrees clockwise from up) and how flat the disc lies (call 218, point 7).
     {
         let a = crate::nav::north_arrow(orbit.now.1, orbit.now.2);
-        out.push_str(&format!("arrow\t{:.1}\t{:.2}\n", a.needle.to_degrees().rem_euclid(360.0), a.flat));
+        let across = named.iter().find(|(n, _, _, _, v, _)| n.name == "North arrow" && v.get()).map(|(_, node, ..)| node.size.x * node.inverse_scale_factor).unwrap_or(0.0);
+        out.push_str(&format!("arrow\t{:.1}\t{:.2}\t{:.0}\n", a.needle.to_degrees().rem_euclid(360.0), a.flat, across));
     }
     // The selected thing as it lies on the screen: its name, the middle of its box, and its width and height in dots
     // (call 218, point 10): a demonstration follows a receptacle or a door down a dive by it.

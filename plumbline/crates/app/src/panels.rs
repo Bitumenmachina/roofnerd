@@ -45,6 +45,10 @@ pub struct Detail {
     pub feet: f32,
     /// The name of what is selected is kept in the clear part of the window while the thing is big on the screen.
     pub keep_in_view: bool,
+    /// Written because the Sizes layer is on; off, only the selected thing and the one filling the middle are named.
+    pub layer: bool,
+    /// Half the thing's height, from its top to its middle.
+    pub drop: f32,
 }
 
 /// The north arrow's needle (turns with the view) and its disc (leans with the tilt) (call 218, point 7).
@@ -465,21 +469,22 @@ fn north_card(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc) {
     node.border_radius = BorderRadius::all(px(44.0));
     p.spawn(docked(node)).with_children(|card| {
         let mut disc = card.spawn((
-            Node { width: px(72.0), height: px(72.0), border: UiRect::all(px(1.5)), border_radius: BorderRadius::all(px(36.0)), align_items: AlignItems::Center, justify_content: JustifyContent::Center, ..default() },
+            Node { width: px(84.0), height: px(84.0), border: UiRect::all(px(1.5)), border_radius: BorderRadius::all(px(42.0)), align_items: AlignItems::Center, justify_content: JustifyContent::Center, ..default() },
             BackgroundColor(theme::control()),
             BorderColor::all(theme::control_edge()),
             UiTransform::default(),
             NorthDisc,
             named("North arrow"),
         ));
-        disc.observe(|press: On<PointerClick>, mut doc: ResMut<Doc>, mut orbit: ResMut<crate::scene::Orbit>, time: Res<Time<Real>>, mut last: Local<f32>| {
+        disc.observe(|press: On<PointerClick>, mut doc: ResMut<Doc>, mut orbit: ResMut<crate::scene::Orbit>, time: Res<Time<Real>>| {
             if press.button != PointerButton::Primary || doc.plan {
                 return;
             }
             let now = time.elapsed_secs();
             // As the double-click on the model is told: within half a second, or within a frame and a half where frames are slower.
-            let twice = now - *last < (time.delta_secs() * 1.5).max(0.5);
-            *last = now;
+            // (Kept in the view's own state: the panels are drawn again after a click, and a note kept in the arrow would be lost.)
+            let twice = now - orbit.arrow_click < (time.delta_secs() * 1.5).max(0.5);
+            orbit.arrow_click = now;
             let mut to = orbit.pose();
             to.yaw += crate::nav::turn_between(to.yaw, 0.0);
             if twice {
@@ -490,18 +495,18 @@ fn north_card(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc) {
             doc.touch();
         });
         disc.with_children(|d| {
-            // 69 dots across inside the edge, its middle at 34.5.
-            d.spawn((Node { position_type: PositionType::Absolute, width: px(69.0), height: px(69.0), ..default() }, UiTransform::default(), NorthRotor, Pickable::IGNORE)).with_children(|r| {
+            // 81 dots across inside the edge, its middle at 40.5.
+            d.spawn((Node { position_type: PositionType::Absolute, width: px(81.0), height: px(81.0), ..default() }, UiTransform::default(), NorthRotor, Pickable::IGNORE)).with_children(|r| {
                 // The letter beyond the red end, then the two halves of the needle, each a diamond: a square turned a corner up and drawn long.
-                r.spawn((Node { position_type: PositionType::Absolute, top: px(0.0), left: px(0.0), width: px(69.0), justify_content: JustifyContent::Center, ..default() }, Pickable::IGNORE))
-                    .with_child((text(fonts, "N", 9.5, Weight::Semibold, theme::red()), Pickable::IGNORE));
+                r.spawn((Node { position_type: PositionType::Absolute, top: px(0.0), left: px(0.0), width: px(81.0), justify_content: JustifyContent::Center, ..default() }, Pickable::IGNORE))
+                    .with_child((text(fonts, "N", 13.0, Weight::Semibold, theme::red()), Pickable::IGNORE));
                 for (up, colour) in [(-1.0_f32, theme::red()), (1.0_f32, theme::ink_soft())] {
                     r.spawn((
-                        Node { position_type: PositionType::Absolute, left: px(34.5 - 6.0), top: px(34.5 - 6.0 + up * 12.7), width: px(12.0), height: px(12.0), ..default() },
+                        Node { position_type: PositionType::Absolute, left: px(40.5 - 7.0), top: px(40.5 - 7.0 + up * 14.8), width: px(14.0), height: px(14.0), ..default() },
                         UiTransform { scale: Vec2::new(0.6, 1.5), ..default() },
                         Pickable::IGNORE,
                     ))
-                    .with_child((Node { width: px(12.0), height: px(12.0), ..default() }, BackgroundColor(colour), UiTransform { rotation: Rot2::degrees(45.0), ..default() }, Pickable::IGNORE));
+                    .with_child((Node { width: px(14.0), height: px(14.0), ..default() }, BackgroundColor(colour), UiTransform { rotation: Rot2::degrees(45.0), ..default() }, Pickable::IGNORE));
                 }
             });
         });
@@ -1937,7 +1942,7 @@ fn pill_sized(p: &mut ChildSpawnerCommands, label: Label, feet: f32, selected: b
         label,
     ));
     if feet > 0.0 {
-        e.insert(Detail { feet, keep_in_view: false });
+        e.insert(Detail { feet, keep_in_view: false, layer: true, drop: 0.0 });
     }
     e.with_children(build);
 }
@@ -2089,7 +2094,10 @@ fn see_in(doc: &Doc) -> bool {
 /// wears it, and a tag that would cover a nearer one is not drawn (`place_labels`).
 fn size_tags(o: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot) {
     use plumbline_world::building::Placement;
-    if !doc.show.sizes || doc.plan || doc.walk || !see_in(doc) {
+    // The Sizes layer tags every run and thing; with it off the name and size of a placed thing are still written over the one that
+    // is selected and the one that fills the middle of the view (`place_labels` decides which, by size on screen; call 218, round 2).
+    let layer = doc.show.sizes;
+    if doc.plan || doc.walk || !see_in(doc) {
         return;
     }
     let shown: Vec<&Placement> = snap.drawn.iter().filter(|p| on_show(doc, p)).filter(|p| !(snap.work.get(&p.path) == Some(&plumbline_world::WorkStatus::Demolish) && !doc.show.demolition)).collect();
@@ -2139,11 +2147,11 @@ fn size_tags(o: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snap
             *best = (length, i);
         }
     }
-    let mut tags: Vec<(String, Vec3, Color, f32, bool)> = Vec::new();
+    let mut tags: Vec<(String, Vec3, Color, f32, bool, Option<f32>)> = Vec::new();
     for (g, (_, i)) in &longest {
         let _ = g;
         let (_, p, [a, b]) = &runs[*i];
-        tags.push((p.tag.clone().unwrap_or_default(), (*a + *b) / 2.0, theme::system_colour(snap.classification(p.system.as_ref())), a.distance(*b), false));
+        tags.push((p.tag.clone().unwrap_or_default(), (*a + *b) / 2.0, theme::system_colour(snap.classification(p.system.as_ref())), a.distance(*b), false, None));
     }
     // A foundation wall is a wall below the ground or one that is cast; no other wall wears one.
     let below = |p: &Placement| p.storey.as_ref().and_then(|st| snap.storeys.iter().find(|x| &x.path == st)).and_then(|x| x.elevation).is_some_and(|e| e < -0.5);
@@ -2151,7 +2159,7 @@ fn size_tags(o: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snap
         let Some(tag) = &p.tag else {
             if matches!(p.kind, Kind::Equipment | Kind::Fixture) && p.discipline != Discipline::Architecture {
                 if let Shape::Box { at, size, .. } = &p.shape {
-                    tags.push((format!("{}, {}", p.name, units::size_said(*size)), to_view(doc.origin, [at[0], at[1], at[2] + size[2]]), theme::system_colour(snap.classification(p.system.as_ref())), size[0].max(size[1]).max(size[2]) as f32, doc.selected.as_deref() == Some(p.path.as_str())));
+                    tags.push((format!("{}, {}", p.name, units::size_said(*size)), to_view(doc.origin, [at[0], at[1], at[2] + size[2]]), theme::system_colour(snap.classification(p.system.as_ref())), size[0].max(size[1]).max(size[2]) as f32, doc.selected.as_deref() == Some(p.path.as_str()), Some(size[2] as f32 / 2.0)));
                 }
             }
             continue;
@@ -2163,26 +2171,29 @@ fn size_tags(o: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snap
         match (&p.shape, p.kind) {
             (_, Kind::Footing | Kind::PadFooting | Kind::Wall) if !under => {}
             (_, Kind::Beam | Kind::Post) if !frame => {}
-            (Shape::Wall { a, b, base, height, .. }, Kind::Footing) => tags.push((tag.clone(), to_view(doc.origin, [(a[0] + b[0]) / 2.0, (a[1] + b[1]) / 2.0, base + height / 2.0]), theme::concrete(), (b[0] - a[0]).hypot(b[1] - a[1]) as f32, false)),
+            (Shape::Wall { a, b, base, height, .. }, Kind::Footing) => tags.push((tag.clone(), to_view(doc.origin, [(a[0] + b[0]) / 2.0, (a[1] + b[1]) / 2.0, base + height / 2.0]), theme::concrete(), (b[0] - a[0]).hypot(b[1] - a[1]) as f32, false, None)),
             (Shape::Wall { a, b, base, height, .. }, Kind::Wall) if below(p) || snap.dress.walls.get(&p.path).is_some_and(|d| d.concrete) => {
-                tags.push((tag.clone(), to_view(doc.origin, [(a[0] + b[0]) / 2.0, (a[1] + b[1]) / 2.0, base + height / 2.0]), theme::concrete(), (b[0] - a[0]).hypot(b[1] - a[1]) as f32, false))
+                tags.push((tag.clone(), to_view(doc.origin, [(a[0] + b[0]) / 2.0, (a[1] + b[1]) / 2.0, base + height / 2.0]), theme::concrete(), (b[0] - a[0]).hypot(b[1] - a[1]) as f32, false, None))
             }
-            (Shape::Run { a, b, .. }, Kind::Beam | Kind::Post) => tags.push((tag.clone(), (to_view(doc.origin, *a) + to_view(doc.origin, *b)) / 2.0, theme::lumber(), to_view(doc.origin, *a).distance(to_view(doc.origin, *b)), false)),
-            (Shape::Box { at, size, .. }, Kind::PadFooting) => tags.push((tag.clone(), to_view(doc.origin, [at[0], at[1], at[2] + size[2]]), theme::concrete(), size[0].max(size[1]).max(size[2]) as f32, false)),
+            (Shape::Run { a, b, .. }, Kind::Beam | Kind::Post) => tags.push((tag.clone(), (to_view(doc.origin, *a) + to_view(doc.origin, *b)) / 2.0, theme::lumber(), to_view(doc.origin, *a).distance(to_view(doc.origin, *b)), false, None)),
+            (Shape::Box { at, size, .. }, Kind::PadFooting) => tags.push((tag.clone(), to_view(doc.origin, [at[0], at[1], at[2] + size[2]]), theme::concrete(), size[0].max(size[1]).max(size[2]) as f32, false, None)),
             _ => {}
         }
     }
     // The same words from the same place are one tag.
     tags.sort_by(|x, y| x.0.cmp(&y.0).then(x.1.x.total_cmp(&y.1.x)).then(x.1.z.total_cmp(&y.1.z)).then(x.1.y.total_cmp(&y.1.y)));
     tags.dedup_by(|x, y| x.0 == y.0 && x.1.distance(y.1) < 0.2);
-    for (words, at, colour, feet, chosen) in tags {
+    if !layer {
+        tags.retain(|t| t.5.is_some());
+    }
+    for (words, at, colour, feet, chosen, drop) in tags {
         o.spawn((
             Node { position_type: PositionType::Absolute, left: px(-2000.0), top: px(-2000.0), padding: UiRect::axes(px(6.0), px(1.0)), column_gap: px(4.0), align_items: AlignItems::Center, border_radius: BorderRadius::all(px(8.0)), ..default() },
             UiTransform { translation: Val2::percent(-50.0, -50.0), ..default() },
             BackgroundColor(theme::panel().with_alpha(0.86)),
             Pickable::IGNORE,
             Label { at: at + Vec3::Y * 0.25, facing: None, rank: if chosen { 0 } else { 2 } },
-            Detail { feet, keep_in_view: chosen },
+            Detail { feet, keep_in_view: chosen, layer, drop: drop.unwrap_or(0.0) },
             Named { name: format!("Tag {words}"), scrolls: false },
         ))
         .with_children(|l| {
@@ -3574,7 +3585,16 @@ pub fn place_labels(doc: Res<Doc>, camera: Query<(&Camera, &GlobalTransform), Wi
         // A thing's name is written over it only while it is a fit size on the screen (call 218, point 2). On plan the drawing
         // keeps its words as it always did.
         if let Some(d) = detail.filter(|_| !doc.plan) {
-            if !crate::nav::label_shown(d.feet, eye.translation().distance(label.at), height) {
+            let away = eye.translation().distance(label.at);
+            let shown = if d.layer {
+                crate::nav::label_shown(d.feet, away, height)
+            } else {
+                // No layer on: the selected thing, or the one that fills the middle of the clear part of the window.
+                let middle = Vec2::new((LEFT_W + width - RIGHT_W) / 2.0, (TOP_H + 70.0 + height - BUILD_H - STATUS_H) / 2.0);
+                let centre = camera.world_to_viewport(eye, label.at - Vec3::Y * (0.25 + d.drop)).ok();
+                centre.is_some_and(|c| crate::nav::name_without_layer(d.keep_in_view, crate::nav::dots_across(d.feet, away, height), c.distance(middle), height))
+            };
+            if !shown {
                 continue;
             }
         }
@@ -3585,7 +3605,7 @@ pub fn place_labels(doc: Res<Doc>, camera: Query<(&Camera, &GlobalTransform), Wi
         let Ok(at) = camera.world_to_viewport(eye, label.at) else { continue };
         let half = computed.size * computed.inverse_scale_factor / 2.0 + Vec2::splat(2.0);
         // A thing that fills the window has its name written above it, out of sight: the name is kept in the clear part of the window.
-        let at = match detail.filter(|d| d.keep_in_view && !doc.plan) {
+        let at = match detail.filter(|d| (d.keep_in_view || !d.layer) && !doc.plan) {
             Some(d) => {
                 let dots = crate::nav::dots_across(d.feet, eye.translation().distance(label.at), height);
                 let lo = Vec2::new(LEFT_W + 20.0, TOP_H + 70.0) + half;

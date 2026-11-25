@@ -21,9 +21,9 @@
 #
 # The job is the made-up whole house (`plumbline sixteen`): 40 ft by 28 ft, two storeys, with a duplex receptacle in the kitchen
 # (3 by 1 3/16 by 4 13/16 in, its middle 3.4 ft up on the north wall) and the front door. Where a figure of STATUS.md's demonstration
-# is not the figure read here the check prints the one it holds: this house is framed at 92.8 ft, so the wheel goes out to 6 x 92.8 =
-# 557 ft (never under 400), and the dive from there to 8 in is about 62 notches (0.81 to a click on this display); a pointer is put on
-# a thing of 5 in only where it is ten dots across (about 30 ft), the wheel having come down over what lay under the pointer before.
+# is not the figure read here the check prints the one it holds: this house is framed at 92.8 ft, so the wheel goes out to 3 x 92.8 =
+# 278 ft (the house is then a sixth of the window's width), and the dive from there to 8 in is about 58 notches (0.81 to a click on this display); a pointer is put on
+# a thing of 5 in only where it is ten dots across (about 30 ft) (about 30 ft), the wheel having come down over what lay under the pointer before.
 #
 # Run from the repository root:  [PLUMBLINE_BIN=<folder>] [ONLY="a b c d e f g"] [STATE=<folder>] demos/navw.sh [folder for the pictures]
 # It drives the real program with a real pointer and keyboard on a virtual display (Xvfb, xdotool, a Vulkan driver). Where a flight
@@ -98,7 +98,7 @@ RC = view_of(8.0, 27.65, 3.4)
 RBOX = ((RC[0]-0.125, RC[1], RC[2]-0.05), (RC[0]+0.125, RC[1]+0.4, RC[2]+0.05))
 RMID = (RC[0], RC[1]+0.2, RC[2])
 # Where the pointer is put on it: low and to the right of its middle, clear of the cable that runs up to it.
-RAIM = (RC[0]+0.08, RC[1]+0.08, RC[2])
+RAIM = (RC[0]+0.1, RC[1]+0.08, RC[2])
 DOOR = view_of(20.0, 0.0, 3.333)
 if __name__ == "__main__":
     what, path = sys.argv[1], sys.argv[2]
@@ -161,14 +161,14 @@ dive() {   # $1 the session's name, $2 clicks of the wheel to a rest in the firs
   read -r px py <<<"$(py recept "$T/cur-$NAME.txt")"
   xdotool mousemove "$px" "$py"; sleep 2
   echo "$px $py" > "$T/pt1-$NAME.txt"
-  # First part: from the lot to about 30 ft, over what lies under the pointer.
+  # First part: from the lot to about 20 ft, over what lies under the pointer.
   for i in $(seq 1 14); do
     d=$(field 5)
-    if awk "BEGIN{exit !($d<=32)}"; then break; fi
+    if awk "BEGIN{exit !($d<=20)}"; then break; fi
     if [ "$2" = 1 ]; then xdotool click 4; else xdotool click --repeat "$2" --delay 150 4; fi
     rest; rec "q$i"
   done
-  # Second part: aimed at the receptacle (a thing of 5 in is under a pointer only where it is ten dots across), taken with the middle button (the left would pick the
+  # Second part: aimed at the receptacle (a thing of 5 in is under a pointer only where it is ten dots across (about 30 ft)), taken with the middle button (the left would pick the
   # thing up and carry it) and slid to the middle of the window as the ground is (the wheel keeps the place under the pointer: a thing dived on at the top of
   # the window ends at the top of it), selected, and in, the pointer not moved.
   tail -1 "$V" > "$T/cur-$NAME.txt"
@@ -197,7 +197,7 @@ DIVE
 cat > "$T/steps-a.sh" <<'STEPS'
 . "$T/dive.sh"
 open_window "$JOB"; rest
-on "Show See through"; on "Show Sizes"; park; rest
+park; rest
 xdotool mousemove 800 450; sleep 1
 # Step 1: out to the lot.
 prev=0
@@ -206,7 +206,9 @@ for i in $(seq 1 30); do
   if awk "BEGIN{exit !($d-$prev<0.05)}" && [ "$i" -gt 3 ]; then break; fi
   prev=$d
 done
-rec out; shot                         # 01 out at the lot
+rec out; shot                         # 01 out at the lot, the house solid
+on "Show See through"; park; rest     # then glass, so that the receptacle can be seen and pointed at
+xdotool mousemove 800 450; sleep 1
 tilt_to 60; rec start; mark start; shot   # 02 tilted to 60 degrees
 STRIP=1; dive a 3 1
 shot                                  # the end of the dive
@@ -221,7 +223,7 @@ cat > "$T/steps-b.sh" <<'STEPS'
 open_window "$JOB"; rest
 on "Show See through"; on "Tilt as I dive"; park; rest
 xdotool mousemove 800 450; sleep 1
-for i in $(seq 1 14); do xdotool click --repeat 3 --delay 150 5; rest; d=$(field 5); if awk "BEGIN{exit !($d>=540)}"; then break; fi; done
+for i in $(seq 1 14); do xdotool click --repeat 3 --delay 150 5; rest; d=$(field 5); if awk "BEGIN{exit !($d>=270)}"; then break; fi; done
 tilt_to 60; rec start; mark start; shot
 dive b 3 1
 shot
@@ -235,14 +237,14 @@ cat > "$T/steps-c.sh" <<'STEPS'
 open_window "$JOB"; rest
 on "Show See through"; park; rest
 xdotool mousemove 800 450; sleep 1
-for i in $(seq 1 14); do xdotool click --repeat 3 --delay 150 5; rest; d=$(field 5); if awk "BEGIN{exit !($d>=540)}"; then break; fi; done
+for i in $(seq 1 14); do xdotool click --repeat 3 --delay 150 5; rest; d=$(field 5); if awk "BEGIN{exit !($d>=270)}"; then break; fi; done
 tilt_to 60; rec start; mark start
 dive c 3 1
 # Back out: the view rights itself.
 xdotool mousemove 800 450; sleep 1
 for i in $(seq 1 30); do
   xdotool click --repeat 3 --delay 150 5; rest; d=$(field 5)
-  if awk "BEGIN{exit !($d>=540)}"; then break; fi
+  if awk "BEGIN{exit !($d>=270)}"; then break; fi
 done
 rec risen; mark risen; shot
 touch "$T/end-c"
@@ -345,7 +347,7 @@ on "North arrow"; rest; rec clicked; shot
 # A double-click: straight down.
 at="$(found model "North arrow")"; set -- $at
 xdotool mousemove "$1" "$2"; sleep 1.5
-xdotool mousedown 1; sleep 0.12; xdotool mouseup 1; sleep 0.12; xdotool mousedown 1; sleep 0.12; xdotool mouseup 1
+xdotool mousedown 1; sleep 0.5; xdotool mouseup 1; sleep 0.1; xdotool mousedown 1; sleep 0.5; xdotool mouseup 1
 sleep 3; rest; rec down; shot
 # Home: north up from where it is (turn a little first, then the key).
 xdotool keydown Right; sleep 0.8; xdotool keyup Right; rest; rec turned
@@ -430,16 +432,16 @@ for s in ("a", "b"):
     if s == "a":
         # 1 out to the lot
         w = None
-        a, b = nav.project(out_v, nav.view_of(-1, -1, 0)), nav.project(out_v, nav.view_of(41, 29, 0))
-        w = abs(b[0] - a[0]) if a and b else 1e9
-        check("1  out: how far the eye is from what it looks at, ft", round(out_v["d"], 1), out_v["d"] >= 400, "400 or more (this house is framed at 92.8 ft: six times that is 557, never under 400)")
-        check("1  out: the house's width on the screen, dots of 1600", round(w), w < 320, "under a fifth (320)")
+        xs = [nav.project(out_v, nav.view_of(x, y, 0))[0] for x in (-1, 41) for y in (-1, 29)]
+        w = max(xs) - min(xs)
+        check("1  out: how far the eye is from what it looks at, ft", round(out_v["d"], 1), out_v["d"] >= 270, "about 278 (this house is framed at 92.8 ft: three times that, never under 40 ft)")
+        check("1  out: the house's width on the screen, dots of 1600", round(w), 160 <= w <= 320, "between a tenth and a fifth (160 to 320)")
     # 2 the dive
     r = dive(s)
     if r:
         pt, P, rows, worst, wi = r
         ns = sum(1 for _ in rows)
-        check(f"2  the dive, {s}: clicks of the wheel (two lines, a notch each, on this display) from the lot to the end", ns + 9, True, "about 62 notches")
+        check(f"2  the dive, {s}: clicks of the wheel (two lines, a notch each, on this display) from the lot to the end", ns + 9, True, "about 58 notches")
         check(f"2  the receptacle under the pointer at every notch of the second part, worst, dots", f"{worst:.2f} at click {wi} ({[round(x[1],1) for x in rows if x[0]==wi]} ft)", worst <= 3.0, "3 or less")
         print("          (click, ft off, tilt, dots from the pointer): " + "; ".join(f"{i}: {d:.1f}, {t:.1f}, {o:.1f}" for i, d, t, o in rows[::3]))
         sel = mapline(s, f"p{rows[-1][0]}", "selected")
@@ -588,6 +590,10 @@ if "f" in only:
     print("  session f")
     hm, no, qu, cl, dn, tn, hk = (vf("f", n) for n in ("home", "north", "quarter", "clicked", "down", "turned", "home_key"))
     check("9  clicked once: north-up, degrees", f"{wrap(no['turn']):.2f}", abs(wrap(no["turn"])) < 1.0, "within a degree")
+    ah = mapline("f", "home", "arrow")
+    across = float(ah[0][3]) if ah else 0.0
+    ax = [float(x.split("\t")[2]) for x in open(f"{td}/m-f-home.txt") if x.startswith("model\tNorth arrow\t")]
+    check("9  the north arrow's width in dots, and its left edge against the left panel's right edge (262)", f"{across:.0f}; {ax[0] - across / 2:.0f}" if ax else "none", across >= 44 and bool(ax) and ax[0] - across / 2 >= 262, "44 or more, clear of the panel")
     arrow = mapline("f", "quarter", "arrow")
     needle = float(arrow[0][1]) if arrow else -1
     check("9  after a quarter turn of the view the needle is a quarter turn off, degrees (view turn, needle)", f"{qu['turn']:.1f}, {needle:.1f}", abs(abs(wrap(qu["turn"])) - 90) < 15 and abs(((needle - qu['turn']) + 180) % 360 - 180) < 3.0, "a quarter, and the same as the view's turn")
