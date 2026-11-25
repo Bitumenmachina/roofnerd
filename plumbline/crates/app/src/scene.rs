@@ -1688,6 +1688,52 @@ pub fn place_camera(mut orbit: ResMut<Orbit>, doc: Res<Doc>, time: Res<Time>,  m
     }
 }
 
+/// With the Cabinets tool taken in hand on the plan, its card lies over the lower part of the window (call 197, point 11:
+/// the south wall of a room was under it). The view eases so that what is drawn stands in the band above the card, below the
+/// top bar's row: down and up, and zoomed out when it does not fit. It does nothing when the whole building already stands
+/// clear of the card, and it is one ease, as any change of view is.
+pub fn room_for_card(doc: Res<Doc>, snap: Res<Snapshot>, mut orbit: ResMut<Orbit>, window: Query<&Window, With<PrimaryWindow>>, card: Query<(&crate::theme::Named, &ComputedNode)>, mut was: Local<(bool, bool)>) {
+    let in_hand = doc.plan && doc.bench.is_none() && !doc.walk && (doc.draw.tool == Some(crate::tools::Tool::Cabinets) || matches!(doc.entry, Some((crate::model::Entry::Cabinets, _))));
+    if !in_hand {
+        *was = (false, false);
+        return;
+    }
+    if !was.0 {
+        *was = (true, true);
+    }
+    if !was.1 {
+        return;
+    }
+    let (Ok(window), Some((_, node))) = (window.single(), card.iter().find(|(n, _)| n.name == "Cabinets card")) else { return };
+    let card_h = node.size.y * node.inverse_scale_factor;
+    if card_h <= 0.0 {
+        return;
+    }
+    let Some((lo, hi, _)) = snap.extent else {
+        was.1 = false;
+        return;
+    };
+    was.1 = false;
+    let h = window.height().max(1.0);
+    let top = TOP_H + 80.0;
+    let bottom = h - (STATUS_H + BUILD_H + 10.0 + 2.0 * crate::theme::GAP) - card_h - 14.0;
+    if bottom - top < 120.0 {
+        return;
+    }
+    let per_px = orbit.distance * PLAN_HEIGHT / h;
+    let (north, south) = (-(hi[1] - doc.origin[1]) as f32, -(lo[1] - doc.origin[1]) as f32);
+    let (y_north, y_south) = (h / 2.0 + (north - orbit.target.z) / per_px, h / 2.0 + (south - orbit.target.z) / per_px);
+    if y_north >= top && y_south <= bottom {
+        return;
+    }
+    // Far enough out that the building's depth fits the band, never closer than it was.
+    let depth = (south - north).max(1.0) * 1.08;
+    let distance = orbit.distance.max(depth * h / (PLAN_HEIGHT * (bottom - top)));
+    let per_px = distance * PLAN_HEIGHT / h;
+    orbit.distance = distance;
+    orbit.target.z = (north + south) / 2.0 - ((top + bottom) / 2.0 - h / 2.0) * per_px;
+}
+
 /// Whether the pointer is over a panel, as picking sees it; and whether the left button's
 /// last press became a drag (a drag is not a click). Kept where any system can ask.
 pub static OVER_PANEL: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
@@ -2072,7 +2118,7 @@ pub fn carry(mut carry: ResMut<Carry>, mut doc: ResMut<Doc>, snap: Res<Snapshot>
 /// carries on and eases to a stop. A double-click flies to the place clicked. On foot
 /// the same keys walk and the right button looks round.
 #[allow(clippy::too_many_arguments)]
-pub fn orbit_input(mut orbit: ResMut<Orbit>, mut feel: ResMut<Feel>, buttons: Res<ButtonInput<MouseButton>>, scroll: Res<AccumulatedMouseScroll>, keys: Res<ButtonInput<KeyCode>>, time: Res<Time>, doc: Res<Doc>, window: Query<&Window, With<PrimaryWindow>>, hover: Res<bevy::picking::hover::HoverMap>, panels: Query<(), With<Node>>, mut presses: MessageReader<bevy::input::mouse::MouseButtonInput>, mut ray_cast: MeshRayCast) {
+pub fn orbit_input(mut orbit: ResMut<Orbit>, mut feel: ResMut<Feel>, buttons: Res<ButtonInput<MouseButton>>, scroll: Res<AccumulatedMouseScroll>, keys: Res<ButtonInput<KeyCode>>, time: Res<Time>, doc: Res<Doc>, window: Query<&Window, With<PrimaryWindow>>, hover: Res<bevy::picking::hover::HoverMap>, panels: Query<(), With<Node>>, mut presses: MessageReader<bevy::input::mouse::MouseButtonInput>, mut ray_cast: MeshRayCast, snap: Res<Snapshot>, model_meshes: Query<Option<&Pickable>, With<SceneMesh>>) {
     use std::sync::atomic::Ordering::Relaxed;
     // How many times the left button went down since the last frame: on a slow machine
     // both presses of a double-click can land in one frame.
@@ -2098,7 +2144,11 @@ pub fn orbit_input(mut orbit: ResMut<Orbit>, mut feel: ResMut<Feel>, buttons: Re
     let moved = if buttons.any_just_pressed([MouseButton::Left, MouseButton::Middle, MouseButton::Right]) { Vec2::ZERO } else { moved };
     feel.was = cursor;
     let inside = cursor.is_some() && !on_panel;
+    // Whether what `under` found last is part of the model (a wall, a roof, a thing set down) and not the ground (call 197, point 14).
+    let on_model = std::cell::Cell::new(false);
+    let is_model = |e: Entity| model_meshes.get(e).is_ok_and(|pick| pick.is_none_or(|p| p.is_hoverable));
     let mut under = |orbit: &Orbit| -> Option<Vec3> {
+        on_model.set(false);
         let sight = cursor.map(|c| ray_at(orbit, window, c)).map(|(eye, way)| (eye, way.normalize_or_zero()));
         // What the pointer was over when that was last worked out is under it now
         // only if it lies on the line of sight from where the pointer is: on a slow
@@ -2111,7 +2161,11 @@ pub fn orbit_input(mut orbit: ResMut<Orbit>, mut feel: ResMut<Feel>, buttons: Re
                 along > 0.0 && (v - way * along).length() < along * 0.01 + 0.05
             })
         };
-        let nearest = hits.and_then(|h| h.values().filter_map(|hit| hit.position.map(|p| (hit.depth, p))).min_by(|a, b| a.0.total_cmp(&b.0))).map(|(_, p)| p).filter(in_sight);
+        let nearest = hits.and_then(|h| h.iter().filter_map(|(e, hit)| hit.position.map(|p| (hit.depth, p, *e))).min_by(|a, b| a.0.total_cmp(&b.0))).filter(|(_, p, _)| in_sight(p));
+        if let Some((_, _, e)) = &nearest {
+            on_model.set(is_model(*e));
+        }
+        let nearest = nearest.map(|(_, p, _)| p);
         // Where the pointer has moved on since, what is under it is found afresh
         // along that line of sight; failing anything there, the ground under it.
         let afresh = || {
@@ -2123,7 +2177,9 @@ pub fn orbit_input(mut orbit: ResMut<Orbit>, mut feel: ResMut<Feel>, buttons: Re
             // (`dressw` on the full run of aa5084c: its measured check failed on it).
             // The sky's dome is not a place to turn about.
             let all = MeshRayCastSettings::default().never_early_exit();
-            ray_cast.cast_ray(ray, &all).iter().filter(|(_, hit)| hit.distance < 5000.0).min_by(|a, b| a.1.distance.total_cmp(&b.1.distance)).map(|(_, hit)| hit.point)
+            let found = ray_cast.cast_ray(ray, &all).iter().filter(|(_, hit)| hit.distance < 5000.0).min_by(|a, b| a.1.distance.total_cmp(&b.1.distance)).map(|(e, hit)| (*e, hit.point));
+            on_model.set(found.is_some_and(|(e, _)| is_model(e)));
+            found.map(|(_, point)| point)
         };
         nearest.or_else(afresh).or_else(|| sight.and_then(|(eye, way)| on_level(eye, way, 0.0)))
     };
@@ -2142,8 +2198,20 @@ pub fn orbit_input(mut orbit: ResMut<Orbit>, mut feel: ResMut<Feel>, buttons: Re
         feel.hold = None;
         if inside && !doc.walk {
             let grab = under(&orbit);
+            let grabbed_model = on_model.get();
             if buttons.just_pressed(MouseButton::Right) && !doc.plan {
-                feel.hold = grab.map(|g| (Hold::Turn, g));
+                // A swing begun on the model turns about that place, which stays under the pointer; begun off it (on the ground,
+                // or on the sky), about the middle of what is drawn, so that the house stays in the window (call 197, point 14).
+                let middle = if doc.bench.is_some() {
+                    orbit.home.0
+                } else {
+                    snap.extent.map(|(lo, hi, top)| to_view(doc.origin, [(lo[0] + hi[0]) / 2.0, (lo[1] + hi[1]) / 2.0, top / 2.0])).unwrap_or(orbit.home.0)
+                };
+                let pivot = match grab {
+                    Some(g) if grabbed_model => g,
+                    _ => middle,
+                };
+                feel.hold = Some((Hold::Turn, pivot));
             } else if buttons.just_pressed(MouseButton::Middle) || (buttons.just_pressed(MouseButton::Right) && doc.plan) || (buttons.just_pressed(left) && free && !CARRYING.load(Relaxed)) {
                 feel.hold = grab.map(|g| (Hold::Ground, g));
             }

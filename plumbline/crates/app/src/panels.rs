@@ -1666,15 +1666,18 @@ fn tool_button<'a>(p: &'a mut ChildSpawnerCommands, fonts: &Fonts, label: &str, 
 /// What a run's boxes could be, listed under the fields as they are typed (call 156, 161):
 /// every box code the job's items have, the corner boxes apart, and the appliances it has,
 /// each as it is typed (in square brackets); and one line of key.
+/// The width of the card's left column: the longest heading ("Marks on the plan", in capitals) fits in it with room over.
+const CARD_HEAD_W: f32 = 140.0;
+
 fn cabinets_card(p: &mut ChildSpawnerCommands, fonts: &Fonts, snap: &Snapshot) {
     let corner = |c: &&String| c.starts_with("BLB") || c.starts_with("LS");
     let straight: Vec<&String> = snap.boxes.iter().filter(|c| !corner(c)).collect();
     let corners: Vec<&String> = snap.boxes.iter().filter(corner).collect();
     let appliances: Vec<String> = snap.items.iter().filter(|i| i.4 == 11).map(|i| format!("[{}]", i.1)).collect();
-    p.spawn(docked(Node { left: px(LEFT_W), right: px(RIGHT_W), bottom: px(STATUS_H + BUILD_H + 10.0), flex_direction: FlexDirection::Column, row_gap: px(3.0), padding: UiRect::axes(px(12.0), px(8.0)), ..default() })).with_children(|c| {
+    p.spawn((docked(Node { left: px(LEFT_W), right: px(RIGHT_W), bottom: px(STATUS_H + BUILD_H + 10.0), flex_direction: FlexDirection::Column, row_gap: px(3.0), padding: UiRect::axes(px(12.0), px(8.0)), ..default() }), theme::named("Cabinets card"))).with_children(|c| {
         let line = |c: &mut ChildSpawnerCommands, head: &str, body: String| {
             c.spawn(Node { column_gap: px(8.0), ..default() }).with_children(|r| {
-                r.spawn(Node { width: px(96.0), flex_shrink: 0.0, ..default() }).with_child((text(fonts, head.to_uppercase(), 11.0, Weight::Semibold, theme::ink_faint()), TextLayout::no_wrap()));
+                r.spawn(Node { width: px(CARD_HEAD_W), flex_shrink: 0.0, ..default() }).with_child((text(fonts, head.to_uppercase(), 11.0, Weight::Semibold, theme::ink_faint()), TextLayout::no_wrap()));
                 r.spawn(Node { flex_grow: 1.0, flex_basis: px(0.0), min_width: px(0.0), ..default() }).with_child(text(fonts, body, 11.0, Weight::Regular, theme::ink()));
             });
         };
@@ -2725,6 +2728,60 @@ fn item_bench(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Sna
     });
     if matches!(doc.entry, Some((Entry::RenameItem, _))) {
         entry_box(p, fonts, doc, snap);
+    }
+    // What the item is priced as (call 196; call 197 point 18): the assembly each of it set down takes, or that it is priced
+    // as nothing. A click lists what goes on its kind; picking one is the model's change (`editing::item_priced_as`).
+    heading(p, fonts, "Priced as");
+    let priced = el.rows.iter().find(|r| r.label == "priced as").map(|r| r.text.clone());
+    let kind = snap.items.iter().find(|i| i.0 == el.path).map(|i| i.2);
+    p.spawn((Node { flex_direction: FlexDirection::Column, padding: UiRect::bottom(px(4.0)), flex_shrink: 0.0, ..default() }, Named { name: "Priced as row".to_string(), scrolls: true })).with_children(|c| {
+        match &priced {
+            Some(a) => c.spawn(text(fonts, format!("Priced as {a:?}: each of it set down takes that assembly's lines."), 12.0, Weight::Medium, theme::ink())),
+            None => c.spawn(text(fonts, "Not priced: what is set down from it is in no line and no total until it is priced as an assembly.", 12.0, Weight::Medium, theme::ink_soft())),
+        };
+    });
+    let open = doc.pricing_item.as_deref() == Some(el.path.as_str());
+    p.spawn(Node { margin: UiRect::bottom(px(6.0)), flex_shrink: 0.0, ..default() }).with_children(|r| {
+        let at = el.path.clone();
+        on_click(&mut button(r, fonts, "Priced as", "", open), move |doc| {
+            doc.pricing_item = if doc.pricing_item.as_deref() == Some(at.as_str()) { None } else { Some(at.clone()) };
+            doc.touch();
+        });
+    });
+    if open {
+        let mut goes: Vec<&String> = snap.assemblies.iter().filter(|a| kind.is_some_and(|k| a.1.contains(&k))).map(|a| &a.0).collect();
+        goes.sort();
+        if goes.is_empty() {
+            hint(p, "This job has no assembly that goes on this kind of thing. Under Bring in, on the left, Starter assemblies brings in a set.");
+        } else {
+            hint(p, "Click one: each of this item set down takes its lines.");
+        }
+        let mut choices: Vec<(String, Option<String>)> = goes.into_iter().map(|a| (a.clone(), Some(a.clone()))).collect();
+        if priced.is_some() {
+            choices.push(("Not priced".to_string(), None));
+        }
+        for (shown, pick) in choices {
+            let mine = pick.is_some() && pick == priced;
+            let path = el.path.clone();
+            row(p, mine, format!("Priced as {shown}"), move |doc| {
+                match plumbline_world::editing::item_priced_as(&mut doc.job, &path, pick.as_deref()) {
+                    Ok(done) => {
+                        doc.job.derive();
+                        doc.edit("priced an item");
+                        doc.pricing_item = None;
+                        let tone = if done.left.is_empty() && done.took.is_empty() { Tone::Done } else { Tone::Warned };
+                        doc.say(tone, done.said().join("\n"));
+                    }
+                    Err(why) => crate::tools::cant(doc, "price it as that", why),
+                }
+                doc.redraw();
+            }, |r| {
+                r.spawn(Node { flex_grow: 1.0, flex_basis: px(0.0), min_width: px(0.0), ..default() }).with_child(text(fonts, shown.clone(), 12.0, if mine { Weight::Semibold } else { Weight::Regular }, theme::ink()));
+                if mine {
+                    r.spawn(Node { flex_shrink: 0.0, ..default() }).with_child((text(fonts, "as it is now", 11.0, Weight::Regular, theme::ink_faint()), TextLayout::no_wrap()));
+                }
+            });
+        }
     }
     heading(p, fonts, "Drawn as");
     hint(p, "Click one. Every one of this item already placed is drawn that way, inside the box of its sizes.");

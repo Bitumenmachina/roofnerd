@@ -93,6 +93,7 @@ demos/draww.sh             # the same house drawn in the window's plan view with
 demos/fit.sh               # fittings worked out from the runs that meet, runs joined to what they serve, and what the takeoff says is still open
 demos/clash.sh             # what is in the same space as what, what passes through a wall, and what is only close
 demos/clashw.sh            # fittings, a connection and the clashes in the window; pictures in demos/captured/clash
+demos/fixes197w.sh          # the six window points of call 197 and what came with them (set down listed, the Cabinets card, a refused corner, a mark left, the swing, an assembly changed, Priced as), a session at a time (ONLY="a b c d d2 e"); pictures in demos/captured/fixes197w
 demos/plan.sh              # a plan laid under a level, given its scale from one dimension and traced over, at the command line
 demos/field.sh             # what is measured on site put on a traced job: the floor above moves and the price with it, one clash clears, one becomes a finding
 demos/fieldw.sh            # the same in the window, each reading typed as a laser in keyboard mode types it; pictures in demos/captured/field

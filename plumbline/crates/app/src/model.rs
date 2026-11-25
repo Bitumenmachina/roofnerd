@@ -381,6 +381,8 @@ pub struct Doc {
     pub dropped: Option<String>,
     /// The list of assemblies that go on what is selected is open, to pick one from.
     pub choosing: bool,
+    /// The list of assemblies an item can be priced as is open on this item (call 196; the window's half, call 197 point 18).
+    pub pricing_item: Option<String>,
     /// The assembly picked from that list, until it has been put on.
     pub give: Option<String>,
     /// An item in hand, by path: the next click on the model sets one down there.
@@ -576,16 +578,23 @@ impl Doc {
         self.touch();
         true
     }
+    /// A mark asked for and then left, its question unanswered (call 197, point 13): nothing was marked, and it is said.
+    pub fn left_unmarked(&mut self) -> Option<String> {
+        let (path, status) = self.marking.take()?;
+        let called = self.job.find(&path).and_then(|e| self.job.world.get::<plumbline_world::Node>(e)).map(|n| n.name.clone()).unwrap_or_else(|| path.clone());
+        Some(format!("{called} was not marked {}: its question was left unanswered, and nothing was changed.", status.said()))
+    }
     pub fn select(&mut self, path: &str) {
         if self.bench_refuses(path) {
             return;
         }
         // The list of assemblies was for what was selected before.
         self.choosing = false;
-        self.marking = None;
+        self.pricing_item = None;
+        let unmarked = self.left_unmarked();
         self.together.clear();
         self.selected = Some(path.to_string());
-        self.say(Tone::Done, format!("Selected {path}."));
+        self.say(Tone::Done, format!("Selected {path}.{}", unmarked.map(|u| format!("\n{u}")).unwrap_or_default()));
         self.touch();
     }
     /// Shift and a click (call 169): the thing is added to what is selected, or taken
@@ -595,8 +604,8 @@ impl Doc {
             return;
         }
         self.choosing = false;
-        self.marking = None;
         let Some(current) = self.selected.clone() else { return self.select(path) };
+        let unmarked = self.left_unmarked();
         if current == path {
             self.selected = self.together.pop();
             self.say(Tone::Done, format!("Took {path} out of what is selected. {}", self.how_many_selected()));
@@ -607,6 +616,10 @@ impl Doc {
             self.together.push(current);
             self.selected = Some(path.to_string());
             self.say(Tone::Done, format!("Added {path}. {}", self.how_many_selected()));
+        }
+        if let Some(unmarked) = unmarked {
+            let said = self.message.clone();
+            self.say(Tone::Done, format!("{said}\n{unmarked}"));
         }
         self.touch();
     }

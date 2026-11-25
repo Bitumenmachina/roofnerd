@@ -172,7 +172,7 @@ fn table(p: &mut ChildSpawnerCommands, fonts: &Fonts, title: &str, count: String
 }
 
 fn nothing(p: &mut ChildSpawnerCommands, fonts: &Fonts, what: &str) {
-    p.spawn(theme::card(Node { padding: UiRect::axes(px(16.0), px(14.0)), flex_shrink: 0.0, ..default() })).with_child(text(fonts, what, 12.5, Weight::Regular, theme::ink_soft()));
+    p.spawn((theme::card(Node { padding: UiRect::axes(px(16.0), px(14.0)), flex_shrink: 0.0, ..default() }), theme::named(what))).with_child(text(fonts, what, 12.5, Weight::Regular, theme::ink_soft()));
 }
 
 /// Draw the sheet again whenever the snapshot has changed.
@@ -217,7 +217,8 @@ pub fn rebuild(mut commands: Commands, doc: Res<Doc>, snap: Res<Snapshot>, fonts
             all.push((Tab::Clashes, "Clashes".to_string(), snap.clashes.as_ref().and_then(|c| c.as_ref().ok()).map(|c| c.in_the_same_space().len()).unwrap_or(0)));
             // Layouts: this job beside others of it. Always offered, with how many are set.
             all.push((Tab::Layouts, "Layouts".to_string(), doc.beside.len()));
-            all.push((Tab::Building, "Building".to_string(), snap.fabric.len()));
+            // What is set down is listed under Building too (call 197, point 10): a job with only things set down has the tab.
+            all.push((Tab::Building, "Building".to_string(), snap.fabric.len() + snap.drawn.iter().filter(|p| p.kind.is_placed()).count()));
             all.push((Tab::Roof, "Roof".to_string(), snap.planes.len()));
             for d in [Discipline::Mechanical, Discipline::Electrical, Discipline::Plumbing] {
                 all.push((Tab::Of(d), theme::discipline_name(d).to_string(), snap.counts.iter().find(|c| c.0 == d).map(|c| c.1).unwrap_or(0)));
@@ -225,7 +226,9 @@ pub fn rebuild(mut commands: Commands, doc: Res<Doc>, snap: Res<Snapshot>, fonts
             for (tab, name, count) in all {
                 let on = doc.tab == tab;
                 // A job with nothing under a tab does not offer it.
-                if count == 0 && !on && tab != Tab::Layouts {
+                // (The Estimate says what is set down and not priced, so it is offered while something is.)
+                let unpriced = tab == Tab::Estimate && snap.pricing.as_ref().is_some_and(|p| p.not_priced.iter().any(|(k, n)| k.is_placed() && *n > 0));
+                if count == 0 && !on && tab != Tab::Layouts && !unpriced {
                     continue;
                 }
                 tabs.spawn((rounded(Node { padding: UiRect::axes(px(8.0), px(6.0)), column_gap: px(5.0), align_items: AlignItems::Center, flex_shrink: 0.0, ..default() }, 8.0), BackgroundColor(if on { theme::accent_wash() } else { Color::NONE }), theme::named(name.clone())))
@@ -435,6 +438,7 @@ fn building(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
             // not known read as a fault.
             if here.is_empty() && storey.footings.members == 0 {
                 t.spawn(Node { padding: UiRect::axes(px(16.0), px(10.0)), ..default() }).with_child(text(fonts, "No walls, floors or rooms are drawn on this level.", 12.5, Weight::Regular, theme::ink_soft()));
+                set_down(t, fonts, snap, &storey.path, &pretty(&storey.name));
                 return;
             }
             header_row(t, fonts, &[("", 7.0, false), ("Wall or floor, and its type", 0.0, false), ("Length", 100.0, true), ("Face, one side", 110.0, true), ("Openings", 100.0, true), ("Net, one side", 110.0, true)]);
@@ -535,6 +539,40 @@ fn building(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
                     cell(r, 110.0, true, |c| words(c, fonts, total(&storey.rooms), 12.5, Weight::Semibold, theme::status_ink(storey.rooms.status)));
                 });
             }
+            set_down(t, fonts, snap, &storey.path, &pretty(&storey.name));
+        });
+    }
+}
+
+/// What is set down on a level (call 197, point 10): equipment, fixtures and furnishings by kind, with what each is called. They are
+/// drawn and counted by the model and are on this list so that the sheet window does not read as though they were not there. Their
+/// number is the model's list of what stands on the level (`Placement`); what is priced on them is the estimate's, and what is not
+/// is said at the foot of its recap.
+// OWED TO THE MODEL (call 197 point 10, the lead's ruling): a count is a figure and belongs to the model. This groups the model's
+// placements by level and kind here for now; a set-down count by level and kind in the storey's totals is to replace it, and this
+// window then reads that figure.
+fn set_down(t: &mut ChildSpawnerCommands, fonts: &Fonts, snap: &Snapshot, level: &str, level_name: &str) {
+    let mut kinds: Vec<Kind> = Vec::new();
+    for p in snap.drawn.iter().filter(|p| p.kind.is_placed() && p.storey.as_deref() == Some(level)) {
+        if !kinds.contains(&p.kind) {
+            kinds.push(p.kind);
+        }
+    }
+    if kinds.is_empty() {
+        return;
+    }
+    header_row(t, fonts, &[("", 7.0, false), ("Set down on this level", 0.0, false)]);
+    for kind in kinds {
+        let here: Vec<&plumbline_world::building::Placement> = snap.drawn.iter().filter(|p| p.kind == kind && p.storey.as_deref() == Some(level)).collect();
+        let said = kind.so_many(here.len());
+        let worst = here.iter().map(|p| p.status).max().unwrap_or(Status::Unknown);
+        let names = here.iter().map(|p| p.name.as_str()).collect::<Vec<_>>().join(", ");
+        t.spawn((Node { align_items: AlignItems::Center, column_gap: px(12.0), padding: UiRect::axes(px(16.0), px(6.0)), min_height: px(31.0), border: UiRect::bottom(px(1.0)), ..default() }, BorderColor::all(theme::rule()), theme::named(format!("Set down on {level_name}: {said}")))).with_children(|r| {
+            cell(r, 7.0, false, |c| dot(c, worst));
+            r.spawn(Node { flex_direction: FlexDirection::Column, flex_grow: 1.0, flex_basis: px(0.0), min_width: px(0.0), ..default() }).with_children(|c| {
+                c.spawn(text(fonts, said, 12.5, Weight::Medium, theme::ink()));
+                c.spawn(text(fonts, names, 11.0, Weight::Regular, theme::ink_faint()));
+            });
         });
     }
 }
@@ -894,6 +932,19 @@ pub fn dollars(d: Option<&plumbline_world::Derived>) -> (String, Status) {
     }
 }
 
+/// How many things are set down and have nothing priced on them, from the model's own count of what is not priced
+/// (`Pricing::not_priced`, the figure the top bar gives): "2 furnishings are set down and not priced."
+fn set_down_said(snap: &Snapshot) -> Option<String> {
+    let p = snap.pricing.as_ref()?;
+    let set: Vec<&(Kind, usize)> = p.not_priced.iter().filter(|(k, _)| k.is_placed()).collect();
+    let n: usize = set.iter().map(|x| x.1).sum();
+    if n == 0 {
+        return None;
+    }
+    let kinds: Vec<String> = set.iter().map(|(k, n)| k.so_many(*n)).collect();
+    Some(format!("{} {} set down and not priced.", kinds.join(", "), if n == 1 { "is" } else { "are" }))
+}
+
 /// The estimate sheet: every cost line under its element with its amount in one of three
 /// columns, the recap, and the suppliers side by side. Every figure is the world's
 /// (`view::estimate`); nothing is added up here.
@@ -902,6 +953,10 @@ fn estimate(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
     let Some(est) = &snap.estimate else { return };
     if est.lines.is_empty() && est.allowance_on.is_empty() {
         nothing(p, fonts, "Nothing in this job has a cost line or an allowance.");
+        // What is set down and not priced is said here too (call 197, point 10): it is in no line and no total.
+        if let Some(said) = set_down_said(snap) {
+            nothing(p, fonts, &said);
+        }
         return;
     }
     let money = |d: &plumbline_world::Derived| dollars(Some(d));
@@ -1011,6 +1066,9 @@ fn estimate(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snaps
                         first.make_ascii_uppercase();
                     }
                     t.spawn(Node { padding: UiRect { left: px(35.0), right: px(16.0), top: px(0.0), bottom: px(8.0) }, ..default() }).with_child(text(fonts, format!("{said}."), 11.5, Weight::Medium, theme::red()));
+                }
+                if let Some(said) = set_down_said(snap) {
+                    t.spawn((Node { padding: UiRect { left: px(35.0), right: px(16.0), top: px(0.0), bottom: px(8.0) }, ..default() }, theme::named(said.clone()))).with_child(text(fonts, said, 11.5, Weight::Medium, theme::ink_soft()));
                 }
                 if let Some(said) = snap.pricing.as_ref().and_then(|p| view::not_priced_said(&p.not_priced)) {
                     let mut said = said;

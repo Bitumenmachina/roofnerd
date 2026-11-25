@@ -118,7 +118,7 @@ fn main() {
         .add_systems(Last, closing)
         .add_systems(
             Update,
-            ((tools::frame_begins, keys).chain(), plans::dropped, plans::read, tools::clicks, scene::carry, tools::record, scene::orbit_input, model::refresh, scene::rebuild, scene::tint, panels::rebuild, sheet::rebuild, (scene::sun_study, scene::place_camera, scene::widen_runs, scene::ground_tone, glass::follow).chain(), tools::pointer, scene::draw_lines, tools::preview, panels::place_labels, panels::write_pointer, panels::scroll_panels, map::write).chain(),
+            ((tools::frame_begins, keys).chain(), plans::dropped, plans::read, tools::clicks, scene::carry, tools::record, (scene::orbit_input, scene::room_for_card).chain(), model::refresh, scene::rebuild, scene::tint, panels::rebuild, sheet::rebuild, (scene::sun_study, scene::place_camera, scene::widen_runs, scene::ground_tone, glass::follow).chain(), tools::pointer, scene::draw_lines, tools::preview, panels::place_labels, panels::write_pointer, panels::scroll_panels, map::write).chain(),
         )
         .run();
 }
@@ -188,6 +188,7 @@ pub fn build_doc(path: String, roof_arg: Option<String>) -> Result<Doc, String> 
         bench_ask: None,
         dropped: None,
         choosing: false,
+        pricing_item: None,
         give: None,
         placing: None,
         lost: None,
@@ -968,6 +969,9 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
             if burst.after_entry {
                 let first = doc.message.clone();
                 doc.say(Tone::Warned, format!("{first}\nA second reading came straight after that one and was not used. One reading to a value: click the next value, then shoot."));
+            } else if doc.draw.tool == Some(tools::Tool::Cabinets) {
+                // Boxes typed before the run has a wall to start on (call 197, point 11): said in the cabinetmaker's words.
+                doc.say(Tone::Refused, "No run is started yet, so the boxes typed were not set. Click the wall's face where the run starts, on the room's side, then type the boxes, like B18 SB36 B24.");
             } else {
                 doc.say(Tone::Refused, "A reading came in with no value picked to take it, and was not used. Click the value first (in the panel on the right), then shoot or type.");
             }
@@ -1249,8 +1253,8 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
         if let Some(sel) = doc.selected.clone() {
             let called = doc.job.find(&sel).and_then(|e| doc.job.world.get::<plumbline_world::Node>(e)).map(|n| n.name.clone()).unwrap_or_else(|| sel.clone());
             let priced_before = plumbline_world::view::estimate(&mut doc.job);
-            match doc.job.change_assembly(&sel, &name, Status::Assumed, SOURCE) {
-                Ok((added, taken)) => {
+            match doc.job.change_assembly_said(&sel, &name, Status::Assumed, SOURCE).map(|c| (c.added, c.taken, c.rewritten, c.left)) {
+                Ok((added, taken, rewritten, kept)) => {
                     doc.job.derive();
                     // What the lines that came off took out of the job cost (J23-5).
                     let money = plumbline_world::view::came_off_said(&priced_before, &mut doc.job).filter(|s| s.contains('$')).and_then(|s| s.split_once(": ").map(|(_, rest)| format!(" {}{}", rest[..1].to_uppercase(), &rest[1..]))).unwrap_or_default();
@@ -1268,7 +1272,7 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
                     for sister in doc.job.sister_planes(&sel) {
                         let its = doc.job.find(&sister).and_then(|e| doc.job.world.get::<plumbline_world::Node>(e)).map(|n| n.name.clone()).unwrap_or_else(|| sister.clone());
                         let bare = doc.job.find(&sister).is_some_and(|e| doc.job.world.get::<plumbline_world::Cost>(e).is_none_or(|c| c.lines.is_empty()));
-                        if bare && doc.job.change_assembly(&sister, &name, Status::Assumed, SOURCE).is_ok() {
+                        if bare && doc.job.change_assembly_said(&sister, &name, Status::Assumed, SOURCE).is_ok() {
                             too.push(its);
                         } else {
                             left.push(its);
@@ -1284,7 +1288,8 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
                         (false, false) => format!(" So {} {}: the same lines on each. {} of the same roof had lines of its own and is as it was.", if too.len() == 1 { "is" } else { "are" }, plumbline_world::view::listed(&too), plumbline_world::view::listed(&left)),
                         (true, false) => format!(" {} of the same roof had lines of its own and is as it was.", plumbline_world::view::listed(&left)),
                     };
-                    doc.say(if money.is_empty() { Tone::Done } else { Tone::Warned }, format!("{called} is now {name:?}: {} added.{off}{money}{roof}", lines(added.len())));
+                    let shared = shared_lines_said(&rewritten, &kept);
+                    doc.say(if money.is_empty() && kept.is_empty() { Tone::Done } else { Tone::Warned }, format!("{called} is now {name:?}: {} added.{off}{money}{roof}{shared}", lines(added.len())));
                 }
                 Err(why) => tools::cant(doc, "give that assembly", why),
             }
@@ -1294,4 +1299,28 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
     if keys.just_pressed(KeyCode::F2) {
         save(doc);
     }
+}
+
+/// What an assembly changed for another did to the lines the two have (call 199, call 200 point 5): each line whose quantity now
+/// reads as the new assembly's, with what it was and what it is, and each left as it was, in the words `plumbline apply --change` uses.
+fn shared_lines_said(rewritten: &[plumbline_world::Rewritten], left: &[plumbline_world::Left]) -> String {
+    let mut out = String::new();
+    let lines = |n: usize| if n == 1 { "1 cost line".to_string() } else { format!("{n} cost lines") };
+    if !rewritten.is_empty() {
+        out.push_str(&format!("\n{} it already had {} the new assembly's quantity, and kept its price, its waste and how it is ordered:", lines(rewritten.len()), if rewritten.len() == 1 { "now reads as" } else { "now read as" }));
+        for r in rewritten {
+            out.push_str(&format!("\n  {}: {} to {} ({} to {})", r.line, r.was, r.now, r.was_written, r.now_written));
+        }
+    }
+    if !left.is_empty() {
+        out.push_str(&format!("\n{} it already had {} left as {}:", lines(left.len()), if left.len() == 1 { "was" } else { "were" }, if left.len() == 1 { "it is" } else { "they are" }));
+        for l in left {
+            out.push_str(&match l.why {
+                plumbline_world::LeftAsIs::Entered => format!("\n  {}: left as entered, {} ({}); the new assembly writes {}, which comes to {}", l.line, l.has, l.has_written, l.would_written, l.would),
+                plumbline_world::LeftAsIs::OldAssemblyGone => format!("\n  {}: left as it was, {} ({}): the assembly it had is not in this job, so what it wrote cannot be compared with this line; the new assembly writes {}, which comes to {}", l.line, l.has, l.has_written, l.would_written, l.would),
+                plumbline_world::LeftAsIs::Unit => format!("\n  {}: left as it was, {} ({}): the new assembly's quantity comes out in another unit than this line is priced and ordered in, and a price does not carry from one to the other; the new assembly writes {}, which comes to {}", l.line, l.has, l.has_written, l.would_written, l.would),
+            });
+        }
+    }
+    out
 }

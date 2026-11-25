@@ -500,7 +500,7 @@ pub fn settings_entered(doc: &mut Doc, tool: Tool, values: &[String]) {
 pub fn new_item(doc: &mut Doc, values: &[String]) {
     use plumbline_world::units;
     use plumbline_world::value::Val;
-    const TYPED: &str = "typed in the window; not yet checked against its maker's sheet";
+    const TYPED: &str = ed::ITEM_SIZE_TYPED;
     let parts: Vec<&str> = values.iter().map(|s| s.trim()).collect();
     let made = (|| -> Result<(String, String), String> {
         let [name, kind, width, depth, height] = parts.as_slice() else { return Err("an item takes a name, a kind, and its width, depth and height".to_string()) };
@@ -915,6 +915,13 @@ pub fn pick(doc: &mut Doc, at: [f64; 2], source: Option<String>) {
         Some(Ok(what)) => {
             doc.edit(tool.name());
             doc.say(if warned { Tone::Refused } else { Tone::Done }, what);
+        }
+        // A corner refused in a run says where the run still stands, so that the next click is not a surprise (call 197, point 12).
+        Some(Err(why)) if matches!(tool, Tool::Wall | Tool::Run(_)) && doc.draw.picked.len() == 1 => {
+            let start = doc.draw.picked[0];
+            let stands = format!("{} still starts at ({}, {}): click the next corner, or press Esc to let it go.", if tool == Tool::Wall { "The run of walls" } else { "The run" }, units::feet_as_ft_in(start[0], 16), units::feet_as_ft_in(start[1], 16));
+            let why = why.to_string();
+            cant(doc, &doing(tool), format!("{why}{} {stands}", if why.ends_with('.') { "" } else { "." }));
         }
         Some(Err(why)) => cant(doc, &doing(tool), why),
         None => {}
@@ -1662,97 +1669,29 @@ pub fn measured(doc: &mut Doc, text: &str) {
     doc.redraw();
 }
 
-/// The words a size typed on an item's panel is entered under: it is the item changed, not a measurement.
-const ITEM_TYPED: &str = "typed in the window; not yet checked against its maker's sheet";
-
 /// A size typed on an item's panel. True when it was an item's size and has been dealt with (said, done or
 /// refused); false when it is anything else, or not a length, and goes the way a measurement goes.
-/// Differing from the size it has: Assumed, in the words New item uses; the same size again (or "same"): the
-/// check, Known, "checked on site". Both are the model's own measurement (`ed::measure`), which also moves what is
-/// set down from the item and says what moved; the second of the two steps below sets the item's size back to
-/// Assumed on the window's say (the model's measurement makes a value Known).
+/// What it is and what follows it is the model's (`ed::item_size`): differing from the size it has, the item changed and
+/// Assumed, in the words New item uses; the same size again (or "same"), the check, Known, "checked on site".
 fn item_size(doc: &mut Doc, path: &str, what: &str, reading: &str, who: &str) -> bool {
     use plumbline_world::Item;
+    // The guard is the window's: only an item's width, depth or height, and only a length or the word "same". What a size
+    // typed there is, and what follows it, is the model's (`editing::item_size`, call 200).
     let Some(e) = doc.job.find(path) else { return false };
-    let Some(item) = doc.job.world.get::<Item>(e).cloned() else { return false };
-    let was = match what {
-        "width" => &item.width,
-        "depth" => &item.depth,
-        "height" => &item.height,
-        _ => return false,
-    };
-    let name = doc.job.world.get::<plumbline_world::Node>(e).map(|n| n.name.clone()).unwrap_or_else(|| path.to_string());
-    let word_same = reading.eq_ignore_ascii_case("same");
-    let typed = if word_same { None } else { units::parse_length(reading).ok() };
-    if !word_same && typed.is_none() {
+    if doc.job.world.get::<Item>(e).is_none() || !matches!(what, "width" | "depth" | "height") {
         return false;
     }
-    let was_text = was.value.as_ref().map(|len| units::show_length(len, &was.unit));
-    // The same size again: the feet are the same to a ten-thousandth of an inch.
-    let again = word_same || typed.zip(was.feet()).is_some_and(|((len, unit), old)| was.status != Status::Unknown && len.feet(unit).is_ok_and(|now| (now - old).abs() < 1.0e-5));
-    if again {
-        let source = if who.is_empty() { "checked on site".to_string() } else { format!("checked on site: {who}") };
-        match ed::measure(&mut doc.job, path, what, ed::Reading::Same, None, &source) {
-            Ok(done) => {
-                doc.edit("checked an item's size");
-                let said = format!("{name}: {what} {} is checked: Known, checked on site.", was_text.unwrap_or_default());
-                doc.say(Tone::Done, if done.also.is_empty() { said } else { format!("{said}\n{}", done.also.join("\n")) });
-            }
-            Err(why) => cant(doc, "use that reading", why),
-        }
-        return true;
+    if !reading.eq_ignore_ascii_case("same") && units::parse_length(reading).is_err() {
+        return false;
     }
-    let source = ITEM_TYPED;
-    let done = match ed::measure(&mut doc.job, path, what, ed::Reading::Length(reading), None, source) {
-        Ok(done) => done,
-        Err(why) => {
-            cant(doc, "use that size", why);
-            return true;
+    match ed::item_size(&mut doc.job, path, what, reading, who) {
+        Ok(done) => {
+            doc.edit(if done.how == ed::HowSized::Checked { "checked an item's size" } else { "typed an item's size" });
+            doc.say(if done.name_carries_old { Tone::Warned } else { Tone::Done }, done.said());
         }
-    };
-    // The size is the item changed, and what is not yet checked is Assumed.
-    let mut it = doc.job.world.get::<Item>(e).cloned().unwrap_or(item);
-    match what {
-        "width" => it.width.status = Status::Assumed,
-        "depth" => it.depth.status = Status::Assumed,
-        _ => it.height.status = Status::Assumed,
+        Err(why) => cant(doc, "use that size", why),
     }
-    let _ = doc.job.put(path, it.clone());
-    // What follows it is as sure as the item's sizes together are: where the three were all Known, the ones set
-    // down said Known a moment ago, and are put right to what the model says of the item's size.
-    let followers: Vec<String> = done.also.iter().filter_map(|a| a.strip_suffix(" is one of it and is now that size")).map(str::to_string).collect();
-    if let Ok((feet, status, from)) = it.size_ft() {
-        for at in &followers {
-            let Some(mut placed) = doc.job.find(at).and_then(|f| doc.job.world.get::<plumbline_world::Placed>(f)).cloned() else { continue };
-            if placed.size.status != status {
-                placed.size = plumbline_world::Val { value: Some(feet), unit: "ft".into(), status, source: format!("{name}: {from}") };
-                let _ = doc.job.put(at, placed);
-            }
-        }
-    }
-    doc.job.derive();
-    doc.edit("typed an item's size");
-    let now = it_text(&it, what);
-    let follow = match followers.len() {
-        0 => "Nothing is set down from it yet.".to_string(),
-        1 => "1 thing set down from it follows.".to_string(),
-        n => format!("{n} things set down from it follow."),
-    };
-    let old = was_text.clone().unwrap_or_default();
-    let renamed = if !old.is_empty() && name.contains(&old) { format!(" Its name still reads {old}: Rename item changes it.") } else { String::new() };
-    let note = if was_text.is_some() { format!(" (it was {old})") } else { String::new() };
-    doc.say(if renamed.is_empty() { Tone::Done } else { Tone::Warned }, format!("{name}: {what} is now {now}{note}. Assumed: {ITEM_TYPED}. {follow} To check it, type {now} again on its {what}: that makes it Known, checked on site.{renamed}"));
     true
-}
-
-/// An item's size as its panel says it.
-fn it_text(item: &plumbline_world::Item, what: &str) -> String {
-    let v = match what {
-        "width" => &item.width,
-        "depth" => &item.depth,
-        _ => &item.height,
-    };
-    v.value.as_ref().map(|len| units::show_length(len, &v.unit)).unwrap_or_default()
 }
 
 /// A roof worked out from the footprint picked: its corners (turned counter-clockwise
@@ -1928,11 +1867,11 @@ pub fn select_all_on_level(doc: &mut Doc, path: &str, kind: Kind) {
     let name = plumbline_world::building::storey_totals(&mut doc.job).into_iter().find(|s| s.path == level).map(|s| crate::panels::pretty(&s.name)).unwrap_or(level);
     let n = same.len() + 1;
     doc.choosing = false;
-    doc.marking = None;
+    let unmarked = doc.left_unmarked().map(|u| format!("\n{u}")).unwrap_or_default();
     doc.together = same;
     doc.selected = Some(path.to_string());
     let what = theme::kind_name(kind).to_lowercase();
-    doc.say(Tone::Done, format!("Selected all {n} {what}{} on {name}. WORK and Delete act on all of them; Esc lets go.", if n == 1 { "" } else { "s" }));
+    doc.say(Tone::Done, format!("Selected all {n} {what}{} on {name}. WORK and Delete act on all of them; Esc lets go.{unmarked}", if n == 1 { "" } else { "s" }));
     doc.touch();
 }
 
@@ -2235,5 +2174,58 @@ mod run_tests {
         let (count, far) = moved_by(&same, &[[[0.0, 0.0], [10.5, 0.0]]]);
         assert_eq!(count, 1);
         assert!((far - 0.5).abs() < 1e-9);
+    }
+}
+
+/// Call 197 (points 10 to 13 and 16): the words the window gives, and where each is worked out.
+#[cfg(test)]
+mod w197_tests {
+    use super::*;
+    use plumbline_world::value::Status;
+
+    fn doc_with_a_wall() -> (Doc, String) {
+        let mut doc = crate::build_doc("/nonexistent/w197-test.json".to_string(), None).expect("a new job");
+        let how = ed::Entered { status: Status::Assumed, source: "made-up plan" };
+        let level = ed::storey(&mut doc.job, "Ground", "0 ft", "9 ft", how).expect("a level");
+        let t = ed::wall_type_for(&mut doc.job, "6 in", how).expect("a wall type");
+        ed::walls(&mut doc.job, &level, &t, &[[0.0, 0.0], [20.0, 0.0]], false, ed::Top::Height("9 ft"), how).expect("a wall");
+        doc.job.derive();
+        doc.show.storey = Some(level.clone());
+        (doc, level)
+    }
+
+    #[test]
+    fn a_corner_refused_says_where_the_run_still_starts() {
+        let (mut doc, _) = doc_with_a_wall();
+        doc.draw.tool = Some(Tool::Wall);
+        doc.draw.settings.insert("Wall", vec!["6 in".to_string(), "9 ft".to_string()]);
+        // A new wall laid along the one that stands: the model refuses it.
+        pick(&mut doc, [4.0, 0.0], None);
+        pick(&mut doc, [12.0, 0.0], None);
+        assert!(doc.message.starts_with("Can't draw the wall:"), "{}", doc.message);
+        assert!(doc.message.contains("The run of walls still starts at (4' 0\", 0' 0\"): click the next corner, or press Esc to let it go."), "{}", doc.message);
+    }
+
+    #[test]
+    fn a_mark_asked_for_and_left_says_nothing_was_marked() {
+        let (mut doc, _) = doc_with_a_wall();
+        let wall = doc.job.order.iter().filter_map(|e| doc.job.world.get::<plumbline_world::Node>(*e)).find(|n| n.path.starts_with("wall-")).map(|n| n.path.clone()).expect("the wall");
+        doc.marking = Some((wall.clone(), plumbline_world::WorkStatus::Demolish));
+        doc.select("level-0002");
+        assert!(doc.marking.is_none());
+        assert!(doc.message.contains("was not marked to demolish: its question was left unanswered, and nothing was changed."), "{}", doc.message);
+        // Nothing pending: nothing said of it.
+        doc.select(&wall);
+        assert!(!doc.message.contains("not marked"), "{}", doc.message);
+    }
+
+    #[test]
+    fn what_an_assembly_changed_for_another_did_to_a_shared_line_is_said_in_the_command_lines_words() {
+        let rewritten = vec![plumbline_world::Rewritten { line: "Lap siding".into(), was: "200.00 SF".into(), now: "140.00 SF".into(), was_written: "net_area".into(), now_written: "net_area - net_area_below_wainscot".into() }];
+        let left = vec![plumbline_world::Left { line: "Corner boards".into(), has: "18.00 LF".into(), has_written: "2 * height".into(), would: "14.00 LF".into(), would_written: "2 * (height - wainscot)".into(), why: plumbline_world::LeftAsIs::Entered }];
+        let said = crate::shared_lines_said(&rewritten, &left);
+        assert!(said.contains("1 cost line it already had now reads as the new assembly's quantity, and kept its price, its waste and how it is ordered:\n  Lap siding: 200.00 SF to 140.00 SF (net_area to net_area - net_area_below_wainscot)"), "{said}");
+        assert!(said.contains("1 cost line it already had was left as it is:\n  Corner boards: left as entered, 18.00 LF (2 * height); the new assembly writes 2 * (height - wainscot), which comes to 14.00 LF"), "{said}");
+        assert_eq!(crate::shared_lines_said(&[], &[]), "");
     }
 }

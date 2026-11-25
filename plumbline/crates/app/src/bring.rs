@@ -139,6 +139,10 @@ pub fn bring(doc: &mut Doc, what: Bring, typed: &str) {
                 if !made.missing.is_empty() {
                     out.push_str(&format!("\nNot on the sheet, and Unknown until entered: {}.", made.missing.join(", ")));
                 }
+                // The sheet does not say which trade's it is (call 197, point 15), as New item does not either.
+                if made.item.division.is_none() {
+                    out.push_str("\nIts trade is not said yet: pick it under Trade, on the right, with the item selected.");
+                }
                 out.push_str("\nIt is in the tool chest, on the left: click it there, then click where one stands.");
                 Ok((out, !made.missing.is_empty()))
             }

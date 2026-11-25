@@ -105,6 +105,15 @@ pub fn write(
         let (window, corner) = if on_model { ("model", model.0) } else { ("sheet", sheet.0) };
         found.push((window, name.name.clone(), at.x + corner.x as f32, at.y + corner.y as f32));
     }
+    // The box of a card laid over the model (the Cabinets card): `box<TAB>name<TAB>left<TAB>top<TAB>right<TAB>bottom`, so that a script
+    // can ask whether it lies over what is drawn (call 197, point 11).
+    let mut boxes = String::new();
+    for (name, node, place, target, visible, _) in &named {
+        if visible.get() && node.size.x > 0.0 && name.name.ends_with(" card") && target.get() == Some(cameras.ui) {
+            let (c, half) = (place.translation * node.inverse_scale_factor, node.size * node.inverse_scale_factor / 2.0);
+            boxes.push_str(&format!("box\t{}\t{}\t{}\t{}\t{}\n", name.name, (c.x - half.x + model.0.x as f32).round(), (c.y - half.y + model.0.y as f32).round(), (c.x + half.x + model.0.x as f32).round(), (c.y + half.y + model.0.y as f32).round()));
+        }
+    }
     found.sort_by(|a, b| a.0.cmp(b.0).then(a.1.cmp(&b.1)).then(a.3.total_cmp(&b.3)).then(a.2.total_cmp(&b.2)));
     let mut out = String::new();
     let mut before: Option<(&str, String)> = None;
@@ -143,6 +152,7 @@ pub fn write(
         }
         out.push_str(&format!("state\tLevel\t{level}\n"));
     }
+    out.push_str(&boxes);
     away.sort();
     away.dedup_by(|a, b| a.0 == b.0);
     for (name, way) in &away {
@@ -205,6 +215,10 @@ pub fn write(
             (None, _) if !doc.plan => {
                 if let Some(p) = snap.extent.and_then(|(lo, _, _)| at(to_view(doc.origin, [lo[0], lo[1], 0.0]))) {
                     out.push_str(&format!("house\t{:.1}\t{:.1}\n", p.0, p.1));
+                }
+                // The middle of what is drawn: what a swing begun off the model turns about (call 197, point 14).
+                if let Some(p) = snap.extent.and_then(|(lo, hi, top)| at(to_view(doc.origin, [(lo[0] + hi[0]) / 2.0, (lo[1] + hi[1]) / 2.0, top / 2.0]))) {
+                    out.push_str(&format!("middle\t{:.1}\t{:.1}\n", p.0, p.1));
                 }
             }
             _ => {}

@@ -73,8 +73,13 @@ cat > "$T/session.sh" <<SESSION
 export APP="$APP" T="$T" OUT="$OUT" ICD="$ICD"
 . "$PWD/demos/window.sh"
 open_window "$J"
+# Where the plan lies on screen, read again once it has come to rest: two readings four seconds apart agree.
+# (Call 197 point 11, ruled 2026-11-25: taking the Cabinets tool in hand eases the plan so that the building stands clear of the
+# tool's card, so each picture is measured against the plan as it lay when that picture was taken, and not against the plan as
+# opened. No bound below moves.)
+plan_rest() { local a b n=0; a="\$(plan_line)"; while [ "\$n" -lt 20 ]; do sleep 4; b="\$(plan_line)"; [ -n "\$b" ] && [ "\$a" = "\$b" ] && break; a="\$b"; n=\$((n + 1)); done; echo "\$b" > "\$1"; }
 on "Plan"; sleep 8; park
-plan_line > "$T/plan.txt"
+plan_rest "$T/plan-01.txt"
 found model "Delete" > /dev/null         # every tool is still on the bar, the last of them too
 shot                                     # 01 the plan as opened: no boxes along the east wall
 on "Cabinets"; sleep 3; park
@@ -82,8 +87,10 @@ shot                                     # 02 Cabinets in hand, its Countertop s
 at 35.75 1; sleep 3                      # the Kitchen's east wall, its face, 1 ft along from the first end
 shot                                     # 03 the run's start taken; the fields are open
 cp "$T/map.txt" "$T/map-fields.txt"
+plan_rest "$T/plan-04.txt"
 typed "B18 [Dishwasher] SB36 B24 DB18 B36" shot       # 04 the boxes typed (picture before Enter), then Enter
 park; sleep 6
+plan_rest "$T/plan-05.txt"
 shot                                     # 05 the run set, in plan, each box carrying its code
 sheet "Estimate"; sleep 5; park
 # The estimate's lines are below its recap: the wheel over the sheet, a step at a time, until
@@ -109,6 +116,7 @@ shot                                     # 09 the same, in 3D
 on "Undo"; sleep 5; park
 shot                                     # 10 undone in one step, in 3D
 on "Plan"; sleep 8; park
+plan_rest "$T/plan-11.txt"
 shot                                     # 11 undone, in plan
 xdotool key F2; sleep 4                  # save again
 cp "$J" "$T/undone.json"
@@ -239,12 +247,16 @@ echo "== The pictures, measured =="
 # Each check is proved able to fail: the run check on the before picture (01) and on the patches
 # moved 6 ft west of the run in picture 05; the code check on picture 01 and on windows 6 ft west
 # in picture 05; the dimension check on the other place in each picture.
-python3 -I - "$OUT" "$T/plan.txt" <<'PY'
+python3 -I - "$OUT" "$T" <<'PY'
 import sys
 from PIL import Image
-out, planfile = sys.argv[1], sys.argv[2]
-x0, y0, k = map(float, open(planfile).read().split())
+out, tmp = sys.argv[1], sys.argv[2]
+# Each picture is measured against the plan as it lay when the picture was taken (call 197 point 11; ruled 2026-11-25).
+def plan(name):
+    return map(float, open("%s/plan-%s.txt" % (tmp, name)).read().split())
+x0, y0, k = plan("01")
 def mean(name, e0, e1, n0, n1):
+    x0, y0, k = plan(name)
     im = Image.open("%s/%s-model.png" % (out, name)).convert("RGB")
     px = im.load()
     xs = range(int(round(x0 + e0 * k)), int(round(x0 + e1 * k)) + 1)
@@ -258,6 +270,7 @@ def mean(name, e0, e1, n0, n1):
             n += 1
     return [a / n for a in acc]
 def dark(name, e0, e1, n0, n1, lum=110):
+    x0, y0, k = plan(name)
     im = Image.open("%s/%s-model.png" % (out, name)).convert("RGB")
     px = im.load()
     n = 0
@@ -275,7 +288,8 @@ def run_drawn(name, shift=0.0):
     past = mean(name, 34.0 + shift, 35.4 + shift, 14.4, 15.4)
     g1, g2 = gap(inside, west), gap(inside, past)
     return g1 > 30 and g2 > 30, inside, west, past, g1, g2
-print("    the plan on screen: zero at (%.0f, %.0f), %.2f pixels to the foot" % (x0, y0, k))
+for pic in ("01", "04", "05", "11"):
+    print("    the plan on screen in picture %s: zero at (%.0f, %.0f), %.2f pixels to the foot" % ((pic,) + tuple(plan(pic))))
 ok = True
 for what, name, shift, want in (
     ("01 before the run", "01", 0.0, False),
@@ -305,6 +319,7 @@ for code, n in middles.items():
 # pixels (luminance over 215) in it, and there are none. The same window in picture 04 is paper:
 # every pixel in it is light, so the second test fails there, as it must.
 def count(name, e0, e1, n0, n1, test):
+    x0, y0, k = plan(name)
     im = Image.open("%s/%s-model.png" % (out, name)).convert("RGB")
     px = im.load()
     n = 0
@@ -328,6 +343,7 @@ ok = ok and good
 # (demos/captured/cabinetsw/05-model.png at the commit before it, "Dishwasher" lettered wider than its
 # box), which fails the check. And DW has ink inside the box (at least 6 dark pixels).
 def light(name, e0, e1, n0, n1, lum=180):
+    x0, y0, k = plan(name)
     im = Image.open("%s/%s-model.png" % (out, name)).convert("RGB")
     px = im.load()
     n = 0
