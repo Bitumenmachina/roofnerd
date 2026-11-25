@@ -325,6 +325,8 @@ impl Show {
 pub struct Doc {
     /// Where the sun is (call 184, step 2); a way of looking, never saved.
     pub sun: SunStudy,
+    /// "Tilt as I dive" (call 218, point 3): the view leans over as the wheel brings it down. A way of looking, never saved.
+    pub tilt_dive: bool,
     /// The trade whose button was pressed last and the switches as it set them
     /// (call 177): its button reads on while they are still so.
     pub trade: Option<(&'static str, Show)>,

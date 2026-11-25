@@ -38,6 +38,21 @@ pub struct Label {
     pub rank: u8,
 }
 
+/// A thing's own size in feet, on the label that names it: the name is written over the thing only while the thing is big enough
+/// on the screen to be what is looked at, and not so big that the window is inside it (call 218, point 2).
+#[derive(Component)]
+pub struct Detail {
+    pub feet: f32,
+    /// The name of what is selected is kept in the clear part of the window while the thing is big on the screen.
+    pub keep_in_view: bool,
+}
+
+/// The north arrow's needle (turns with the view) and its disc (leans with the tilt) (call 218, point 7).
+#[derive(Component)]
+pub struct NorthRotor;
+#[derive(Component)]
+pub struct NorthDisc;
+
 /// A label that is to stay inside a box on the plan (call 169): lettered smaller where
 /// its words are wider than the box, and never wider than it. The box's four corners.
 #[derive(Component)]
@@ -377,6 +392,7 @@ pub fn rebuild(mut commands: Commands, doc: Res<Doc>, snap: Res<Snapshot>, plans
         }
         top_bar(root, fonts, &doc, &snap);
         views(root, fonts, &doc);
+        north_card(root, fonts, &doc);
         sun_card(root, fonts, &doc);
         status_line(root, fonts, &doc);
     });
@@ -423,11 +439,73 @@ fn views(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc) {
             });
         }
         on_click(&mut button(bar, fonts, "Frame", "F", false), |doc| doc.press(KeyCode::KeyF));
+        // The view leans over as the wheel brings it down, and rights itself going out (call 218, point 3).
+        on_click(&mut button(bar, fonts, "Tilt as I dive", "", doc.tilt_dive), |doc| {
+            doc.tilt_dive = !doc.tilt_dive;
+            let said = if doc.tilt_dive { "Tilt as I dive is on: the view leans over as the wheel brings it down, and rights itself going out." } else { "Tilt as I dive is off: the wheel keeps the angle you left the view at." };
+            doc.say(Tone::Done, said);
+            doc.touch();
+        });
         // Where the sun is (call 184, step 2): its card opens beneath.
         on_click(&mut button(bar, fonts, "Sun", "", doc.sun.open), |doc| {
             doc.sun.open = !doc.sun.open;
             doc.touch();
         });
+    });
+}
+
+/// The north arrow, in the model's top left corner (call 218, point 7): a disc that turns as the view turns and leans as it tilts,
+/// its red end north. A click turns the view north-up where it stands; a second click straight after looks straight down. Home does
+/// the first. A builder's north arrow, not a cube of faces.
+fn north_card(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc) {
+    if doc.bench.is_some() || doc.walk {
+        return;
+    }
+    let mut node = Node { top: px(TOP_H), left: px(LEFT_W), padding: UiRect::all(px(6.0)), flex_direction: FlexDirection::Column, align_items: AlignItems::Center, row_gap: px(3.0), ..default() };
+    node.border_radius = BorderRadius::all(px(44.0));
+    p.spawn(docked(node)).with_children(|card| {
+        let mut disc = card.spawn((
+            Node { width: px(72.0), height: px(72.0), border: UiRect::all(px(1.5)), border_radius: BorderRadius::all(px(36.0)), align_items: AlignItems::Center, justify_content: JustifyContent::Center, ..default() },
+            BackgroundColor(theme::control()),
+            BorderColor::all(theme::control_edge()),
+            UiTransform::default(),
+            NorthDisc,
+            named("North arrow"),
+        ));
+        disc.observe(|press: On<PointerClick>, mut doc: ResMut<Doc>, mut orbit: ResMut<crate::scene::Orbit>, time: Res<Time<Real>>, mut last: Local<f32>| {
+            if press.button != PointerButton::Primary || doc.plan {
+                return;
+            }
+            let now = time.elapsed_secs();
+            // As the double-click on the model is told: within half a second, or within a frame and a half where frames are slower.
+            let twice = now - *last < (time.delta_secs() * 1.5).max(0.5);
+            *last = now;
+            let mut to = orbit.pose();
+            to.yaw += crate::nav::turn_between(to.yaw, 0.0);
+            if twice {
+                to.pitch = crate::nav::STRAIGHT_DOWN;
+            }
+            orbit.fly(to);
+            doc.say(Tone::Done, if twice { "Looking straight down, north up." } else { "North is up." });
+            doc.touch();
+        });
+        disc.with_children(|d| {
+            // 69 dots across inside the edge, its middle at 34.5.
+            d.spawn((Node { position_type: PositionType::Absolute, width: px(69.0), height: px(69.0), ..default() }, UiTransform::default(), NorthRotor, Pickable::IGNORE)).with_children(|r| {
+                // The letter beyond the red end, then the two halves of the needle, each a diamond: a square turned a corner up and drawn long.
+                r.spawn((Node { position_type: PositionType::Absolute, top: px(0.0), left: px(0.0), width: px(69.0), justify_content: JustifyContent::Center, ..default() }, Pickable::IGNORE))
+                    .with_child((text(fonts, "N", 9.5, Weight::Semibold, theme::red()), Pickable::IGNORE));
+                for (up, colour) in [(-1.0_f32, theme::red()), (1.0_f32, theme::ink_soft())] {
+                    r.spawn((
+                        Node { position_type: PositionType::Absolute, left: px(34.5 - 6.0), top: px(34.5 - 6.0 + up * 12.7), width: px(12.0), height: px(12.0), ..default() },
+                        UiTransform { scale: Vec2::new(0.6, 1.5), ..default() },
+                        Pickable::IGNORE,
+                    ))
+                    .with_child((Node { width: px(12.0), height: px(12.0), ..default() }, BackgroundColor(colour), UiTransform { rotation: Rot2::degrees(45.0), ..default() }, Pickable::IGNORE));
+                }
+            });
+        });
+        keycap(card, fonts, "Home");
     });
 }
 
@@ -1841,7 +1919,13 @@ fn build_bar(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snap
 /// A label's tag: flat, hairline edge, and nothing in it takes the pointer, so a click
 /// on a label still lands on the model under it.
 fn pill(p: &mut ChildSpawnerCommands, label: Label, selected: bool, build: impl FnOnce(&mut ChildSpawnerCommands)) {
-    p.spawn((
+    pill_sized(p, label, 0.0, selected, build)
+}
+
+/// A pill whose thing is `feet` across: it is written over the thing only while the thing is a fit size on the screen
+/// (`Detail`). 0: no rule, as before.
+fn pill_sized(p: &mut ChildSpawnerCommands, label: Label, feet: f32, selected: bool, build: impl FnOnce(&mut ChildSpawnerCommands)) {
+    let mut e = p.spawn((
         // A tag on the model: round, with a little shadow, as everything that floats
         // over it is (it was a square white box with a grey line round it: J22B-19).
         Node { position_type: PositionType::Absolute, left: px(-2000.0), top: px(-2000.0), padding: UiRect::axes(px(8.0), px(2.0)), column_gap: px(6.0), align_items: AlignItems::Center, border: UiRect::all(px(1.0)), border_radius: BorderRadius::all(px(10.0)), ..default() },
@@ -1851,8 +1935,11 @@ fn pill(p: &mut ChildSpawnerCommands, label: Label, selected: bool, build: impl 
         theme::card_shadow(),
         Pickable::IGNORE,
         label,
-    ))
-    .with_children(build);
+    ));
+    if feet > 0.0 {
+        e.insert(Detail { feet, keep_in_view: false });
+    }
+    e.with_children(build);
 }
 
 fn quiet(p: &mut ChildSpawnerCommands, fonts: &Fonts, s: impl Into<String>, size: f32, weight: Weight, colour: Color) {
@@ -2052,11 +2139,11 @@ fn size_tags(o: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snap
             *best = (length, i);
         }
     }
-    let mut tags: Vec<(String, Vec3, Color)> = Vec::new();
+    let mut tags: Vec<(String, Vec3, Color, f32, bool)> = Vec::new();
     for (g, (_, i)) in &longest {
         let _ = g;
         let (_, p, [a, b]) = &runs[*i];
-        tags.push((p.tag.clone().unwrap_or_default(), (*a + *b) / 2.0, theme::system_colour(snap.classification(p.system.as_ref()))));
+        tags.push((p.tag.clone().unwrap_or_default(), (*a + *b) / 2.0, theme::system_colour(snap.classification(p.system.as_ref())), a.distance(*b), false));
     }
     // A foundation wall is a wall below the ground or one that is cast; no other wall wears one.
     let below = |p: &Placement| p.storey.as_ref().and_then(|st| snap.storeys.iter().find(|x| &x.path == st)).and_then(|x| x.elevation).is_some_and(|e| e < -0.5);
@@ -2064,7 +2151,7 @@ fn size_tags(o: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snap
         let Some(tag) = &p.tag else {
             if matches!(p.kind, Kind::Equipment | Kind::Fixture) && p.discipline != Discipline::Architecture {
                 if let Shape::Box { at, size, .. } = &p.shape {
-                    tags.push((p.name.clone(), to_view(doc.origin, [at[0], at[1], at[2] + size[2]]), theme::system_colour(snap.classification(p.system.as_ref()))));
+                    tags.push((format!("{}, {}", p.name, units::size_said(*size)), to_view(doc.origin, [at[0], at[1], at[2] + size[2]]), theme::system_colour(snap.classification(p.system.as_ref())), size[0].max(size[1]).max(size[2]) as f32, doc.selected.as_deref() == Some(p.path.as_str())));
                 }
             }
             continue;
@@ -2076,25 +2163,26 @@ fn size_tags(o: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snap
         match (&p.shape, p.kind) {
             (_, Kind::Footing | Kind::PadFooting | Kind::Wall) if !under => {}
             (_, Kind::Beam | Kind::Post) if !frame => {}
-            (Shape::Wall { a, b, base, height, .. }, Kind::Footing) => tags.push((tag.clone(), to_view(doc.origin, [(a[0] + b[0]) / 2.0, (a[1] + b[1]) / 2.0, base + height / 2.0]), theme::concrete())),
+            (Shape::Wall { a, b, base, height, .. }, Kind::Footing) => tags.push((tag.clone(), to_view(doc.origin, [(a[0] + b[0]) / 2.0, (a[1] + b[1]) / 2.0, base + height / 2.0]), theme::concrete(), (b[0] - a[0]).hypot(b[1] - a[1]) as f32, false)),
             (Shape::Wall { a, b, base, height, .. }, Kind::Wall) if below(p) || snap.dress.walls.get(&p.path).is_some_and(|d| d.concrete) => {
-                tags.push((tag.clone(), to_view(doc.origin, [(a[0] + b[0]) / 2.0, (a[1] + b[1]) / 2.0, base + height / 2.0]), theme::concrete()))
+                tags.push((tag.clone(), to_view(doc.origin, [(a[0] + b[0]) / 2.0, (a[1] + b[1]) / 2.0, base + height / 2.0]), theme::concrete(), (b[0] - a[0]).hypot(b[1] - a[1]) as f32, false))
             }
-            (Shape::Run { a, b, .. }, Kind::Beam | Kind::Post) => tags.push((tag.clone(), (to_view(doc.origin, *a) + to_view(doc.origin, *b)) / 2.0, theme::lumber())),
-            (Shape::Box { at, size, .. }, Kind::PadFooting) => tags.push((tag.clone(), to_view(doc.origin, [at[0], at[1], at[2] + size[2]]), theme::concrete())),
+            (Shape::Run { a, b, .. }, Kind::Beam | Kind::Post) => tags.push((tag.clone(), (to_view(doc.origin, *a) + to_view(doc.origin, *b)) / 2.0, theme::lumber(), to_view(doc.origin, *a).distance(to_view(doc.origin, *b)), false)),
+            (Shape::Box { at, size, .. }, Kind::PadFooting) => tags.push((tag.clone(), to_view(doc.origin, [at[0], at[1], at[2] + size[2]]), theme::concrete(), size[0].max(size[1]).max(size[2]) as f32, false)),
             _ => {}
         }
     }
     // The same words from the same place are one tag.
     tags.sort_by(|x, y| x.0.cmp(&y.0).then(x.1.x.total_cmp(&y.1.x)).then(x.1.z.total_cmp(&y.1.z)).then(x.1.y.total_cmp(&y.1.y)));
     tags.dedup_by(|x, y| x.0 == y.0 && x.1.distance(y.1) < 0.2);
-    for (words, at, colour) in tags {
+    for (words, at, colour, feet, chosen) in tags {
         o.spawn((
             Node { position_type: PositionType::Absolute, left: px(-2000.0), top: px(-2000.0), padding: UiRect::axes(px(6.0), px(1.0)), column_gap: px(4.0), align_items: AlignItems::Center, border_radius: BorderRadius::all(px(8.0)), ..default() },
             UiTransform { translation: Val2::percent(-50.0, -50.0), ..default() },
             BackgroundColor(theme::panel().with_alpha(0.86)),
             Pickable::IGNORE,
-            Label { at: at + Vec3::Y * 0.25, facing: None, rank: 2 },
+            Label { at: at + Vec3::Y * 0.25, facing: None, rank: if chosen { 0 } else { 2 } },
+            Detail { feet, keep_in_view: chosen },
             Named { name: format!("Tag {words}"), scrolls: false },
         ))
         .with_children(|l| {
@@ -2247,7 +2335,8 @@ fn overlay(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
             let normal = facing(&positions);
             let selected = doc.selected.as_deref() == Some(plane.path.as_str());
             let (main, soft) = if selected { (Color::WHITE, Color::WHITE.with_alpha(0.82)) } else { (theme::ink(), theme::ink_soft()) };
-            pill(o, Label { at: at + normal * 0.15, facing: Some(normal), rank: if selected { 0 } else { 1 } }, selected, |l| {
+            let across = positions.iter().fold(0.0_f32, |m, q| m.max(q.distance(at)));
+            pill_sized(o, Label { at: at + normal * 0.15, facing: Some(normal), rank: if selected { 0 } else { 1 } }, if selected { 0.0 } else { across * 2.0 }, selected, |l| {
                 quiet(l, fonts, plane.short(), 12.0, Weight::Semibold, main);
                 match plane.area {
                     Some(area) => quiet(l, fonts, amount(Some(area), 0, "SF"), 12.0, Weight::Medium, if selected || plane.area_status == Status::Known { main } else { theme::status_ink(plane.area_status) }),
@@ -3463,7 +3552,7 @@ fn selection(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snap
 
 /// Keep each label at its point of the model as the view moves. Where two would lie over
 /// each other, the one nearer the eye stays and the other waits until there is room.
-pub fn place_labels(doc: Res<Doc>, camera: Query<(&Camera, &GlobalTransform), With<MainCamera>>, mut labels: Query<(Entity, &Label, &mut Node, &mut Visibility, &ComputedNode)>, mut fitted: Query<(&Fit, &ComputedNode, &mut UiTransform)>) {
+pub fn place_labels(doc: Res<Doc>, camera: Query<(&Camera, &GlobalTransform), With<MainCamera>>, mut labels: Query<(Entity, &Label, &mut Node, &mut Visibility, &ComputedNode, Option<&Detail>)>, window: Query<&Window, With<PrimaryWindow>>, mut fitted: Query<(&Fit, &ComputedNode, &mut UiTransform)>) {
     let Ok((camera, eye)) = camera.single() else { return };
     // A label that has to stay inside its box is lettered smaller where its words are
     // wider than the box is on the screen (call 169).
@@ -3480,13 +3569,33 @@ pub fn place_labels(doc: Res<Doc>, camera: Query<(&Camera, &GlobalTransform), Wi
         }
     }
     let mut wanted: Vec<(Entity, u8, f32, Vec2, Vec2)> = Vec::new();
-    for (entity, label, _, _, computed) in &labels {
+    let (width, height) = window.single().map(|w| (w.width(), w.height())).unwrap_or((1600.0, 900.0));
+    for (entity, label, _, _, computed, detail) in &labels {
+        // A thing's name is written over it only while it is a fit size on the screen (call 218, point 2). On plan the drawing
+        // keeps its words as it always did.
+        if let Some(d) = detail.filter(|_| !doc.plan) {
+            if !crate::nav::label_shown(d.feet, eye.translation().distance(label.at), height) {
+                continue;
+            }
+        }
         let towards = if doc.plan { Vec3::Y } else { eye.translation() - label.at };
         if label.facing.is_some_and(|n| n.dot(towards) <= 0.0) {
             continue;
         }
         let Ok(at) = camera.world_to_viewport(eye, label.at) else { continue };
         let half = computed.size * computed.inverse_scale_factor / 2.0 + Vec2::splat(2.0);
+        // A thing that fills the window has its name written above it, out of sight: the name is kept in the clear part of the window.
+        let at = match detail.filter(|d| d.keep_in_view && !doc.plan) {
+            Some(d) => {
+                let dots = crate::nav::dots_across(d.feet, eye.translation().distance(label.at), height);
+                let lo = Vec2::new(LEFT_W + 20.0, TOP_H + 70.0) + half;
+                let hi = Vec2::new(width - RIGHT_W - 20.0, height - BUILD_H - STATUS_H - 20.0) - half;
+                // The name stands a quarter foot above the thing: it is the thing's size plus that gap that may lie out of the window.
+                let reach = dots * (1.0 + 0.25 / d.feet.max(0.01));
+                crate::nav::pull_in(at, reach, lo, hi)
+            }
+            None => at,
+        };
         wanted.push((entity, label.rank, eye.translation().distance(label.at), at, half));
     }
     wanted.sort_by(|a, b| a.1.cmp(&b.1).then(a.2.total_cmp(&b.2)));
@@ -3497,7 +3606,7 @@ pub fn place_labels(doc: Res<Doc>, camera: Query<(&Camera, &GlobalTransform), Wi
             kept.push((entity, at, half));
         }
     }
-    for (entity, _, mut node, mut visibility, _) in &mut labels {
+    for (entity, _, mut node, mut visibility, _, _) in &mut labels {
         match kept.iter().find(|k| k.0 == entity) {
             Some((_, at, _)) => {
                 let (left, top) = (px(at.x.round()), px(at.y.round()));

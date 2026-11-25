@@ -33,6 +33,7 @@ use crate::theme::Named;
 #[allow(clippy::type_complexity, clippy::too_many_arguments)]
 pub fn write(
     doc: Res<Doc>,
+    orbit: Res<crate::scene::Orbit>,
     snap: Res<Snapshot>,
     cameras: Option<Res<Cameras>>,
     named: Query<(&Named, &ComputedNode, &UiGlobalTransform, &ComputedUiTargetCamera, &InheritedVisibility, Option<&CalculatedClip>)>,
@@ -297,6 +298,21 @@ pub fn write(
     if let Some(el) = &snap.selected {
         if let Some((value, unit, status)) = crate::panels::gable_stat(&snap, el) {
             out.push_str(&format!("gable_panel\t{}\t{} {}\t{:?}\n", el.path, value, unit, status));
+        }
+    }
+    // The north arrow: how far its needle is turned (degrees clockwise from up) and how flat the disc lies (call 218, point 7).
+    {
+        let a = crate::nav::north_arrow(orbit.now.1, orbit.now.2);
+        out.push_str(&format!("arrow\t{:.1}\t{:.2}\n", a.needle.to_degrees().rem_euclid(360.0), a.flat));
+    }
+    // The selected thing as it lies on the screen: its name, the middle of its box, and its width and height in dots
+    // (call 218, point 10): a demonstration follows a receptacle or a door down a dive by it.
+    if let (Some(path), Ok((camera, eye, _))) = (&doc.selected, camera.single()) {
+        let shown: Vec<Vec2> = crate::scene::corners_of(&doc, &snap, path).iter().filter_map(|c| camera.world_to_viewport(eye, *c).ok()).collect();
+        if let Some(first) = shown.first() {
+            let (lo, hi) = shown.iter().fold((*first, *first), |(lo, hi), p| (lo.min(*p), hi.max(*p)));
+            let name = snap.selected.as_ref().map(|e| e.name.clone()).unwrap_or_else(|| path.clone());
+            out.push_str(&format!("selected\t{}\t{:.0}\t{:.0}\t{:.0}\t{:.0}\n", name, (lo.x + hi.x) / 2.0 + model.0.x as f32, (lo.y + hi.y) / 2.0 + model.0.y as f32, hi.x - lo.x, hi.y - lo.y));
         }
     }
     out.push_str(&spoken);

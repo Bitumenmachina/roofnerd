@@ -110,6 +110,10 @@ pub struct Orbit {
     pub now: (Vec3, f32, f32, f32),
     /// Where F brings the view back to.
     pub home: (Vec3, f32),
+    /// The tilt the person chose: coming back out, the view rights itself no further than this (call 218, point 3).
+    pub wish: f32,
+    /// A flight in the air: the view is carried from one pose to another and a hand takes it over (point 6).
+    pub flight: Option<crate::nav::Flight>,
 }
 
 pub const HOME_YAW: f32 = -0.66;
@@ -117,7 +121,22 @@ pub const HOME_PITCH: f32 = 0.27;
 
 impl Orbit {
     pub fn new() -> Orbit {
-        Orbit { target: Vec3::ZERO, yaw: HOME_YAW, pitch: HOME_PITCH, distance: 120.0, now: (Vec3::ZERO, HOME_YAW, HOME_PITCH, 120.0), home: (Vec3::ZERO, 120.0) }
+        Orbit { target: Vec3::ZERO, yaw: HOME_YAW, pitch: HOME_PITCH, distance: 120.0, now: (Vec3::ZERO, HOME_YAW, HOME_PITCH, 120.0), home: (Vec3::ZERO, 120.0), wish: HOME_PITCH, flight: None }
+    }
+    /// Where the view is going, as a pose.
+    pub fn pose(&self) -> crate::nav::Pose {
+        crate::nav::Pose { target: self.target, yaw: self.yaw, pitch: self.pitch, distance: self.distance }
+    }
+    /// Where the view is now, as a pose.
+    pub fn pose_now(&self) -> crate::nav::Pose {
+        crate::nav::Pose { target: self.now.0, yaw: self.now.1, pitch: self.now.2, distance: self.now.3 }
+    }
+    /// Fly to a pose: timed by how far it goes, eased in and out (call 218, point 6). A hand takes it over.
+    pub fn fly(&mut self, to: crate::nav::Pose) {
+        // The goals stay where they are until the flight has carried the view: set to the end at once, the ease in `place_camera`
+        // would run the view a quarter of the way on the first frame, and the flight would then take it back.
+        self.flight = Some(crate::nav::Flight::new(self.pose_now(), to));
+        self.wish = to.pitch;
     }
     pub fn go_home(&mut self) {
         self.target = self.home.0;
@@ -1622,7 +1641,7 @@ pub fn sun_study(doc: Res<Doc>, mut last: Local<Option<(u32, u32)>>, mut light: 
 }
 
 /// Ease the camera toward where it is going, and set the lens for the view it is in.
-pub fn place_camera(mut orbit: ResMut<Orbit>, doc: Res<Doc>, time: Res<Time>,  mut camera: Query<(&mut Transform, &mut Projection, Option<&mut DistanceFog>, &mut Tonemapping), (With<MainCamera>, Without<Sky>)>, mut sun: Query<&mut DirectionalLight, With<KeyLight>>, mut sky: Query<(&mut Transform, &mut Visibility), (With<Sky>, Without<MainCamera>)>) {
+pub fn place_camera(mut orbit: ResMut<Orbit>, doc: Res<Doc>, time: Res<Time>,  mut camera: Query<(&mut Transform, &mut Projection, Option<&mut DistanceFog>, &mut Tonemapping), (With<MainCamera>, Without<Sky>)>, mut sun: Query<&mut DirectionalLight, With<KeyLight>>, mut cascades: Query<&mut bevy::light::CascadeShadowConfig, With<KeyLight>>, mut sky: Query<(&mut Transform, &mut Visibility), (With<Sky>, Without<MainCamera>)>) {
     // A plan is a drawing, not a view: it has no shadows to hide what is on the floor.
     for mut light in &mut sun {
         if light.shadow_maps_enabled == doc.plan {
@@ -1676,11 +1695,24 @@ pub fn place_camera(mut orbit: ResMut<Orbit>, doc: Res<Doc>, time: Res<Time>,  m
         let (sy, cy) = yaw.sin_cos();
         let (sp, cp) = pitch.sin_cos();
         let (lens, back) = (LENS, stand_off(pitch, distance));
-        let eye = at + Vec3::new(sy * cp, sp, cy * cp) * back;
+        let mut eye = at + Vec3::new(sy * cp, sp, cy * cp) * back;
+        // The view never passes through the ground (call 218, point 1): the eye stays a tenth of a foot over it while the ground is shown.
+        if doc.show.ground && eye.y < 0.1 {
+            eye.y = 0.1;
+        }
         let up = if pitch > 1.5 { Vec3::NEG_Z } else { Vec3::Y };
         *t = Transform::from_translation(eye).looking_at(at, up);
-        if !matches!(&*projection, Projection::Perspective(p) if (p.fov - lens).abs() < 1e-4) {
-            *projection = Projection::from(PerspectiveProjection { fov: lens, near: 0.5, far: 40_000.0, ..default() });
+        // What is drawn near and far follows the distance: a hinge at 6 in is whole, and so is the lot at 400 ft.
+        let (near, far) = crate::nav::clip_planes(back);
+        if !matches!(&*projection, Projection::Perspective(p) if (p.fov - lens).abs() < 1e-4 && (p.near - near).abs() < near * 0.02 && (p.far - far).abs() < far * 0.02) {
+            *projection = Projection::from(PerspectiveProjection { fov: lens, near, far, ..default() });
+        }
+        // The shadow's finest picture is laid over what is near the eye: close in it is over the hinge, far out over the house.
+        if let Ok(mut cascade) = cascades.single_mut() {
+            let first = (back * 1.5).clamp(8.0, 180.0);
+            if cascade.bounds.first().is_none_or(|b| (b - first).abs() > first * 0.15) {
+                *cascade = CascadeShadowConfigBuilder { minimum_distance: near, first_cascade_far_bound: first, maximum_distance: 1600.0, ..default() }.build();
+            }
         }
     }
     // The sky stays round the eye; a plan has none.
@@ -1690,6 +1722,56 @@ pub fn place_camera(mut orbit: ResMut<Orbit>, doc: Res<Doc>, time: Res<Time>,  m
         if *seen != want {
             *seen = want;
         }
+    }
+}
+
+/// Where the view stands, every frame it moves, to `<map file>.view` when the map is written (call 218, point 10): one line a frame,
+/// `view<TAB>seconds<TAB>eye x y z<TAB>target x y z<TAB>distance<TAB>tilt in degrees<TAB>turn in degrees<TAB>flying or still<TAB>real seconds`, so that a
+/// demonstration reads a dive, a pan or a flight as a curve. Nothing is written without the map.
+pub fn trace_view(orbit: Res<Orbit>, time: Res<Time>, real: Res<Time<Real>>, camera: Query<&Transform, With<MainCamera>>, mut last: Local<Option<[f32; 9]>>, mut file: Local<Option<Option<String>>>) {
+    let file = file.get_or_insert_with(|| std::env::var("PLUMBLINE_MAP").ok().map(|f| format!("{f}.view")));
+    let (Some(file), Ok(t)) = (file.as_ref(), camera.single()) else { return };
+    let (at, yaw, pitch, distance) = orbit.now;
+    let eye = t.translation;
+    let now = [eye.x, eye.y, eye.z, at.x, at.y, at.z, distance, pitch, yaw];
+    if last.is_some_and(|l| l.iter().zip(&now).all(|(a, b)| (a - b).abs() < 1e-5)) {
+        return;
+    }
+    *last = Some(now);
+    let turn = yaw.to_degrees().rem_euclid(360.0);
+    let turn = if turn > 180.0 { turn - 360.0 } else { turn };
+    use std::io::Write;
+    if let Ok(mut log) = std::fs::OpenOptions::new().create(true).append(true).open(file) {
+        let _ = writeln!(log, "view\t{:.3}\t{:.3} {:.3} {:.3}\t{:.3} {:.3} {:.3}\t{:.3}\t{:.2}\t{:.2}\t{}\t{:.3}", time.elapsed_secs(), eye.x, eye.y, eye.z, at.x, at.y, at.z, distance, pitch.to_degrees(), turn, if orbit.flight.is_some() { "flying" } else { "still" }, real.elapsed_secs());
+    }
+}
+
+/// The place the view turns about is marked while it turns: a ring and four ticks, drawn facing the eye (call 218, point 4).
+pub fn pivot_mark(feel: Res<Feel>, buttons: Res<ButtonInput<MouseButton>>, camera: Query<&Transform, With<MainCamera>>, mut mark: Gizmos<Highlight>) {
+    let (Some((Hold::Turn, at)), Ok(t)) = (feel.hold, camera.single()) else { return };
+    if !buttons.any_pressed([MouseButton::Left, MouseButton::Right]) {
+        return;
+    }
+    let r = (t.translation.distance(at) * 0.014).clamp(0.01, 6.0);
+    let (right, up) = (t.right().as_vec3(), t.up().as_vec3());
+    let ring = |k: f32| at + (right * (k * std::f32::consts::TAU / 28.0).cos() + up * (k * std::f32::consts::TAU / 28.0).sin()) * r;
+    for k in 0..28 {
+        mark.line(ring(k as f32), ring(k as f32 + 1.0), theme::accent());
+    }
+    for (a, b) in [(right, -right), (up, -up)] {
+        mark.line(at + a * r * 1.5, at + a * r * 0.6, theme::accent());
+        mark.line(at + b * r * 1.5, at + b * r * 0.6, theme::accent());
+    }
+}
+
+/// The north arrow's needle and disc follow the view as it turns and leans (call 218, point 7).
+pub fn north_follow(orbit: Res<Orbit>, mut rotor: Query<&mut UiTransform, (With<crate::panels::NorthRotor>, Without<crate::panels::NorthDisc>)>, mut disc: Query<&mut UiTransform, With<crate::panels::NorthDisc>>) {
+    let a = crate::nav::north_arrow(orbit.now.1, orbit.now.2);
+    for mut t in &mut rotor {
+        t.rotation = Rot2::radians(a.needle);
+    }
+    for mut t in &mut disc {
+        t.scale = Vec2::new(1.0, a.flat);
     }
 }
 
@@ -1811,6 +1893,120 @@ fn stand_off(pitch: f32, distance: f32) -> f32 {
     distance * (1.0 - k * (1.0 - PLAN_HEIGHT / (2.0 * (LENS / 2.0).tan())))
 }
 
+/// The height a level's z is in the view's own space.
+pub fn to_height(origin: [f64; 3], z: f64) -> f32 {
+    to_view(origin, [0.0, 0.0, z]).y
+}
+
+/// Where the eye stands, for where the view is going.
+pub fn eye_of(orbit: &Orbit) -> Vec3 {
+    let (sy, cy) = orbit.yaw.sin_cos();
+    let (sp, cp) = orbit.pitch.sin_cos();
+    orbit.target + Vec3::new(sy * cp, sp, cy * cp) * stand_off(orbit.pitch, orbit.distance)
+}
+
+/// The corners of a thing in the view's own space (feet), for framing it and for measuring it on the screen: its box, or
+/// for a door or a window the hole it makes in its wall, or a roof plane's corners. Empty where it is not drawn.
+pub fn corners_of(doc: &Doc, snap: &Snapshot, path: &str) -> Vec<Vec3> {
+    let view = |p: [f64; 3]| to_view(doc.origin, p);
+    let mut out: Vec<Vec3> = Vec::new();
+    if let Some(p) = snap.drawn.iter().find(|p| p.path == path) {
+        match &p.shape {
+            Shape::Wall { a, b, base, height, thickness, .. } => {
+                let (dx, dy) = (b[0] - a[0], b[1] - a[1]);
+                let long = dx.hypot(dy).max(1e-9);
+                let (nx, ny) = (-dy / long * thickness / 2.0, dx / long * thickness / 2.0);
+                for q in [a, b] {
+                    for side in [-1.0, 1.0] {
+                        for z in [*base, base + height] {
+                            out.push(view([q[0] + nx * side, q[1] + ny * side, z]));
+                        }
+                    }
+                }
+            }
+            Shape::Floor { boundary, top, thickness } => {
+                for q in boundary {
+                    out.push(view([q[0], q[1], *top]));
+                    out.push(view([q[0], q[1], top - thickness]));
+                }
+            }
+            Shape::Run { a, b, round, rect } => {
+                let r = round.map(|d| d / 2.0).or_else(|| rect.map(|(w, d)| w.max(d) / 2.0)).unwrap_or(0.1);
+                for q in [a, b] {
+                    for (dx, dy, dz) in [(r, r, r), (-r, -r, -r), (r, -r, r), (-r, r, -r)] {
+                        out.push(view([q[0] + dx, q[1] + dy, q[2] + dz]));
+                    }
+                }
+            }
+            Shape::Box { at, size, angle } => {
+                let (sin, cos) = angle.to_radians().sin_cos();
+                for (u, v) in [(-0.5, -0.5), (0.5, -0.5), (0.5, 0.5), (-0.5, 0.5)] {
+                    let (x, y) = (u * size[0], v * size[1]);
+                    for z in [0.0, size[2]] {
+                        out.push(view([at[0] + x * cos - y * sin, at[1] + x * sin + y * cos, at[2] + z]));
+                    }
+                }
+            }
+        }
+        return out;
+    }
+    // A door or a window is a hole in a wall: [from, to] along it, [sill, head] above its base.
+    for p in &snap.drawn {
+        if let Shape::Wall { a, b, base, holes, .. } = &p.shape {
+            if let Some((_, _, [from, to, sill, head])) = holes.iter().find(|h| h.0 == path) {
+                let long = (b[0] - a[0]).hypot(b[1] - a[1]).max(1e-9);
+                for s in [from, to] {
+                    for z in [sill, head] {
+                        out.push(view([a[0] + (b[0] - a[0]) * s / long, a[1] + (b[1] - a[1]) * s / long, base + z]));
+                    }
+                }
+                return out;
+            }
+        }
+    }
+    if let Some(solid) = snap.planes.iter().find(|p| p.path == path).and_then(|p| p.solid.as_ref()) {
+        out.extend(solid.points.iter().map(|q| view([q[0], q[1], solid.height_at(*q)])));
+    }
+    out
+}
+
+/// A sphere round a set of corners: its middle and its radius.
+pub fn sphere_of(corners: &[Vec3]) -> Option<(Vec3, f32)> {
+    let first = *corners.first()?;
+    let (lo, hi) = corners.iter().fold((first, first), |(lo, hi), c| (lo.min(*c), hi.max(*c)));
+    Some(((lo + hi) / 2.0, (hi - lo).length() / 2.0))
+}
+
+/// Where a double-click on a thing that is selected ends: in front of the face clicked, the thing filling about half the window.
+/// None where the click was not on the thing (then it closes on the place, as it did).
+fn framed(doc: &Doc, snap: &Snapshot, path: &str, hit: Vec3, normal: Option<Vec3>, orbit: &Orbit) -> Option<crate::nav::Pose> {
+    let (centre, radius) = sphere_of(&corners_of(doc, snap, path))?;
+    if hit.distance(centre) > radius * 1.3 + 0.5 {
+        return None;
+    }
+    let yaw = normal.filter(|n| n.x.hypot(n.z) > 0.3).map(|n| n.x.atan2(n.z)).unwrap_or(orbit.yaw);
+    let distance = if doc.plan { (2.0 * radius / (0.5 * PLAN_HEIGHT)).max(crate::nav::MIN_DISTANCE) } else { crate::nav::framing_distance(radius, 0.5) };
+    Some(crate::nav::Pose { target: centre, yaw, pitch: orbit.pitch.min(0.4), distance })
+}
+
+/// F: the selected thing in view from the side the view is on, or, with nothing selected, the whole job (call 218, point 6).
+/// Says what it framed.
+pub fn frame(doc: &mut Doc, orbit: &mut Orbit, snap: &Snapshot) {
+    let selected = doc.selected.clone().and_then(|path| sphere_of(&corners_of(doc, snap, &path)).map(|s| (path, s)));
+    match selected {
+        Some((path, (centre, radius))) => {
+            let distance = if doc.plan { (2.0 * radius / (0.5 * PLAN_HEIGHT)).max(crate::nav::MIN_DISTANCE) } else { crate::nav::framing_distance(radius, 0.5) };
+            orbit.fly(crate::nav::Pose { target: centre, yaw: orbit.yaw, pitch: orbit.pitch.min(0.4), distance });
+            let name = snap.selected.as_ref().map(|e| e.name.clone()).filter(|n| !n.is_empty()).unwrap_or(path);
+            doc.say(Tone::Done, format!("{} in view.", crate::panels::pretty(&name)));
+        }
+        None => {
+            orbit.fly(crate::nav::Pose { target: orbit.home.0, yaw: HOME_YAW, pitch: HOME_PITCH, distance: orbit.home.1 });
+            doc.say(Tone::Done, "The whole job, in view.");
+        }
+    }
+}
+
 /// The ray under a place in the window, from where the view is going (not where it has
 /// got to): its eye and its way.
 fn ray_at(orbit: &Orbit, window: &Window, cursor: Vec2) -> (Vec3, Vec3) {
@@ -1824,6 +2020,28 @@ fn ray_at(orbit: &Orbit, window: &Window, cursor: Vec2) -> (Vec3, Vec3) {
     let half = (LENS / 2.0).tan();
     let (nx, ny) = (cursor.x / w * 2.0 - 1.0, 1.0 - cursor.y / h * 2.0);
     (eye, (-back + right * (nx * half * w / h) + up * (ny * half)).normalize())
+}
+
+/// How far the view must slide for the place grabbed on the ground to be under the pointer again.
+fn ground_shift(orbit: &Orbit, window: &Window, cursor: Vec2, grabbed: Vec3) -> Option<Vec3> {
+    let (eye, way) = ray_at(orbit, window, cursor);
+    on_level(eye, way, grabbed.y).map(|now| grabbed - now).filter(|s| s.length() < orbit.distance * 4.0)
+}
+
+/// One notch (or part of one) of the wheel closing on `place`, which stays under the pointer:
+/// the eye and what it looks at come nearer by a tenth of what is left, and the view leans over
+/// as it comes down (call 218, points 1 and 3). `tilt` is the switch "Tilt as I dive".
+pub fn notch(orbit: &mut Orbit, place: Vec3, notches: f32, tilt: bool) {
+    let was = orbit.distance;
+    orbit.distance = (was * crate::nav::NOTCH.powf(notches)).clamp(crate::nav::MIN_DISTANCE, crate::nav::furthest(orbit.home.1, was));
+    let by = orbit.distance / was;
+    orbit.target = place + (orbit.target - place) * by;
+    if tilt {
+        let to = crate::nav::tilt_after(orbit.pitch, orbit.wish, orbit.distance, notches > 0.0);
+        if to != orbit.pitch {
+            turn_about(orbit, place, 0.0, to - orbit.pitch);
+        }
+    }
 }
 
 /// Where a ray meets the level plane at a height; none when it runs away from it or
@@ -2151,9 +2369,12 @@ pub fn orbit_input(mut orbit: ResMut<Orbit>, mut feel: ResMut<Feel>, buttons: Re
     let inside = cursor.is_some() && !on_panel;
     // Whether what `under` found last is part of the model (a wall, a roof, a thing set down) and not the ground (call 197, point 14).
     let on_model = std::cell::Cell::new(false);
+    // The way the face under the pointer looks, where the pointer's ray found one: a double-click ends in front of it.
+    let hit_normal = std::cell::Cell::new(None::<Vec3>);
     let is_model = |e: Entity| model_meshes.get(e).is_ok_and(|pick| pick.is_none_or(|p| p.is_hoverable));
-    let mut under = |orbit: &Orbit| -> Option<Vec3> {
+    let under = |orbit: &Orbit, ray_cast: &mut MeshRayCast| -> Option<Vec3> {
         on_model.set(false);
+        hit_normal.set(None);
         let sight = cursor.map(|c| ray_at(orbit, window, c)).map(|(eye, way)| (eye, way.normalize_or_zero()));
         // What the pointer was over when that was last worked out is under it now
         // only if it lies on the line of sight from where the pointer is: on a slow
@@ -2166,11 +2387,12 @@ pub fn orbit_input(mut orbit: ResMut<Orbit>, mut feel: ResMut<Feel>, buttons: Re
                 along > 0.0 && (v - way * along).length() < along * 0.01 + 0.05
             })
         };
-        let nearest = hits.and_then(|h| h.iter().filter_map(|(e, hit)| hit.position.map(|p| (hit.depth, p, *e))).min_by(|a, b| a.0.total_cmp(&b.0))).filter(|(_, p, _)| in_sight(p));
-        if let Some((_, _, e)) = &nearest {
+        let nearest = hits.and_then(|h| h.iter().filter_map(|(e, hit)| hit.position.map(|p| (hit.depth, p, *e, hit.normal))).min_by(|a, b| a.0.total_cmp(&b.0))).filter(|(_, p, _, _)| in_sight(p));
+        if let Some((_, _, e, n)) = &nearest {
             on_model.set(is_model(*e));
+            hit_normal.set(*n);
         }
-        let nearest = nearest.map(|(_, p, _)| p);
+        let nearest = nearest.map(|(_, p, _, _)| p);
         // Where the pointer has moved on since, what is under it is found afresh
         // along that line of sight; failing anything there, the ground under it.
         let afresh = || {
@@ -2182,9 +2404,10 @@ pub fn orbit_input(mut orbit: ResMut<Orbit>, mut feel: ResMut<Feel>, buttons: Re
             // (`dressw` on the full run of aa5084c: its measured check failed on it).
             // The sky's dome is not a place to turn about.
             let all = MeshRayCastSettings::default().never_early_exit();
-            let found = ray_cast.cast_ray(ray, &all).iter().filter(|(_, hit)| hit.distance < 5000.0).min_by(|a, b| a.1.distance.total_cmp(&b.1.distance)).map(|(e, hit)| (*e, hit.point));
-            on_model.set(found.is_some_and(|(e, _)| is_model(e)));
-            found.map(|(_, point)| point)
+            let found = ray_cast.cast_ray(ray, &all).iter().filter(|(_, hit)| hit.distance < 5000.0).min_by(|a, b| a.1.distance.total_cmp(&b.1.distance)).map(|(e, hit)| (*e, hit.point, hit.normal));
+            on_model.set(found.is_some_and(|(e, _, _)| is_model(e)));
+            hit_normal.set(found.map(|(_, _, n)| n));
+            found.map(|(_, point, _)| point)
         };
         nearest.or_else(afresh).or_else(|| sight.and_then(|(eye, way)| on_level(eye, way, 0.0)))
     };
@@ -2194,6 +2417,36 @@ pub fn orbit_input(mut orbit: ResMut<Orbit>, mut feel: ResMut<Feel>, buttons: Re
     let free = doc.entry.is_none() && doc.draw.tool.is_none() && !doc.choosing && doc.placing.is_none();
     let left = MouseButton::Left;
 
+    // A flight in the air carries the view until a hand takes it over: a press or the wheel over the model, or a key that
+    // moves the view. The view then stays where the flight had got to (never a frame back) and the hand goes on from there.
+    if let Some(mut flight) = orbit.flight {
+        let keyed = doc.entry.is_none() && keys.any_pressed([KeyCode::KeyW, KeyCode::KeyA, KeyCode::KeyS, KeyCode::KeyD, KeyCode::KeyE, KeyCode::KeyQ, KeyCode::ArrowUp, KeyCode::ArrowDown, KeyCode::ArrowLeft, KeyCode::ArrowRight]);
+        let by_hand = (inside && (buttons.any_just_pressed([left, MouseButton::Middle, MouseButton::Right]) || scroll.delta.y != 0.0)) || keyed;
+        if by_hand {
+            let now = orbit.pose_now();
+            orbit.target = now.target;
+            orbit.distance = now.distance;
+            if !doc.plan {
+                orbit.yaw = now.yaw;
+                orbit.pitch = now.pitch;
+            }
+            orbit.wish = orbit.pitch;
+            orbit.flight = None;
+        } else {
+            let p = flight.step(time.delta_secs().min(0.25));
+            orbit.target = p.target;
+            orbit.distance = p.distance;
+            orbit.yaw = p.yaw;
+            orbit.pitch = p.pitch;
+            orbit.now.0 = p.target;
+            orbit.now.3 = p.distance;
+            if !doc.plan {
+                orbit.now.1 = p.yaw;
+                orbit.now.2 = p.pitch;
+            }
+            orbit.flight = if flight.landed() { None } else { Some(flight) };
+        }
+    }
     // A press takes hold; any press stops what was carrying on.
     if buttons.any_just_pressed([left, MouseButton::Middle, MouseButton::Right]) {
         feel.slide = Vec3::ZERO;
@@ -2202,9 +2455,11 @@ pub fn orbit_input(mut orbit: ResMut<Orbit>, mut feel: ResMut<Feel>, buttons: Re
         feel.gone = 0.0;
         feel.hold = None;
         if inside && !doc.walk {
-            let grab = under(&orbit);
+            let grab = under(&orbit, &mut ray_cast);
             let grabbed_model = on_model.get();
-            if buttons.just_pressed(MouseButton::Right) && !doc.plan {
+            let shift = keys.pressed(KeyCode::ShiftLeft) || keys.pressed(KeyCode::ShiftRight);
+            // The right button turns the view; so does Shift and the left (Google Earth's own, and what a machine with one button needs).
+            if (buttons.just_pressed(MouseButton::Right) || (shift && buttons.just_pressed(left) && free && !CARRYING.load(Relaxed))) && !doc.plan {
                 // A swing begun on the model turns about that place, which stays under the pointer; begun off it (on the ground,
                 // or on the sky), about the middle of what is drawn, so that the house stays in the window (call 197, point 14).
                 let middle = if doc.bench.is_some() {
@@ -2232,8 +2487,10 @@ pub fn orbit_input(mut orbit: ResMut<Orbit>, mut feel: ResMut<Feel>, buttons: Re
                 // ground out at the horizon, flew the eye to nothing (J19-50).
                 let near_the_job = |to: &Vec3| to.distance(orbit.home.0) < (orbit.home.1 * 4.0).max(120.0);
                 if let (true, Some(to)) = (again, grab.filter(near_the_job)) {
-                    orbit.target = to;
-                    orbit.distance = (orbit.distance * 0.45).clamp(10.0, 6000.0);
+                    // A thing that is selected and was clicked: the flight ends in front of the face clicked, the thing filling about half
+                    // the window. Bare ground (or anything else): it closes on the place, as it did.
+                    let pose = grabbed_model.then(|| doc.selected.clone()).flatten().and_then(|path| framed(&doc, &snap, &path, to, hit_normal.get(), &orbit)).unwrap_or(crate::nav::Pose { target: to, yaw: orbit.yaw, pitch: orbit.pitch, distance: (orbit.distance * 0.45).clamp(10.0, 6000.0) });
+                    orbit.fly(pose);
                     feel.hold = None;
                     feel.last_press = None;
                 }
@@ -2267,6 +2524,9 @@ pub fn orbit_input(mut orbit: ResMut<Orbit>, mut feel: ResMut<Feel>, buttons: Re
                 let per_px = std::f32::consts::TAU / window.height().max(1.0);
                 let (yaw, pitch) = (-moved.x * per_px, moved.y * per_px);
                 turn_about(&mut orbit, grabbed, yaw, pitch);
+                if pitch != 0.0 {
+                    orbit.wish = orbit.pitch;
+                }
                 if std::env::var_os("PLUMBLINE_TRACE").is_some() {
                     eprintln!("turn: moved {moved:?} about {grabbed:?}: target {:?} yaw {:.3} pitch {:.3} distance {:.1} (held {held}, let go {let_go})", orbit.target, orbit.yaw, orbit.pitch, orbit.distance);
                 }
@@ -2279,7 +2539,7 @@ pub fn orbit_input(mut orbit: ResMut<Orbit>, mut feel: ResMut<Feel>, buttons: Re
                     right * (-moved.x * per_px) + toward * (-moved.y * per_px)
                 } else {
                     // The place grabbed is put back under the pointer.
-                    cursor.and_then(|c| { let (eye, way) = ray_at(&orbit, window, c); on_level(eye, way, grabbed.y) }).map(|now| grabbed - now).filter(|s| s.length() < orbit.distance * 4.0).unwrap_or(Vec3::ZERO)
+                    cursor.and_then(|c| ground_shift(&orbit, window, c, grabbed)).unwrap_or(Vec3::ZERO)
                 };
                 orbit.target += shift;
                 feel.slide = feel.slide.lerp(shift / took, 0.5);
@@ -2310,6 +2570,9 @@ pub fn orbit_input(mut orbit: ResMut<Orbit>, mut feel: ResMut<Feel>, buttons: Re
         if feel.spin.0 != Vec2::ZERO && !doc.plan {
             let (rate, about) = feel.spin;
             turn_about(&mut orbit, about, rate.x * dt, rate.y * dt);
+            if rate.y != 0.0 {
+                orbit.wish = orbit.pitch;
+            }
             feel.spin.0 *= fade;
             if feel.spin.0.length() < 0.02 {
                 feel.spin.0 = Vec2::ZERO;
@@ -2325,13 +2588,11 @@ pub fn orbit_input(mut orbit: ResMut<Orbit>, mut feel: ResMut<Feel>, buttons: Re
         // hundredth of a notch each (three.js's measure of a wheel).
         let notches = if scroll.unit == MouseScrollUnit::Pixel { scroll.delta.y / 100.0 } else { scroll.delta.y }.clamp(-3.0, 3.0);
         let was = orbit.distance;
-        // Out stops where the building is still a building on the screen, about a
-        // sixth of the size F frames it at (J19-15: forty notches out it shrank to
-        // nothing and only a name tag was left in an empty view).
-        let furthest = (orbit.home.1 * 6.0).clamp(60.0, 6000.0).max(was);
-        orbit.distance = (was * 0.9_f32.powf(notches)).clamp(3.0, furthest);
-        let by = orbit.distance / was;
+        // Out stops at the whole lot or a good deal further for a big job; in, at a hinge filling the window (call 218, point 1).
+        let furthest = crate::nav::furthest(orbit.home.1, was);
         if doc.plan {
+            orbit.distance = (was * crate::nav::NOTCH.powf(notches)).clamp(crate::nav::MIN_DISTANCE, furthest);
+            let by = orbit.distance / was;
             // On plan the place under the pointer stays under it, which is how a
             // dimension's end on a drawing is closed in on.
             if let Some(cursor) = cursor {
@@ -2340,19 +2601,43 @@ pub fn orbit_input(mut orbit: ResMut<Orbit>, mut feel: ResMut<Feel>, buttons: Re
                 let place = orbit.target + right * (off.x * per_px) + toward * (off.y * per_px);
                 orbit.target = place + (orbit.target - place) * by;
             }
-        } else if let Some(place) = under(&orbit).filter(|p| p.distance(orbit.target) < was * 6.0) {
-            // In 3D the same: the eye and what it looks at both close on the place
-            // under the pointer, so the place stays under the pointer.
-            orbit.target = place + (orbit.target - place) * by;
-        } else if let Some(cursor) = cursor {
-            // Nothing near is under the pointer (sky, or ground out at the horizon):
-            // the view still goes the way the pointer points, over the ground, and
-            // not at whatever happens to be in the middle (J19-49: it ran onto the
-            // roof of the house beside the pointer).
-            let (eye, way) = ray_at(&orbit, window, cursor);
-            let flat = Vec3::new(way.x, 0.0, way.z).normalize_or_zero();
-            let place = Vec3::new(eye.x, orbit.target.y, eye.z) + flat * was;
-            orbit.target = place + (orbit.target - place) * by;
+        } else {
+            // In 3D the eye and what it looks at both close on the place under the pointer, so the place stays under the pointer;
+            // nothing near under it (sky, or ground out at the horizon): the view goes the way the pointer points, over the ground,
+            // and not at whatever happens to be in the middle (J19-49: it ran onto the roof of the house beside the pointer).
+            let found = under(&orbit, &mut ray_cast).filter(|p| p.distance(orbit.target) < was * 6.0);
+            let place = found.or_else(|| {
+                let (eye, way) = ray_at(&orbit, window, cursor?);
+                let flat = Vec3::new(way.x, 0.0, way.z).normalize_or_zero();
+                Some(Vec3::new(eye.x, orbit.target.y, eye.z) + flat * was)
+            });
+            if let Some(place) = place {
+                // Coming in, the eye does not pass through a face: the notch is cut short where one stands in its way,
+                // unless See through is on (call 218, point 1).
+                let mut notches = notches;
+                if notches > 0.0 && !doc.show.ghost {
+                    let mut trial = Orbit::new();
+                    (trial.target, trial.yaw, trial.pitch, trial.distance, trial.home, trial.wish) = (orbit.target, orbit.yaw, orbit.pitch, orbit.distance, orbit.home, orbit.wish);
+                    notch(&mut trial, place, notches, false);
+                    let (eye0, eye1) = (eye_of(&orbit), eye_of(&trial));
+                    let step = eye0.distance(eye1);
+                    if step > 1e-4 {
+                        if let Ok(way) = Dir3::new((eye1 - eye0) / step) {
+                            let all = MeshRayCastSettings::default().never_early_exit();
+                            let hit = ray_cast.cast_ray(Ray3d::new(eye0, way), &all).iter().filter(|(e, h)| h.distance < step + 0.1 && is_model(*e)).map(|(_, h)| h.distance).min_by(|a, b| a.total_cmp(b));
+                            let allowed = crate::nav::stop_short(step, hit);
+                            if allowed < 1.0 {
+                                // The eye moves in proportion to what is closed, so the part of the notch it may have is the same part.
+                                let by = 1.0 - allowed * (1.0 - crate::nav::NOTCH.powf(notches));
+                                notches = if allowed <= 0.0 { 0.0 } else { by.ln() / crate::nav::NOTCH.ln() };
+                            }
+                        }
+                    }
+                }
+                if notches != 0.0 {
+                    crate::scene::notch(&mut orbit, place, notches, doc.tilt_dive);
+                }
+            }
         }
         feel.slide = Vec3::ZERO;
     }
@@ -2379,6 +2664,7 @@ pub fn orbit_input(mut orbit: ResMut<Orbit>, mut feel: ResMut<Feel>, buttons: Re
         let tilt = turn(KeyCode::ArrowUp) - turn(KeyCode::ArrowDown);
         if tilt != 0.0 {
             orbit.pitch = (orbit.pitch + tilt).clamp(0.06, 1.52);
+            orbit.wish = orbit.pitch;
         }
     }
 }
@@ -2690,5 +2976,94 @@ mod trim_tests {
         assert!(near(e.centre[0] - e.size[0] / 2.0, -1.0 - t));
         // The rake is as the model has it.
         assert!(near(r.size[0], (81.0f64 + 20.25).sqrt()));
+    }
+}
+
+#[cfg(test)]
+mod move_tests {
+    use super::*;
+    use crate::nav;
+
+    fn window() -> Window {
+        Window { resolution: bevy::window::WindowResolution::new(1600, 900), ..default() }
+    }
+    fn orbit_at(distance: f32, pitch_deg: f32) -> Orbit {
+        let mut o = Orbit::new();
+        o.target = Vec3::new(20.0, 0.0, 14.0);
+        o.distance = distance;
+        o.pitch = pitch_deg.to_radians();
+        o.wish = o.pitch;
+        o
+    }
+    /// How many dots off the pointer a place is: the angle between the pointer's ray and the way to the place.
+    fn dots_off(o: &Orbit, w: &Window, cursor: Vec2, place: Vec3) -> f32 {
+        let (eye, way) = ray_at(o, w, cursor);
+        let to = (place - eye).normalize();
+        way.dot(to).clamp(-1.0, 1.0).acos() / (LENS / w.height())
+    }
+
+    #[test]
+    fn the_place_under_the_pointer_stays_under_it_at_every_notch_of_a_dive_from_the_lot_to_a_hinge() {
+        let w = window();
+        let cursor = Vec2::new(900.0, 520.0);
+        let mut o = orbit_at(400.0, 60.0);
+        let (eye, way) = ray_at(&o, &w, cursor);
+        let place = on_level(eye, way, 0.0).expect("the pointer is over the ground");
+        let (mut worst, mut last_pitch) = (0.0_f32, o.pitch);
+        for i in 0..80 {
+            notch(&mut o, place, 1.0, true);
+            let off = dots_off(&o, &w, cursor, place);
+            worst = worst.max(off);
+            assert!(off < 3.0, "notch {i}: the place is {off} dots from the pointer at {} ft", o.distance);
+            assert!(o.pitch <= last_pitch + 1e-6, "the tilt went back on itself at notch {i}");
+            last_pitch = o.pitch;
+        }
+        assert_eq!(o.distance, nav::MIN_DISTANCE);
+        assert!((5.0..=25.0).contains(&o.pitch.to_degrees()), "ended at {} degrees", o.pitch.to_degrees());
+        println!("worst: {worst} dots");
+    }
+
+    #[test]
+    fn with_the_switch_off_the_same_dive_ends_at_the_angle_it_began() {
+        let w = window();
+        let cursor = Vec2::new(900.0, 520.0);
+        let mut o = orbit_at(400.0, 60.0);
+        let (eye, way) = ray_at(&o, &w, cursor);
+        let place = on_level(eye, way, 0.0).unwrap();
+        for _ in 0..80 {
+            notch(&mut o, place, 1.0, false);
+            assert!(dots_off(&o, &w, cursor, place) < 3.0);
+        }
+        assert!((o.pitch.to_degrees() - 60.0).abs() < 1e-3);
+    }
+
+    #[test]
+    fn going_back_out_rights_the_view_and_the_place_stays_under_the_pointer() {
+        let w = window();
+        let cursor = Vec2::new(700.0, 400.0);
+        let mut o = orbit_at(400.0, 60.0);
+        let (eye, way) = ray_at(&o, &w, cursor);
+        let place = on_level(eye, way, 0.0).unwrap();
+        for _ in 0..70 {
+            notch(&mut o, place, 1.0, true);
+        }
+        while o.distance < 400.0 {
+            notch(&mut o, place, -1.0, true);
+            assert!(dots_off(&o, &w, cursor, place) < 3.0);
+        }
+        assert!((o.pitch.to_degrees() - 60.0).abs() < 0.05, "righted to {}", o.pitch.to_degrees());
+    }
+
+    #[test]
+    fn a_pan_holds_the_ground_at_a_tilt_to_the_edge_of_the_window() {
+        let w = window();
+        let mut o = orbit_at(60.0, 30.0);
+        for (from, to) in [(Vec2::new(700.0, 500.0), Vec2::new(1000.0, 380.0)), (Vec2::new(800.0, 600.0), Vec2::new(1595.0, 880.0)), (Vec2::new(800.0, 300.0), Vec2::new(5.0, 700.0))] {
+            let (eye, way) = ray_at(&o, &w, from);
+            let grabbed = on_level(eye, way, 0.0).unwrap();
+            let shift = ground_shift(&o, &w, to, grabbed).expect("the ground is under the pointer");
+            o.target += shift;
+            assert!(dots_off(&o, &w, to, grabbed) < 3.0, "the place grabbed is {} dots from the pointer", dots_off(&o, &w, to, grabbed));
+        }
     }
 }

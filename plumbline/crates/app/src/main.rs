@@ -48,6 +48,7 @@ mod bring;
 mod dress;
 mod map;
 mod model;
+mod nav;
 mod panels;
 mod plans;
 mod glass;
@@ -115,12 +116,22 @@ fn main() {
         .add_observer(scene::pressed)
         .add_observer(scene::dragging)
         .add_systems(Startup, (scene::setup, glass::setup, setup).chain())
+        .add_systems(Startup, game_time)
         .add_systems(Last, closing)
         .add_systems(
             Update,
-            ((tools::frame_begins, keys).chain(), plans::dropped, plans::read, tools::clicks, scene::carry, tools::record, (scene::orbit_input, scene::room_for_card).chain(), model::refresh, scene::rebuild, scene::tint, panels::rebuild, sheet::rebuild, (scene::sun_study, scene::place_camera, scene::widen_runs, scene::ground_tone, glass::follow).chain(), tools::pointer, scene::draw_lines, tools::preview, panels::place_labels, panels::write_pointer, panels::scroll_panels, map::write).chain(),
+            ((tools::frame_begins, keys).chain(), plans::dropped, plans::read, tools::clicks, scene::carry, tools::record, (scene::orbit_input, scene::room_for_card).chain(), model::refresh, scene::rebuild, scene::tint, panels::rebuild, sheet::rebuild, (scene::sun_study, scene::place_camera, scene::widen_runs, scene::ground_tone, glass::follow, scene::trace_view, scene::pivot_mark, scene::north_follow).chain(), tools::pointer, scene::draw_lines, tools::preview, panels::place_labels, panels::write_pointer, panels::scroll_panels, map::write).chain(),
         )
         .run();
+}
+
+/// With PLUMBLINE_FRAME=<seconds> set, no frame counts for more than that much of the program's own time, however long it took
+/// to draw: on a slow renderer a flight of a second is then made of many frames, and a demonstration can read its curve. (Without
+/// it the longest a frame counts for is a quarter of a second, as the engine has it.)
+fn game_time(mut time: ResMut<Time<Virtual>>) {
+    if let Some(max) = std::env::var("PLUMBLINE_FRAME").ok().and_then(|v| v.parse::<f64>().ok()).filter(|v| *v > 0.0) {
+        time.set_max_delta(std::time::Duration::from_secs_f64(max));
+    }
 }
 
 /// A job opened as a window holds it: read from its file (or new, where there is none yet).
@@ -212,6 +223,7 @@ pub fn build_doc(path: String, roof_arg: Option<String>) -> Result<Doc, String> 
         also: None,
         walk: false,
         sun: model::SunStudy::default(),
+        tilt_dive: true,
         show: Show { architecture: true, roof: true, mechanical: true, electrical: true, plumbing: true, ghost: false, storey: None, certainty: false, clashes: false, ground: true, framing: false, trim: true, finishes: true, demolition: true, existing: true, off_levels: Default::default(), off_systems: Default::default(), away: [false; 3], sizes: false },
         // The sheet opens on the estimate once anything is priced; before that, on what
         // has been taken off.
@@ -1178,8 +1190,29 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
         stops.extend(snap.storeys.iter().map(|s| Some(s.path.clone())));
         let at = stops.iter().position(|s| *s == doc.show.storey).unwrap_or(0);
         let next = if keys.just_pressed(KeyCode::PageUp) { (at + 1) % stops.len() } else { (at + stops.len() - 1) % stops.len() };
+        // The view glides from the middle of one level to the middle of the next, and back by the same way (call 218, point 8).
+        let middle = |stop: &Option<String>| -> f32 {
+            let z = match stop.as_ref().and_then(|p| snap.storeys.iter().find(|s| &s.path == p)) {
+                Some(s) => s.elevation.unwrap_or(0.0) + 4.5,
+                None => snap.extent.map(|(_, _, top)| top / 2.0).unwrap_or(4.5),
+            };
+            scene::to_height(doc.origin, z)
+        };
+        let glide = middle(&stops[next]) - middle(&doc.show.storey);
         doc.show.storey = stops[next].clone();
+        if !doc.plan && !doc.walk && glide.abs() > 1e-4 {
+            let mut to = orbit.pose();
+            to.target.y += glide;
+            orbit.fly(to);
+        }
         doc.redraw();
+    }
+    if keys.just_pressed(KeyCode::Home) && !doc.walk {
+        let mut to = orbit.pose();
+        to.yaw = to.yaw + nav::turn_between(to.yaw, 0.0);
+        orbit.fly(to);
+        doc.say(Tone::Done, "North is up.");
+        doc.touch();
     }
     if keys.just_pressed(KeyCode::KeyT) {
         let (plan, was_on_foot) = (!doc.plan, doc.walk);
@@ -1199,8 +1232,7 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
         if doc.walk {
             doc.say(Tone::Refused, "Frame brings the whole job into view from outside. On foot there is no outside: press V to come out first.");
         } else {
-            orbit.go_home();
-            doc.say(Tone::Done, "The whole job, in view.");
+            scene::frame(doc, &mut orbit, &snap);
         }
         doc.touch();
     }
