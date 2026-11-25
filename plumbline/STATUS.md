@@ -11550,6 +11550,54 @@ script reads those lines. By hand:
 
 Not built yet.
 
+## How tools feel, the model's side: a demonstration, written before it is built (call 219; 2026-11-25)
+
+`demos/tools-feel.sh`, at the command line (contract
+`handoff/contracts/contract-219M.md`). Every figure is made up. A new job: one
+level, floor at 0 ft, 9 ft high; four outside walls 6 in thick on a 20 ft by 12 ft
+line; a door 3 ft wide and 6 ft 8 in high in the south wall, 4 ft from its west
+end; the starter items brought in. By hand (the worker fits each step to the
+words the verbs already take, and says where a figure of the lead's is wrong):
+
+1. **Tried and taken back.** A partition from (10, 0) to (10, 12), tried: the
+   reply says what it would make (1 wall, and its length as `takeoff` would give
+   it), and the saved job is byte for byte what it was; `takeoff` is unchanged.
+2. **Tried where it would clash.** A duct 14 in by 8 in from (-2, 6) to (22, 6),
+   8 ft up, tried: it would pass through the west and the east walls: the reply
+   says **2 holes to cut**, naming each wall, and nothing is made.
+3. **Tried where it would be refused.** A wall drawn over the south wall, tried:
+   the reply is the refusal the real change gives, word for word, and nothing is
+   made.
+4. **A door moved along its wall.** Moved 5 ft east: it is 9 ft from the west
+   end; the wall's face less openings is what it was. Moved 15 ft east from
+   where it began: refused, it would overrun the 20 ft wall by **2 ft** (4 and
+   15 and 3 is 22); the job is byte for byte what it was.
+5. **A door moved to another wall.** To the north wall, 6 ft from its west end:
+   the south wall's face less openings grows by **20.00 SF** (3 ft by 6 ft 8 in)
+   and the north wall's shrinks by 20.00 SF; the estimate's lines priced by
+   those faces follow.
+6. **A copy is Assumed.** A Lavatory set down at (5, 5) and its place measured
+   Known; copied to (8, 5): two lavatories; the copy's place and sizes are
+   Assumed and say what it was copied from; it carries the same cost lines; the
+   estimate counts 2.
+7. **A row of copies.** With the copy of step 6 taken back, the first repeated
+   4 times, 3 ft apart, eastward: copies at (8, 5), (11, 5), (14, 5) and
+   (17, 5); five lavatories in all, each copy Assumed. Repeated 6 times the same
+   way, the sixth would stand at (23, 5), outside the house: it is made (a thing
+   outside a wall is not refused), and the reply says which copy stands in the
+   same space as a wall: the fifth, at (20, 5), on the east wall's line.
+8. **A wall copied with its openings.** The south wall copied 12 ft north (onto
+   the north wall's line): refused, it would lie over the north wall. Copied 6 ft
+   north: a wall 20 ft long with a door 4 ft from its west end.
+9. **Find.** `lav` finds the item Lavatory in the tool chest and each lavatory
+   set down, with its level; `south` finds nothing if no wall is so named and
+   says so; a level's name finds the level; a word in an estimate line finds the
+   line with its amount. Exact names come first.
+10. Nothing of the sample whole house moves: `plumbline sixteen` writes the job
+    it wrote, byte for byte.
+
+Not built yet.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **As of 2026-11-25, 06:00 UTC (the lead). Read this block first; what is below it is

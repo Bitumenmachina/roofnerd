@@ -9265,3 +9265,61 @@ editors-pass2.md` for Google Earth's own keys and the editors'):
 11. Not in this call: a ghost of the thing before the click and the rest of how
     tools feel (the next call); the second window showing a plan (the call
     after).
+
+### Call 219. How tools feel: the thing shown before the click, sizes at the pointer, a door moved, a copy, one search (2026-11-25; the lead's design, not built)
+
+Step 2 of call 217's order. What the review found the window lacks beside the
+best-made games and editors (`research/review-1125-window-behaviours.md`, points
+1 to 14), each read against what a builder needs and not what a game does:
+
+1. **A thing is shown before the click.** With a tool in hand, what the next
+   click would make is drawn where it would go, as the thing itself seen
+   through: a wall at its thickness and height from the last corner to the
+   pointer; a door or a window in the wall under the pointer, sliding along it;
+   an item, a fixture or a piece of equipment at its sizes where it would stand;
+   a run at its section and height; a run of cabinets along its wall. It is
+   drawn by what draws the real thing, from what the model says the click would
+   make, so the picture before and after the click is the same thing.
+2. **Whether it fits is said before the click.** The model tries the change and
+   takes it back (BIMCraft tries a script this way; ours is one change): what it
+   would make, what it would be in the same space as, what hole it would cut,
+   and, where the model would refuse it, the refusal word for word. The thing
+   seen through is drawn in the ink of a clash where it would clash and the
+   words stand at the pointer. A click the model would refuse is refused as it
+   is today. The saved job is never touched by a try. Tried when the pointer
+   rests a moment, not on every frame.
+3. **Sizes at the pointer.** Drawing a wall or a run: the length so far and the
+   angle of this leg, lettered at the pointer as the estimate writes a length. A
+   door or a window: how far it is from each end of its wall. Typing still takes
+   the length over, as today.
+4. **Turned before it is set down, and to any angle after.** The key that turns
+   a thing a quarter after it is set down turns the thing in hand before; a
+   typed angle turns it to that; a thing set down takes a typed angle on its
+   panel (the model already turns by any angle; the window offered a quarter).
+5. **A door or a window is moved**: along its wall, and to another wall. It is
+   refused where it would overrun its wall or lie over another opening, saying by
+   how much; each wall's face less openings follows.
+6. **A copy, and a row of copies.** A thing selected is copied into the hand and
+   set down as many times as wanted; or repeated in a row, so many, so far
+   apart. **A copy is Assumed**, whatever the thing it was copied from: its place
+   is new and nobody has measured it, and it says what it was copied from. It
+   carries the same type, sizes and cost lines. A wall is copied with its doors
+   and windows. And "like this one": a thing clicked with a key held puts its
+   tool in hand with its type and sizes.
+7. **One search.** A box that finds, as it is typed: every command the window
+   has (by the word on its button, with its key), every item of the tool chest,
+   everything in the job that has a name (a level, a room, a fixture, a wall
+   type), and the lines of the estimate. Enter does the command, takes the item
+   in hand, or flies to the thing.
+8. **Snaps can be let go.** Each kind of snap has a switch, and a key held frees
+   the pointer from all of them while it is held. What was caught is still named
+   at the pointer.
+9. **Games' habits that are not taken** (the review, list B): the program never
+   picks the result for the builder, never snaps to a grid a house does not
+   have, never shows trouble as a colour without the words and the size, and
+   never forgives a bad fit in silence.
+10. **Built in this order**: the model's side first at the command line
+    (trying a change; moving an opening; copy and repeat; find), under
+    `handoff/contracts/contract-219M.md`; then the window in three jobs: shown
+    before the click with sizes at the pointer and the turn (points 1 to 4, 8);
+    move, copy and like-this-one (5, 6); the search (7).
