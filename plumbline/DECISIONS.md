@@ -8453,3 +8453,27 @@ older way refuses it); and an unpriced line of the same name that is not made of
 the material (a list prices it; the older way does not). The road a list takes is
 the one the window will use. The older way is to be brought to it, with every
 figure that moves listed first: a command-line job, not yet contracted.
+
+### Call 208. Four things left with two readings, brought to one (2026-11-25)
+
+Each was said as "not right" by the worker who met it, and each is two ways of
+doing one thing.
+
+1. **A price has one road, whoever sets it** (call 207, as built, left three cases
+   on an older one). The road a price list brought in takes is the one the window
+   will use, and it wins: `set <material> price` and `quote` go by it in every
+   case. So (a) a supplier's price on a material the estimator has not priced
+   becomes the job's price for it too, as it does from a list (call 108), and the
+   reply says so; (b) a supplier's name written another way is taken as the job's
+   own spelling, and the reply says which; (c) an unpriced line of the same name
+   that is not made of the material is priced by it, as a list prices it, and the
+   reply names the line. **Every figure of money that moves in a test or a
+   demonstration is listed first, with the arithmetic**: one moves only where a
+   thing that had no price now has the price a list would have given it.
+2. **"Priced on nothing" is worked in one place.** The estimate's own rule and the
+   count of what is set down and not priced (call 205) are one function.
+3. **`check` says of a job that holds a shape under a starter shape's name** that
+   it does, and that the shape is to be kept under another name (call 205 left the
+   job opening, rightly, and silent).
+4. **Any length a line enters, below nothing, is refused**, a spacing as well as a
+   height (call 206 point 13 stopped at heights).
