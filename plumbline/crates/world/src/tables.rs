@@ -1930,7 +1930,11 @@ fn read_connection(cols: &Columns, row: &[String]) -> Result<crate::building::It
         }
         Ok(cell.to_string())
     };
-    let faces = crate::building::Facing::named(cols.cell(row, "faces")).ok_or_else(|| format!("it faces {:?}, which is none of back, front, left, right, up or down", cols.cell(row, "faces")))?;
+    // An empty cell says nothing of which way it faces.
+    let faces = match cols.cell(row, "faces") {
+        "" => None,
+        said => Some(crate::building::Facing::named(said).ok_or_else(|| format!("it faces {said:?}, which is none of back, front, left, right, up or down"))?),
+    };
     // How sure and where from: the place's own two columns, else the row's one pair.
     let pair = |own: (&str, &str)| -> Result<(Status, String), String> {
         let (status, source) = if own.0.is_empty() && own.1.is_empty() { (cols.cell(row, "status"), cols.cell(row, "source")) } else { own };
@@ -1973,7 +1977,7 @@ pub fn connections_out(job: &mut Job) -> Vec<Vec<String>> {
                 r.across.clone(),
                 r.back.clone(),
                 r.up.clone(),
-                r.faces.word().to_string(),
+                r.faces.map(|f| f.word().to_string()).unwrap_or_default(),
                 status_said(r.place).to_string(),
                 r.place_from.clone(),
                 size,

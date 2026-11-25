@@ -35,6 +35,11 @@ use crate::{Connector, ConnectorKind, Connectors, Domain, Flow, Item, Placed, P3
 /// (`-4 in`, `height - 12 in`), the size a length ("1/2 in"). `how` says how sure the place is and where it is from, and the
 /// size too; Assumed is the only sureness a row may have (`check_item_connections`).
 pub fn connection_row(name: &str, takes: ConnectorKind, carries: Option<Domain>, goes: Flow, across: &str, back: &str, up: &str, faces: Facing, size: Option<&str>, how: Entered) -> Result<ItemConnection, String> {
+    connection_row_facing(name, takes, carries, goes, across, back, up, Some(faces), size, how)
+}
+
+/// The same, where which way it faces may be said to be nothing (call 214, round 3): a connection whose facing nobody says.
+pub fn connection_row_facing(name: &str, takes: ConnectorKind, carries: Option<Domain>, goes: Flow, across: &str, back: &str, up: &str, faces: Option<Facing>, size: Option<&str>, how: Entered) -> Result<ItemConnection, String> {
     let size = match size {
         Some(typed) => Some(how.length(typed).map_err(|why| format!("the {name} connection's size: {why}"))?),
         None => None,
@@ -752,8 +757,16 @@ pub fn connection_set_how(job: &mut Job, item: &str, connection: &str, field: &s
                 format!("the {shown_name} connection's {} is {value} now", field.to_lowercase())
             }
             "faces" => {
-                r.faces = Facing::named(value).ok_or_else(|| format!("{value:?} is not a way a connection faces: back, front, left, right, up or down"))?;
-                format!("the {shown_name} connection faces {} now", r.faces.word())
+                // "none" (or nothing) says it faces no way that anybody says.
+                r.faces = match value.trim() {
+                    "" => None,
+                    v if v.eq_ignore_ascii_case("none") => None,
+                    v => Some(Facing::named(v).ok_or_else(|| format!("{value:?} is not a way a connection faces: back, front, left, right, up or down, or none"))?),
+                };
+                match r.faces {
+                    Some(f) => format!("the {shown_name} connection faces {} now", f.word()),
+                    None => format!("the {shown_name} connection says nothing of which way it faces now"),
+                }
             }
             "size" => {
                 if none {

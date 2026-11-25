@@ -9489,3 +9489,84 @@ control on the top bar that reads at a glance.
     either flies both to it.
 13. Drawing stays in the first window in this call; the second is for looking.
     Said on the screen where someone tries.
+
+### Call 223. "They own their database": every table written out as one workbook and brought back whole (2026-11-25; the lead's design, not built)
+
+Call 220, point 2. Every table the program works from already goes out and comes
+back one at a time (items, shapes, where items connect, assemblies, prices by
+supplier; cabinet rules when call 215 is built). A person who is told they own
+their database should be able to pick it up in one hand.
+
+1. **"My database" written out is one workbook**, a tab for each table, each tab
+   exactly what that table's own writing-out gives: the same headings, the same
+   rows, in the same order. The same as a folder of plain tables for whoever
+   wants them so.
+2. **Brought back, it is brought back whole**: each tab by the reader its own
+   table already has, in the order they depend on one another (shapes, then
+   items, then where they connect; assemblies; prices), all of it or none of it.
+   The reply says, tab by tab, how many rows were added, how many were the same
+   as the job already has, and how many were refused, each refusal with its row
+   and its reason.
+3. **Out, in to an empty job, and out again gives the same workbook**, cell for
+   cell, and the same folder byte for byte.
+4. **What it cannot read is said**: a tab it does not know and a column it does
+   not know are named in the reply and left alone, never dropped in silence and
+   never a reason to refuse the rest.
+5. **The starter database comes in the same way**: every table the program comes
+   with, in one bringing-in.
+6. Nothing in it is in a form only this program reads: a workbook any
+   spreadsheet opens, headings in a builder's words, no codes of the program's
+   own. Every value keeps how sure it is and where it came from, as each table
+   already does.
+7. In the window: "My database" under Write out and under Bring in. A small
+   window job after the command line's.
+
+### Call 214, as built, and two rulings made on the way (2026-11-25)
+
+Built by a Sonnet worker under `handoff/contracts/contract-214M.md`
+(`research/worker-report-call214M.md`), in three rounds, and accepted by the
+lead's own run in the worker's copy: 1,128 tests in the six command-line crates
+(672, 45, 6, 111, 122, 172), 58 command-line demonstrations with
+`demos/maker-model.sh` among them, no output with FAIL in it, the gates,
+`tools/portmap.sh`, `tools/licenses.sh`; the sample whole house's saved job is
+what it was, byte for byte. (Six of the demonstrations failed in the lead's
+first run in the minutes the disk was full and passed when run again; nothing
+of theirs was changed.)
+
+1. **Points 1 to 8 are built as written**: `import maker-model <job> <file>
+   [--as fixture|equipment|furnishing]` makes items in the tool chest and sets
+   nothing down; one item for each type in the file; sizes from the extent of the
+   body, Assumed and naming the file; maker and model from the manufacturer's
+   property set, Assumed, or Unknown, "not said in the model"; each connection
+   point a row of the item; drawn as a box, saying the body's own shape was not
+   kept; a proxy left out and named unless the person says what it is; the same
+   file again refused by name with the job untouched.
+2. **Which bodies are read**: pushed outlines, solids of faces, face sets, shapes
+   shared by a type, a box, and a clipped solid as the solid it was cut from,
+   following BIMCraft's structure and written here. **Not read, and said so each
+   time**: a solid turned about an axis, a swept or tapered solid, and curved
+   solids of the advanced kind. Their sizes stay Unknown: sampling a curve would
+   give a size nobody could vouch for.
+3. **Ruled in the second and third rounds: a connection point that does not say
+   which way it faces is kept.** The lead's second-round instruction lost such a
+   point altogether, which was wrong: where a thing connects is worth more than
+   which way it faces. An item's connection may now say nothing of its facing
+   (the key is absent in the saved job; the table's cell is empty; a job written
+   before reads and writes back byte for byte). A maker's point whose placement
+   gives no axis, or one along none of the six, is a row with no facing, and the
+   reply counts them.
+4. **Ruled: this program's own model files tell no lie about facing.** The
+   writer gave every connection point an axis straight up whatever it was. It now
+   writes the axis from the connection's own facing, and none where it has none.
+   So which way a connection faces is carried by the file and comes back when it
+   is read, onto a thing and onto an item's row. This replaces point 5 of "Call
+   211, the model's side, as built" (facing not written). One expectation moved
+   with it and was listed first: `demos/connections.sh` step 9 now checks that
+   the old line is gone and "faces back" returns.
+5. Not right, and said: the standard's own text on how a connection point's
+   facing is given could not be read; the placement's own axis is used and the
+   reply says so and says to check one against the maker's sheet. A shared
+   shape placed away from its own origin is not read. Weight, material, price
+   and classification are not read. The third round's tests were written after
+   its code and were never seen to fail. The window's entry under Bring in is not
+   built.

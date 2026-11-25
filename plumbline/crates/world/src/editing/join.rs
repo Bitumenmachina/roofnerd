@@ -580,6 +580,8 @@ pub struct PortSaid {
     pub kind: ConnectorKind,
     pub domain: Option<Domain>,
     pub flow: Flow,
+    /// Which way it faces in the thing's own axes, where the file says: none where it does not.
+    pub facing: Option<crate::Facing>,
 }
 
 /// A connection put on a fixture or a piece of equipment because a model brought in says there is one
@@ -653,7 +655,7 @@ pub fn connect_port(job: &mut Job, thing: &str, run: Option<(&str, usize)>, at: 
             flow: said.flow,
             at: Val { value: Some([tidy(q[0] * 12.0), tidy(q[1] * 12.0), tidy(q[2] * 12.0)]), unit: units::IN.into(), status: written(status), source },
             size: info.as_ref().and_then(|(r, _)| r.section.as_ref().map(|t| t.width.clone())),
-            facing: None,
+            facing: said.facing,
             of_item: None,
         });
         building::check_connectors(thing, kind, &connectors)?;

@@ -34,7 +34,7 @@ pub mod shapes;
 pub mod snap;
 pub mod stretch;
 
-pub use connections::{connection_add, connection_row, connection_set, connection_set_how, connection_take, connections_outside_their_boxes, connections_standing, item_connections_worked, item_rows, ConnectionDone, ConnectionsFollowed, Near, Standing, StandsHow, StandsOff, WorkedConnection};
+pub use connections::{connection_add, connection_row, connection_row_facing, connection_set, connection_set_how, connection_take, connections_outside_their_boxes, connections_standing, item_connections_worked, item_rows, ConnectionDone, ConnectionsFollowed, Near, Standing, StandsHow, StandsOff, WorkedConnection};
 pub use history::{History, UNDO_LIMIT};
 pub use shapes::{keep_shape_as, shape_block_add, shape_block_set, shape_block_take, BlockSet, ShapeChanged};
 pub use stretch::{move_wall, read_move, way_said, Followed, Moved, Resized, RoofMoved};

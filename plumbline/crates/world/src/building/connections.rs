@@ -95,7 +95,9 @@ pub struct ItemConnection {
     pub across: String,
     pub back: String,
     pub up: String,
-    pub faces: Facing,
+    /// Which way it faces; none where nothing says (a model's connection point whose placement gives no axis). Absent in the saved job where there is none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub faces: Option<Facing>,
     /// How sure the place is: Assumed. A place is Known only where somebody measures it on the thing.
     pub place: Status,
     /// Where the place is from.
@@ -232,7 +234,7 @@ impl ItemConnection {
                 s.status = Status::Assumed.max(s.status);
                 s
             }),
-            facing: Some(self.faces),
+            facing: self.faces,
             of_item: Some(self.name.clone()),
         })
     }
@@ -245,7 +247,8 @@ impl ItemConnection {
         let back = size[1] / 2.0 - at[1];
         // A size says where it is from where that is not where the place is from (a size typed on a connection is not the rough-in sheet's).
         let sized = self.size.as_ref().and_then(|s| s.value.as_ref().map(|l| format!("; size {}{}", units::show_length(l, &s.unit), if s.source != self.place_from || s.status != self.place { format!(" ({}: {})", status_word(s.status), s.source) } else { String::new() }))).unwrap_or_default();
-        format!("{}: {what}; across {}, back {}, up {}; faces {}{sized}; {}: {}", self.name, inches_of(across), inches_of(back), inches_of(at[2]), self.faces.word(), status_word(self.place), self.place_from)
+        let faces = self.faces.map(|f| format!("faces {}", f.word())).unwrap_or_else(|| "which way it faces is not said".to_string());
+        format!("{}: {what}; across {}, back {}, up {}; {faces}{sized}; {}: {}", self.name, inches_of(across), inches_of(back), inches_of(at[2]), status_word(self.place), self.place_from)
     }
 }
 

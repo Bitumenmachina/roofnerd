@@ -11418,7 +11418,21 @@ at (254, 457.2, 0) facing down. By hand:
 10. File 1 with a fourth connection point 100 mm outside the body: three rows are
     written and the fourth is named as outside the item and not written.
 
-Not built yet.
+**Built (2026-11-25).** Accepted by the lead's own run in the worker's copy: 1,128
+tests in the six command-line crates (672, 45, 6, 111, 122, 172), 58 command-line
+demonstrations, no output with FAIL in it, the gates, portmap and licences; the
+sample whole house unchanged to the byte.
+- Steps 1 and 2 came to the lead's figures: 20 in, 18 in and 8 in; cold water
+  4 in to one side, at the back, 2 in up; hot 4 in to the other; waste on the
+  middle at the foot, facing down.
+- Step 8's unreadable body is a solid turned about an axis (a round pedestal):
+  its sizes are Unknown and it is not drawn until it has sizes.
+- Step 10: the fourth point is named as standing 3 15/16 in behind the body and
+  is not written.
+- Beyond the steps: a point that does not say which way it faces is kept as a
+  row with no facing; and this program's own model files now carry each
+  connection's real facing out and back (DECISIONS.md, "Call 214, as built").
+- Not right: curved solids are not read; the window has no entry for it yet.
 
 ## A cabinet by rule: a demonstration, written before it is built (call 215; 2026-11-25)
 
@@ -11675,6 +11689,32 @@ after another.
    saved. After a Save there is no recovery copy.
 8. Every window demonstration that ran before runs as it did (the builder runs
    `glassw`, `moneyw`, `benchw` and `pricew` and says so).
+
+Not built yet.
+
+## The database in one hand: a demonstration, written before it is built (call 223; 2026-11-25)
+
+`demos/database.sh`, at the command line (contract to be written when its turn
+comes). A new job with the starter tables brought in (the worker gives the counts
+the program holds on the day: at call 211 they were 48 items, 13 shapes, 5 rows of
+where items connect, 42 assemblies of 202 lines), a made-up price list of three
+suppliers, and one shape and one item of the job's own.
+
+1. Written out as "my database": one workbook with a tab for each table; each
+   tab is, row for row, what that table's own writing-out gives (the script
+   writes each table singly and compares).
+2. Brought into a new, empty job: the reply gives each tab's count, and they are
+   the counts of step 1.
+3. Written out again from the second job: the same workbook, cell for cell; as
+   a folder, the same files byte for byte.
+4. Brought into a job that already has it all: every row is "the same as the
+   job already has", nothing is added, the job is byte for byte what it was.
+5. A tab added by hand named "Notes" and a column added to Items named "My
+   code": both are named in the reply as not read; everything else comes in.
+6. A workbook with one bad row (an item with a width that is not a length):
+   nothing at all is brought in, and the reply names the tab, the row and why.
+7. The starter database in one bringing-in gives the same job as the starter
+   tables brought in one by one, byte for byte.
 
 Not built yet.
 
