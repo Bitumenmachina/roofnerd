@@ -10277,3 +10277,41 @@ reply and the demonstration's output.
    a picture of the place; the eye kept clear of the house's walls; BCF 3.0;
    issues read back; the window's entry under Write out.
 
+### Call 233. What a house has that the tool chest draws as a plain box: starter shapes and items for appliances and small devices (2026-11-26; the lead's design, not built)
+
+Call 218's dive ends on a kitchen receptacle that is a plain box, and said so.
+The chest's 48 starter items have no electrical device at all, and its range,
+refrigerator, dishwasher, washer, dryer, air handler and panelboard are drawn as
+boxes. Since calls 198 and 203 a shape is rows of a table, so this is a table
+job, not code.
+
+1. **New starter shapes**, each a few blocks a person knows at a glance and each
+   true to its item's sizes: a range (a body, a cooktop, an oven door), a
+   refrigerator (two doors), a dishwasher, a laundry machine (washer and dryer
+   alike: a body and a round door), an air handler, a panelboard (a flat box
+   and its door), a receptacle and a switch (a plate, and what is on it), a
+   ceiling light, a recessed light, a smoke alarm, a thermostat, a register or
+   grille, a shower base.
+2. **The seven starter items that are boxes today are drawn as their shapes**;
+   their sizes, statuses and sources are not touched.
+3. **New starter items** for what was missing: duplex receptacle, switch,
+   ceiling light, recessed light, smoke alarm, thermostat, supply register,
+   return grille, shower base. Each size is a typical one from a published
+   standard or a maker-neutral source the worker names (address and the line
+   quoted in `research/device-sizes.md`), **Assumed**, "a typical size; the
+   product is not chosen". A size that cannot be sourced is Unknown, not
+   written from memory.
+4. **Where an item connects** for the new plumbing and mechanical items only
+   where a published rough-in gives it (call 211's rule); none is invented.
+5. **Nothing already in a job moves.** A job carries its own shapes only; a
+   thing set down before this call is what it was. The sample whole house's
+   saved job, estimate, clash list and verify-in-field list are byte for byte
+   what they were. If drawing one of its things as a new shape would change any
+   of those, the worker stops and hands that back.
+6. **Counts move, and only counts**: where a test or a demonstration counts the
+   starter shapes, their rows, the starter items or the database's tabs' rows,
+   that count moves to the new figure with "call 233" beside it; the worker
+   lists every one before touching any, and nothing else in those files moves.
+7. The window draws shapes from the table already; its pictures are retaken at
+   the next window merge, and the dive's last picture is looked at then.
+

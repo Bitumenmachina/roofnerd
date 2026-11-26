@@ -11590,7 +11590,11 @@ the command line the stopped bench step (call 214) taken up again.
   sized by its whole length. With the window builder to build; failed the same
   way on its second run.
   `screensw` PASS (first run, 08:45 to 09:05). `bringw` PASS (first run).
-  Still to run on it: `movew`. `trimw`, `benchw`, `dressw`, `shapebenchw`,
+  `movew` PASS (first run, 09:31 to 09:36). **So on the frozen build of
+  2e6f63a the lead's own runs stand at: ten pass (`fixes209w`, `fixes197w`,
+  `itemlibw`, `itemneww`, `cabinetsw`, `gablew`, `gableendw`, `screensw`,
+  `bringw`, `movew`); `navw` fails one figure (the north arrow's double-click)
+  and `tradesw` two (the size tags of call 232).** `trimw`, `benchw`, `dressw`, `shapebenchw`,
   `glassw`, `moneyw` and `pricew` were last run by the lead on the build before
   call 222 part A, and four of them by its builder since; they are run again
   on the next merge, which is near. The builder's own runs
@@ -12222,6 +12226,33 @@ LAS with the same points.
 6. An E57 of the same room: read to the same figures, or refused by name
    saying what to save it as, as the licences decide.
 7. `plumbline sixteen` writes the job it wrote, byte for byte.
+
+Not built yet.
+
+## Starter shapes and items for appliances and small devices: a demonstration, written before it is built (call 233; 2026-11-26)
+
+`demos/devices.sh` (contract `handoff/contracts/contract-233M.md`). On the day the
+chest has 48 starter items and 13 starter shapes; by the lead's list the call adds
+14 shapes and 9 items (the worker gives the counts it ends with and says where
+they differ).
+
+1. `plumbline items` on a job with the starter chest: **57 items**; the nine new
+   ones are there, each Assumed with a source that names where its size is
+   from.
+2. The seven that were boxes (range, refrigerator, dishwasher, washer, dryer,
+   air handler, panelboard) say what they are drawn as, and their width, depth
+   and height are what they were.
+3. Each new shape, set down at its item's size: **its blocks lie inside the
+   item's box and reach each of its six faces** (a shape true to its sizes), at
+   that size and at half again as wide.
+4. A duplex receptacle set down on a wall at 18 in to its middle: the model
+   gives its plate's size as the item's, and it is "set against" the wall, not a
+   clash.
+5. The shapes and the items written out and brought back into an empty job:
+   the same tables, byte for byte.
+6. The sample whole house: `plumbline sixteen` writes the job it wrote, byte for
+   byte, and its estimate, clash list and verify-in-field list are what they
+   were.
 
 Not built yet.
 
