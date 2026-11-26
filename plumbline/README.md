@@ -37,7 +37,7 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 **3. The program:**
 
 ```
-git clone -b claude/nifty-tesla-qmn44n https://github.com/Bitumenmachina/roofnerd
+git clone --depth 1 -b claude/nifty-tesla-qmn44n https://github.com/Bitumenmachina/roofnerd
 cd roofnerd/plumbline
 cargo build                         # the first build takes a while: it builds the 3D engine
 cargo test --workspace              # the model, the command line, the window's crate

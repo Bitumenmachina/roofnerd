@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>BuildOS Manual</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+:root{--bg:#f3f1ea;--panel:#fbfaf6;--ink:#1c2226;--soft:#5b6469;--line:#d8d2c4;--line2:#e9e4d8;--blue:#1f4e79;--blue-bg:#e3ecf5;--warn:#8a5a00;--warn-bg:#f8ecc8;
+--mono:ui-monospace,"SF Mono","Cascadia Mono",Menlo,Consolas,"Liberation Mono",monospace;--sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14181b;--panel:#1b2125;--ink:#e7e4dc;--soft:#9aa3a8;--line:#333c42;--line2:#272e33;--blue:#8fbbe6;--blue-bg:#1d2f41;--warn:#e8bf5e;--warn-bg:#3a2e10;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#14181b;--panel:#1b2125;--ink:#e7e4dc;--soft:#9aa3a8;--line:#333c42;--line2:#272e33;--blue:#8fbbe6;--blue-bg:#1d2f41;--warn:#e8bf5e;--warn-bg:#3a2e10;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 var(--sans)}
+.wrap{max-width:1180px;margin:0 auto;padding-block:26px 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;grid-template-columns:230px minmax(0,1fr);gap:34px}
+header.sheet{grid-column:1/-1;border:2px solid var(--ink);background:var(--panel);display:grid;grid-template-columns:1fr auto}
+header.sheet .t{padding:16px 20px}
+header.sheet h1{margin:0 0 4px;font-size:28px;line-height:1.15;letter-spacing:-.01em}
+header.sheet p{margin:0;color:var(--soft);max-width:60ch}
+.block{border-left:2px solid var(--ink);display:grid;grid-template-columns:auto auto;font:12px/1.35 var(--mono);align-content:stretch}
+.block div{padding:6px 12px;border-bottom:1px solid var(--line)}
+.block div:nth-child(odd){color:var(--soft);text-transform:uppercase;letter-spacing:.06em;border-right:1px solid var(--line)}
+.block div:nth-last-child(-n+2){border-bottom:0}
+.block .flag{color:var(--warn);background:var(--warn-bg);font-weight:700}
+nav{position:sticky;top:14px;align-self:start;font-size:14px;max-height:calc(100vh - 28px);overflow:auto}
+nav b{display:block;font:11.5px var(--mono);text-transform:uppercase;letter-spacing:.07em;color:var(--soft);margin:14px 0 4px}
+nav b:first-child{margin-top:0}
+nav a{display:block;color:var(--ink);text-decoration:none;padding:3px 8px;border-left:2px solid var(--line)}
+nav a:hover{border-left-color:var(--blue);color:var(--blue)}
+main{min-width:0}
+h2{font-size:21px;margin:40px 0 8px;padding-top:10px;border-top:2px solid var(--ink);text-wrap:balance}
+main>h2:first-child{margin-top:0}
+h3{font-size:16px;margin:22px 0 6px}
+p,li{max-width:70ch}
+p{margin:8px 0}
+ol,ul{padding-left:24px;margin:8px 0}
+li{margin:4px 0}
+code{font:.9em var(--mono);background:var(--line2);padding:1px 4px;border-radius:3px;overflow-wrap:anywhere}
+.scroll{overflow-x:auto;margin:12px 0}
+table{border-collapse:collapse;width:100%;background:var(--panel);border:1px solid var(--line);font-size:14.5px}
+th,td{text-align:left;vertical-align:top;padding:7px 10px;border-bottom:1px solid var(--line2)}
+th{font:11.5px var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--soft);border-bottom:1px solid var(--line)}
+tr:last-child td{border-bottom:0}
+figure{margin:16px 0;background:var(--panel);border:1px solid var(--line)}
+figure img{display:block;width:100%;height:auto;max-width:100%}
+figcaption{padding:8px 12px;font-size:14px;border-top:1px solid var(--line)}
+.stamp{color:var(--soft);white-space:nowrap}
+.nopic{padding:26px 12px;text-align:center;color:var(--warn);background:var(--warn-bg);font:13px var(--mono)}
+.part{margin-top:56px;padding:10px 14px;background:var(--blue-bg);color:var(--blue);font:700 13px var(--mono);letter-spacing:.06em;text-transform:uppercase}
+footer{grid-column:1/-1;border-top:1px solid var(--line);padding-top:10px;color:var(--soft);font-size:13px}
+@media (max-width:860px){.wrap{grid-template-columns:minmax(0,1fr);gap:18px}nav{position:static;max-height:none;display:flex;flex-wrap:wrap;gap:2px 4px}nav b{flex-basis:100%}nav a{border-left:0;border-bottom:1px solid var(--line);padding:2px 6px}header.sheet{grid-template-columns:1fr}.block{border-left:0;border-top:2px solid var(--ink)}}
+@media print{nav{display:none}.wrap{display:block}body{background:#fff}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="sheet">
+  <div class="t"><h1>BuildOS manual</h1><p>This is the one page that says how each task is done in BuildOS and what state the program is in. When a task changes, its section and its picture are replaced. Nothing is added beside them. A picture has the commit it was taken on below it. A task with no picture of the present build says so.</p></div>
+  <div class="block">
+    <div>Program</div><div>BuildOS</div>
+    <div>State</div><div class="flag">Not a release candidate</div>
+    <div>As of</div><div>2026-11-26</div>
+    <div>Pictures</div><div>17, taken from 2026-11-23 to 2026-11-26</div>
+  </div>
+</header>
+<nav><b>How each task is done</b><a href="#1-start">1. Start</a><a href="#2-the-model-window">2. The model window</a><a href="#3-move-the-view">3. Move the view</a><a href="#4-bring-in-a-plan-and-set-its-scale">4. Bring in a plan and set its scale</a><a href="#5-trace-the-house">5. Trace the house</a><a href="#6-enter-a-field-measurement">6. Enter a field measurement</a><a href="#7-clashes-and-the-verify-in-field-list">7. Clashes and the verify-in-field list</a><a href="#8-the-estimate-window">8. The estimate window</a><a href="#9-items-place-move-and-the-bench">9. Items: place, move, and the bench</a><a href="#10-kitchens-renovation-and-layouts">10. Kitchens, renovation and layouts</a><a href="#11-see-each-trade">11. See each trade</a><a href="#12-bring-in-and-write-out">12. Bring in and write out</a><a href="#13-two-plans-side-by-side">13. Two plans side by side</a><b>The state of the program</b><a href="#state-where-the-work-is">Where the work is</a><a href="#state-what-was-run-and-on-which-commit">What was run, and on which commit</a><a href="#state-the-window">The window</a><a href="#state-the-release-candidate-the-thirteen-as-they-stand">The release candidate: the thirteen, as they stand</a><a href="#state-what-is-not-right">What is not right</a><a href="#state-what-only-patrick-can-give-nothing-waits-on-it">What only Patrick can give (nothing waits on it)</a><a href="#state-how-the-work-is-run">How the work is run</a></nav>
+<main>
+<p>Each task below names the demonstration that proves it. A demonstration is a script that operates the real program with a pointer and a keyboard, and checks the result.</p>
+<h2 id="1-start">1. Start</h2>
+<ol><li>Install the program. <code>README.md</code> has the three steps.</li><li>Make a sample house: <code>cargo run -p plumbline -- sixteen house.json</code></li><li>Open it: <code>cargo run -p plumbline-app -- house.json</code></li></ol>
+<p>Two windows open. The <b>model window</b> shows the house. The <b>estimate window</b> shows the price. Each change in one window shows in the other.</p>
+<p>To start an empty job, give the name of a file that does not exist. The panel <b>Next steps</b> tells you what to do first.</p>
+<figure><a href="pictures/two-windows.jpg"><img src="pictures/two-windows.jpg" width="1800" height="690" loading="lazy" alt="The model window and the estimate window, open on the sample house."></a><figcaption>The model window and the estimate window, open on the sample house. <span class="stamp">Picture of commit <code>73dd7c0</code>, 2026-11-26.</span></figcaption></figure>
+<p>Proven by <code>demos/dressw.sh</code> and <code>demos/pricew.sh</code>.</p>
+<h2 id="2-the-model-window">2. The model window</h2>
+<ul><li>The <b>view bar</b> is at the top: <b>3D</b>, <b>Plan</b>, <b>Walk</b>, <b>Frame</b>, <b>Sun</b>.</li><li>The <b>Job</b> panel is at the left: Next steps, Levels, Show, Drawings, Bring in, Write out.</li><li>The <b>Details</b> panel is at the right. It shows the thing that you selected.</li><li>The <b>Tools</b> bar is at the bottom: Building, then Mechanical, Electrical and Plumbing, then Edit.</li><li>Three switches at the lower right put each panel away and bring it back.</li></ul>
+<p>On a small screen the panels fold. The size of the lettering has four steps. The program keeps the place and the size of each window for the next start.</p>
+<p>If the program stops before you save, it keeps a recovery copy. At the next start it offers the copy to you.</p>
+<p>The picture in section 1 shows each of them.</p>
+<p>Proven by <code>demos/glassw.sh</code> and <code>demos/screensw.sh</code>.</p>
+<h2 id="3-move-the-view">3. Move the view</h2>
+<ul><li><b>Wheel</b>: the view dives at the place under the pointer. One wheel goes from the whole lot to one hinge.</li><li><b>Drag</b>: the ground moves with your hand. A flick continues and slows down.</li><li><b>Right drag</b>, or <b>Shift and drag</b>, or the <b>arrow keys</b>: tilt and turn.</li><li><b>Double-click</b> a thing: the view flies to it. <b>F</b> frames the selected thing.</li><li><b>North arrow</b>: one click turns the view north-up. A double-click looks straight down.</li><li><b>Page Up</b> and <b>Page Down</b> go from level to level. <b>T</b> goes between plan and 3D.</li><li><b>Tilt as I dive</b> is a switch on the view bar.</li></ul>
+<p>No view jumps. Each move starts slowly and stops slowly.</p>
+<figure><a href="pictures/view-dive.jpg"><img src="pictures/view-dive.jpg" width="1600" height="720" loading="lazy" alt="A strip of pictures across one dive of the wheel, from the lot to a fixture."></a><figcaption>A strip of pictures across one dive of the wheel, from the lot to a fixture. <span class="stamp">Picture of commit <code>331632a</code>, 2026-11-26.</span></figcaption></figure>
+<p>Proven by <code>demos/navw.sh</code>. The script reads the path of the view frame by frame.</p>
+<h2 id="4-bring-in-a-plan-and-set-its-scale">4. Bring in a plan and set its scale</h2>
+<ol><li>On the Job panel, select <b>Add drawing</b>. Pick the file from the list. Pick the page.</li><li>Select <b>Set scale</b>. Click the two ends of one dimension on the drawing. Type the length that the dimension shows.</li><li>To put a second drawing in line with the first, select <b>Line up</b>.</li></ol>
+<p>The program takes a PDF (drawn or scanned), a PNG, a JPEG and a scan (PLY) from the window. Where a PDF has drawn lines, the pointer catches them.</p>
+<figure><a href="pictures/plan-scale.jpg"><img src="pictures/plan-scale.jpg" width="1600" height="960" loading="lazy" alt="A plan under the tracing, with its scale set from one dimension."></a><figcaption>A plan under the tracing, with its scale set from one dimension. <span class="stamp">Picture of commit <code>9ba06ea</code>, 2026-11-23.</span></figcaption></figure>
+<p>Proven by <code>demos/planw.sh</code> and <code>demos/firstw.sh</code> (a plan in the public domain).</p>
+<h2 id="5-trace-the-house">5. Trace the house</h2>
+<ol><li>Select <b>Add level</b>. Give the height to the next level.</li><li>Select the <b>Wall</b> tool. The tool shows the sizes that it will make. Accept them or type other sizes. Click each corner. To make a wall of an exact length, type the length and press Enter.</li><li>Select <b>Door</b> or <b>Window</b>. Click on a wall.</li><li>Select <b>Floor</b>, then <b>Room</b>. Click in a closed room and give it a name.</li><li>Select <b>Roof</b>. Click the corners of the footprint. Set the pitch.</li><li>Select <b>3D</b> on the view bar. The house stands on the tracing.</li></ol>
+<p>Each traced value is <b>Assumed</b> and says where it came from. <b>Undo</b> takes back one step.</p>
+<figure><a href="pictures/trace.jpg"><img src="pictures/trace.jpg" width="1600" height="960" loading="lazy" alt="Walls traced over a plan, in Plan view."></a><figcaption>Walls traced over a plan, in Plan view. <span class="stamp">Picture of commit <code>9ba06ea</code>, 2026-11-23.</span></figcaption></figure>
+<figure><a href="pictures/house-3d.jpg"><img src="pictures/house-3d.jpg" width="1600" height="960" loading="lazy" alt="The 3D house made from the tracing."></a><figcaption>The 3D house made from the tracing. <span class="stamp">Picture of commit <code>9ba06ea</code>, 2026-11-23.</span></figcaption></figure>
+<p>Proven by <code>demos/draww.sh</code>, <code>demos/planw.sh</code> and <code>demos/firstw.sh</code>.</p>
+<h2 id="6-enter-a-field-measurement">6. Enter a field measurement</h2>
+<ol><li>Select the thing. Its values are in the Details panel.</li><li>Select <b>Measure</b> beside a value. Type the measured length, or shoot it with a laser in keyboard mode. The laser types the number at the cursor.</li><li>The value is now <b>Known</b>. Its source is your measurement.</li></ol>
+<p>A clash that depended on the value confirms or clears. The price in the estimate window changes at the same time.</p>
+<p>To take the list to the site on paper, write out the field sheet. Fill it in. Bring it back as a file (section 12).</p>
+<figure><a href="pictures/field.jpg"><img src="pictures/field.jpg" width="1600" height="960" loading="lazy" alt="A measured height typed for a level. The value becomes Known."></a><figcaption>A measured height typed for a level. The value becomes Known. <span class="stamp">Picture of commit <code>9ba06ea</code>, 2026-11-23.</span></figcaption></figure>
+<p>Proven by <code>demos/fieldw.sh</code> and <code>demos/field-sheet.sh</code>.</p>
+<h2 id="7-clashes-and-the-verify-in-field-list">7. Clashes and the verify-in-field list</h2>
+<ul><li>A clash between <b>Assumed</b> things is a <b>question for the field</b>.</li><li>A clash between <b>Known</b> things is a <b>finding</b>.</li><li>In the estimate window, the tab <b>Clashes</b> lists them. The tab <b>Verify in field</b> lists each question, where it is, and the dollars that depend on it. The largest dollars are first.</li><li>Pick up a thing and move it (section 9). Its clashes light and clear while it moves.</li></ul>
+<figure><a href="pictures/clash.jpg"><img src="pictures/clash.jpg" width="1800" height="690" loading="lazy" alt="Clashes marked on the house, and the list of them in the estimate window."></a><figcaption>Clashes marked on the house, and the list of them in the estimate window. <span class="stamp">Picture of commit <code>76854a3</code>, 2026-11-23.</span></figcaption></figure>
+<p>Proven by <code>demos/clashw.sh</code>, <code>demos/tradesw.sh</code>, <code>demos/clash.sh</code> and <code>demos/vif.sh</code>.</p>
+<h2 id="8-the-estimate-window">8. The estimate window</h2>
+<ul><li>The tab <b>Estimate</b> shows the recap and the 16 divisions. Other tabs show one division, the budget, the clashes and the field list.</li><li>Each line shows its quantity, its formula and its source. You can change the stretch-out on the line.</li><li>You can switch labor on or off for each line.</li><li><b>Overhead</b> and <b>Profit</b> are fields. Type a new percent.</li><li><b>Price list</b> (on the Job panel) brings in a supplier&#x27;s list. The window shows three suppliers side by side.</li><li>A price per SF or LF grows into line items for the same condition. The detail rolls up again to the same line.</li></ul>
+<figure><a href="pictures/estimate.jpg"><img src="pictures/estimate.jpg" width="880" height="960" loading="lazy" alt="The estimate window: the recap and the divisions."></a><figcaption>The estimate window: the recap and the divisions. <span class="stamp">Picture of commit <code>1a99772</code>, 2026-11-25.</span></figcaption></figure>
+<p>Proven by <code>demos/moneyw.sh</code>, <code>demos/pricew.sh</code>, <code>demos/d4w.sh</code> and <code>demos/d5w.sh</code>.</p>
+<h2 id="9-items-place-move-and-the-bench">9. Items: place, move, and the bench</h2>
+<ol><li>On the Job panel, select <b>Starter tool chest</b>. The items of each trade come in. An item from a maker&#x27;s sheet comes in with <b>Maker&#x27;s sheet</b>.</li><li>Select <b>Fixture</b> or <b>Equipment</b>. Pick the item. Click where it goes.</li><li>Select <b>Move</b>. Pick up the thing and put it down in its new place. A wall that you move takes the walls that meet it.</li><li>Open an item on <b>the bench</b> to see it alone: its sizes, its shape, where it connects, and how it is priced.</li></ol>
+<p>Each size of an item from a sheet is Assumed and names the line of the sheet. A size that the sheet does not give is Unknown.</p>
+<figure><a href="pictures/items.jpg"><img src="pictures/items.jpg" width="1600" height="960" loading="lazy" alt="An item of the tool chest: each size is Assumed and says where it came from."></a><figcaption>An item of the tool chest: each size is Assumed and says where it came from. <span class="stamp">Picture of commit <code>d1a72fe</code>, 2026-11-26.</span></figcaption></figure>
+<figure><a href="pictures/move.jpg"><img src="pictures/move.jpg" width="1600" height="960" loading="lazy" alt="A wall moved. The message says what followed it."></a><figcaption>A wall moved. The message says what followed it. <span class="stamp">Picture of commit <code>7ff4f38</code>, 2026-11-26.</span></figcaption></figure>
+<figure><a href="pictures/bench.jpg"><img src="pictures/bench.jpg" width="1600" height="960" loading="lazy" alt="An item on the bench."></a><figcaption>An item on the bench. <span class="stamp">Picture of commit <code>73dd7c0</code>, 2026-11-26.</span></figcaption></figure>
+<p>Proven by <code>demos/itemlibw.sh</code>, <code>demos/itemneww.sh</code>, <code>demos/movew.sh</code>, <code>demos/benchw.sh</code> and <code>demos/shapebenchw.sh</code>.</p>
+<h2 id="10-kitchens-renovation-and-layouts">10. Kitchens, renovation and layouts</h2>
+<ul><li><b>Cabinets</b>: select the Cabinets tool. Click a wall. Type the codes of the boxes (for example <code>B15 B30 SB36</code>). The run stands along the wall with its countertop.</li><li><b>Renovation</b>: select a wall. Mark it <b>Existing</b> or <b>To demolish</b>. The lists show what to build, what stays and what comes down.</li><li><b>Room line</b>: divides an open plan into two rooms with no wall.</li><li><b>Layouts</b>: keep the job as another layout, change it, and set the two side by side with their prices.</li></ul>
+<figure><a href="pictures/cabinets.jpg"><img src="pictures/cabinets.jpg" width="1600" height="960" loading="lazy" alt="A run of cabinet boxes along a kitchen wall."></a><figcaption>A run of cabinet boxes along a kitchen wall. <span class="stamp">Picture of commit <code>d04bd8f</code>, 2026-11-26.</span></figcaption></figure>
+<figure><a href="pictures/renovation.jpg"><img src="pictures/renovation.jpg" width="1600" height="960" loading="lazy" alt="A renovation: existing walls pale, a wall to demolish marked."></a><figcaption>A renovation: existing walls pale, a wall to demolish marked. <span class="stamp">Picture of commit <code>9ba06ea</code>, 2026-11-23.</span></figcaption></figure>
+<p>Proven by <code>demos/cabinetsw.sh</code>, <code>demos/renow.sh</code>, <code>demos/roomlinew.sh</code> and <code>demos/layoutsw.sh</code>.</p>
+<h2 id="11-see-each-trade">11. See each trade</h2>
+<p>The <b>Show</b> part of the Job panel has one switch for each layer: Foundation, Framing, Outside, Plumbing, HVAC, Electrical, Inside, Ground, Finishes, Roof, See through, Sizes. Each switch reads on or off at a glance. A trade is drawn only where the estimate prices it.</p>
+<p><b>Sun</b> on the view bar sets the month and the hour.</p>
+<figure><a href="pictures/trades-framing.jpg"><img src="pictures/trades-framing.jpg" width="1600" height="960" loading="lazy" alt="The frame of the walls, with the finishes switched off."></a><figcaption>The frame of the walls, with the finishes switched off. <span class="stamp">Picture of commit <code>76854a3</code>, 2026-11-23.</span></figcaption></figure>
+<figure><a href="pictures/trades-hvac.jpg"><img src="pictures/trades-hvac.jpg" width="1600" height="960" loading="lazy" alt="The ducts, with the house see-through."></a><figcaption>The ducts, with the house see-through. <span class="stamp">Picture of commit <code>76854a3</code>, 2026-11-23.</span></figcaption></figure>
+<p>Proven by <code>demos/tradesw.sh</code>, <code>demos/dressw.sh</code>, <code>demos/trimw.sh</code> and <code>demos/lightw.sh</code>.</p>
+<h2 id="12-bring-in-and-write-out">12. Bring in and write out</h2>
+<p>The window brings in these files, each picked from a list:</p>
+<div class="scroll"><table><thead><tr><th>File</th><th>Button on the Job panel</th></tr></thead><tbody>
+<tr><td>Plan: PDF, PNG, JPEG</td><td>Add drawing</td></tr>
+<tr><td>Scan: PLY</td><td>Scan file</td></tr>
+<tr><td>Another trade&#x27;s or a designer&#x27;s model: IFC</td><td>Designer&#x27;s model</td></tr>
+<tr><td>Supplier&#x27;s price list: CSV, XLSX</td><td>Price list</td></tr>
+<tr><td>Assemblies and a prior estimate: CSV, XLSX</td><td>Assemblies, Prior estimate</td></tr>
+<tr><td>A maker&#x27;s sheet: PDF</td><td>Maker&#x27;s sheet</td></tr>
+<tr><td>Items by trade: CSV</td><td>Tool chest file</td></tr>
+</tbody></table></div>
+<p>The window writes out the BIM model (IFC), the estimate as a workbook with live formulas, the estimate as CSV, and one sheet each for suppliers, subcontractors and the project manager.</p>
+<p>The command line does more today. The window does not have these yet:</p>
+<div class="scroll"><table><thead><tr><th>Task</th><th>Command</th></tr></thead><tbody>
+<tr><td>A CAD drawing (DXF) or a TIFF as a plan</td><td><code>plumbline drawing &lt;job&gt; &lt;level&gt; &quot;&lt;name&gt;&quot; --file &lt;file&gt;</code></td></tr>
+<tr><td>The plan of a level as a CAD drawing (DXF)</td><td><code>plumbline export dxf &lt;job&gt; &lt;out.dxf&gt; --level &lt;level&gt;</code></td></tr>
+<tr><td>A scanner&#x27;s own file (LAS, LAZ, E57)</td><td><code>plumbline import scan &lt;job&gt; &lt;file&gt; --level &lt;level&gt;</code></td></tr>
+<tr><td>The measured marks on a PDF as quantities</td><td><code>plumbline import marks &lt;job&gt; &lt;marked-up PDF&gt;</code></td></tr>
+<tr><td>All tables of the job in one workbook, out and back</td><td><code>plumbline export database</code>, <code>plumbline import database</code></td></tr>
+<tr><td>The field sheet, out and back</td><td><code>plumbline export field-sheet</code>, <code>plumbline import field-sheet</code></td></tr>
+<tr><td>The clashes as an issue list (BCF)</td><td><code>plumbline export bcf &lt;job&gt; &lt;out.bcfzip&gt;</code></td></tr>
+<tr><td>The house as one 3D file (glTF)</td><td><code>plumbline export gltf &lt;job&gt; &lt;out.glb&gt;</code></td></tr>
+</tbody></table></div>
+<p><code>plumbline</code> with no words after it lists each command. When a file loses something on the way in or out, the program says what it lost.</p>
+<figure><a href="pictures/bring-in.jpg"><img src="pictures/bring-in.jpg" width="1600" height="960" loading="lazy" alt="A designer&#x27;s model brought in from the window. The program says what it read."></a><figcaption>A designer&#x27;s model brought in from the window. The program says what it read. <span class="stamp">Picture of commit <code>6f64a34</code>, 2026-11-26.</span></figcaption></figure>
+<p>Proven by <code>demos/bringw.sh</code>, <code>demos/scanw.sh</code> and the command-line demonstrations <code>imports</code>, <code>export</code>, <code>dxf</code>, <code>scan-files</code>, <code>marks</code>, <code>database</code>, <code>field-sheet</code>, <code>bcf</code> and <code>gltf</code>.</p>
+<h2 id="13-two-plans-side-by-side">13. Two plans side by side</h2>
+<p>At the top of the estimate window, select <b>Plan</b>. The window shows a plan in place of the estimate. Select <b>Two plans</b> to show two: two levels, or a drawing beside its tracing. Each plan moves by the same wheel and drag as the model window. A thing that you select in one window is marked in the other.</p>
+<figure><a href="pictures/two-plans.jpg"><img src="pictures/two-plans.jpg" width="880" height="960" loading="lazy" alt="The second window with the first floor beside the second floor."></a><figcaption>The second window with the first floor beside the second floor. <span class="stamp">Picture of commit <code>1d0f84d</code>, 2026-11-26.</span></figcaption></figure>
+<p>Proven by <code>demos/twoplansw.sh</code>.</p>
+<div class="part">The state of the program (from STATUS.md)</div>
+<p>What is so now. This file is short and is rewritten in place (DECISIONS.md call 238): nothing is added below, and what is no longer so is taken out. How it came to be so is the calls in <code>DECISIONS.md</code> (<code>DECISIONS-index.md</code> finds one). Everything this file held before 2026-11-26 is <code>STATUS-history.md</code>.</p>
+<p><b>As of 2026-11-26, the lead. It is not a release candidate and it is not tagged.</b></p>
+<h2 id="state-where-the-work-is">Where the work is</h2>
+<p>Patrick&#x27;s ruling of 2026-11-26 (call 237): the repository was not acceptable as it stood. It is cleaned, in the nine steps below, before any new function is built; then the build goes on without asking him, and what he is sent is the manual, changed.</p>
+<div class="scroll"><table><thead><tr><th>Step</th><th>What</th><th>Where it stands</th></tr></thead><tbody>
+<tr><td>1</td><td>The lead&#x27;s checks in the repository</td><td><b>Done.</b> <code>tools/check.sh</code>, <code>tools/window-run.sh</code>, <code>tools/quiet.sh</code>, <code>tools/index.sh</code>.</td></tr>
+<tr><td>2</td><td>Window demonstrations made sure; all forty-five run with nothing beside them</td><td><b>Begun.</b> See &quot;The window&quot; below.</td></tr>
+<tr><td>3</td><td>The manual; <code>demos/captured/</code> let go</td><td><b>Done, and it goes on</b>: <code>manual/index.html</code> (written by <code>tools/manual.py</code> from <code>manual/manual.md</code>, this file and <code>manual/pictures/</code>) is published to Patrick as one artifact. Seventeen pictures, each stamped with the commit it is of; they are replaced as step 2&#x27;s runs give new ones. <code>demos/captured/</code> is no longer kept in the repository.</td></tr>
+<tr><td>4</td><td>The documents put right</td><td><b>Done.</b> Four lists are written by tools and checked by the commit hook (<code>DECISIONS-index.md</code>, the README&#x27;s demonstrations, the table in <code>LICENSES.md</code>, the manual&#x27;s page). <code>TRY-IT.md</code> is gone: the manual takes its place.</td></tr>
+<tr><td>5</td><td>The earlier program off the branch; the commit hook BuildOS&#x27;s own</td><td><b>Done.</b> It is on <code>main</code>, whole.</td></tr>
+<tr><td>6</td><td>The window takes every kind of file the command line takes</td><td>Not begun.</td></tr>
+<tr><td>7</td><td>The eleven files over 2,000 lines cut</td><td>Not begun.</td></tr>
+<tr><td>8</td><td>The name BuildOS through the code</td><td>Not begun. Last, alone.</td></tr>
+<tr><td>9</td><td>Items 9 to 12 judged again</td><td>Not begun.</td></tr>
+</tbody></table></div>
+<h2 id="state-what-was-run-and-on-which-commit">What was run, and on which commit</h2>
+<ul><li><b>The command line&#x27;s side, on b6dc2ab</b> (the lead&#x27;s own run, 2026-11-26): 1,344 tests of the six crates pass (the model 759, the command line 94, the workbook 7, the BIM file 131, the roof 122, the plans 231); all 69 command-line demonstrations pass and none says FAIL; the three gates, the port map and the licence check pass; the sample whole house (<code>plumbline sixteen</code>) is 880d9fd3c364b5f7, as it has been, and prices at $393,981.66.</li><li><b>The window&#x27;s own tests, on the head with the double-click repair</b>: 109 pass.</li><li><b><code>tools/committed.sh</code> passed on 1edb650</b> (108 test runs from a clean copy). It has not been run since; it is owed before the next push that changes code.</li><li>After the earlier program left the branch, the roofing crate&#x27;s 122 tests were run again and pass (three of them read two of its files, now kept byte for byte in <code>crates/roofing/tests/engine/</code>). The two rewritten gates were each proved red and green (<code>tools/gate-language.sh --self-test</code>; a socket and a network crate for <code>tools/gate-egress.sh</code>).</li></ul>
+<h2 id="state-the-window">The window</h2>
+<p><b>Not proven on the head.</b> The window builds on the head and its 109 tests pass. Of the forty-five window demonstrations, the lead&#x27;s last runs (2026-11-26, on the build before the head, with builds running beside them) gave: <code>screensw</code> passed; <code>twoplansw</code> failed twice at its step 7 (a double-click in a plan selected and did not fly); <code>tradesw</code> failed twice at a different click each time; the other forty-two were not run. Ten had passed on the build before that. <b>A repair of the double-click is in the working copy, not committed</b>: the demonstration&#x27;s two presses were 0.75 s apart and the program tells a double-click inside half a second of its own clock; the presses now go 0.4 s apart, and the model window&#x27;s double-click takes the same one function as the other two (<code>nav::again</code>). It is committed when <code>twoplansw</code> passes in the lead&#x27;s own run with nothing beside it.</p>
+<p><b>The rule that was broken, and is now held by a tool.</b> No build runs on the machine while a timed window demonstration runs. On 2026-11-26 the lead ran builds beside them in the idle class; <code>navw</code>, <code>tradesw</code> and <code>twoplansw</code> lost clicks or time, and a day&#x27;s window evidence with them. <code>tools/window-run.sh</code> holds a lock and waits for cargo to be gone; every other cargo command goes through <code>tools/quiet.sh</code>.</p>
+<p><b>What the window cannot do that the command line can</b> (step 6): bring in a CAD drawing (DXF), a TIFF, a scanner&#x27;s own files (LAS, LAZ, E57), the measured marks on a PDF, a maker&#x27;s model, the database, the field&#x27;s sheet; write out the issue list (BCF), the house as glTF, the field&#x27;s sheet, the database, the cabinet rules. It brings in PDF, PNG, JPEG, CSV, XLSX, IFC and PLY.</p>
+<p><b>Owed to the window from work already in the tree</b>: its three counts of the chest (48) become 57 (<code>cabinetsw</code>, <code>turnw</code>, <code>itemlibw</code>; call 235); a cabinet made by a rule says so; a starter shape is still drawn through the program&#x27;s list of forms and a washer&#x27;s door is square (call 235, points 4 and 5).</p>
+<h2 id="state-the-release-candidate-the-thirteen-as-they-stand">The release candidate: the thirteen, as they stand</h2>
+<p>None is complete with evidence on one commit. &quot;Judged&quot; is by an agent that did not build it.</p>
+<div class="scroll"><table><thead><tr><th>#</th><th>Item</th><th>Where it stands</th></tr></thead><tbody>
+<tr><td>1</td><td>A clean clone installs on Linux from the README in one pass</td><td>A clean copy of 1edb650 builds and passes. The README&#x27;s steps were last walked on a fresh system on 2026-11-22.</td></tr>
+<tr><td>2</td><td>Every import works, each file picked from a list</td><td>Every kind is read at the command line. The window takes seven kinds (step 6).</td></tr>
+<tr><td>3</td><td>A real residential plan PDF opened, scaled, traced; the 3D house builds</td><td><code>firstw</code> does it on a public-domain plan; not run on the present build.</td></tr>
+<tr><td>4</td><td>Clashes show their certainty; the VIF list is sorted by dollars</td><td>So at the command line: 11 in the sample house, 5 findings and 6 to verify; 85 questions, the most dollars first. <code>clashw</code> not run on the present build.</td></tr>
+<tr><td>5</td><td>A typed or lasered measurement makes a value Known; the clash clears; the price moves in the second window</td><td><code>fieldw</code> and <code>moneyw</code> passed on earlier builds; not run on the present one. A sheet filled in the field comes back by file (call 234).</td></tr>
+<tr><td>6</td><td>A price per SF or LF grows into line items and rolls back up</td><td><code>d4</code> passes; <code>d4w</code> not run on the present build.</td></tr>
+<tr><td>7</td><td>The estimate sheet: stretch-out, labor per line, overhead and profit, three suppliers</td><td><code>d5</code> passes; <code>d5w</code> and <code>pricew</code> not run on the present build.</td></tr>
+<tr><td>8</td><td>xlsx with live formulas, CSV, IFC4 passed by IfcOpenShell; three lenses</td><td>So at the command line (<code>export</code>; IfcOpenShell 0.9.0 passes the file). Not all of it from the window.</td></tr>
+<tr><td>9</td><td>A judge lists every word on every screen; none is a software term</td><td><b>Failed three times on 2026-11-16. Not judged since.</b> The language gate passes.</td></tr>
+<tr><td>10</td><td>A veteran with no software background completes a whole-house takeoff from a PDF</td><td>Passed once, on d20ac60 (2026-11-16). The window has changed much since. To judge again.</td></tr>
+<tr><td>11</td><td>The visual judge passes every screen against <code>VISUAL.md</code></td><td><b>Failed three times on 2026-11-16. Not judged since</b>; the glass and the new movement came after.</td></tr>
+<tr><td>12</td><td>A fresh judge cannot break the money path</td><td>Failed on 2026-11-16. Window judges of 2026-11-24 and 2026-11-25 found no wrong money; the item has not been judged whole since.</td></tr>
+<tr><td>13</td><td>A hand estimate in <code>refs/</code> reproduced, every difference explained</td><td><b>Pending</b>: there is none in <code>refs/</code>. Only Patrick can place one.</td></tr>
+</tbody></table></div>
+<h2 id="state-what-is-not-right">What is not right</h2>
+<ul><li>The window is behind the command line and unproven on the head (steps 2 and 6).</li><li>Eleven source files are over 2,000 lines (step 7): <code>crates/world/tests/world.rs</code> 6,713; <code>crates/cli/src/main.rs</code> 4,310; <code>crates/app/src/panels.rs</code> 4,017; <code>crates/world/src/building.rs</code> 3,944; <code>crates/app/src/scene.rs</code> 3,248; <code>crates/plans/src/found.rs</code> 2,930; <code>crates/ifc/src/lib.rs</code> 2,852; <code>crates/world/src/editing.rs</code> 2,666; and three more.</li><li>The repository&#x27;s history is 1.76 GB, most of it pictures. History is not rewritten (call 237). Pictures are no longer kept in the repository but for the manual&#x27;s (one fixed name each, about 3 MB together), and the README&#x27;s clone line takes only the newest commit.</li><li>The folder, the crates and the two commands are still named plumbline (step 8).</li><li>Neither wall finder turns a real phone scan, or a crowded plan, into walls by itself: a person traces and the finder helps.</li><li>A double-click is told by the program&#x27;s own clock, and a demonstration&#x27;s two presses must fall inside half a second of it. <code>twoplansw</code> was repaired for that; <code>navw</code>&#x27;s north arrow still sends its presses 0.6 s apart and passes only where a frame is slow. It is put right in step 2.</li><li>Designed and not built: an issue list (BCF) read back; a mesh brought in; glTF with each thing as its own shape; the sixteen division harnesses (<code>PROPOSALS.md</code> 21).</li></ul>
+<h2 id="state-what-only-patrick-can-give-nothing-waits-on-it">What only Patrick can give (nothing waits on it)</h2>
+<p>A sanitized hand estimate in <code>refs/</code> (item 13); a sanitized PDF with his own measured marks (<code>QUESTIONS.md</code> Q36); a real LAZ and a real E57, sanitized; the production ruling, after the tag.</p>
+<h2 id="state-how-the-work-is-run">How the work is run</h2>
+<p><code>CLAUDE.md</code> has the rules and the seats. <code>handoff/README.md</code> has how a worker and a judge are briefed, with the contracts as patterns. Two working copies at most are built in at once, and never while a window run holds the lock.</p>
+</main>
+<footer>Written by <code>tools/manual.py build</code> from <code>manual/manual.md</code>, <code>STATUS.md</code> and <code>manual/pictures/</code>. It opens with no connection. No job, client or supplier data is on this page: every house and every price in a picture is made up.</footer>
+</div>
+</body>
+</html>

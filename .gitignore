@@ -13,3 +13,8 @@ refs/
 evidence/
 work/
 out/
+
+# A window demonstration writes its pictures here for whoever runs it to read. They are not
+# kept: what is shown is the manual (plumbline/manual/), one picture to a task, replaced in
+# place (plumbline/DECISIONS.md call 237).
+plumbline/demos/captured/

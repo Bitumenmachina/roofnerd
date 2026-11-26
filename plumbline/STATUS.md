@@ -17,8 +17,8 @@ the build goes on without asking him, and what he is sent is the manual, changed
 |---|---|---|
 | 1 | The lead's checks in the repository | **Done.** `tools/check.sh`, `tools/window-run.sh`, `tools/quiet.sh`, `tools/index.sh`. |
 | 2 | Window demonstrations made sure; all forty-five run with nothing beside them | **Begun.** See "The window" below. |
-| 3 | The manual; `demos/captured/` let go | Not begun. It is made from the pictures of step 2's run. |
-| 4 | The documents put right | **Done but for one**: `TRY-IT.md` stands until the manual takes its place. Three lists are now written by tools and checked by the commit hook (`DECISIONS-index.md`, the README's demonstrations, the table in `LICENSES.md`). |
+| 3 | The manual; `demos/captured/` let go | **Done, and it goes on**: `manual/index.html` (written by `tools/manual.py` from `manual/manual.md`, this file and `manual/pictures/`) is published to Patrick as one artifact. Seventeen pictures, each stamped with the commit it is of; they are replaced as step 2's runs give new ones. `demos/captured/` is no longer kept in the repository. |
+| 4 | The documents put right | **Done.** Four lists are written by tools and checked by the commit hook (`DECISIONS-index.md`, the README's demonstrations, the table in `LICENSES.md`, the manual's page). `TRY-IT.md` is gone: the manual takes its place. |
 | 5 | The earlier program off the branch; the commit hook BuildOS's own | **Done.** It is on `main`, whole. |
 | 6 | The window takes every kind of file the command line takes | Not begun. |
 | 7 | The eleven files over 2,000 lines cut | Not begun. |
@@ -103,8 +103,9 @@ build it.
   `crates/plans/src/found.rs` 2,930; `crates/ifc/src/lib.rs` 2,852;
   `crates/world/src/editing.rs` 2,666; and three more.
 - The repository's history is 1.76 GB, most of it pictures. History is not rewritten
-  (call 237). From step 3 pictures are not kept in the repository and the README's
-  clone line takes only the newest commit.
+  (call 237). Pictures are no longer kept in the repository but for the manual's
+  (one fixed name each, about 3 MB together), and the README's clone line takes only
+  the newest commit.
 - The folder, the crates and the two commands are still named plumbline (step 8).
 - Neither wall finder turns a real phone scan, or a crowded plan, into walls by
   itself: a person traces and the finder helps.

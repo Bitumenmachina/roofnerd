@@ -14,8 +14,9 @@ cd "$root" || exit 1
 if ! { bash tools/gate-language.sh && bash tools/gate-egress.sh; }; then
   echo "commit refused: a gate failed"; exit 1
 fi
-# Three lists a tool writes and a hand let go stale (plumbline/DECISIONS.md call 238): the index of
-# decisions, the README's list of demonstrations, the table of what is linked.
+# What a tool writes and a hand let go stale (plumbline/DECISIONS.md call 238): the index of
+# decisions, the README's list of demonstrations, the table of what is linked, the manual's page.
 if ! bash plumbline/tools/index.sh --check; then echo "commit refused: a list is stale"; exit 1; fi
 if ! bash plumbline/tools/licenses.sh --check; then echo "commit refused: LICENSES.md is stale"; exit 1; fi
+if ! python3 plumbline/tools/manual.py build --check; then echo "commit refused: the manual's page is stale"; exit 1; fi
 exec bash "$root/tools/gate-clientdata.sh"
