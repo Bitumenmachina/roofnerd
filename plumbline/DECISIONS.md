@@ -10582,3 +10582,75 @@ without the list of forms; a washer's round door; the window built on this and
 its three counts of the chest moved from 48 to 57 and run. **The window is not
 built on this commit.**
 
+### Call 237. Patrick, 2026-11-26: the repo is not acceptable as it is; clean it, then run; one manual in place of piling pictures
+
+After the review of the repo (`research/review-1126-repo.html`) he asked: **"If
+you own the code is this acceptable as a repo ?"** The lead answered no, and
+why, in nine points: the window is behind the command line and unproven on the
+head; its demonstrations lose clicks on a busy machine and the lead ran builds
+beside them against the rule; the guide documents are wrong in fourteen
+places; STATUS.md and this file are too long to read; eleven source files are
+over 2,000 lines; the repository holds 550 MB of pictures and 1.76 GB of
+history; two programs share it and every commit builds the earlier one; the
+lead's checks live outside the repository; items 9 to 12 have not been judged
+since 2026-11-16. He was given six steps and three decisions marked as his.
+
+His answer, whole: **"You own it I agree with your decisions make those
+changes and cleaning and then you may run automatoisly keeping a state file
+with screenshots when things are updated as a modified artifact much like a
+operators manual to keep down future screenshots piling up"**
+
+How it is read.
+
+1. **The six steps are taken, in the order below, before any new function.**
+   Call 187 stands and is the thing that was not kept: the window first.
+2. **The three decisions are the lead's and are made here.**
+   - **The earlier program leaves this branch.** It is on the default branch
+     `main`, file for file (checked 2026-11-26: `src-tauri`, `packages`, `jobs`
+     and `data` are the same trees there; `tools` differs only by the two gates
+     this branch widened to read BuildOS). Nothing is lost, and this branch's
+     own history keeps it. The three gates stay. The commit hook becomes
+     BuildOS's own.
+   - **The name goes through the code**: the folder, the crates, the two
+     commands and the names the program reads from its surroundings say
+     BuildOS (call 115 named it; the code never followed). **The saved job does
+     not change**: its keys (`pl::...`) are a promise to every job already
+     written, and the sample whole house stays byte for byte. It is done last,
+     alone, in one commit that changes nothing else.
+   - **History is not rewritten.** It is the one change of the three that
+     cannot be taken back and it breaks every copy already cloned. What it
+     would buy is had without it: pictures stop being kept in the repository
+     (point 3) and the README's clone line takes only the newest commit. If he
+     wants the history cut he will say so in those words.
+3. **One manual, changed in place, in place of pictures piling up.** "a state
+   file with screenshots ... as a modified artifact much like a operators
+   manual": one page, **the BuildOS manual**, which says for each thing a
+   person does in the program how it is done, with one current picture of it,
+   and says the state of each part. When a thing changes its section and its
+   picture are replaced; nothing is added beside them. Its source is `manual/`
+   in the repository (a page and its pictures, each picture under a fixed name
+   so the folder does not grow), and it is published to him as one artifact at
+   one address, republished when it changes. **`demos/captured/` is no longer
+   kept in the repository**: a demonstration still writes its pictures there
+   for whoever runs it to read, and git ignores them. The rule "look at every
+   picture before anything is called shown" stands as it was; what is shown to
+   Patrick, and what an item of the deliverable cites, is the manual's picture
+   with the commit it was taken on.
+4. **"then you may run"**: when the cleaning is done the build goes on as call
+   217 has it, without asking. What he is sent is the manual, changed.
+
+The order, the lead's:
+1. The lead's checks into the repository (`tools/`), so a clone can run them.
+2. The window demonstrations made sure: a press waits until the window has
+   drawn; all forty-five run with nothing beside them; what fails is repaired.
+   No build runs beside a timed run again.
+3. The manual, from that run; `demos/captured/` let go.
+4. The documents: the fourteen disagreements put right; STATUS.md cut to what
+   is so now, its history moved whole to a file beside it; this file stays the
+   record it is, with an index at its head.
+5. The earlier program off the branch; the commit hook BuildOS's own.
+6. The window given an entry for every kind of file the command line takes.
+7. The eleven long files cut, no number, meaning or format moved.
+8. The name through the code.
+9. Items 9 to 12 judged again.
+
