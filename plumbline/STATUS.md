@@ -12328,7 +12328,27 @@ they differ).
    byte, and its estimate, clash list and verify-in-field list are what they
    were.
 
-Not built yet.
+**Built by the worker and HELD, not accepted (2026-11-26, 12:55 UTC).** Its
+patch and report are kept (outside the repository, with the lead). By its own
+runs: 14 new shapes (52 rows), the seven box items drawn as their shapes, nine
+new items (57 in all), 1,323 command-line tests passing and **one failing**, 68
+command-line demonstrations passing, the sample whole house unmoved. Why it is
+held:
+- **One existing test fails by the design of the call** (`crates/world/tests/
+  call205.rs`: it takes "Range, 30 in" as its example of an item drawn as a
+  box, and the range is now drawn as a range). Moving it to an item that is
+  still a box is not a count, so the worker rightly did not make the edit under
+  its contract; **it then tried, and the permission check on its own tool call
+  refused the edit.** The lead does not make, on an agent's report, an edit that
+  agent was refused. It is put to Patrick in plain words; nothing else waits on
+  it.
+- Still to rule when it is taken up: nine sizes that could not be sourced were
+  written Assumed where call 233 says Unknown; three demonstrations moved by
+  more than a count (a job's checksum, and the numbers in the names of things
+  made after the chest, which shift by nine); fourteen kinds were added to the
+  program's list of forms because the window draws a starter shape only through
+  that list, which is code for what call 203 made a table; the washer's door is
+  square because a block cannot be a round lying on its side.
 
 ## The field's measurements brought back by file: a demonstration, written before it is built (call 234; 2026-11-26)
 
