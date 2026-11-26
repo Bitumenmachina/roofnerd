@@ -10347,3 +10347,48 @@ file in a browser and looking at it.
    now, so the same blocks can be written); a window's frame; unique names;
    the window's entry under Write out; a mesh brought in (its own call).
 
+### Call 234. The field's measurements brought back by file: a sheet to fill, and the loop closed without retyping (2026-11-26; the lead's design, not built)
+
+Proposal 40's first half and step 8 of call 217's order, the model's side.
+Patrick's intent (call 216): "a field app in the future but for now it will be
+on a desktop". The loop is the mission: Assumed until a veteran measures it.
+Today the list to verify goes out as a sheet to print (`export vif`) with a
+blank for what was found, and every measurement comes back by someone typing it
+value by value. By file it comes back whole, and the same file is what a field
+companion would later fill (Q33: by file only; the program opens no
+connection).
+
+1. **`plumbline export field-sheet <job> <file.xlsx|csv>`**: a row for each
+   value there is to measure (not for each question: a question such as "check
+   its size" is three rows, a width, a depth and a height): where, the thing,
+   what to measure in a builder's words, what the job has now and how sure,
+   the dollars riding on its question, and blanks: **As found, Measured by,
+   On**. Sorted as the verify-in-field list is, by dollars. Each row carries a
+   reference of its own that says which value it is, so the sheet can be
+   sorted or cut down on site and still come back.
+2. **`plumbline import field-sheet <job> <file>`**: each row with something in
+   As found sets that value **Known**, by the very function a typed
+   measurement goes through (one arithmetic: the price, the clashes and the
+   list move exactly as they do for a typed one). Its source says it was
+   measured in the field, by whom and on what day where the row says, and
+   names the sheet and the row. A length is read as a laser or a tape writes it
+   (the readings typed measurements already take).
+3. **A row left blank changes nothing.** A row whose As found is what the job
+   already has makes the value Known at that figure: a measurement that agrees
+   is still a measurement.
+4. **All of it or none of it, and every refusal named by row**: a figure that
+   cannot be read as what the row measures; a reference the job does not have;
+   a value that is no longer what the sheet says it was when it went out
+   (somebody changed it since: the row says what the sheet had and what the
+   job has, and is not applied over it without `--anyway`).
+5. **The reply says what a typed measurement says**, for each row: what
+   followed, which clash was confirmed or cleared, the price before and after;
+   and at the end how many values were measured, how many questions are left
+   and the dollars still riding.
+6. **A value measured Known in the field is never set back to Assumed by a
+   later sheet**; a second measurement that differs is said, with both, and
+   needs `--anyway`.
+7. The printed sheet (`export vif`) is as it was. The window's entry, and a
+   photo kept with a measurement, are later jobs.
+8. Nothing of the sample whole house moves.
+

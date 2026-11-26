@@ -12275,6 +12275,41 @@ they differ).
 
 Not built yet.
 
+## The field's measurements brought back by file: a demonstration, written before it is built (call 234; 2026-11-26)
+
+`demos/field-sheet.sh` (contract `handoff/contracts/contract-234M.md`). The job is
+the one `demos/field.sh` measures by typing (made by `demos/field-job.sh`: a
+tracing with two clashes that are questions and a wall whose price is flagged).
+The figures are that demonstration's own, already worked by hand in STATUS.md
+("Field entry"); this one must come to the same.
+
+1. The sheet to fill is written: a row for each value to measure, by dollars,
+   each with its reference, what the job has now and how sure; nothing is
+   filled. Brought straight back: no row has anything As found; nothing
+   changes and the job is byte for byte what it was.
+2. **The measurements `demos/field.sh` types are filled into the sheet instead**
+   and it is brought back: the reply says for each what `field.sh` is told when
+   it is typed (the floor above moves and the price with it; one clash clears;
+   the other becomes a finding).
+3. **The job is the typed job**: its estimate, its clash list and its
+   verify-in-field list are, text for text, what `field.sh` ends with; each
+   measured value is Known and its source names the sheet, its row, who and
+   when.
+4. The sheet's rows put in another order and half of them deleted, then
+   brought back: the same result for the rows that are there.
+5. One row with "about nine feet" As found: nothing at all is brought in, the
+   row is named with why, and the job is byte for byte what it was.
+6. A value changed in the job after the sheet went out: its row is refused,
+   saying what the sheet had and what the job has; with `--anyway` it is taken.
+7. A row that agrees with what the job has: the value is Known at that figure
+   and the price does not move.
+8. A second sheet that measures a Known value differently: said with both, and
+   left, without `--anyway`.
+9. `plumbline sixteen` writes the job it wrote, byte for byte; `export vif` of
+   the sample house is what it was.
+
+Not built yet.
+
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
 **As of 2026-11-25, 06:00 UTC (the lead). Read this block first; what is below it is
