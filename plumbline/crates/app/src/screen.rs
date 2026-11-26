@@ -34,10 +34,12 @@ pub struct Rect {
 
 impl Rect {
     /// Every corner is on a screen of this size.
+    #[cfg(test)]
     pub fn on(&self, screen: (u32, u32)) -> bool {
         self.x >= 0 && self.y >= 0 && self.x as i64 + self.w as i64 <= screen.0 as i64 && self.y as i64 + self.h as i64 <= screen.1 as i64
     }
     /// The two lie over one another.
+    #[cfg(test)]
     pub fn over(&self, other: &Rect) -> bool {
         (self.x as i64) < other.x as i64 + other.w as i64 && (other.x as i64) < self.x as i64 + self.w as i64 && (self.y as i64) < other.y as i64 + other.h as i64 && (other.y as i64) < self.y as i64 + self.h as i64
     }
@@ -185,6 +187,28 @@ pub fn command_held(keys: &ButtonInput<KeyCode>) -> bool {
     keys.any_pressed([KeyCode::ControlLeft, KeyCode::ControlRight, KeyCode::SuperLeft, KeyCode::SuperRight])
 }
 
+/// The word on the key that does what Ctrl does, by the operating system the program runs on (`std::env::consts::OS`): Cmd on a Mac, Ctrl on
+/// any other (call 224, point 4).
+pub fn command_word(os: &str) -> &'static str {
+    if os == "macos" { "Cmd" } else { "Ctrl" }
+}
+
+/// A key as it is written on a button: the command key's word, a plus and the letter.
+pub fn key_said(os: &str, letter: char) -> String {
+    format!("{}+{}", command_word(os), letter.to_ascii_uppercase())
+}
+
+/// The key as it reads on this computer.
+pub fn command_key(letter: char) -> String {
+    key_said(std::env::consts::OS, letter)
+}
+
+/// Whether a window may be shown yet: the windows are not seen until they have been put where they go (call 224, point 3). The old ways
+/// (no placing is done) show them at once.
+pub fn may_be_seen(old_ways: bool, placed: bool) -> bool {
+    old_ways || placed
+}
+
 // ---------------------------------------------------------------- settings
 
 /// What a person set, kept on this computer: where each window stood and how big, which
@@ -196,6 +220,8 @@ pub struct Settings {
     pub sheet: Option<Rect>,
     pub away: [bool; 3],
     pub lettering: u8,
+    /// What the second window shows and how each plan in it is looked at: the program's, never the job's (call 222, point 12).
+    pub second: crate::second::Kept,
 }
 
 const PANEL_WORDS: [&str; 3] = ["Job", "Details", "Tools"];
@@ -214,6 +240,7 @@ impl Settings {
         let away: Vec<&str> = PANEL_WORDS.iter().copied().zip(self.away).filter(|(_, a)| *a).map(|(n, _)| n).collect();
         out.push_str(&format!("panels put away = {}\n", if away.is_empty() { "none".to_string() } else { away.join(" ") }));
         out.push_str(&format!("lettering = {}\n", self.lettering));
+        out.push_str(&self.second.text());
         out
     }
 
@@ -237,7 +264,9 @@ impl Settings {
                     }
                 }
                 "lettering" => s.lettering = value.parse::<u8>().unwrap_or(0).min(LETTERING.len() as u8 - 1),
-                _ => {}
+                _ => {
+                    s.second.read(name, value);
+                }
             }
         }
         s
@@ -438,6 +467,8 @@ pub struct Kept {
     pub old_ways: bool,
     /// The windows have been put where they go.
     placed: bool,
+    /// And have been shown, a frame after (call 224, point 3).
+    revealed: bool,
     /// Frames spent waiting for the screen to be known.
     waited: u32,
     keeper: Keeper,
@@ -452,7 +483,7 @@ impl Kept {
         let old_ways = old_ways();
         let path = settings_path();
         let read = path.as_ref().and_then(|p| std::fs::read_to_string(p).ok()).map(|t| Settings::parse(&t)).unwrap_or_default();
-        Kept { path, written: read.clone(), since: 0.0, old_ways, placed: false, waited: 0, keeper: Keeper::default(), read, screen: None }
+        Kept { path, written: read.clone(), since: 0.0, old_ways, placed: false, revealed: false, waited: 0, keeper: Keeper::default(), read, screen: None }
     }
 }
 
@@ -468,14 +499,27 @@ pub fn opening(kept: &Kept) -> ((u32, u32), (u32, u32)) {
 /// onto this screen, or where `place` puts it. Runs once; the old ways do not run it.
 #[allow(clippy::too_many_arguments)]
 pub fn put_windows(mut kept: ResMut<Kept>, mut doc: ResMut<Doc>, monitors: Query<(&Monitor, Has<PrimaryMonitor>)>, mut windows: Query<(&mut Window, Has<PrimaryWindow>)>, mut scale: ResMut<UiScale>) {
-    if kept.old_ways || kept.placed {
+    if kept.old_ways {
         return;
     }
-    // The letters are as they were left, from the first frame.
+    // A window is shown a frame after it has been put where it goes, and not before: it was seen first at the size it opened at and moved after
+    // (call 224, point 3).
+    if kept.placed {
+        if !kept.revealed {
+            kept.revealed = true;
+            for (mut window, _) in &mut windows {
+                window.visible = true;
+            }
+        }
+        return;
+    }
+    // The letters are as they were left, from the first frame; and what the second window showed.
     if kept.waited == 0 {
         doc.fit.lettering = kept.read.lettering;
         doc.show.away = kept.read.away;
         scale.0 = lettering_scale(doc.fit.lettering);
+        let read = kept.read.second.clone();
+        doc.second.load(&read);
     }
     kept.waited += 1;
     let monitor = monitors.iter().find(|(_, primary)| *primary).or_else(|| monitors.iter().next()).map(|(m, _)| m);
@@ -507,6 +551,29 @@ pub fn track(_main: bevy::ecs::system::NonSendMarker, kept: Res<Kept>, mut windo
         return;
     }
     for (entity, mut window) in &mut windows {
+        // A window manager's frame (its edges) is outside the window's own size: a window made as wide as the screen stands a frame's width past it.
+        // Where the frame takes a window past the screen's right edge by no more than the frame's own width, the window is made that much narrower.
+        if let Some(screen) = kept.screen.filter(|_| kept.revealed) {
+            let over = bevy::winit::WINIT_WINDOWS.with_borrow(|w| {
+                w.get_window(entity).and_then(|x| {
+                    let (pos, outer, inner) = (x.outer_position().ok()?, x.outer_size(), x.inner_size());
+                    let frame = outer.width.saturating_sub(inner.width) as i32;
+                    let right = pos.x + outer.width as i32;
+                    let edge = (screen.0 as f32 * window.scale_factor()) as i32;
+                    (frame > 0 && right > edge && right - edge <= frame).then_some(((right - edge) as f32 / window.scale_factor()).ceil())
+                })
+            });
+            if let Some(over) = over {
+                if window.width() - over >= SHEET_LEAST.0 as f32 {
+                    let (w, h) = (window.width() - over, window.height());
+                    window.resolution.set(w, h);
+                } else if let WindowPosition::At(at) = window.position {
+                    // Not narrower than a window may be: moved in by what it stands past the screen.
+                    window.position = WindowPosition::At(IVec2::new(at.x - (over * window.scale_factor()) as i32, at.y));
+                    continue;
+                }
+            }
+        }
         let at = bevy::winit::WINIT_WINDOWS.with_borrow(|w| w.get_window(entity).and_then(|x| x.outer_position().ok()).map(|p| IVec2::new(p.x, p.y)));
         if let Some(at) = at {
             if window.position != WindowPosition::At(at) {
@@ -562,7 +629,7 @@ pub fn keep(time: Res<Time<Real>>, mut kept: ResMut<Kept>, doc: Res<Doc>, window
         return;
     }
     let Some(path) = kept.path.clone() else { return };
-    let now = Settings { model: None, sheet: None, away: doc.show.away, lettering: doc.fit.lettering };
+    let now = Settings { model: None, sheet: None, away: doc.show.away, lettering: doc.fit.lettering, second: doc.second.kept() };
     let mut now = now;
     for (window, primary) in &windows {
         let k = window.scale_factor().max(0.1);
@@ -636,6 +703,7 @@ pub fn take(doc: &mut Doc) {
             next.shots = doc.shots;
             next.show.away = doc.show.away;
             next.fit = doc.fit.clone();
+            next.second = std::mem::take(&mut doc.second);
             *doc = next;
         }
         Err(why) => {
@@ -659,6 +727,45 @@ mod tests {
     use super::*;
     use plumbline_world::file;
     use plumbline_world::value::Status;
+
+    #[test]
+    fn the_key_that_does_what_ctrl_does_reads_cmd_on_a_mac_and_ctrl_elsewhere() {
+        assert_eq!(command_word("macos"), "Cmd");
+        for os in ["linux", "windows", "freebsd", ""] {
+            assert_eq!(command_word(os), "Ctrl", "{os}");
+        }
+        assert_eq!(key_said("macos", 's'), "Cmd+S");
+        assert_eq!(key_said("linux", 'z'), "Ctrl+Z");
+        assert_eq!(key_said("windows", 'Y'), "Ctrl+Y");
+        // And on the machine the tests run on it is whatever that machine's word is.
+        assert_eq!(command_key('s'), key_said(std::env::consts::OS, 's'));
+    }
+
+    #[test]
+    fn a_window_is_not_seen_until_it_has_been_put_where_it_goes_unless_the_old_ways_are_on() {
+        assert!(!may_be_seen(false, false), "unplaced: hidden");
+        assert!(may_be_seen(false, true), "placed: shown");
+        assert!(may_be_seen(true, false), "the old ways never place, so show at once");
+        assert!(may_be_seen(true, true));
+    }
+
+    #[test]
+    fn what_is_kept_of_the_second_window_is_read_back_the_same() {
+        use crate::second::{Look, Mode};
+        let mut s = Settings::default();
+        s.second.mode = Mode::Two;
+        s.second.looks = [Some(Look::Level("level/first-floor".into())), Some(Look::Sheet("drawing/made-up".into()))];
+        s.second.away = [vec!["Plumbing".into()], vec!["Roof".into(), "Mechanical".into()]];
+        s.second.views = [Some([12.5, 7.25, 31.4]), None];
+        let back = Settings::parse(&s.text());
+        assert_eq!(back, s);
+        assert!(s.text().contains("second window = two plans"));
+        assert!(s.text().contains("plan 1 view = 12.5 7.25 31.4"));
+        // A file with nothing of it opens on the estimate, as it always did; a line not understood is passed over.
+        let none = Settings::parse("lettering = 1\nsecond window = something else\nplan 1 shows = nonsense\n");
+        assert_eq!(none.second.mode, Mode::Estimate);
+        assert_eq!(none.second.looks, [None, None]);
+    }
 
     fn folder(name: &str) -> PathBuf {
         let dir = std::env::temp_dir().join(format!("buildos-screen-{}-{name}", std::process::id()));
@@ -799,7 +906,7 @@ mod tests {
 
     #[test]
     fn settings_are_written_as_plain_lines_and_read_back_as_they_were() {
-        let s = Settings { model: Some(Rect { x: 0, y: 0, w: 1500, h: 900 }), sheet: Some(Rect { x: 1510, y: 20, w: 700, h: 800 }), away: [true, false, true], lettering: 2 };
+        let s = Settings { model: Some(Rect { x: 0, y: 0, w: 1500, h: 900 }), sheet: Some(Rect { x: 1510, y: 20, w: 700, h: 800 }), away: [true, false, true], lettering: 2, second: Default::default() };
         let text = s.text();
         assert!(text.contains("model window = 0 0 1500 900\n"), "{text}");
         assert!(text.contains("estimate window = 1510 20 700 800\n"), "{text}");

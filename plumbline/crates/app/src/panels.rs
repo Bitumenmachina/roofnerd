@@ -14,7 +14,7 @@ use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 
 use crate::model::{to_view, Doc, Entry, Snapshot, Tone};
-use crate::scene::{facing, MainCamera, BUILD_H, LEFT_W, RIGHT_W, STATUS_H, TOP_H};
+use crate::scene::{facing, MainCamera, LEFT_W, RIGHT_W, STATUS_H, TOP_H};
 use crate::sheet::SheetScroll;
 use crate::theme::{self, button, chip, heading, keycap, named, status_chip, swatch, text, Fonts, Named, Weight};
 use plumbline_world::building::{Shape, SystemTakeoff};
@@ -49,6 +49,12 @@ pub struct Detail {
     pub layer: bool,
     /// Half the thing's height, from its top to its middle.
     pub drop: f32,
+    /// A size tag (written while the Sizes layer is on) and not a name: it is written from a smaller size on the screen (call 232).
+    pub tag: bool,
+    /// The thing's section in feet (a run's diameter or wider side): of two tags that would lie over one another the larger thing's is kept.
+    pub section: f32,
+    /// Other places on its own run, in view coordinates, nearest to where it stands first: where it is moved to when its own place is taken (call 232, point 5a).
+    pub alts: Vec<Vec3>,
 }
 
 /// The north arrow's needle (turns with the view) and its disc (leans with the tilt) (call 218, point 7).
@@ -350,7 +356,7 @@ fn docked(mut node: Node) -> impl Bundle {
 
 /// The glass of a floating panel on a node laid out wherever it is put: round corners,
 /// a light edge, a shadow, frosted where the scene behind can be had as a picture.
-fn glass_card(mut node: Node) -> impl Bundle {
+pub(crate) fn glass_card(mut node: Node) -> impl Bundle {
     node.border = UiRect::all(px(1.0));
     node.border_radius = BorderRadius::all(px(theme::PANEL_RADIUS));
     // Frosted where the scene behind can be had as a picture; else tinted.
@@ -517,14 +523,16 @@ fn north_card(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc) {
             NorthDisc,
             named("North arrow"),
         ));
-        disc.observe(|press: On<PointerClick>, mut doc: ResMut<Doc>, mut orbit: ResMut<crate::scene::Orbit>, time: Res<Time<Real>>| {
+        // Told by presses, as the double-click on the model is, and by the program's own clock: a click needs its press and its release on one
+        // thing, and the first click draws the panels again, which can put a new disc under the second press before it is let go (the second
+        // click was then lost and the view only turned north: the north arrow's double-click, call 222 part C).
+        disc.observe(|press: On<PointerPress>, mut doc: ResMut<Doc>, mut orbit: ResMut<crate::scene::Orbit>, time: Res<Time>| {
             if press.button != PointerButton::Primary || doc.plan {
                 return;
             }
             let now = time.elapsed_secs();
-            // As the double-click on the model is told: within half a second, or within a frame and a half where frames are slower.
-            // (Kept in the view's own state: the panels are drawn again after a click, and a note kept in the arrow would be lost.)
-            let twice = now - orbit.arrow_click < (time.delta_secs() * 1.5).max(0.5);
+            // (Kept in the view's own state: the panels are drawn again after a press, and a note kept in the arrow would be lost.)
+            let twice = crate::nav::again(orbit.arrow_click, now, time.delta_secs());
             orbit.arrow_click = now;
             let mut to = orbit.pose();
             to.yaw += crate::nav::turn_between(to.yaw, 0.0);
@@ -618,12 +626,29 @@ fn sun_card(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc) {
     });
 }
 
+/// What the price bar keeps as the window narrows (call 224, point 2). The order it gives way in: the counts of Known, Assumed and Unknown first,
+/// then the word "PRICE", then the word of how sure the price is, then the dollars riding on what is to verify. The price, whether the job is saved and the
+/// count to verify are never given up. `width` is the window's, in dots, and `scale` the lettering's.
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub struct Keeps {
+    pub counts: bool,
+    pub word: bool,
+    pub sure: bool,
+    pub riding: bool,
+}
+
+pub fn bar_keeps(width: f32, scale: f32) -> Keeps {
+    let w = width / scale.max(0.1);
+    Keeps { counts: w >= crate::screen::TIGHT_BELOW, word: w >= crate::screen::BARE_BELOW, sure: w >= 800.0, riding: w >= 740.0 }
+}
+
 /// Along the top: the job, Save, Undo and Redo, and at all times the price and how
 /// much of the job is not yet sure.
 fn top_bar(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot) {
     // In a narrow window the keys beside Save, Undo and Redo are left off and the job's name is cut shorter: what stays whole is the
     // price and whether the job is saved (call 222).
     let tight = layout(doc).tight;
+    let keeps = bar_keeps(if doc.fit.width > 0.0 { doc.fit.width } else { crate::screen::MODEL_FULL.0 as f32 }, 1.0);
     // Two cards, each as wide as what is on it, with the model between them: one strip
     // across the whole window read as a bar the model was docked under (J22B-3, A1).
     let card = |shrinks: bool| glass_card(Node { height: percent(100.0), padding: UiRect::horizontal(px(12.0)), align_items: AlignItems::Center, column_gap: px(8.0), overflow: Overflow::clip(), flex_shrink: if shrinks { 1.0 } else { 0.0 }, min_width: px(0.0), ..default() });
@@ -635,9 +660,9 @@ fn top_bar(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
         // letters: at 26 a job's name was cut with half the bar empty beside it.
         bar.spawn(Node { flex_shrink: 0.0, ..default() }).with_child((theme::name(fonts, one_line(&snap.title, if tight { 16 } else { 44 }), 13.0, Weight::Semibold, theme::ink()), TextLayout::no_wrap()));
         divider(bar);
-        on_click(&mut button(bar, fonts, "Save", if tight { "" } else { "Ctrl+S" }, false), |doc| doc.press(KeyCode::F2));
-        on_click(&mut button(bar, fonts, "Undo", if tight { "" } else { "Ctrl+Z" }, false), |doc| doc.press(KeyCode::KeyZ));
-        on_click(&mut button(bar, fonts, "Redo", if tight { "" } else { "Ctrl+Y" }, false), |doc| doc.press(KeyCode::KeyY));
+        on_click(&mut button(bar, fonts, "Save", &if tight { String::new() } else { crate::screen::command_key('s') }, false), |doc| doc.press(KeyCode::F2));
+        on_click(&mut button(bar, fonts, "Undo", &if tight { String::new() } else { crate::screen::command_key('z') }, false), |doc| doc.press(KeyCode::KeyZ));
+        on_click(&mut button(bar, fonts, "Redo", &if tight { String::new() } else { crate::screen::command_key('y') }, false), |doc| doc.press(KeyCode::KeyY));
     });
     row.spawn(card(true)).with_children(|bar| {
         // The price, in the colour of how sure it is.
@@ -648,7 +673,7 @@ fn top_bar(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
             _ => ("nothing priced yet".to_string(), Status::Known),
         };
         bar.spawn(Node { align_items: AlignItems::Baseline, column_gap: px(7.0), flex_shrink: 0.0, ..default() }).with_children(|b| {
-            if !(tight && doc.fit.width < crate::screen::BARE_BELOW) {
+            if keeps.word {
                 b.spawn((text(fonts, "PRICE", 11.0, Weight::Semibold, theme::ink_faint()), TextLayout::no_wrap()));
             }
             b.spawn((text(fonts, price, if priced { 16.0 } else { 12.0 }, if priced { Weight::Semibold } else { Weight::Regular }, if priced { theme::status_ink(status) } else { theme::ink_faint() }), TextLayout::no_wrap()));
@@ -657,7 +682,7 @@ fn top_bar(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
         // bar holds only so much, and the price is already in that colour (the save
         // mark was pushed off the end of the bar when a line with no price was added).
         let says_why = snap.estimate.as_ref().is_some_and(|e| !e.job_cost.left_out.is_empty()) || snap.pricing.as_ref().is_some_and(|p| p.allowances_alone().is_some());
-        if !says_why {
+        if !says_why && keeps.sure {
             status_chip(bar, fonts, status);
         }
         // In a tight bar whether the job is saved comes straight after the price: what follows may be cut off at the bar's end.
@@ -686,7 +711,7 @@ fn top_bar(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
         // What there is to verify in the field, and the dollars riding on it.
         let questions = snap.verify.questions.len();
         if questions > 0 {
-            let said = match snap.verify.riding {
+            let said = match snap.verify.riding.filter(|_| keeps.riding) {
                 Some(x) => format!("{questions} to verify, ${} riding", view::figure(x, 2)),
                 None => format!("{questions} to verify"),
             };
@@ -722,7 +747,7 @@ fn top_bar(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
         } else {
             chip(bar, fonts, "Saved", theme::green(), theme::panel());
         }
-        if notes.iter().filter(|n| **n).count() < 3 && !tight {
+        if notes.iter().filter(|n| **n).count() < 3 && !tight && keeps.counts {
             divider(bar);
             tally_chips(bar, fonts, snap.tally);
         }
@@ -833,7 +858,7 @@ fn switch_of(p: &mut ChildSpawnerCommands, on: bool, name: String, act: impl Fn(
 }
 
 /// A switch, in a panel that scrolls or (`scrolls` false) on a bar that does not.
-fn switch_at(p: &mut ChildSpawnerCommands, on: bool, name: String, scrolls: bool, act: impl Fn(&mut Doc) + Send + Sync + 'static) {
+pub(crate) fn switch_at(p: &mut ChildSpawnerCommands, on: bool, name: String, scrolls: bool, act: impl Fn(&mut Doc) + Send + Sync + 'static) {
     p.spawn((Node { padding: UiRect::axes(px(2.0), px(2.0)), flex_shrink: 0.0, ..default() }, Named { name, scrolls })).with_children(|s| switch(s, on)).observe(move |mut press: On<PointerClick>, mut doc: ResMut<Doc>| {
         press.propagate(false);
         if press.button == PointerButton::Primary {
@@ -1175,7 +1200,7 @@ fn steps_of(doc: &Doc, snap: &Snapshot) -> Vec<Step> {
         Step { done: services, what: "Run the ducts, pipes and wiring", how: "Click Duct, Pipe, Conduit or Cable, then click along its run. Equipment and Fixture stand where you click.".into() },
         Step { done: priced, what: "Price it", how: if lined { "Cost lines are on, with no price yet. On the sheet's Estimate tab click a line's unit cost and type it; or click the thing here and press U. Bring in, Price list brings a supplier's prices.".into() } else { "Under Bring in, Starter assemblies gives the job a set to price with. Then click a wall or a roof plane, Assembly, and pick one; or Allowance for a price per SF. The sheet window shows the estimate.".into() } },
         Step { done: priced && unsure == 0, what: "Verify in field", how: format!("{unsure} to verify. The sheet's Verify in field tab lists them by the dollars riding on each. Click one, click a value marked Measure, and type what the tape or laser reads.") },
-        Step { done: !doc.edited && walls, what: "Save", how: "Click Save, or press Ctrl+S.".into() },
+        Step { done: !doc.edited && walls, what: "Save", how: format!("Click Save, or press {}.", crate::screen::command_key('s')) },
     ]
 }
 
@@ -2040,7 +2065,7 @@ fn pill_sized(p: &mut ChildSpawnerCommands, label: Label, feet: f32, selected: b
         label,
     ));
     if feet > 0.0 {
-        e.insert(Detail { feet, keep_in_view: false, layer: true, drop: 0.0 });
+        e.insert(Detail { feet, keep_in_view: false, layer: true, drop: 0.0, tag: false, section: 0.0, alts: Vec::new() });
     }
     e.with_children(build);
 }
@@ -2237,19 +2262,40 @@ fn size_tags(o: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snap
         }
     }
     let mut longest: std::collections::HashMap<usize, (f32, usize)> = std::collections::HashMap::new();
+    // How long the run is as a person sees it: the pieces end to end taken together, not the longest of them (call 232, point 3).
+    let mut whole: std::collections::HashMap<usize, f32> = std::collections::HashMap::new();
     for i in 0..runs.len() {
         let g = find(&mut group, i);
         let length = runs[i].2[0].distance(runs[i].2[1]);
+        *whole.entry(g).or_insert(0.0) += length;
         let best = longest.entry(g).or_insert((-1.0, i));
         if length > best.0 {
             *best = (length, i);
         }
     }
-    let mut tags: Vec<(String, Vec3, Color, f32, bool, Option<f32>)> = Vec::new();
+    let mut tags: Vec<(String, Vec3, Color, f32, bool, Option<f32>, f32, Vec<Vec3>)> = Vec::new();
     for (g, (_, i)) in &longest {
-        let _ = g;
         let (_, p, [a, b]) = &runs[*i];
-        tags.push((p.tag.clone().unwrap_or_default(), (*a + *b) / 2.0, theme::system_colour(snap.classification(p.system.as_ref())), a.distance(*b), false, None));
+        // Its section, the larger thing winning where two tags would lie over one another (call 232, point 2): a round run by its diameter, a duct by its wider side.
+        let section = match &p.shape {
+            Shape::Run { round, rect, .. } => round.or_else(|| rect.map(|(w, d)| w.max(d))).unwrap_or(0.0) as f32,
+            _ => 0.0,
+        };
+        // The other places on its own run it may be written at: along each piece of the pieces end to end, nearest to where it stands first.
+        let here = (*a + *b) / 2.0;
+        let mut alts: Vec<Vec3> = Vec::new();
+        for j in 0..runs.len() {
+            if find(&mut group, j) != *g {
+                continue;
+            }
+            let [c, d] = runs[j].2;
+            for t in [0.5_f32, 0.25, 0.75, 0.1, 0.9] {
+                alts.push(c.lerp(d, t));
+            }
+        }
+        alts.retain(|q| q.distance(here) > 0.05);
+        alts.sort_by(|x, y| x.distance(here).total_cmp(&y.distance(here)));
+        tags.push((p.tag.clone().unwrap_or_default(), here, theme::system_colour(snap.classification(p.system.as_ref())), whole.get(g).copied().unwrap_or_else(|| a.distance(*b)), false, None, section, alts));
     }
     // A foundation wall is a wall below the ground or one that is cast; no other wall wears one.
     let below = |p: &Placement| p.storey.as_ref().and_then(|st| snap.storeys.iter().find(|x| &x.path == st)).and_then(|x| x.elevation).is_some_and(|e| e < -0.5);
@@ -2257,7 +2303,7 @@ fn size_tags(o: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snap
         let Some(tag) = &p.tag else {
             if matches!(p.kind, Kind::Equipment | Kind::Fixture) && p.discipline != Discipline::Architecture {
                 if let Shape::Box { at, size, .. } = &p.shape {
-                    tags.push((format!("{}, {}", p.name, units::size_said(*size)), to_view(doc.origin, [at[0], at[1], at[2] + size[2]]), theme::system_colour(snap.classification(p.system.as_ref())), size[0].max(size[1]).max(size[2]) as f32, doc.selected.as_deref() == Some(p.path.as_str()), Some(size[2] as f32 / 2.0)));
+                    tags.push((format!("{}, {}", p.name, units::size_said(*size)), to_view(doc.origin, [at[0], at[1], at[2] + size[2]]), theme::system_colour(snap.classification(p.system.as_ref())), size[0].max(size[1]).max(size[2]) as f32, doc.selected.as_deref() == Some(p.path.as_str()), Some(size[2] as f32 / 2.0), 0.0, Vec::new()));
                 }
             }
             continue;
@@ -2269,12 +2315,12 @@ fn size_tags(o: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snap
         match (&p.shape, p.kind) {
             (_, Kind::Footing | Kind::PadFooting | Kind::Wall) if !under => {}
             (_, Kind::Beam | Kind::Post) if !frame => {}
-            (Shape::Wall { a, b, base, height, .. }, Kind::Footing) => tags.push((tag.clone(), to_view(doc.origin, [(a[0] + b[0]) / 2.0, (a[1] + b[1]) / 2.0, base + height / 2.0]), theme::concrete(), (b[0] - a[0]).hypot(b[1] - a[1]) as f32, false, None)),
+            (Shape::Wall { a, b, base, height, .. }, Kind::Footing) => tags.push((tag.clone(), to_view(doc.origin, [(a[0] + b[0]) / 2.0, (a[1] + b[1]) / 2.0, base + height / 2.0]), theme::concrete(), (b[0] - a[0]).hypot(b[1] - a[1]) as f32, false, None, 0.0, Vec::new())),
             (Shape::Wall { a, b, base, height, .. }, Kind::Wall) if below(p) || snap.dress.walls.get(&p.path).is_some_and(|d| d.concrete) => {
-                tags.push((tag.clone(), to_view(doc.origin, [(a[0] + b[0]) / 2.0, (a[1] + b[1]) / 2.0, base + height / 2.0]), theme::concrete(), (b[0] - a[0]).hypot(b[1] - a[1]) as f32, false, None))
+                tags.push((tag.clone(), to_view(doc.origin, [(a[0] + b[0]) / 2.0, (a[1] + b[1]) / 2.0, base + height / 2.0]), theme::concrete(), (b[0] - a[0]).hypot(b[1] - a[1]) as f32, false, None, 0.0, Vec::new()))
             }
-            (Shape::Run { a, b, .. }, Kind::Beam | Kind::Post) => tags.push((tag.clone(), (to_view(doc.origin, *a) + to_view(doc.origin, *b)) / 2.0, theme::lumber(), to_view(doc.origin, *a).distance(to_view(doc.origin, *b)), false, None)),
-            (Shape::Box { at, size, .. }, Kind::PadFooting) => tags.push((tag.clone(), to_view(doc.origin, [at[0], at[1], at[2] + size[2]]), theme::concrete(), size[0].max(size[1]).max(size[2]) as f32, false, None)),
+            (Shape::Run { a, b, .. }, Kind::Beam | Kind::Post) => tags.push((tag.clone(), (to_view(doc.origin, *a) + to_view(doc.origin, *b)) / 2.0, theme::lumber(), to_view(doc.origin, *a).distance(to_view(doc.origin, *b)), false, None, 0.0, Vec::new())),
+            (Shape::Box { at, size, .. }, Kind::PadFooting) => tags.push((tag.clone(), to_view(doc.origin, [at[0], at[1], at[2] + size[2]]), theme::concrete(), size[0].max(size[1]).max(size[2]) as f32, false, None, 0.0, Vec::new())),
             _ => {}
         }
     }
@@ -2284,14 +2330,14 @@ fn size_tags(o: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snap
     if !layer {
         tags.retain(|t| t.5.is_some());
     }
-    for (words, at, colour, feet, chosen, drop) in tags {
+    for (words, at, colour, feet, chosen, drop, section, alts) in tags {
         o.spawn((
             Node { position_type: PositionType::Absolute, left: px(-2000.0), top: px(-2000.0), padding: UiRect::axes(px(6.0), px(1.0)), column_gap: px(4.0), align_items: AlignItems::Center, border_radius: BorderRadius::all(px(8.0)), ..default() },
             UiTransform { translation: Val2::percent(-50.0, -50.0), ..default() },
             BackgroundColor(theme::panel().with_alpha(0.86)),
             Pickable::IGNORE,
             Label { at: at + Vec3::Y * 0.25, facing: None, rank: if chosen { 0 } else { 2 } },
-            Detail { feet, keep_in_view: chosen, layer, drop: drop.unwrap_or(0.0) },
+            Detail { feet, keep_in_view: chosen, layer, drop: drop.unwrap_or(0.0), tag: true, section, alts },
             Named { name: format!("Tag {words}"), scrolls: false },
         ))
         .with_children(|l| {
@@ -3677,7 +3723,7 @@ pub fn place_labels(doc: Res<Doc>, camera: Query<(&Camera, &GlobalTransform), Wi
             transform.scale = Vec2::splat(k);
         }
     }
-    let mut wanted: Vec<(Entity, u8, f32, Vec2, Vec2)> = Vec::new();
+    let mut wanted: Vec<(Entity, u8, f32, Vec2, Vec2, f32, f32, Vec<Vec2>)> = Vec::new();
     // The window's own dots, and the panels' edges in them: the panels are drawn in units that the lettering's step scales (call 222).
     let (width, height) = window.single().map(|w| (w.width(), w.height())).unwrap_or((1600.0, 900.0));
     let (k, lay) = (ui.0.max(0.1), layout(&doc));
@@ -3688,7 +3734,7 @@ pub fn place_labels(doc: Res<Doc>, camera: Query<(&Camera, &GlobalTransform), Wi
         if let Some(d) = detail.filter(|_| !doc.plan) {
             let away = eye.translation().distance(label.at);
             let shown = if d.layer {
-                crate::nav::label_shown(d.feet, away, height)
+                if d.tag { crate::nav::tag_shown(d.feet, away, height) } else { crate::nav::label_shown(d.feet, away, height) }
             } else {
                 // No layer on: the selected thing, or the one that fills the middle of the clear part of the window.
                 let middle = Vec2::new((left_px + width - right_px) / 2.0, (TOP_H * k + 70.0 * k + height - bar_px - STATUS_H * k) / 2.0);
@@ -3720,14 +3766,21 @@ pub fn place_labels(doc: Res<Doc>, camera: Query<(&Camera, &GlobalTransform), Wi
             }
             None => at,
         };
-        wanted.push((entity, label.rank, eye.translation().distance(label.at), at, half));
+        // A tag's other places on its own run, as the window has them (the panels' units), for when its own is taken.
+        let alts: Vec<Vec2> = detail.filter(|d| d.tag).map(|d| d.alts.iter().filter_map(|w| camera.world_to_viewport(eye, *w + Vec3::Y * 0.25).ok()).map(|p| p / k).collect()).unwrap_or_default();
+        wanted.push((entity, label.rank, eye.translation().distance(label.at), at, half, detail.map_or(0.0, |d| d.section), detail.map_or(0.0, |d| d.feet), alts));
     }
-    wanted.sort_by(|a, b| a.1.cmp(&b.1).then(a.2.total_cmp(&b.2)));
+    // Of two that would lie over one another, at the same rank, the larger thing's is kept: by its section, then its length, then the nearer.
+    wanted.sort_by(|a, b| a.1.cmp(&b.1).then(crate::nav::larger_first((a.5, a.6, a.2), (b.5, b.6, b.2))));
+    // Those that would lie over one another are settled: the one first in the order keeps its place; another that is covered moves along its own run to the
+    // nearest place where it lies over none that is kept, and is dropped only when its run has no such place (call 232, point 5a).
+    let (lo, hi) = (Vec2::new(lay.left_in + 20.0, TOP_H + 70.0), Vec2::new(width / k - lay.right_in - 20.0, height / k - bar_height(&doc) - STATUS_H - 20.0));
+    let wants: Vec<(Vec2, Vec2, Vec<Vec2>)> = wanted.iter().map(|w| (w.3, w.4, w.7.clone())).collect();
+    let placed = crate::nav::settle(&wants, lo, hi);
     let mut kept: Vec<(Entity, Vec2, Vec2)> = Vec::new();
-    for (entity, _, _, at, half) in wanted {
-        let clear = kept.iter().all(|(_, other, size)| (at.x - other.x).abs() > half.x + size.x || (at.y - other.y).abs() > half.y + size.y);
-        if clear {
-            kept.push((entity, at, half));
+    for (w, p) in wanted.iter().zip(placed) {
+        if let Some(at) = p {
+            kept.push((w.0, at, w.4));
         }
     }
     for (entity, _, mut node, mut visibility, _, _) in &mut labels {
@@ -3934,5 +3987,31 @@ fn set_goal(which: usize, to: f32) {
 fn scrolls_to(which: usize, by: f32, limit: f32) {
     if let Ok(mut g) = GOALS.lock() {
         g[which] = (g[which] - by).clamp(0.0, limit);
+    }
+}
+
+#[cfg(test)]
+mod bar_tests {
+    use super::*;
+
+    #[test]
+    fn the_price_bar_gives_way_in_the_order_the_ruling_gives_and_nothing_comes_back_as_it_narrows() {
+        let kept = |k: Keeps| [k.counts, k.word, k.sure, k.riding];
+        assert_eq!(kept(bar_keeps(1600.0, 1.0)), [true, true, true, true], "wide: all of it");
+        assert_eq!(kept(bar_keeps(1200.0, 1.0)), [false, true, true, true], "counts first");
+        assert_eq!(kept(bar_keeps(850.0, 1.0)), [false, false, true, true], "then the word PRICE");
+        assert_eq!(kept(bar_keeps(780.0, 1.0)), [false, false, false, true], "then how sure");
+        assert_eq!(kept(bar_keeps(720.0, 1.0)), [false, false, false, false], "then what is riding");
+        // Narrowing never brings back what has gone.
+        let mut was = [true; 4];
+        for w in (720..=2000).rev().step_by(10) {
+            let now = kept(bar_keeps(w as f32, 1.0));
+            for i in 0..4 {
+                assert!(!now[i] || was[i], "width {w}: item {i} came back");
+            }
+            was = now;
+        }
+        // Larger lettering narrows the room the same as a narrower window does.
+        assert_eq!(kept(bar_keeps(1600.0, 1.5)), kept(bar_keeps(1600.0 / 1.5, 1.0)));
     }
 }

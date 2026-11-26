@@ -57,6 +57,12 @@ pub fn quintic(x: f32) -> f32 {
     x * x * x * (x * (x * 6.0 - 15.0) + 10.0)
 }
 
+/// Whether a press at `now` is the second of a double-click that began at `last`: within half a second of the program's own clock, or within a frame and a half
+/// where frames are slower (the program's clock never counts a frame for more than a quarter second, however long it took to draw).
+pub fn again(last: f32, now: f32, delta: f32) -> bool {
+    now - last < (delta * 1.5).max(0.5)
+}
+
 /// How long a flight takes by how far it goes: 0.4 s for a short one to 1.2 s for the longest (call 63).
 pub fn flight_secs(from: &Pose, to: &Pose) -> f32 {
     let far = from.target.distance(to.target) / from.distance.max(to.distance).max(1.0);
@@ -116,8 +122,53 @@ pub fn framing_distance(radius: f32, fill: f32) -> f32 {
 /// the window's height in dots. Too small to be what is looked at: no. Bigger than the window
 /// shows: no (the house's own name is not lettered over a hinge).
 pub fn label_shown(feet: f32, away: f32, height: f32) -> bool {
+    shown_from(NAME_LEAST, feet, away, height)
+}
+
+/// The least a thing's name is lettered over it, in dots across.
+pub const NAME_LEAST: f32 = 48.0;
+/// The least a size tag (Sizes switched on) is written over a thing, in dots across: a tag is a few words, a name more (call 232).
+pub const TAG_LEAST: f32 = 24.0;
+
+/// A size tag over a thing: from `TAG_LEAST` dots across, and no more than one and a half window heights, as a name is.
+pub fn tag_shown(feet: f32, away: f32, height: f32) -> bool {
+    shown_from(TAG_LEAST, feet, away, height)
+}
+
+/// Where each label stands once those that would lie over one another are settled (call 232, point 5a). `wants` is in the order they win places in: each is
+/// `(where it stands, half its size, the other places on its own run it may stand, nearest first)`. A label stands where it wants if that lies over no label
+/// already kept; else at the first of its other places that is inside `lo..hi` and lies over none; else it is not written (None).
+pub fn settle(wants: &[(Vec2, Vec2, Vec<Vec2>)], lo: Vec2, hi: Vec2) -> Vec<Option<Vec2>> {
+    let mut kept: Vec<(Vec2, Vec2)> = Vec::new();
+    let mut out = Vec::with_capacity(wants.len());
+    for (at, half, alts) in wants {
+        let clear = |p: Vec2, kept: &[(Vec2, Vec2)]| kept.iter().all(|(other, size)| (p.x - other.x).abs() > half.x + size.x || (p.y - other.y).abs() > half.y + size.y);
+        let chosen = if clear(*at, &kept) { Some(*at) } else { alts.iter().copied().find(|p| p.x >= lo.x && p.x <= hi.x && p.y >= lo.y && p.y <= hi.y && clear(*p, &kept)) };
+        if let Some(p) = chosen {
+            kept.push((p, *half));
+        }
+        out.push(chosen);
+    }
+    out
+}
+
+/// One arithmetic for dots across, with the least size passed in.
+pub fn shown_from(least: f32, feet: f32, away: f32, height: f32) -> bool {
     let dots = dots_across(feet, away, height);
-    dots >= 48.0 && dots <= 1.5 * height
+    dots >= least && dots <= 1.5 * height
+}
+
+/// Of two tags that would lie over one another, which is kept first (the order to sort in): the larger thing's, by its section, then by its length (feet, each
+/// as `(section, length, how far the eye is)`); only then the nearer (call 232, point 2). Sections and lengths within a tenth of an inch are the same.
+pub fn larger_first(a: (f32, f32, f32), b: (f32, f32, f32)) -> std::cmp::Ordering {
+    let same = |x: f32, y: f32| (x - y).abs() < 0.01;
+    if !same(a.0, b.0) {
+        return b.0.total_cmp(&a.0);
+    }
+    if !same(a.1, b.1) {
+        return b.1.total_cmp(&a.1);
+    }
+    a.2.total_cmp(&b.2)
 }
 
 /// Where a name is written over a thing that is big on the screen but whose anchor lies outside the clear part of the window (a
@@ -445,5 +496,87 @@ mod tests {
         assert!((stop_short(2.0, Some(1.0)) - 0.45).abs() < 1e-6);
         // A face closer than that: none of it.
         assert_eq!(stop_short(2.0, Some(0.05)), 0.0);
+    }
+}
+
+#[cfg(test)]
+mod tag_tests {
+    use super::*;
+    use std::cmp::Ordering;
+
+    #[test]
+    fn a_size_tag_is_written_from_24_dots_across_and_a_name_still_wants_48_and_the_upper_bound_is_the_same() {
+        let window = 960.0;
+        // A pad 3 ft across seen from 85 ft is 45 dots (the figures of tradesw): too small for a name, enough for a tag.
+        let d = dots_across(3.0, 85.0, window);
+        assert!((44.0..47.0).contains(&d), "{d}");
+        assert!(!label_shown(3.0, 85.0, window));
+        assert!(tag_shown(3.0, 85.0, window));
+        // The far pad, 39 dots at 100 ft: a tag too.
+        assert!(tag_shown(3.0, 100.0, window) && !label_shown(3.0, 100.0, window));
+        // Under 24 dots, no tag: a piece of 0.8 ft at 100 ft is 10 dots.
+        assert!(!tag_shown(0.8, 100.0, window));
+        // The upper bound, one and a half window heights, is the same for both.
+        assert!(!tag_shown(25.0, 0.7, window) && !label_shown(25.0, 0.7, window));
+        assert!(tag_shown(25.0, 90.0, window) && label_shown(25.0, 90.0, window));
+        // Where a name is shown a tag is too, and the figures of a name are as they were.
+        for feet in [0.42, 3.0, 25.0] {
+            for away in [1.0, 10.0, 60.0, 400.0] {
+                assert_eq!(label_shown(feet, away, window), shown_from(48.0, feet, away, window));
+                assert!(!label_shown(feet, away, window) || tag_shown(feet, away, window));
+            }
+        }
+    }
+
+    #[test]
+    fn of_two_tags_that_would_lie_over_one_another_the_larger_things_is_kept_by_section_then_length_then_nearness() {
+        // A 3 in stack (0.25 ft section, 13 ft) over a 3/4 in pipe (0.0625 ft, 5 ft) though the pipe is nearer the eye.
+        assert_eq!(larger_first((0.25, 13.1, 99.9), (0.0625, 4.9, 80.0)), Ordering::Less);
+        assert_eq!(larger_first((0.0625, 4.9, 80.0), (0.25, 13.1, 99.9)), Ordering::Greater);
+        // The same section: the longer.
+        assert_eq!(larger_first((0.0625, 10.0, 99.0), (0.0625, 5.0, 60.0)), Ordering::Less);
+        // The same in both: the nearer.
+        assert_eq!(larger_first((0.0625, 5.0, 60.0), (0.0625, 5.0, 90.0)), Ordering::Less);
+        // A thing that is no run (no section) and the same length is as a run of none: the nearer.
+        assert_eq!(larger_first((0.0, 3.0, 85.0), (0.0, 3.0, 99.0)), Ordering::Less);
+    }
+}
+
+#[cfg(test)]
+mod settle_tests {
+    use super::*;
+
+    #[test]
+    fn two_tags_wanting_one_place_the_first_keeps_it_the_other_moves_along_its_run_and_with_no_room_on_its_run_is_dropped() {
+        let (lo, hi) = (Vec2::new(0.0, 0.0), Vec2::new(1000.0, 800.0));
+        let half = Vec2::new(40.0, 8.0);
+        let stack = (Vec2::new(500.0, 400.0), half, Vec::new());
+        // The pipe's tag wants the same place; its run has a place 60 dots down the screen that lies over nothing.
+        let pipe = (Vec2::new(505.0, 402.0), half, vec![Vec2::new(510.0, 410.0), Vec2::new(520.0, 470.0), Vec2::new(520.0, 600.0)]);
+        let placed = settle(&[stack.clone(), pipe.clone()], lo, hi);
+        assert_eq!(placed[0], Some(Vec2::new(500.0, 400.0)), "the larger thing keeps its place");
+        assert_eq!(placed[1], Some(Vec2::new(520.0, 470.0)), "the other moves to the nearest place on its run that is clear");
+        // No place on its run is clear or inside the window: dropped.
+        let boxed = (Vec2::new(505.0, 402.0), half, vec![Vec2::new(510.0, 410.0), Vec2::new(2000.0, 470.0)]);
+        assert_eq!(settle(&[stack.clone(), boxed], lo, hi)[1], None);
+        // A tag that is clear where it stands stays there; one with no other place is dropped when it is covered.
+        assert_eq!(settle(&[stack.clone(), (Vec2::new(500.0, 600.0), half, Vec::new())], lo, hi)[1], Some(Vec2::new(500.0, 600.0)));
+        assert_eq!(settle(&[stack, (Vec2::new(505.0, 402.0), half, Vec::new())], lo, hi)[1], None);
+    }
+}
+
+#[cfg(test)]
+mod again_tests {
+    use super::*;
+
+    #[test]
+    fn two_presses_a_slow_frame_apart_are_a_double_click_by_the_programs_clock_and_two_a_second_apart_are_not() {
+        // A frame that took a second to draw is a quarter second of the program's clock: the presses of one double-click land a frame apart.
+        assert!(again(10.0, 10.25, 0.25));
+        assert!(again(10.0, 10.0, 0.25), "both in one frame");
+        assert!(again(10.0, 10.4, 0.1));
+        assert!(!again(10.0, 10.6, 0.1), "slow hand on a fast frame");
+        assert!(!again(-10.0, 54.2, 0.9), "the first press ever");
+        assert!(!again(54.2, 221.9, 0.9));
     }
 }

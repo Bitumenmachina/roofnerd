@@ -1627,7 +1627,7 @@ pub fn keep_layout(doc: &mut Doc, title: &str) {
 /// in this window in place of this one. With changes not saved it opens nothing (call 161).
 pub fn open_layout(doc: &mut Doc, name: &str) {
     if doc.edited {
-        doc.say(Tone::Ask, "Save first (Ctrl+S).");
+        doc.say(Tone::Ask, format!("Save first ({}).", crate::screen::command_key('s')));
         doc.touch();
         return;
     }
@@ -2034,6 +2034,37 @@ fn over_model(window: &Window, at: Vec2) -> bool {
     over_model_at(window, at)
 }
 
+/// What can be picked on the plan of a level: its walls and lines, and a drawing's own lines where its file has them (their ends, their
+/// middles and their crossings are places to pick, as a wall's are), and the faces a scan's sheet shows. The pointer of the model window
+/// and each half of the second window's catch on this one scene.
+pub fn level_scene(job: &mut plumbline_world::Job, snap_shot: &Snapshot, plans: &crate::plans::Plans, storey: &str, skip: Option<&str>) -> (snap::Scene, Vec<crate::plans::SheetFaces>) {
+    let mut scene = snap::scene(job, storey, skip);
+    let mut sheets = Vec::new();
+    for l in snap_shot.drawings.iter().filter(|l| l.storey == storey) {
+        if let Some(read) = plans.read.get(&l.path) {
+            for line in &read.lines {
+                scene.segment(l.on_plan(line[0]), l.on_plan(line[1]), None);
+            }
+            // A scan's sheet shows the faces of its walls: places to pick, and what a wall
+            // traced over it is set by (call 190).
+            if let Some(faces) = crate::plans::sheet_faces(l, read) {
+                for f in &faces.faces {
+                    scene.segment(f.line[0], f.line[1], None);
+                }
+                sheets.push(faces);
+            }
+        }
+    }
+    (scene, sheets)
+}
+
+/// What the pointer catches on a plan, looking and not drawing: the corner, the end, the middle, the nearest point on a line (the model
+/// window's own snaps with no tool in hand), `scale` being what a dot covers of the ground, in feet.
+pub fn catch_at(scene: &snap::Scene, p: [f64; 2], scale: f64) -> snap::Found {
+    let reach = snap::Reach { point: 10.0 * scale, line: 8.0 * scale };
+    snap::snap(scene, p, reach, &[], false, &snap::Snaps::default())
+}
+
 /// Where the pointer is on the storey's floor, snapped, while a tool is in hand.
 pub fn pointer(mut doc: ResMut<Doc>, snap_shot: Res<Snapshot>, plans: Res<crate::plans::Plans>, keys: Res<ButtonInput<KeyCode>>, windows: Query<&Window, With<PrimaryWindow>>, camera: Query<(&Camera, &GlobalTransform), With<MainCamera>>) {
     let doc = doc.bypass_change_detection();
@@ -2069,25 +2100,7 @@ pub fn pointer(mut doc: ResMut<Doc>, snap_shot: Res<Snapshot>, plans: Res<crate:
     let skip = if tool == Tool::Move { doc.selected.clone() } else { None };
     let pages = plans.read.len();
     if !doc.draw.scene.as_ref().is_some_and(|(geometry, of, without, read, _)| *geometry == doc.geometry && *of == storey && *without == skip && *read == pages) {
-        let mut scene = snap::scene(&mut doc.job, &storey, skip.as_deref());
-        // A drawing's own lines, where its file has them: their ends, their middles and
-        // their crossings are places to pick, as a wall's are.
-        let mut sheets = Vec::new();
-        for l in snap_shot.drawings.iter().filter(|l| l.storey == storey) {
-            if let Some(read) = plans.read.get(&l.path) {
-                for line in &read.lines {
-                    scene.segment(l.on_plan(line[0]), l.on_plan(line[1]), None);
-                }
-                // A scan's sheet shows the faces of its walls: places to pick, and what a wall
-                // traced over it is set by (call 190).
-                if let Some(faces) = crate::plans::sheet_faces(l, read) {
-                    for f in &faces.faces {
-                        scene.segment(f.line[0], f.line[1], None);
-                    }
-                    sheets.push(faces);
-                }
-            }
-        }
+        let (scene, sheets) = level_scene(&mut doc.job, &snap_shot, &plans, &storey, skip.as_deref());
         doc.draw.sheets = sheets;
         doc.draw.scene = Some((doc.geometry, storey.clone(), skip.clone(), pages, scene));
     }

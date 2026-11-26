@@ -54,6 +54,7 @@ mod plans;
 mod glass;
 mod scene;
 mod screen;
+mod second;
 mod sheet;
 mod skylight;
 mod theme;
@@ -96,7 +97,7 @@ fn main() {
 
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
-            primary_window: Some(Window { title: "BuildOS: model".into(), resolution: model_size.into(), position: WindowPosition::At(IVec2::new(0, 0)), resize_constraints, ..default() }),
+            primary_window: Some(Window { title: "BuildOS: model".into(), resolution: model_size.into(), position: WindowPosition::At(IVec2::new(0, 0)), resize_constraints, visible: screen::may_be_seen(kept.old_ways, false), ..default() }),
             // Closing is ours to answer: work not saved is never dropped without a word.
             close_when_requested: false,
             ..default()
@@ -127,6 +128,19 @@ fn main() {
         .add_systems(Startup, game_time)
         .add_systems(Last, closing)
         .add_systems(Update, glass::resize)
+        .init_gizmo_group::<scene::Pen<0, 0>>()
+        .init_gizmo_group::<scene::Pen<1, 0>>()
+        .init_gizmo_group::<scene::Pen<2, 0>>()
+        .init_gizmo_group::<scene::Pen<3, 0>>()
+        .init_gizmo_group::<scene::Pen<4, 0>>()
+        .init_gizmo_group::<scene::Pen<5, 0>>()
+        .init_gizmo_group::<scene::Pen<0, 1>>()
+        .init_gizmo_group::<scene::Pen<1, 1>>()
+        .init_gizmo_group::<scene::Pen<2, 1>>()
+        .init_gizmo_group::<scene::Pen<3, 1>>()
+        .init_gizmo_group::<scene::Pen<4, 1>>()
+        .init_gizmo_group::<scene::Pen<5, 1>>()
+        .add_systems(Update, (second::step, second::rebuild, second::cameras, second::draw::<0>, second::draw::<1>, second::captions).chain().after(panels::place_labels).before(map::write))
         .add_systems(Update, (screen::track, screen::put_windows, screen::keep_least, screen::follow, screen::recover, screen::keep).chain().before(model::refresh))
         .add_systems(
             Update,
@@ -258,6 +272,7 @@ pub fn build_doc_with(path: String, roof_arg: Option<String>, taken: Option<Stri
         scan_feet: false,
         scan_side: None,
         fit: screen::Fit::default(),
+        second: second::Second::default(),
         recovered,
     };
     Ok(doc)
@@ -272,8 +287,10 @@ fn setup(mut commands: Commands, mut fonts: ResMut<Assets<Font>>, camera: Query<
     let (_, sheet_size) = screen::opening(&kept);
     let least = screen::SHEET_LEAST;
     let resize_constraints = bevy::window::WindowResizeConstraints { min_width: least.0 as f32, min_height: least.1 as f32, ..default() };
-    let window = commands.spawn((Window { title: "BuildOS: sheet".into(), resolution: sheet_size.into(), position: WindowPosition::At(IVec2::new(1610, 0)), resize_constraints, ..default() }, sheet::SheetWindow)).id();
-    let sheet = commands.spawn((Camera2d, Msaa::Off, RenderLayers::layer(1), RenderTarget::Window(WindowRef::Entity(window)))).id();
+    let window = commands.spawn((Window { title: "BuildOS: sheet".into(), resolution: sheet_size.into(), position: WindowPosition::At(IVec2::new(1610, 0)), resize_constraints, visible: screen::may_be_seen(kept.old_ways, false), ..default() }, sheet::SheetWindow)).id();
+    // The controls' camera is drawn last, over the plans a half may show (call 222, part C): order 5, clearing nothing while a plan is under it.
+    let sheet = commands.spawn((Camera2d, Camera { order: 5, ..default() }, Msaa::Off, RenderLayers::layer(1), RenderTarget::Window(WindowRef::Entity(window)), second::UiCamera)).id();
+    second::spawn_cameras(&mut commands, window);
     commands.insert_resource(panels::Cameras { ui, sheet });
 }
 
@@ -459,7 +476,7 @@ fn closing(mut commands: Commands, mut asked: MessageReader<bevy::window::Window
     }
     if doc.edited && *warned != Some(doc.draw.edits) {
         *warned = Some(doc.draw.edits);
-        doc.say(Tone::Ask, "Not closed: the job has changes that are not saved. Save (Ctrl+S), or close again to leave without saving them.");
+        doc.say(Tone::Ask, format!("Not closed: the job has changes that are not saved. Save ({}), or close again to leave without saving them.", screen::command_key('s')));
         doc.touch();
     } else {
         // A clean close leaves no recovery copy; a close with work not saved leaves the job's latest, whole.

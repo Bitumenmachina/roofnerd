@@ -160,7 +160,7 @@ pub struct Surface {
 }
 
 /// On plan the view is this much of the camera's distance tall, in feet.
-const PLAN_HEIGHT: f32 = 0.62;
+pub const PLAN_HEIGHT: f32 = 0.62;
 
 /// What is drawn as lines every frame, in view coordinates.
 #[derive(Resource, Default)]
@@ -224,6 +224,11 @@ pub struct Highlight;
 /// A room line: dashed, in its own ink, over whatever it lies on (call 161).
 #[derive(Default, Reflect, GizmoConfigGroup)]
 pub struct RoomLines;
+
+/// The pens of half `S` of the second window: one group of each kind (`K`: 0 roof and walls, 1 runs, 2 broken, 3 grid, 4 outline of what is
+/// selected, 5 room lines), each on the half's own render layer, drawn as the model window's are.
+#[derive(Default, Reflect, GizmoConfigGroup)]
+pub struct Pen<const K: u8, const S: u8>;
 
 /// How much brighter than paper white the sky and the far haze are drawn, before the
 /// camera folds the range of light to the screen.
@@ -340,6 +345,37 @@ pub fn setup(mut commands: Commands, mut store: ResMut<GizmoConfigStore>, mut me
     highlight.line.width = 2.5;
     highlight.depth_bias = -0.2;
     highlight.render_layers = RenderLayers::layer(0);
+    pens::<0>(&mut store);
+    pens::<1>(&mut store);
+}
+
+/// The pens of half `S` of the second window set as the model window's are, each on the half's own layer.
+fn pens<const S: u8>(store: &mut GizmoConfigStore) {
+    let layers = RenderLayers::layer(View::layer_of(S));
+    let (c, _) = store.config_mut::<Pen<0, S>>();
+    c.line.width = 3.0;
+    c.depth_bias = -0.004;
+    c.render_layers = layers.clone();
+    let (c, _) = store.config_mut::<Pen<1, S>>();
+    c.line.width = 3.0;
+    c.render_layers = layers.clone();
+    let (c, _) = store.config_mut::<Pen<2, S>>();
+    c.line.width = 3.0;
+    c.line.style = GizmoLineStyle::Dashed { gap_scale: 2.5, line_scale: 3.0 };
+    c.depth_bias = -0.004;
+    c.render_layers = layers.clone();
+    let (c, _) = store.config_mut::<Pen<3, S>>();
+    c.line.width = 1.6;
+    c.render_layers = layers.clone();
+    let (c, _) = store.config_mut::<Pen<4, S>>();
+    c.line.width = 2.5;
+    c.depth_bias = -0.2;
+    c.render_layers = layers.clone();
+    let (c, _) = store.config_mut::<Pen<5, S>>();
+    c.line.width = 3.0;
+    c.line.style = GizmoLineStyle::Dashed { gap_scale: 2.5, line_scale: 3.0 };
+    c.depth_bias = -0.5;
+    c.render_layers = layers;
 }
 
 /// Cut a simple outline into triangles, for drawing: the core's cut, taken as it comes
@@ -428,6 +464,8 @@ struct Builder<'a, 'w, 's> {
     plan_fill: Option<(String, Color)>,
     /// The piece spawned last, so that a caller can add to it.
     last: Option<Entity>,
+    /// The view being built: its mark, its layer, its level, whether it is a plan (call 222, part C).
+    view: View,
 }
 
 impl Builder<'_, '_, '_> {
@@ -483,7 +521,7 @@ impl Builder<'_, '_, '_> {
         if see_through && !self.drawing.ghosts.iter().any(|g| g == path) {
             self.drawing.ghosts.push(path.to_string());
         }
-        let mut e = self.commands.spawn((Mesh3d(mesh), MeshMaterial3d(handle), at, SceneMesh));
+        let mut e = self.view.tag(self.commands.spawn((Mesh3d(mesh), MeshMaterial3d(handle), at)));
         self.last = Some(e.id());
         if blend {
             // What is drawn as glass does not darken what is inside it.
@@ -496,15 +534,16 @@ impl Builder<'_, '_, '_> {
         }
         let (click, over, out) = (path.to_string(), path.to_string(), path.to_string());
         let on_plan = self.on_plan.clone();
+        let (plan, shown) = (self.view.plan, self.view.show.clone());
         e.observe(move |press: On<PointerClick>, mut doc: ResMut<Doc>, snap: Res<Snapshot>, keys: Res<ButtonInput<KeyCode>>| {
             // With a drawing tool in hand a click is a pick, not a selection.
             if press.button == PointerButton::Primary && doc.draw.tool.is_none() && !doc.draw.swallow && !dragged() && !doc.field_in_the_way() {
-                let mut path = on_plan.as_ref().filter(|_| doc.plan).unwrap_or(&click).clone();
+                let mut path = on_plan.as_ref().filter(|_| plan).unwrap_or(&click).clone();
                 // On plan the roof lies over the walls. A click on a wall's own
                 // thickness is for the wall: the roof plane over it is picked anywhere
                 // else on it, and by its label (J22A-5: "click a wall" picked the roof).
-                if doc.plan && snap.planes.iter().any(|p| p.path == path) {
-                    if let Some(under) = press.hit.position.and_then(|p| wall_under(&doc, &snap, [doc.origin[0] + f64::from(p.x), doc.origin[1] - f64::from(p.z)])) {
+                if plan && snap.planes.iter().any(|p| p.path == path) {
+                    if let Some(under) = press.hit.position.and_then(|p| wall_under(&shown, &snap, [doc.origin[0] + f64::from(p.x), doc.origin[1] - f64::from(p.z)])) {
                         path = under;
                     }
                 }
@@ -622,15 +661,6 @@ pub fn rebuild(
         commands.entity(e).despawn();
     }
     let origin = doc.origin;
-    let show = doc.show.clone();
-    // On the bench (call 195): one item alone. The house, its sheets, its runs and its clashes are not
-    // drawn; the item is drawn by the same code a thing set down is, from the same kind of record.
-    let bench_item = doc.bench.as_ref().map(|b| b.item.clone());
-    let on_bench = bench_item.is_some();
-    let bench_drawn: Vec<plumbline_world::building::Placement> = bench_item.as_ref().and_then(|item| crate::bench::placement(&mut doc.job, item, origin).ok()).into_iter().collect();
-    let bench_floor: Option<[f32; 2]> = bench_item.as_ref().map(|_| snap.bench.as_ref().map(|l| l.half).unwrap_or([3.0, 3.0]));
-    // On the plan a floor is paper, as a drawing leaves it: what is drawn on it reads.
-    let on_plan_view = doc.plan && !on_bench;
 
     // Frame the building once, and lay the ground under it.
     if !doc.framed {
@@ -699,15 +729,88 @@ pub fn rebuild(
         }
     }
 
+    let view = View { slot: None, show: doc.show.clone(), plan: doc.plan, walk: doc.walk, bench: true, only_sheet: None };
+    build_house(&mut commands, &mut doc, &snap, &plans, &solids, &mut meshes, &mut materials, &mut images, &mut patterns, &mut drawing, &view);
+}
+
+/// How the house is built for one view of it: the model window's own, or one half of the second window (call 222, part C). A half
+/// has its own layers (`show`), always looks from straight above, and puts what it builds on its own render layer, so that its
+/// camera sees it and no other camera does.
+#[derive(Clone)]
+pub struct View {
+    /// None: the model window's own. Some(n): half n of the second window.
+    pub slot: Option<u8>,
+    /// What is on show in it.
+    pub show: crate::model::Show,
+    pub plan: bool,
+    pub walk: bool,
+    /// The item on the bench is drawn (the model window only).
+    pub bench: bool,
+    /// A drawing sheet alone, by path: the house is not drawn.
+    pub only_sheet: Option<String>,
+}
+
+/// What marks an entity as part of the second window's half n.
+#[derive(Component)]
+pub struct SlotMesh(pub u8);
+
+impl View {
+    /// The render layer of half n of the second window (layers 0 and 1 are the model window's and the sheet's).
+    pub fn layer_of(slot: u8) -> usize {
+        2 + slot as usize
+    }
+    /// The mark an entity built for this view carries: the model window's scene, or a half's own layer.
+    pub fn tag<'a>(&self, mut e: EntityCommands<'a>) -> EntityCommands<'a> {
+        match self.slot {
+            None => {
+                e.insert(SceneMesh);
+            }
+            Some(n) => {
+                e.insert((SlotMesh(n), RenderLayers::layer(Self::layer_of(n))));
+            }
+        }
+        e
+    }
+}
+
+/// The building, its sheets and its lines for one view of it: built whole into `drawing`.
+#[allow(clippy::too_many_arguments)]
+pub fn build_house(
+    commands: &mut Commands,
+    doc: &mut Doc,
+    snap: &Snapshot,
+    plans: &crate::plans::Plans,
+    solids: &Solids,
+    meshes: &mut Assets<Mesh>,
+    materials: &mut Assets<StandardMaterial>,
+    images: &mut Assets<Image>,
+    patterns: &mut dress::Patterns,
+    drawing: &mut Drawing,
+    view: &View,
+) {
+    let origin = doc.origin;
+    let show = view.show.clone();
+    // On the bench (call 195): one item alone. The house, its sheets, its runs and its clashes are not
+    // drawn; the item is drawn by the same code a thing set down is, from the same kind of record.
+    let bench_item = if view.bench { doc.bench.as_ref().map(|b| b.item.clone()) } else { None };
+    let on_bench = bench_item.is_some();
+    let bench_drawn: Vec<plumbline_world::building::Placement> = bench_item.as_ref().and_then(|item| crate::bench::placement(&mut doc.job, item, origin).ok()).into_iter().collect();
+    let bench_floor: Option<[f32; 2]> = bench_item.as_ref().map(|_| snap.bench.as_ref().map(|l| l.half).unwrap_or([3.0, 3.0]));
+    // On the plan a floor is paper, as a drawing leaves it: what is drawn on it reads.
+    let on_plan_view = view.plan && !on_bench;
     // ---- The drawings laid under the storeys: each sheet flat at its storey's floor ----
     // On the plan the sheet is over the floor, to be traced; in 3D it is under it. It is
     // shown as it is, unlit, and takes no click: what is picked is the place on the floor.
     for l in snap.drawings.iter().filter(|_| !on_bench) {
-        if show.storey.as_ref().is_some_and(|s| *s != l.storey) || show.off_levels.contains(&l.storey) {
+        if let Some(only) = &view.only_sheet {
+            if l.path != *only {
+                continue;
+            }
+        } else if show.storey.as_ref().is_some_and(|s| *s != l.storey) || show.off_levels.contains(&l.storey) {
             continue;
         }
         let Some(read) = plans.read.get(&l.path) else { continue };
-        let floor = snap.storeys.iter().find(|s| s.path == l.storey).and_then(|s| s.elevation).unwrap_or(0.0) + if doc.plan { 0.02 } else { -0.02 };
+        let floor = snap.storeys.iter().find(|s| s.path == l.storey).and_then(|s| s.elevation).unwrap_or(0.0) + if view.plan { 0.02 } else { -0.02 };
         let [w, h] = l.drawing.size;
         let corner = |x: f64, y: f64| {
             let p = l.on_plan([x, y]);
@@ -723,13 +826,17 @@ pub fn rebuild(
         // told from it (call 193, G): it is seen through, as a scan is, not a drawing to be matched in black.
         let scan = crate::plans::is_scan(l);
         let paper = StandardMaterial { base_color: if scan { Color::srgba(1.0, 1.0, 1.0, SCAN_CUT_ALPHA) } else { Color::WHITE }, base_color_texture: Some(read.image.clone()), alpha_mode: if scan { AlphaMode::Blend } else { AlphaMode::Opaque }, unlit: true, double_sided: true, cull_mode: None, ..default() };
-        commands.spawn((Mesh3d(meshes.add(sheet)), MeshMaterial3d(materials.add(paper)), Transform::IDENTITY, SceneMesh, NotShadowCaster, Pickable::IGNORE));
+        view.tag(commands.spawn((Mesh3d(meshes.add(sheet)), MeshMaterial3d(materials.add(paper)), Transform::IDENTITY, NotShadowCaster, Pickable::IGNORE)));
     }
 
+    // A sheet alone (a half of the second window set to a drawing): no house, no ground lines of the house.
+    if view.only_sheet.is_some() {
+        return;
+    }
     // The bench's floor: its own, a little larger than the item, lined every foot (the lines are `draw_lines`'). It takes no click.
     if let Some([hx, hz]) = bench_floor {
         let floor = materials.add(StandardMaterial { base_color: theme::bench_floor(), perceptual_roughness: 0.92, reflectance: 0.12, ..default() });
-        commands.spawn((Mesh3d(meshes.add(Plane3d::default().mesh().size(hx * 2.0, hz * 2.0))), MeshMaterial3d(floor), Transform::from_xyz(0.0, -0.03, 0.0), SceneMesh, Pickable::IGNORE));
+        view.tag(commands.spawn((Mesh3d(meshes.add(Plane3d::default().mesh().size(hx * 2.0, hz * 2.0))), MeshMaterial3d(floor), Transform::from_xyz(0.0, -0.03, 0.0), Pickable::IGNORE)));
     }
     drawing.lines.clear();
     drawing.roof_lines.clear();
@@ -743,7 +850,7 @@ pub fn rebuild(
     drawing.frames.clear();
     drawing.surfaces.clear();
     let drawing = &mut *drawing;
-    let mut build = Builder { commands: &mut commands, materials: &mut materials, drawing, ghost: show.ghost, wash: None, on_plan: None, pattern: None, flat: on_plan_view, work: None, pale: show.existing, plan_fill: None, last: None };
+    let mut build = Builder { commands: commands, materials: materials, drawing, ghost: show.ghost, wash: None, on_plan: None, pattern: None, flat: on_plan_view, work: None, pale: show.existing, plan_fill: None, last: None, view: view.clone() };
     let has_walls = snap.drawn.iter().any(|p| p.kind == Kind::Wall);
 
     // Outside trim (call 184, call 193 A). The house is dressed in what the estimate prices: a fascia, a soffit, corner boards
@@ -791,7 +898,7 @@ pub fn rebuild(
     // ---- Room lines (call 153): on plan only, dashed, in the ink the rooms are named in ----
     // A room line parts two rooms where no wall stands. It is not built, so it has no
     // shape in 3D. Over it lies a thin invisible strip, so that a click can pick it.
-    if on_plan_view && !doc.walk && show.architecture {
+    if on_plan_view && !view.walk && show.architecture {
         build.work = None;
         build.wash = None;
         for (path, storey, ends) in &snap.room_lines {
@@ -915,8 +1022,8 @@ pub fn rebuild(
                 // out, is dressed on both.
                 let both = wd.is_some_and(|d| d.both()) && (clad.is_some() || low.is_some());
                 let halftone = show.existing && build.work == Some(plumbline_world::WorkStatus::Existing);
-                let upper = clad.map(|c| patterns.of(&mut images, dress::Look::of_cladding(c.what), c.tone.map(|t| t.rgb), halftone));
-                let lower = low.map(|(c, to, _)| (patterns.of(&mut images, dress::Look::of_cladding(c.what), c.tone.map(|t| t.rgb), halftone), *to as f32));
+                let upper = clad.map(|c| patterns.of(images, dress::Look::of_cladding(c.what), c.tone.map(|t| t.rgb), halftone));
+                let lower = low.map(|(c, to, _)| (patterns.of(images, dress::Look::of_cladding(c.what), c.tone.map(|t| t.rgb), halftone), *to as f32));
                 let masonry = clad.is_some_and(|c| c.what.masonry());
                 let part = dress::Part { o: va, x: along, y: Vec3::Y, z: out };
                 // The wall round its doors and windows: the same pieces the clash test
@@ -1357,7 +1464,7 @@ pub fn rebuild(
             let said = snap.dress.roofs.get(&info.path).filter(|_| info.area.is_some());
             match said {
                 Some(r) => {
-                    let pattern = patterns.of(&mut images, dress::Look::of_roofing(r.what), r.tone.map(|t| t.rgb), show.existing && build.work == Some(plumbline_world::WorkStatus::Existing));
+                    let pattern = patterns.of(images, dress::Look::of_roofing(r.what), r.tone.map(|t| t.rgb), show.existing && build.work == Some(plumbline_world::WorkStatus::Existing));
                     // The pattern runs level across the plane, its top up the slope.
                     let across = Vec3::Y.cross(normal).normalize_or(Vec3::X);
                     let mut up = normal.cross(across);
@@ -1443,7 +1550,7 @@ pub fn rebuild(
                 let blend = if show.ghost { AlphaMode::Blend } else { AlphaMode::Opaque };
                 let roof_edge = build.materials.add(StandardMaterial { base_color: theme::roof_edge().with_alpha(alpha), perceptual_roughness: 0.8, double_sided: true, cull_mode: None, alpha_mode: blend, ..default() });
                 if !trimmed_fascia.contains(&line.path) {
-                    build.commands.spawn((Mesh3d(meshes.add(edge.mesh())), MeshMaterial3d(roof_edge), SceneMesh, NotShadowCaster));
+                    view.tag(build.commands.spawn((Mesh3d(meshes.add(edge.mesh())), MeshMaterial3d(roof_edge), NotShadowCaster)));
                 }
                 // A gutter where one is priced on the eave: hung on the fascia, 5 in out.
                 if let Some(g) = snap.dress.gutters.get(&line.path).filter(|_| line.kind == Kind::Eave) {
@@ -1458,7 +1565,7 @@ pub fn rebuild(
                     let mut face = Faces::new();
                     face.quad([fa, fb, fb.with_y(0.0), fa.with_y(0.0)], normal);
                     let wall = build.materials.add(StandardMaterial { base_color: theme::wall().with_alpha(alpha), perceptual_roughness: 0.95, double_sided: true, cull_mode: None, alpha_mode: blend, ..default() });
-                    build.commands.spawn((Mesh3d(meshes.add(face.mesh())), MeshMaterial3d(wall), SceneMesh));
+                    view.tag(build.commands.spawn((Mesh3d(meshes.add(face.mesh())), MeshMaterial3d(wall))));
                 }
             }
         }
@@ -1658,7 +1765,7 @@ pub fn place_camera(mut orbit: ResMut<Orbit>, doc: Res<Doc>, time: Res<Time>,  m
     }
     // On plan the eye goes straight overhead before the perspective is taken out.
     let (yaw, pitch) = if doc.plan { (0.0, 1.5607) } else { (orbit.yaw, orbit.pitch) };
-    let ease = 1.0 - (-time.delta_secs() * 9.0).exp();
+    let ease = ease_of(time.delta_secs());
     let (target, distance) = (orbit.target, orbit.distance);
     let now = &mut orbit.now;
     now.0 = now.0.lerp(target, ease);
@@ -1836,6 +1943,16 @@ pub fn dragged() -> bool {
     DRAGGED.load(std::sync::atomic::Ordering::Relaxed)
 }
 
+/// A hand has moved the view with the left button down: what it let go of is not a click. (The second window's plans say it too.)
+pub fn mark_dragged() {
+    DRAGGED.store(true, std::sync::atomic::Ordering::Relaxed);
+}
+
+/// The distance a plan's view stands at for a thing of this radius (feet) to fill half its height.
+pub fn plan_distance_for(radius: f32) -> f32 {
+    (2.0 * radius / (0.5 * PLAN_HEIGHT)).max(crate::nav::MIN_DISTANCE)
+}
+
 /// The left button went down: whatever it does next, it has not dragged yet.
 pub fn pressed(press: On<PointerPress>) {
     if press.button == PointerButton::Primary {
@@ -1989,7 +2106,7 @@ fn framed(doc: &Doc, snap: &Snapshot, path: &str, hit: Vec3, normal: Option<Vec3
         return None;
     }
     let yaw = normal.filter(|n| n.x.hypot(n.z) > 0.3).map(|n| n.x.atan2(n.z)).unwrap_or(orbit.yaw);
-    let distance = if doc.plan { (2.0 * radius / (0.5 * PLAN_HEIGHT)).max(crate::nav::MIN_DISTANCE) } else { crate::nav::framing_distance(radius, 0.5) };
+    let distance = if doc.plan { plan_distance_for(radius) } else { crate::nav::framing_distance(radius, 0.5) };
     Some(crate::nav::Pose { target: centre, yaw, pitch: orbit.pitch.min(0.4), distance })
 }
 
@@ -1999,7 +2116,7 @@ pub fn frame(doc: &mut Doc, orbit: &mut Orbit, snap: &Snapshot) {
     let selected = doc.selected.clone().and_then(|path| sphere_of(&corners_of(doc, snap, &path)).map(|s| (path, s)));
     match selected {
         Some((path, (centre, radius))) => {
-            let distance = if doc.plan { (2.0 * radius / (0.5 * PLAN_HEIGHT)).max(crate::nav::MIN_DISTANCE) } else { crate::nav::framing_distance(radius, 0.5) };
+            let distance = if doc.plan { plan_distance_for(radius) } else { crate::nav::framing_distance(radius, 0.5) };
             orbit.fly(crate::nav::Pose { target: centre, yaw: orbit.yaw, pitch: orbit.pitch.min(0.4), distance });
             let name = snap.selected.as_ref().map(|e| e.name.clone()).filter(|n| !n.is_empty()).unwrap_or(path);
             doc.say(Tone::Done, format!("{} in view.", crate::panels::pretty(&name)));
@@ -2046,6 +2163,64 @@ pub fn notch(orbit: &mut Orbit, place: Vec3, notches: f32, tilt: bool) {
             turn_about(orbit, place, 0.0, to - orbit.pitch);
         }
     }
+}
+
+/// On plan a dot covers the same ground everywhere: how far the view slides, in feet, when a hand has hold of the ground and goes `moved`
+/// dots, in a view `height` dots tall. The model window's drag and each half of the second window's are this one figure.
+pub fn plan_drag(orbit: &Orbit, moved: Vec2, height: f32) -> Vec3 {
+    let per_px = orbit.distance * PLAN_HEIGHT / height.max(1.0);
+    Vec3::X * (-moved.x * per_px) + Vec3::Z * (-moved.y * per_px)
+}
+
+/// What a dot covers of the ground on plan, in feet, at a distance, in a view `height` dots tall.
+pub fn plan_feet_per_dot(distance: f32, height: f32) -> f32 {
+    distance * PLAN_HEIGHT / height.max(1.0)
+}
+
+/// The place on the ground a point `off` dots from the middle of a plan view is at, the view standing at `target`.
+pub fn plan_place(target: Vec3, distance: f32, off: Vec2, height: f32) -> Vec3 {
+    let per_px = plan_feet_per_dot(distance, height);
+    target + Vec3::X * (off.x * per_px) + Vec3::Z * (off.y * per_px)
+}
+
+/// A notch (or part of one) of the wheel on a plan: nearer by a tenth of what is left, or further, within the same bounds as the model
+/// window's wheel; the place `off` dots from the middle (where the pointer is) stays under the pointer. The model window's wheel and
+/// each half of the second window's are this one figure.
+pub fn plan_wheel(orbit: &mut Orbit, notches: f32, off: Option<Vec2>, height: f32) {
+    let was = orbit.distance;
+    let furthest = crate::nav::furthest(orbit.home.1, was);
+    orbit.distance = (was * crate::nav::NOTCH.powf(notches)).clamp(crate::nav::MIN_DISTANCE, furthest);
+    let by = orbit.distance / was;
+    if let Some(off) = off {
+        let place = plan_place(orbit.target, was, off, height);
+        orbit.target = place + (orbit.target - place) * by;
+    }
+}
+
+/// How far a flight has carried a plan's view after `dt` seconds, as `orbit_input` carries the model window's: the goals follow it and the
+/// eye is where it is. The view's turn and tilt are not a plan's.
+pub fn plan_flight(orbit: &mut Orbit, dt: f32) {
+    if let Some(mut flight) = orbit.flight {
+        let p = flight.step(dt.min(0.25));
+        orbit.target = p.target;
+        orbit.distance = p.distance;
+        orbit.now.0 = p.target;
+        orbit.now.3 = p.distance;
+        orbit.flight = if flight.landed() { None } else { Some(flight) };
+    }
+}
+
+/// How much of what is left a frame of `dt` seconds carries the view: nine to the second.
+pub fn ease_of(dt: f32) -> f32 {
+    1.0 - (-dt * 9.0).exp()
+}
+
+/// The view eases toward where it is going, by the same ease `place_camera` gives the model window's.
+pub fn plan_ease(orbit: &mut Orbit, dt: f32) {
+    let ease = ease_of(dt);
+    let (target, distance) = (orbit.target, orbit.distance);
+    orbit.now.0 = orbit.now.0.lerp(target, ease);
+    orbit.now.3 += (distance - orbit.now.3) * ease;
 }
 
 /// Where a ray meets the level plane at a height; none when it runs away from it or
@@ -2158,14 +2333,14 @@ fn inside(outline: &[[f64; 2]], at: [f64; 2]) -> bool {
 
 /// The wall of a level on show whose thickness a point of the plan lies in, if any:
 /// the nearest to its line, and of those the highest.
-fn wall_under(doc: &Doc, snap: &Snapshot, at: [f64; 2]) -> Option<String> {
-    if !doc.show.architecture {
+fn wall_under(show: &crate::model::Show, snap: &Snapshot, at: [f64; 2]) -> Option<String> {
+    if !show.architecture {
         return None;
     }
     let mut best: Option<(f64, f64, &str)> = None;
     for p in &snap.drawn {
         let Shape::Wall { a, b, base, thickness, .. } = &p.shape else { continue };
-        let on_show = p.storey.as_ref().is_none_or(|s| !doc.show.off_levels.contains(s) && doc.show.storey.as_ref().is_none_or(|alone| alone == s));
+        let on_show = p.storey.as_ref().is_none_or(|s| !show.off_levels.contains(s) && show.storey.as_ref().is_none_or(|alone| alone == s));
         if p.kind != Kind::Wall || !on_show {
             continue;
         }
@@ -2345,7 +2520,7 @@ pub fn carry(mut carry: ResMut<Carry>, mut doc: ResMut<Doc>, snap: Res<Snapshot>
 /// carries on and eases to a stop. A double-click flies to the place clicked. On foot
 /// the same keys walk and the right button looks round.
 #[allow(clippy::too_many_arguments)]
-pub fn orbit_input(mut orbit: ResMut<Orbit>, mut feel: ResMut<Feel>, buttons: Res<ButtonInput<MouseButton>>, scroll: Res<AccumulatedMouseScroll>, keys: Res<ButtonInput<KeyCode>>, time: Res<Time>, doc: Res<Doc>, window: Query<&Window, With<PrimaryWindow>>, hover: Res<bevy::picking::hover::HoverMap>, panels: Query<(), With<Node>>, mut presses: MessageReader<bevy::input::mouse::MouseButtonInput>, mut ray_cast: MeshRayCast, snap: Res<Snapshot>, model_meshes: Query<Option<&Pickable>, With<SceneMesh>>) {
+pub fn orbit_input(mut orbit: ResMut<Orbit>, mut feel: ResMut<Feel>, buttons: Res<ButtonInput<MouseButton>>, scroll: Res<AccumulatedMouseScroll>, keys: Res<ButtonInput<KeyCode>>, time: Res<Time>, doc: Res<Doc>, window: Query<&Window, With<PrimaryWindow>>, hover: Res<bevy::picking::hover::HoverMap>, panels: Query<(), With<Node>>, mut presses: MessageReader<bevy::input::mouse::MouseButtonInput>, mut ray_cast: MeshRayCast, snap: Res<Snapshot>, model_meshes: Query<Option<&Pickable>, With<SceneMesh>>, slot_meshes: Query<(), With<SlotMesh>>) {
     use std::sync::atomic::Ordering::Relaxed;
     // How many times the left button went down since the last frame: on a slow machine
     // both presses of a double-click can land in one frame.
@@ -2407,7 +2582,8 @@ pub fn orbit_input(mut orbit: ResMut<Orbit>, mut feel: ResMut<Feel>, buttons: Re
             // stands inside) and the view turned about a place far behind the house
             // (`dressw` on the full run of aa5084c: its measured check failed on it).
             // The sky's dome is not a place to turn about.
-            let all = MeshRayCastSettings::default().never_early_exit();
+            let apart = |e: Entity| !slot_meshes.contains(e);
+            let all = MeshRayCastSettings::default().never_early_exit().with_filter(&apart);
             let found = ray_cast.cast_ray(ray, &all).iter().filter(|(_, hit)| hit.distance < 5000.0).min_by(|a, b| a.1.distance.total_cmp(&b.1.distance)).map(|(e, hit)| (*e, hit.point, hit.normal));
             on_model.set(found.is_some_and(|(e, _, _)| is_model(e)));
             hit_normal.set(found.map(|(_, _, n)| n));
@@ -2539,8 +2715,7 @@ pub fn orbit_input(mut orbit: ResMut<Orbit>, mut feel: ResMut<Feel>, buttons: Re
             Hold::Ground => {
                 let shift = if doc.plan {
                     // On plan a dot covers the same ground everywhere: exact.
-                    let per_px = orbit.distance * PLAN_HEIGHT / window.height().max(1.0);
-                    right * (-moved.x * per_px) + toward * (-moved.y * per_px)
+                    plan_drag(&orbit, moved, window.height())
                 } else {
                     // The place grabbed is put back under the pointer.
                     cursor.and_then(|c| ground_shift(&orbit, window, c, grabbed)).unwrap_or(Vec3::ZERO)
@@ -2592,19 +2767,10 @@ pub fn orbit_input(mut orbit: ResMut<Orbit>, mut feel: ResMut<Feel>, buttons: Re
         // hundredth of a notch each (three.js's measure of a wheel).
         let notches = if scroll.unit == MouseScrollUnit::Pixel { scroll.delta.y / 100.0 } else { scroll.delta.y }.clamp(-3.0, 3.0);
         let was = orbit.distance;
-        // Out stops at the whole lot or a good deal further for a big job; in, at a hinge filling the window (call 218, point 1).
-        let furthest = crate::nav::furthest(orbit.home.1, was);
         if doc.plan {
-            orbit.distance = (was * crate::nav::NOTCH.powf(notches)).clamp(crate::nav::MIN_DISTANCE, furthest);
-            let by = orbit.distance / was;
             // On plan the place under the pointer stays under it, which is how a
             // dimension's end on a drawing is closed in on.
-            if let Some(cursor) = cursor {
-                let per_px = was * PLAN_HEIGHT / window.height().max(1.0);
-                let off = cursor - Vec2::new(window.width(), window.height()) / 2.0;
-                let place = orbit.target + right * (off.x * per_px) + toward * (off.y * per_px);
-                orbit.target = place + (orbit.target - place) * by;
-            }
+            plan_wheel(&mut orbit, notches, cursor.map(|c| c - Vec2::new(window.width(), window.height()) / 2.0), window.height());
         } else {
             // In 3D the eye and what it looks at both close on the place under the pointer, so the place stays under the pointer;
             // nothing near under it (sky, or ground out at the horizon): the view goes the way the pointer points, over the ground,
@@ -2627,7 +2793,8 @@ pub fn orbit_input(mut orbit: ResMut<Orbit>, mut feel: ResMut<Feel>, buttons: Re
                     let step = eye0.distance(eye1);
                     if step > 1e-4 {
                         if let Ok(way) = Dir3::new((eye1 - eye0) / step) {
-                            let all = MeshRayCastSettings::default().never_early_exit();
+                            let apart = |e: Entity| !slot_meshes.contains(e);
+                            let all = MeshRayCastSettings::default().never_early_exit().with_filter(&apart);
                             let hit = ray_cast.cast_ray(Ray3d::new(eye0, way), &all).iter().filter(|(e, h)| h.distance < step + 0.1 && is_model(*e)).map(|(_, h)| h.distance).min_by(|a, b| a.total_cmp(b));
                             let allowed = crate::nav::stop_short(step, hit);
                             if allowed < 1.0 {
@@ -2675,12 +2842,20 @@ pub fn orbit_input(mut orbit: ResMut<Orbit>, mut feel: ResMut<Feel>, buttons: Re
 
 /// The ground's grid, the roof's lines, thin runs, and the outline of what is selected.
 pub fn draw_lines(doc: Res<Doc>, snap: Res<Snapshot>, drawing: Res<Drawing>, mut lines: Gizmos<RoofLines>, mut runs: Gizmos<RunLines>, mut broken: Gizmos<BrokenLines>, mut grid: Gizmos<GridLines>, mut highlight: Gizmos<Highlight>, mut room: Gizmos<RoomLines>) {
+    let view = View { slot: None, show: doc.show.clone(), plan: doc.plan, walk: doc.walk, bench: true, only_sheet: None };
+    draw_view(&doc, &snap, &drawing, &view, &mut lines, &mut runs, &mut broken, &mut grid, &mut highlight, &mut room);
+}
+
+/// The lines of one view, in the pens it is given: the model window's own, or one half of the second window's (call 222, part C). One
+/// piece of code draws a plan, whichever window it is in.
+#[allow(clippy::too_many_arguments)]
+pub fn draw_view<R: GizmoConfigGroup, N: GizmoConfigGroup, B: GizmoConfigGroup, G: GizmoConfigGroup, H: GizmoConfigGroup, M: GizmoConfigGroup>(doc: &Doc, snap: &Snapshot, drawing: &Drawing, view: &View, lines: &mut Gizmos<R>, runs: &mut Gizmos<N>, broken: &mut Gizmos<B>, grid: &mut Gizmos<G>, highlight: &mut Gizmos<H>, room: &mut Gizmos<M>) {
     // The grid: a line every ten feet, a stronger one every fifty, fading out with
     // distance from the building so the ground has no edge.
     let reach = drawing.reach;
     // With the ground switched off there is no ground to rule: the grid lay across the
     // face of the foundation, between it and the eye (J24B-25).
-    if reach > 0.0 && !doc.walk && doc.show.ground && doc.bench.is_none() {
+    if reach > 0.0 && !view.walk && view.show.ground && !(view.bench && doc.bench.is_some()) {
         let (minor, major) = (theme::grid_minor(), theme::grid_major());
         let fade = |x: f32, z: f32| (1.0 - (x * x + z * z).sqrt() / reach).clamp(0.0, 1.0).powf(1.4);
         // Over a very large ground (an unscaled scan laid at a tenth of a foot to the
@@ -2706,7 +2881,7 @@ pub fn draw_lines(doc: Res<Doc>, snap: Res<Snapshot>, drawing: Res<Drawing>, mut
     }
     // The bench (call 195): the item's own floor, lined every foot, and its three dimensions, each a line with
     // ends in the colour of how sure the size is. (Where they stand and what they say is the bench's own: `bench::layout`.)
-    if let (Some(_), Some(l)) = (&doc.bench, &snap.bench) {
+    if let (true, Some(_), Some(l)) = (view.bench, &doc.bench, &snap.bench) {
         let (hx, hz) = (l.half[0], l.half[1]);
         let (steps_x, steps_z) = (hx as i32, hz as i32);
         for i in -steps_x..=steps_x {
@@ -2737,7 +2912,7 @@ pub fn draw_lines(doc: Res<Doc>, snap: Res<Snapshot>, drawing: Res<Drawing>, mut
     // hip and ridge made it read as a diagram (J22B-19, D8). They are drawn on plan, on
     // a roof not yet dressed, and while something of the roof is selected.
     let of_the_roof = doc.selected.as_ref().is_some_and(|s| snap.planes.iter().any(|p| p.path == *s) || snap.lines.iter().any(|l| l.path == *s) || snap.roof_path == *s);
-    if doc.plan || !drawing.roof_dressed || of_the_roof {
+    if view.plan || !drawing.roof_dressed || of_the_roof {
         for (a, b, colour) in &drawing.roof_lines {
             lines.line(*a, *b, *colour);
         }
@@ -2758,7 +2933,7 @@ pub fn draw_lines(doc: Res<Doc>, snap: Res<Snapshot>, drawing: Res<Drawing>, mut
     // On plan a door or a window is its span through the wall: looking straight down,
     // the wall over it hides it. A window has its glass down the middle. Which way a door
     // swings is not in the model, so no swing is drawn.
-    if doc.plan {
+    if view.plan {
         for c in &drawing.walls {
             for i in 0..4 {
                 lines.line(c[i], c[(i + 1) % 4], theme::ink());
@@ -2793,7 +2968,7 @@ pub fn draw_lines(doc: Res<Doc>, snap: Res<Snapshot>, drawing: Res<Drawing>, mut
     }
     // With the sheet on its Clashes tab, each place two things are in the same space is
     // marked on the model: three short strokes, seen through whatever is in front.
-    if matches!(doc.tab, crate::model::Tab::Clashes | crate::model::Tab::Verify) || doc.show.clashes {
+    if (view.slot.is_none() && matches!(doc.tab, crate::model::Tab::Clashes | crate::model::Tab::Verify)) || view.show.clashes {
         if let Some(Ok(found)) = &snap.clashes {
             for c in found.in_the_same_space() {
                 let at = to_view(doc.origin, c.at);
@@ -2815,7 +2990,7 @@ pub fn draw_lines(doc: Res<Doc>, snap: Res<Snapshot>, drawing: Res<Drawing>, mut
         }
     }
     // (On the bench the item is drawn as it is set down, and not outlined as a thing picked.)
-    if let Some(selected) = doc.selected.as_ref().filter(|_| doc.bench.is_none()) {
+    if let Some(selected) = doc.selected.as_ref().filter(|_| !(view.bench && doc.bench.is_some())) {
         for (_, frame) in drawing.frames.iter().filter(|(p, _)| p == selected) {
             for (a, b) in frame {
                 highlight.line(*a, *b, theme::accent());

@@ -95,6 +95,8 @@ st() { awk -F'\t' -v n="\$1" '\$1=="state" && \$2==n {print \$3}' "\$PLUMBLINE_M
 expect() { local got; got="\$(st "\$1")"; echo "\$STEP: \$1 reads \$got" >> "\$T/states.txt"; [ "\$got" = "\$2" ] || echo "after \$STEP: \$1 reads \$got, wanted \$2" >> "\$T/fails.txt"; }
 said_is() { local last; last="\$(tail -1 "\$PLUMBLINE_MAP.said")"; echo "\$STEP said: \$last" >> "\$T/states.txt"; [ "\$last" = "\$1" ] || echo "after \$STEP the status line said: \$last (wanted: \$1)" >> "\$T/fails.txt"; }
 tags() { grep -P '^model\tTag ' "\$PLUMBLINE_MAP" > "\$T/tags-\$STEP.txt" || : > "\$T/tags-\$STEP.txt"; }
+# (call 232, point 5(b): each tag's box is kept too, for the count of wires drawn to leave out)
+boxes() { grep -P '^size\tmodel\tTag ' "\$PLUMBLINE_MAP" > "\$T/boxes-\$STEP.txt" || : > "\$T/boxes-\$STEP.txt"; }
 trade() { STEP="\$1"; on "\$1"; sleep 9; park; sleep 3; }
 open_window "$J2"
 park
@@ -104,43 +106,43 @@ trade Plumbing
 for w in "Ground on" "Finishes on" "Framing off" "Roof on" "Mechanical off" "Electrical off" "Plumbing on" "Sizes on" "Level all"; do expect \${w% *} \${w##* }; done
 expect "See through" on
 said_is "Plumbing: the rest of the house shown as glass, sizes on."
-tags
+tags; boxes
 shot                                    # 02 plumbing: the rest as glass, pipes tagged
 trade HVAC
 for w in "Mechanical on" "Electrical off" "Plumbing off" "Sizes on"; do expect \${w% *} \${w##* }; done
 expect "See through" on
 said_is "HVAC: the rest of the house shown as glass, sizes on."
-tags
+tags; boxes
 shot                                    # 03 HVAC
 trade Electrical
 for w in "Mechanical off" "Electrical on" "Plumbing off" "Sizes on"; do expect \${w% *} \${w##* }; done
 said_is "Electrical: the rest of the house shown as glass, sizes on."
-tags
+tags; boxes
 shot                                    # 04 electrical
 trade Framing
 for w in "Framing on" "Finishes off" "Roof on" "Mechanical off" "Electrical off" "Plumbing off" "Sizes on" "Ground on"; do expect \${w% *} \${w##* }; done
 expect "See through" on
 said_is "Framing: the walls as their frames, with the joists, rafters, beams and posts, the rest of the house shown as glass, sizes on."
-tags
+tags; boxes
 shot                                    # 05 framing: joists, rafters, beam and posts
 trade Foundation
 for w in "Ground off" "Framing off" "Sizes on" "Mechanical off"; do expect \${w% *} \${w##* }; done
 expect "See through" on
 said_is "Foundation: the ground taken away, the footings and foundation walls solid and the house above them shown as glass, sizes on."
-tags
+tags; boxes
 shot                                    # 06 foundation
 trade Outside
 for w in "Ground on" "Finishes on" "Framing off" "Roof on" "Sizes off" "Mechanical on" "Plumbing on"; do expect \${w% *} \${w##* }; done
 expect "See through" off
 said_is "Outside: the house as it will be built."
-tags
+tags; boxes
 shot                                    # 07 outside
 trade Inside
 for w in "Roof off" "Finishes on" "Sizes off"; do expect \${w% *} \${w##* }; done
 expect "Level" "first floor"
 expect "See through" off
 said_is "Inside: the roof off and the level looked into, with its finishes."
-tags
+tags; boxes
 shot                                    # 08 inside
 trade All
 STEP=All; grep -P '^state' "\$PLUMBLINE_MAP" > "\$T/state-all.txt"
@@ -149,7 +151,7 @@ shot                                    # 09 all: as it was
 # Sizes by itself, over the house as it will be built: the work inside is not tagged, and it says so.
 STEP=sizes-alone; on "Show Sizes"; sleep 5
 said_is "Sizes: switched on. The work inside is tagged when the house is seen through (X) or its frame is shown."
-tags
+tags; boxes
 on "Show Sizes"; sleep 3
 # A far view of the plumbing: a run is never thinner than two dots.
 trade Plumbing
@@ -161,7 +163,7 @@ trade All
 on "Frame"; sleep 10                    # the view comes back to the house
 # Each clash says its room, on the model and on the sheet.
 STEP=clashes; on "Show Clashes"; sleep 8; park
-tags
+tags; boxes
 shot                                    # 11 the clashes marked, each saying its room
 sheet "Clashes"; sleep 6; park
 shot                                    # 12 the sheet's list of clashes: room first
@@ -258,11 +260,31 @@ import colorsys
 def hsv(p):
     h, s, v = colorsys.rgb_to_hsv(*[x / 255 for x in p]); return h * 360, s, v
 HOUSE = (400, 300, 1180, 780)
-def kinds(n):
+def tag_boxes(step):
+    """Each tag's box on the picture, from the map: its place (the middle) and its size."""
+    try:
+        rows = [l.rstrip("\n").split("\t") for l in open(f"{td}/boxes-{step}.txt")]
+        at = {r[1][4:]: (int(r[2]), int(r[3])) for r in (l.rstrip("\n").split("\t") for l in open(f"{td}/tags-{step}.txt")) if len(r) == 4}
+    except OSError:
+        return []
+    out = []
+    for r in rows:
+        if len(r) >= 5 and r[2][4:] in at:
+            x, y = at[r[2][4:]]
+            out.append((x - int(r[3]) / 2 - 2, y - int(r[4]) / 2 - 2, x + int(r[3]) / 2 + 2, y + int(r[4]) / 2 + 2))
+    return out
+def kinds(n, step=None, masked=True):
     """Pipe (cold water, vent: cyan and green), duct (blue) and wire (orange) pixels in the house's box,
     the pale ones: the tags' own dots are saturated and are left out."""
     c = {"pipe": 0, "duct": 0, "wire": 0}
-    for p in pixels(n, HOUSE):
+    # call 232, point 5(b): the count is of wires drawn; a tag's own swatch is not a wire, so the tags' boxes are left out
+    skip = tag_boxes(step) if step and masked else []
+    im = Image.open(f"{out}/{n:02d}-model.png").convert("RGB")
+    for xx in range(HOUSE[0], HOUSE[2]):
+      for yy in range(HOUSE[1], HOUSE[3]):
+        if any(b[0] <= xx <= b[2] and b[1] <= yy <= b[3] for b in skip):
+            continue
+        p = im.getpixel((xx, yy))
         h, s, v = hsv(p)
         if not (0.30 < s < 0.85 and v > 0.35):
             continue
@@ -270,7 +292,8 @@ def kinds(n):
         elif 200 <= h < 260: c["duct"] += 1
         elif 15 <= h < 60: c["wire"] += 1
     return c
-pl, hv, el = kinds(7), kinds(8), kinds(9)
+pl, hv, el = kinds(7, "Plumbing"), kinds(8, "HVAC"), kinds(9)
+print("    (call 232, point 5(b) the wire-coloured dots: plumbing %d with the tags' boxes left out, %d without; HVAC %d, %d; as opened, no tags: %d, %d)" % (pl["wire"], kinds(7, "Plumbing", False)["wire"], hv["wire"], kinds(8, "HVAC", False)["wire"], kinds(1, "opened")["wire"], kinds(1, "opened", False)["wire"]))
 def gone(c, ref): return c < 0.1 * ref and c < 100
 check("07 plumbing: pipe colour present", pl["pipe"], pl["pipe"] >= 150, "at least 150 pipe pixels")
 check("   and no duct colour", pl["duct"], gone(pl["duct"], hv["duct"]), "under a tenth of the HVAC picture's, %d" % hv["duct"])

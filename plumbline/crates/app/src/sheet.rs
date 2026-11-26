@@ -10,7 +10,7 @@ use bevy::picking::pointer::PointerButton;
 use bevy::prelude::*;
 
 use crate::model::{Doc, Entry, Snapshot, Tab, Tone};
-use crate::panels::{amount, one_line, pretty, shown, tally_chips, tone_ink, total, wordmark, Cameras, Scrolls};
+use crate::panels::{amount, pretty, shown, tone_ink, total, Cameras, Scrolls};
 use crate::theme::{self, rounded, status_chip, swatch, text, Fonts, Weight};
 use plumbline_world::value::Status;
 use plumbline_world::{units, view, Discipline, Kind};
@@ -19,6 +19,29 @@ use plumbline_world::{units, view, Discipline, Kind};
 /// of status at the foot: what scrolls shows between them.
 pub const HEAD_H: f32 = 102.0;
 pub const FOOT_H: f32 = 42.0;
+
+/// How many lines the estimate's tabs stand on in a window this wide (dots) at a lettering's scale: each tab is its padding, its name and its count
+/// (`tabs` is each one's letters and the digits of its count), and the row wraps where the next would not fit (call 224, point 1). The
+/// lettering scales everything with it, so the room is the window's width over the scale.
+pub fn tab_lines(tabs: &[(usize, usize)], window: f32, scale: f32) -> usize {
+    // A tab is its padding (8 each side), the gap to its count (5), the gap to the next (1), and its words at 12 and its count at 11 in the type the program
+    // uses (about 7.0 and 6.2 dots a letter and a digit).
+    let room = (window / scale.max(0.1) - 24.0).max(1.0);
+    let (mut lines, mut used) = (0usize, 0.0_f32);
+    for (letters, digits) in tabs {
+        let w = 22.0 + *letters as f32 * 7.0 + *digits as f32 * 6.2;
+        if lines == 0 || used + w > room {
+            lines += 1;
+            used = 0.0;
+        }
+        used += w;
+    }
+    lines
+}
+
+/// The estimate's row of tabs, with each tab's letters and the digits of its count: the map says how many lines the row should stand on.
+#[derive(Component)]
+pub struct TabRow(pub Vec<(usize, usize)>);
 
 #[derive(Component)]
 pub struct SheetWindow;
@@ -186,23 +209,20 @@ pub fn rebuild(mut commands: Commands, doc: Res<Doc>, snap: Res<Snapshot>, fonts
         commands.entity(e).despawn();
     }
     let fonts = &*fonts;
+    // As a plan the window is its plans and the controls over them.
+    if doc.second.mode != crate::second::Mode::Estimate {
+        crate::second::spawn_ui(&mut commands, &doc, &snap, fonts, &cameras);
+        return;
+    }
     // `min_width` 0: the sheet is as wide as its window and no wider, however long a line
     // of text in it is. Without it the window's own layout lets the sheet grow to fit its
     // longest line, and the right-hand columns fall off the edge.
     commands.spawn((Node { width: percent(100.0), max_width: percent(100.0), min_width: px(0.0), height: percent(100.0), flex_direction: FlexDirection::Column, overflow: Overflow::clip(), ..default() }, BackgroundColor(theme::canvas()), UiTargetCamera(cameras.sheet), SheetUi)).with_children(|root| {
-        // The sheet's own title bar.
-        // A round card lifted off the page, as the model window's bar is, with the job's
-        // name in it (it said "Sheet", which is this program's word and nobody's job).
-        root.spawn((rounded(Node { height: px(44.0), flex_shrink: 0.0, margin: UiRect { left: px(theme::GAP), right: px(theme::GAP), top: px(theme::GAP), bottom: px(0.0) }, padding: UiRect::horizontal(px(14.0)), align_items: AlignItems::Center, column_gap: px(12.0), border: UiRect::all(px(1.0)), overflow: Overflow::clip(), ..default() }, theme::PANEL_RADIUS), BackgroundColor(theme::panel()), BorderColor::all(theme::hairline()), theme::card_shadow())).with_children(|bar| {
-            wordmark(bar, fonts);
-            bar.spawn((Node { width: px(1.0), height: px(22.0), margin: UiRect::horizontal(px(4.0)), flex_shrink: 0.0, ..default() }, BackgroundColor(theme::hairline())));
-            bar.spawn((theme::name(fonts, one_line(&snap.title, 44), 13.5, Weight::Semibold, theme::ink()), TextLayout::no_wrap()));
-            bar.spawn(Node { flex_grow: 1.0, ..default() });
-            tally_chips(bar, fonts, snap.tally);
-        });
+        crate::second::title_card(root, fonts, &doc, &snap);
         // The tabs.
         // The tabs lie on the page itself, under the card: no strip behind them.
-        root.spawn((Node { flex_shrink: 0.0, padding: UiRect::axes(px(12.0), px(8.0)), column_gap: px(1.0), overflow: Overflow::clip(), ..default() }, BackgroundColor(Color::NONE))).with_children(|tabs| {
+        // The row wraps onto a second line where a tab would not fit: a tab out of sight is a tab nobody finds (call 224, point 1).
+        root.spawn((TabRow(Vec::new()), Node { flex_shrink: 0.0, flex_wrap: FlexWrap::Wrap, padding: UiRect::axes(px(12.0), px(8.0)), column_gap: px(1.0), row_gap: px(2.0), ..default() }, BackgroundColor(Color::NONE))).with_children(|tabs| {
             // The estimate first: it is what the job is for. Then what is to verify and
             // what clashes; then the takeoff, by what was taken off.
             // (An allowance carried in the price is on the estimate too: a job priced only by
@@ -223,6 +243,17 @@ pub fn rebuild(mut commands: Commands, doc: Res<Doc>, snap: Res<Snapshot>, fonts
             for d in [Discipline::Mechanical, Discipline::Electrical, Discipline::Plumbing] {
                 all.push((Tab::Of(d), theme::discipline_name(d).to_string(), snap.counts.iter().find(|c| c.0 == d).map(|c| c.1).unwrap_or(0)));
             }
+            // What the row will hold, for the map to say how many lines it should stand on.
+            let mut held: Vec<(usize, usize)> = Vec::new();
+            for (tab, name, count) in &all {
+                let unpriced = *tab == Tab::Estimate && snap.pricing.as_ref().is_some_and(|p| p.not_priced.iter().any(|(k, n)| k.is_placed() && *n > 0));
+                if *count == 0 && doc.tab != *tab && *tab != Tab::Layouts && !unpriced {
+                    continue;
+                }
+                held.push((name.chars().count(), count.to_string().len()));
+            }
+            let row = tabs.target_entity();
+            tabs.commands_mut().entity(row).insert(TabRow(held));
             for (tab, name, count) in all {
                 let on = doc.tab == tab;
                 // A job with nothing under a tab does not offer it.
@@ -266,14 +297,19 @@ pub fn rebuild(mut commands: Commands, doc: Res<Doc>, snap: Res<Snapshot>, fonts
             notes(body, fonts, &snap);
             cost_lines(body, fonts, &snap);
         });
-        // The last thing that happened. It cannot push the sheet wider than its window.
-        // Written as the model window writes it, with its first letter a capital.
-        let first = crate::panels::bar_message(&doc, crate::panels::BAR_HOLDS);
-        let (tone_dot, ink) = if first.is_empty() { (theme::ink_faint(), theme::ink_soft()) } else { tone_ink(doc.tone) };
-        root.spawn((rounded(Node { height: px(28.0), flex_shrink: 0.0, margin: UiRect { left: px(theme::GAP), right: px(theme::GAP), top: px(4.0), bottom: px(theme::GAP) }, padding: UiRect::horizontal(px(14.0)), align_items: AlignItems::Center, column_gap: px(9.0), border: UiRect::all(px(1.0)), overflow: Overflow::clip(), ..default() }, theme::BUTTON_RADIUS + 6.0), BackgroundColor(theme::panel()), BorderColor::all(theme::hairline()), theme::card_shadow())).with_children(|bar| {
-            bar.spawn((rounded(Node { width: px(7.0), height: px(7.0), flex_shrink: 0.0, ..default() }, 4.0), BackgroundColor(tone_dot)));
-            bar.spawn(Node { flex_grow: 1.0, flex_basis: px(0.0), min_width: px(0.0), overflow: Overflow::clip(), ..default() }).with_children(|m| words(m, fonts, first, 12.0, Weight::Regular, ink));
-        });
+        foot(root, fonts, &doc);
+    });
+}
+
+/// The last thing that happened, along the foot of the window. It cannot push the sheet wider than its window.
+pub fn foot(root: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc) {
+    // The last thing that happened. It cannot push the sheet wider than its window.
+    // Written as the model window writes it, with its first letter a capital.
+    let first = crate::panels::bar_message(doc, crate::panels::BAR_HOLDS);
+    let (tone_dot, ink) = if first.is_empty() { (theme::ink_faint(), theme::ink_soft()) } else { tone_ink(doc.tone) };
+    root.spawn((rounded(Node { height: px(28.0), flex_shrink: 0.0, margin: UiRect { left: px(theme::GAP), right: px(theme::GAP), top: px(4.0), bottom: px(theme::GAP) }, padding: UiRect::horizontal(px(14.0)), align_items: AlignItems::Center, column_gap: px(9.0), border: UiRect::all(px(1.0)), overflow: Overflow::clip(), ..default() }, theme::BUTTON_RADIUS + 6.0), BackgroundColor(theme::panel()), BorderColor::all(theme::hairline()), theme::card_shadow())).with_children(|bar| {
+        bar.spawn((rounded(Node { width: px(7.0), height: px(7.0), flex_shrink: 0.0, ..default() }, 4.0), BackgroundColor(tone_dot)));
+        bar.spawn(Node { flex_grow: 1.0, flex_basis: px(0.0), min_width: px(0.0), overflow: Overflow::clip(), ..default() }).with_children(|m| words(m, fonts, first, 12.0, Weight::Regular, ink));
     });
 }
 
@@ -810,7 +846,7 @@ fn layouts(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
             let files: Vec<&(String, String)> = doc.jobs_here.iter().filter(|(n, _)| setting && !doc.beside.iter().any(|b| b.file == *n) || doc.opening_layout).collect();
             c.spawn(text(fonts, if setting { "PICK THE LAYOUT, FROM THIS JOB'S FOLDER" } else { "PICK THE JOB TO OPEN, FROM THIS JOB'S FOLDER" }, 11.0, Weight::Semibold, theme::ink_faint()));
             if doc.opening_layout && doc.edited {
-                c.spawn(text(fonts, "This job has changes that are not saved: Save first (Ctrl+S), then pick.", 12.0, Weight::Regular, theme::amber()));
+                c.spawn(text(fonts, format!("This job has changes that are not saved: Save first ({}), then pick.", crate::screen::command_key('s')), 12.0, Weight::Regular, theme::amber()));
             }
             if files.is_empty() {
                 c.spawn(text(fonts, "No other job is kept here. Keep this one as another layout, then pick it.", 12.0, Weight::Regular, theme::ink_faint()));
@@ -1674,4 +1710,36 @@ fn cost_lines(p: &mut ChildSpawnerCommands, fonts: &Fonts, snap: &Snapshot) {
             }
         }
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The sample house's tabs: Estimate 4 digits, Budget, Verify in field, Clashes, Layouts, Building, Roof, Mechanical, Electrical, Plumbing.
+    fn sample() -> Vec<(usize, usize)> {
+        vec![(8, 3), (6, 2), (15, 2), (7, 2), (7, 1), (8, 2), (4, 2), (10, 2), (10, 2), (8, 2)]
+    }
+
+    #[test]
+    fn the_tabs_of_the_sample_house_wrap_onto_a_second_line_at_880_and_stand_on_one_in_a_wide_window() {
+        assert_eq!(tab_lines(&sample(), 880.0, 1.0), 2, "ten tabs do not fit in 880");
+        assert_eq!(tab_lines(&sample(), 2000.0, 1.0), 1);
+        assert_eq!(tab_lines(&[], 880.0, 1.0), 0, "no tabs, no line");
+        assert_eq!(tab_lines(&[(8, 3)], 880.0, 1.0), 1);
+    }
+
+    #[test]
+    fn larger_lettering_wraps_the_tabs_onto_more_lines_and_none_is_ever_cut_off() {
+        let mut last = 0;
+        for scale in [1.0, 1.15, 1.3, 1.5] {
+            let n = tab_lines(&sample(), 880.0, scale);
+            assert!(n >= last && n >= 2, "scale {scale}: {n} lines after {last}");
+            last = n;
+        }
+        // (Worked by hand: at the largest step the room is 880 / 1.5 - 24 = 562 units; the tabs come to 931, which lay in two lines of 473 and 452.)
+        assert_eq!(last, 2, "at the largest lettering the row is still two lines");
+        // A window only as wide as the least one still lays every tab on some line: a line is at least one tab.
+        assert!(tab_lines(&sample(), 880.0, 1.5) <= sample().len());
+    }
 }

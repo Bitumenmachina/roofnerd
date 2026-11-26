@@ -457,6 +457,8 @@ pub struct Doc {
     pub scan_side: Option<(String, bool, u64)>,
     /// How the main window is at the moment: its width, the panels folded by it, the lettering (call 222). Never saved in the job.
     pub fit: crate::screen::Fit,
+    /// What the second window shows and how each plan in it is looked at: a way of looking, never saved with the job (call 222, point 12).
+    pub second: crate::second::Second,
     /// Work found beside the job that was never saved, offered on opening (call 222, point 6).
     pub recovered: crate::screen::Offer,
 }

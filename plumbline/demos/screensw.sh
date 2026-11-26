@@ -16,6 +16,9 @@
 #   g  "Leave it": the job as last saved, the recovered work left beside it until Save           (step 7)
 #   f  work never lost: a wall and a door, not saved; stopped dead; opened again; taken; left; saved
 #                                                                                         (step 7)
+#   h  the same three screens under a window manager (openbox, with tint2 for the desktop's bar: outside programs, run and never linked,
+#      as the IFC checker is): each window with its title bar, measured: what the title bar and the desktop's bar take, beside the
+#      72 dots allowed for them (call 224, point 5)
 # Run from the repository root:  [PLUMBLINE_BIN=<folder>] [ONLY="a b c d e f"] [STATE=<folder>] demos/screensw.sh [pictures]
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -28,7 +31,7 @@ ICD="${VK_ICD_FILENAMES:-/usr/share/vulkan/icd.d/lvp_icd.json}"
 if [ -n "${PLUMBLINE_BIN:-}" ]; then echo "using the program in $PLUMBLINE_BIN, not building"; else cargo build --quiet; fi
 P="${PLUMBLINE_BIN:-$PWD/target/debug}/plumbline"; APP="${PLUMBLINE_BIN:-$PWD/target/debug}/plumbline-app"
 OUT="${1:-$PWD/demos/captured/screensw}"; mkdir -p "$OUT"
-ONLY="${ONLY:-a b c d e f g}"
+ONLY="${ONLY:-a b c d e f g h}"
 if [ -n "${STATE:-}" ]; then T="$STATE"; mkdir -p "$T"; else T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT; fi
 wants() { case " $ONLY " in *" $1 "*) return 0;; *) return 1;; esac; }
 J="$T/house.json"
@@ -154,6 +157,35 @@ cp "$W" "$T/g-left-saved.json"; ls -l "$T"/left.json* > "$T/g-ls.txt" 2>&1 || tr
 close_window
 STEPS
 
+# --- h: under a window manager (call 224, point 5): each of the three screens, each window with its title bar and the desktop's bar
+for s in 1 2 3; do cat > "$T/steps-h$s.sh" <<'STEPS'
+export PLUMBLINE_SETTINGS="$T/settings-$NAME.txt"; rm -f "$PLUMBLINE_SETTINGS"
+openbox > "$T/wm-$NAME.log" 2>&1 &
+WM_PID=$!
+sleep 4
+tint2 > "$T/bar-$NAME.log" 2>&1 &
+BAR_PID=$!
+sleep 6
+open_window "$JOB"
+settle 10
+# What the display has: each window's frame (the title bar and the edges the manager gave it), and the room the desktop leaves.
+for w in model sheet; do
+  id="$(xdotool search --name "BuildOS: $w" | head -1)"
+  eval "$(xdotool getwindowgeometry --shell "$id")"
+  xprop -id "$id" _NET_FRAME_EXTENTS > "$T/fx-$NAME-$w.txt" 2>&1 || true
+  echo "$X $Y $WIDTH $HEIGHT" > "$T/gw-$NAME-$w.txt"
+  # the frame itself, as the display has it (xdotool's own position for a framed window is not the frame's)
+  xwininfo -frame -id "$id" | awk '/Absolute upper-left X/ {x=$4} /Absolute upper-left Y/ {y=$4} /Width:/ {w=$2} /Height:/ {h=$2} END {print x, y, w, h}' > "$T/ow-$NAME-$w.txt"
+done
+xprop -root _NET_WORKAREA > "$T/work-$NAME.txt" 2>&1 || true
+keep_map open
+park; shot
+import -window root "$OUT/desktop.png" 2>/dev/null || true
+close_window
+kill "$BAR_PID" "$WM_PID" 2>/dev/null || true
+STEPS
+done
+
 wants a && session a 2560x1440
 wants b && session b 1920x1080
 wants c && session c 1366x768
@@ -161,6 +193,7 @@ wants d && session d 2560x1440
 wants e && session e 2560x1440
 wants f && session f 2560x1440
 wants g && session g 2560x1440
+wants h && { session h1 2560x1440; session h2 1920x1080; session h3 1366x768; }
 
 if wants f && [ -s "$T/f-taken-saved.json" ]; then
   # The job the command line makes by drawing the same wall and door, from the places the window's job holds.
@@ -276,6 +309,26 @@ if "g" in ONLY:
     ok(lf is not None and lf == base, "Leave it: the job saved after is the job as it was last saved, byte for byte")
     ok(not os.path.exists(f"{T}/left.json.recovery"), "and after that Save there is no recovery copy")
     lm = m(f"{T}/m-g-left.txt"); ok(("model", "Leave it") not in lm["ctl"], "the offer is gone once it is answered")
+if "h" in ONLY:
+    import re as _re
+    screens_h = {"h1": (2560, 1440), "h2": (1920, 1080), "h3": (1366, 768)}
+    for s, sc in screens_h.items():
+        def ext(w):
+            try: n = [int(x) for x in _re.findall(r"\d+", open(f"{T}/fx-{s}-{w}.txt").read())]
+            except OSError: return None
+            return n if len(n) == 4 else None
+        def geo(w): return g(f"{T}/gw-{s}-{w}.txt")
+        try: wa = [int(x) for x in _re.findall(r"\d+", open(f"{T}/work-{s}.txt").read())][:4]
+        except OSError: wa = None
+        for w in ("model", "sheet"):
+            e, r = ext(w), geo(w)
+            if e is None or r is None or wa is None or len(wa) < 4:
+                ok(False, f"{s}: the {w} window's frame and the desktop's room were measured ({e} {r} {wa})"); continue
+            left, right, top, bottom = e
+            outer = g(f"{T}/ow-{s}-{w}.txt") or (r[0] - left, r[1] - top, r[2] + left + right, r[3] + top + bottom)
+            ok(outer[0] >= wa[0] and outer[1] >= wa[1] and outer[0] + outer[2] <= wa[0] + wa[2] and outer[1] + outer[3] <= wa[1] + wa[3], f"{s}: the {w} window with its title bar {outer} is whole on the desktop's room {tuple(wa)} of the screen {sc}")
+            print(f"        {s} {w}: title bar {top} dots, edges {left} and {right}, foot {bottom}")
+        print(f"        {s}: the desktop's bar takes {sc[1] - wa[3] - wa[1] if wa else '?'} dots at the foot or head of the screen {sc}; the program allows 72")
 print("PASS" if not bad else "FAIL: " + "; ".join(bad))
 sys.exit(1 if bad else 0)
 PY

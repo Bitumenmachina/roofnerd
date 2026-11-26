@@ -41,6 +41,7 @@ pub fn write(
     windows: Query<(&Window, Has<PrimaryWindow>)>,
     ui: Res<UiScale>,
     kept: Res<crate::screen::Kept>,
+    tab_row: Query<&crate::sheet::TabRow>,
     glass_pictures: Query<&RenderTarget, With<crate::glass::Behind>>,
     images: Res<Assets<Image>>,
     camera: Query<(&Camera, &GlobalTransform, &Projection), With<MainCamera>>,
@@ -346,6 +347,11 @@ pub fn write(
         if let Some(picture) = images.get(&behind.handle) {
             out.push_str(&format!("glass\t{}\t{}\t{}\t{}\n", picture.width(), picture.height(), window.physical_width(), window.physical_height()));
         }
+    }
+    out.push_str(&crate::second::map_lines(&doc, &snap, sheet.0));
+    // How many lines the estimate's row of tabs should stand on at this width and lettering (call 224, point 1).
+    if let Ok(row) = tab_row.single() {
+        out.push_str(&format!("tabs\t{}\t{}\n", row.0.len(), crate::sheet::tab_lines(&row.0, sheet.1.x, s)));
     }
     out.push_str(&sizes);
     out.push_str(&spoken);
