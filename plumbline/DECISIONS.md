@@ -10457,3 +10457,52 @@ and merged with the command line's work at baf6684.
    window; the drag's one odd reading run down if it shows again; a judge who
    did not build any of it on how the two windows feel (calls 218, 222, 232).
 
+### Call 235. Patrick, 2026-11-26: "Do you own the codebase ?"; and call 233's held work ruled and taken up
+
+The worker of contract 233M handed back with one existing test failing by the
+call's design, and said its own attempt to edit that test had been refused by
+the permission check on its tool call. The lead did not make that edit on the
+agent's report, held the work, and told Patrick it was the one thing waiting
+on him. He asked what was waiting, was told, and answered: **"Do you own the
+codebase ?"**
+
+How it is read. Yes: CLAUDE.md says so in its first lines, and call 217 has
+the lead making the calls. An expectation of a test or a demonstration is the
+lead's to move, with the decision written first. What stays as it was: an
+edit an agent was refused is never made on the agent's word alone; it is said
+to Patrick, in plain words, where it happens. This one was said to him and he
+sent it back to the lead, so it is taken up.
+
+Rulings on call 233's work, each with the reason beside it in the file:
+
+1. **`crates/world/tests/call205.rs`**: the test's example of an item drawn as
+   a box was "Range, 30 in"; call 233 gives the range a shape, so the example
+   is **W1230**, a wall box, which is still a box. Nothing else in the test
+   moves: keeping the shape of an item drawn as a box is still refused, naming
+   the item and saying "box".
+2. **A size no published page gave says so.** Call 233 said such a size is
+   Unknown; the worker wrote six of them Assumed with the words of a sourced
+   size, because an item with no depth cannot be drawn or set down. Assumed is
+   right (a plate has a thickness and somebody has to say one); the words were
+   not. Those six say **"an assumption: no published size was found"**: the
+   depth of the receptacle, the switch, the supply register and the return
+   grille; the height of the ceiling light and the recessed light.
+3. **Three demonstrations moved by more than a count, and stand**: the
+   checksum of a saved job that holds the starter chest (`cabinet-rules.sh`;
+   the worker showed the old chest still gives the old checksum), and the
+   numbers in the names of things made after the chest, which are nine higher
+   because nine items were added before them (`itemcost.sh`,
+   `judged-1125.sh`). A name of a thing is not a figure of the job.
+4. **Fourteen kinds were added to the program's list of forms** because the
+   window draws a starter shape only through that list. Accepted, and **owed**:
+   a starter shape drawn from its rows like a job's own, so that a new shape is
+   rows and nothing else (call 203's promise). Until then a shape added to the
+   table by a user is drawn from its rows (that road exists); only the
+   program's own starter shapes take the list.
+5. **A washer's door is square**: a block cannot be a round lying on its side.
+   Owed with point 4.
+6. **The window's own counts of the chest** (`cabinetsw.sh`, `turnw.sh`,
+   `itemlibw.sh`: "48 items") move to 57 when the window is next built on this,
+   by the lead, and are run then; the window's "Drawn as" list now has 27
+   choices and its room for them is looked at then.
+
