@@ -14,3 +14,8 @@ hayro = "0.9.0"
 hayro-cmap = "0.1.1"
 # PNG and JPEG pictures of plans, and aerial pictures.
 image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
+# TIFF pictures of plans (call 227), the image-rs project's own reader of the format (MIT; its three small
+# crates are fax (MIT), weezl (MIT OR Apache-2.0) and quick-error (MIT/Apache-2.0); tools/licenses.sh passes with
+# them). Read directly, not through `image`, because `image` hands out the first page of a file only and a scanned
+# set is one TIFF of many pages. Packings read: none, LZW, deflate, PackBits, CCITT group 4, JPEG in a strip.
+tiff = "0.11"

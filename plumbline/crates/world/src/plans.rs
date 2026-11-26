@@ -64,6 +64,11 @@ pub struct Drawing {
     /// PDF or a picture, and for a CAD drawing with every layer on; a job saved before this was kept reads as it did.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub layers_off: Vec<String>,
+    /// The measured marks on the page of a PDF that was marked up, kept as drawn so that they can be shown over the sheet and
+    /// their corners caught (call 227). Empty for a picture, a CAD drawing and a PDF with no marks; a job saved before
+    /// this was kept reads as it did, and a drawing with none is written as it was.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub marks: Vec<crate::marks::MarkShape>,
 }
 
 /// A place on a drawing's page and the place on the plan, in feet, it was said to be.
@@ -286,6 +291,9 @@ pub fn check(path: &str, kind: Kind, d: &Drawing) -> Result<(), String> {
     if d.layers_off.iter().any(|l| l.trim().is_empty() || l.chars().any(char::is_control)) {
         return Err(format!("{path}: a layer is switched off by a name that is not usable"));
     }
+    for m in &d.marks {
+        crate::marks::check_shape(path, m)?;
+    }
     if let Some(l) = &d.lined_up {
         if !l.page.iter().chain(&l.plan).all(|x| x.is_finite() && x.abs() <= crate::check::MAX_COORDINATE_FT * 1.0e3) {
             return Err(format!("{path}: what it was lined up by is not two usable points"));
@@ -367,6 +375,7 @@ pub fn add(job: &mut Job, storey: &str, name: &str, read: Read, how: Entered) ->
             lined_up: None,
             earlier: Vec::new(),
             layers_off: Vec::new(),
+            marks: Vec::new(),
         };
         let path = job.add(storey, Kind::Drawing, name)?;
         check(&path, Kind::Drawing, &drawing)?;

@@ -12101,7 +12101,23 @@ sheet's scale. By hand (the worker says where a figure is wrong):
    packing's name.
 10. `plumbline sixteen` writes the job it wrote, byte for byte.
 
-Not built yet.
+**Built (2026-11-26; the worker's, checked by the lead's own run of its copy:
+1,259 command-line tests, 64 command-line demonstrations with no FAIL in any, the
+three gates, the port map, the licences, the sample whole house byte for byte).**
+`demos/marks.sh` passes. **Changed from the steps above by call 231**: a count
+is brought in only with `--counts`, so step 3 brings **five** lines and says one
+label of four symbols was left; a step added brings the count (six lines), and
+steps 4 to 6 run with it. None of the hand figures above was wrong. The refusal
+of a file that is no drawing now names TIFF and DXF (two expectations moved,
+marked in their files). The TIFF reader is the picture project's own (MIT),
+linked for its many pages; packings it does not read are refused by name.
+**Not confirmed, and said**: which keys a marking program writes a mark's label
+and figure to (QUESTIONS.md Q36); the standard was read in an English rendering
+of its text, not from the standard's own document. Not right: the heading over
+the marks' lines is printed by `estimate` and the window does not show it yet; a
+line somebody renamed is added again when the file is brought in again; a scale
+set for part of a sheet, a metric figure and a curved edge are named and left
+out; the window has no entry for marks or for a TIFF's page yet.
 
 ## Clashes handed over as an issue list: a demonstration, written before it is built (call 228; 2026-11-26)
 

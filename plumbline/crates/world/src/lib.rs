@@ -36,6 +36,7 @@ pub mod geom;
 pub mod hidden;
 pub mod job;
 pub mod lines;
+pub mod marks;
 pub mod paper;
 pub mod pricelist;
 pub mod plan_set;

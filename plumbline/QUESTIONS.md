@@ -496,3 +496,14 @@ is done again.
 able to make the calls". Q32 is his own ruling: two windows stay, and the second
 can show plans. Q31 is withdrawn and is not raised again. Q30, Q33, Q34 and Q35
 are the lead's calls and are written in call 217.
+
+## Q36. A marked-up PDF of his own, made safe, to settle how marks are read (2026-11-26, call 231)
+The marks on a marked-up PDF are read to the PDF standard (DECISIONS.md call
+227). Which keys the marking program he uses writes a mark's label and figure
+to, and whether it writes a count as placed symbols, is not confirmed against a
+file that program wrote: none may be in the repository unless it is his and
+made safe. One marked page with a length, an area and a count on it, with
+nothing of a real job on it, placed in `refs/`, would settle it. **Nothing waits
+on this.** Working assumption: the standard's keys as read; a count only when
+asked for.
+

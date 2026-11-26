@@ -10174,3 +10174,32 @@ maker's help pages, which say what a person sees and nothing of what is stored.
    curved edge are named and left out; the marks have no picture of their own
    in the made-up file, so another PDF reader shows the page without them.
 
+### Call 227, as built: marks on a PDF read as quantities; a TIFF as a plan (2026-11-26)
+
+The worker's work under contract 227M (`research/worker-report-call227M.md`,
+`research/pdf-marks.md`), with call 231's rulings applied, checked by the lead's
+own run of its copy (1,259 command-line tests: model 734, command line 78,
+sheets 7, model files 111, roofing 122, plans 207; 64 command-line
+demonstrations; gates, port map, licences; the sample whole house byte for
+byte) and by the lead reading the list and the bringing-in as a person would.
+
+1. **`plumbline marks <pdf> [--page n]`** lists a page's marks in its own order:
+   a length, a run of lengths, an area, a count of symbols by label, a note;
+   each with what the mark says, what its points work out to at the scale it
+   carries, and where it is on the sheet in inches. A mark whose two figures
+   differ by more than a hundredth is flagged with both.
+2. **`plumbline import marks <job> <pdf> [--page n] [--counts]`**: each measured
+   mark a line on the job, Assumed, its source naming the mark, the page and
+   the file; no price, no division, and said so. Again: the same, moved (with
+   what it was), or gone from the file (its line left). A line somebody
+   measured Known is left alone and said.
+3. **The notes are read with the PDF crate already linked**; no new one.
+4. **`drawing add` keeps a page's marks with the drawing** (the window's half
+   will show them); a page with none leaves the job byte for byte as before.
+5. **TIFF** is a picture of a plan: one page or `--page n`; read through the
+   picture project's own TIFF crate (MIT, with three small permissive crates),
+   linked directly because the picture crate hands out only the first page.
+6. **Unread and named, never nought**: a curved edge, no scale, a scale for part
+   of a sheet, a figure in a unit not held, no figure.
+7. Call 231 has what is not confirmed and what is owed.
+
