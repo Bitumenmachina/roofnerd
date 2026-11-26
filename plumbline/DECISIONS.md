@@ -9622,3 +9622,60 @@ sample whole house unchanged to the byte.
    three things rest on common knowledge of the format and not on a page that
    was opened (the bytes a Revit file begins with, that an arc's angles are in
    degrees, a dimension's codes), each pinned by a test.
+
+### Call 218, as built: how the window moves (2026-11-26)
+
+Built by a Sonnet window builder under `handoff/contracts/contract-218W.md`
+(`research/worker-report-call218W.md`), in two rounds, merged with everything
+pushed since and pushed at 80ff75a: 1,197 tests in the seven crates (window 69,
+model 672, command line 45, sheets 6, model files 111, roofing 122, plans 172)
+and the three gates. `demos/navw.sh` measures it from the view's own path,
+written frame by frame.
+
+1. **Macro to micro on one wheel.** The wheel runs out to three times the
+   distance the job is framed at, where the house is a tenth to a fifth of the
+   window's width on its lot (the made-up house: 278 ft, 280 of 1,600 dots), and
+   in to 8 in from a thing. What is drawn near and far follows the distance, so
+   nothing is cut away at either end. From the lot to the kitchen receptacle is
+   about 58 notches; the receptacle stays within 1.4 dots of the pointer at every
+   notch (measured; the limit asked was 3) and fills 824 of the window's 960
+   dots at the end. The view never goes under the ground and stops at a wall's
+   face unless the walls are see-through.
+2. **A house on its lot at the far end** (second round; the first was a speck in
+   haze): ground lines fading outward, a soft sky, the house with its shadow.
+3. **Tilt as it dives**: from 60 degrees to 10 over the dive, never going back,
+   righting itself on the way out; a switch on the view bar ("Tilt as I dive")
+   leaves it at 60. On plan it does not tilt.
+4. **The name and size of what the dive is on show with no layer switched on**
+   (second round): the thing selected, or filling the middle of the view.
+5. **Pans, turns, flights**: a corner dragged at a tilt stays within half a dot
+   of the pointer and a flick carries on 87 dots; Shift and the left button turn
+   exactly as the right button does, and a ring marks the place turned about; a
+   double-click flies in 0.4 to 1.2 s by distance, its speed rising then
+   falling, ending with the thing between a third and two thirds of the window
+   (the front door: 0.81 s, 0.44); a hand taking over mid-flight never sends the
+   view backward; F frames what is selected, or the house.
+6. **A north arrow**, 84 dots across with N at its point: a click turns the view
+   north-up where it stands, a double-click looks straight down.
+7. **Levels glide** (17 frames, back to the inch); plan to 3D and back as one
+   move.
+8. **Found and fixed on the way**: the flights call 63 specified had never been
+   built (a double-click only set where to go); a flight's first frame jumped a
+   quarter of the way and came back; the north arrow's double-click was lost
+   because its state was kept on a card redrawn at every click.
+9. **Checked by the lead's own runs on a frozen build of 80ff75a, each passing
+   on its first run**: `navw` (seven sessions), `glassw`, `movew`, `moneyw`,
+   `bringw`, `pricew`, `trimw`, `benchw`, `dressw`, `shapebenchw`, `fixes209w`.
+   **Not run on that build**: `fixes197w`, `itemlibw`, `itemneww`, `cabinetsw`,
+   `gablew`, `gableendw`, `tradesw`. The lead's runs were keeping both builders
+   off the machine; those seven run on the next merge, which holds this code.
+   `tools/committed.sh` has not been run on 80ff75a or later; it waits for the
+   same merge.
+10. Not right, and said: at the bottom of the dive a receptacle is a plain box
+    (shapes for small devices are owed, a table job); the dive cannot be aimed at
+    a receptacle from the lot, where it is smaller than a dot, so the
+    demonstration comes down over what is under the pointer and centres it on
+    the way; Page Down from "All levels" goes first to the foundation (older
+    than this work, left as it was, to be ruled); the curves are read with the
+    program's clock slowed by `PLUMBLINE_FRAME`, a setting for demonstrations.
+    **No model that did not build it has yet tried the feel.**

@@ -11562,7 +11562,26 @@ script reads those lines. By hand:
     the two heights) and ends where it began, within an inch.
 11. `demos/glassw.sh` passes unchanged: nothing it measures has moved.
 
-Not built yet.
+**Built (2026-11-26), merged and pushed at 80ff75a**: 1,197 tests and the three
+gates on the merge. The figures as measured, beside the ones written first:
+- Step 1: the wheel stops at 278 ft, not 400 (the limit follows the size of what
+  is built), where the house is 280 of the window's 1,600 dots: a house on its
+  lot.
+- Step 2: about 58 notches; the receptacle within 1.4 dots of the pointer at
+  every notch; it fills 824 of 960 dots at the end. The dive is not aimed at the
+  receptacle from the lot (it is smaller than a dot there): it comes down over
+  what is under the pointer and centres the receptacle on the way.
+- Step 4: 60.2 to 10.0 degrees, never back; with the switch off, 60.2 throughout.
+- Step 5: half a dot at the end of the drag; a flick carries 87 dots.
+- Step 6: 60.00 and -12.03 degrees both ways.
+- Step 7: 0.81 s; the door 0.44 of the window; no frame backward on take-over.
+- Step 9: the arrow's needle follows the view; north-up to 0.00 degrees.
+- Step 10: 17 frames; back to 0.0000 ft.
+- Step 11: `glassw` passes with its figures where they were.
+The lead ran eleven window demonstrations on a frozen build of 80ff75a, each
+passing first time; seven were not run on it and `tools/committed.sh` has not
+been run on it (DECISIONS.md, "Call 218, as built", point 9). No judge has
+tried the feel yet.
 
 ## How tools feel, the model's side: a demonstration, written before it is built (call 219; 2026-11-25)
 
