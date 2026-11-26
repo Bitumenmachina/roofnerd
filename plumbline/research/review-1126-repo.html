@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BuildOS Repo Review</title>
+<style>
+:root{
+  --bg:#f4f1ea; --panel:#fbfaf6; --ink:#1d2327; --soft:#5a6368; --line:#d9d3c5; --line2:#e8e3d7;
+  --blue:#1f4e79; --blue-bg:#e3ecf5;
+  --works:#1f6b3a; --works-bg:#dff0e3;
+  --partial:#8a5a00; --partial-bg:#f8ecc8;
+  --stub:#5b5f66; --stub-bg:#e6e6e3;
+  --broken:#a12a1f; --broken-bg:#f7dcd8;
+  --chk:#1f4e79; --inf:#7a4a8c; --inf-bg:#efe3f4;
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#14181b; --panel:#1b2125; --ink:#e7e4dc; --soft:#9aa3a8; --line:#333c42; --line2:#272e33;
+    --blue:#8fbbe6; --blue-bg:#1d2f41;
+    --works:#7fd39a; --works-bg:#173322;
+    --partial:#e8bf5e; --partial-bg:#3a2e10;
+    --stub:#b4b8be; --stub-bg:#2c3136;
+    --broken:#f08f84; --broken-bg:#43201c;
+    --chk:#8fbbe6; --inf:#cfa6e0; --inf-bg:#33243b;
+    color-scheme: dark;
+  }
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 var(--sans)}
+.wrap{max-width:1080px;margin:0 auto;padding:28px 20px 80px}
+header.sheet{border:2px solid var(--ink);background:var(--panel);display:grid;grid-template-columns:1fr auto;gap:0}
+header.sheet .t{padding:18px 20px}
+header.sheet h1{margin:0 0 4px;font-size:26px;line-height:1.15;letter-spacing:-.01em;text-wrap:balance}
+header.sheet p{margin:0;color:var(--soft)}
+.block{border-left:2px solid var(--ink);display:grid;grid-template-columns:auto auto;font:12px/1.35 var(--mono)}
+.block div{padding:6px 12px;border-bottom:1px solid var(--line)}
+.block div:nth-child(odd){color:var(--soft);text-transform:uppercase;letter-spacing:.06em;border-right:1px solid var(--line)}
+.block div:nth-last-child(-n+2){border-bottom:0}
+nav{display:flex;flex-wrap:wrap;gap:6px 14px;margin:14px 0 4px;font:13px var(--mono)}
+nav a{color:var(--blue);text-decoration:none;border-bottom:1px solid transparent}
+nav a:hover{border-bottom-color:var(--blue)}
+h2{font-size:19px;margin:38px 0 6px;padding-top:10px;border-top:2px solid var(--ink);display:flex;align-items:baseline;gap:10px}
+h2 .n{font:13px var(--mono);color:var(--soft)}
+h3{font-size:15px;margin:22px 0 6px}
+p{margin:8px 0;max-width:72ch}
+.note{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--blue);padding:10px 14px;margin:12px 0;max-width:none}
+.note.warn{border-left-color:var(--broken)}
+.note p{margin:4px 0;max-width:none}
+code,pre,.mono{font-family:var(--mono)}
+code{font-size:.92em;background:var(--line2);padding:1px 4px;border-radius:3px}
+pre{background:var(--panel);border:1px solid var(--line);padding:12px 14px;overflow-x:auto;font-size:12.5px;line-height:1.45;margin:10px 0}
+pre code{background:none;padding:0}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;background:var(--panel);border:1px solid var(--line);font-size:14px}
+th,td{text-align:left;vertical-align:top;padding:7px 10px;border-bottom:1px solid var(--line2)}
+th{font:11.5px var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--soft);border-bottom:1px solid var(--line);white-space:nowrap}
+tr:last-child td{border-bottom:0}
+td.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+td.path{font-family:var(--mono);font-size:12.5px;color:var(--soft);white-space:nowrap}
+.chip{display:inline-block;font:700 11px/1 var(--mono);letter-spacing:.05em;padding:4px 7px;border-radius:3px;white-space:nowrap}
+.WORKS{color:var(--works);background:var(--works-bg)}
+.PARTIAL{color:var(--partial);background:var(--partial-bg)}
+.STUB{color:var(--stub);background:var(--stub-bg)}
+.BROKEN{color:var(--broken);background:var(--broken-bg)}
+.CHECKED{color:var(--chk);background:var(--blue-bg)}
+.INFERRED{color:var(--inf);background:var(--inf-bg)}
+.legend{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:8px;margin:12px 0}
+.legend div{background:var(--panel);border:1px solid var(--line);padding:9px 12px;font-size:13.5px}
+.legend .chip{margin-bottom:5px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:14px 0}
+.tile{background:var(--panel);border:1px solid var(--line);padding:10px 12px}
+.tile b{display:block;font:600 24px/1.1 var(--mono);font-variant-numeric:tabular-nums}
+.tile span{font-size:12.5px;color:var(--soft)}
+.filters{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.filters button{font:12px var(--mono);padding:5px 10px;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:3px;cursor:pointer}
+.filters button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.bar{height:8px;background:var(--line2);min-width:90px;position:relative}
+.bar i{position:absolute;left:0;top:0;bottom:0;background:var(--blue)}
+.says{color:var(--soft)}
+ol.steps{padding-left:22px}
+ol.steps li{margin:6px 0;max-width:76ch}
+footer{margin-top:40px;padding-top:10px;border-top:1px solid var(--line);color:var(--soft);font-size:12.5px}
+@media (max-width:720px){
+  header.sheet{grid-template-columns:1fr}
+  .block{border-left:0;border-top:2px solid var(--ink)}
+  h1{font-size:22px}
+}
+@media print{ .filters,nav{display:none} body{background:#fff} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="sheet">
+  <div class="t">
+    <h1>BuildOS repo review</h1>
+    <p>The repo as it is at one commit. The state of each part. The conflicts with the working documents. The finished deliverable, and how you verify it.</p>
+  </div>
+  <div class="block">
+    <div>Repo</div><div>Bitumenmachina/roofnerd</div>
+    <div>Branch</div><div>claude/hopeful-cannon-kng8eo</div>
+    <div>Commit</div><div>b6dc2ab</div>
+    <div>Date</div><div>2026-11-26</div>
+    <div>Tracked files</div><div>1,844</div>
+    <div>Tag</div><div>none</div>
+  </div>
+</header>
+
+<nav>
+  <a href="#read">How to read</a>
+  <a href="#tree">1 Tree</a>
+  <a href="#types">2 Code types</a>
+  <a href="#state">3 State</a>
+  <a href="#conflicts">4 Conflicts</a>
+  <a href="#deliverable">5 Deliverable</a>
+  <a href="#verify">6 Verify</a>
+  <a href="#open">7 Not committed</a>
+</nav>
+
+<h2 id="read"><span class="n">0</span>How to read this page</h2>
+<p>This page uses one word for one thing. A <b>part</b> is a folder or a function of the repo. A <b>test</b> is a Rust test. A <b>demonstration</b> is a script in <code>plumbline/demos/</code> that operates the real program and checks the result. The <b>window</b> is the program with its two windows. The <b>command line</b> is the program <code>plumbline</code>.</p>
+<div class="legend">
+  <div><span class="chip WORKS">WORKS</span><br>All tests and all demonstrations of the part pass.</div>
+  <div><span class="chip PARTIAL">PARTIAL</span><br>The part does some of its functions. Other functions are not built or are not proven.</div>
+  <div><span class="chip STUB">STUB</span><br>The documents name the function. No code does the function.</div>
+  <div><span class="chip BROKEN">BROKEN</span><br>A check of the part fails today.</div>
+  <div><span class="chip CHECKED">CHECKED</span><br>I ran a command today and read the output.</div>
+  <div><span class="chip INFERRED">INFERRED</span><br>I took the item from a record or from an older run. I did not run it today.</div>
+</div>
+<div class="note">
+  <p><b>Your path was empty.</b> Your message said "my working documentation at [path]". The path was not filled in. I used these documents as your working documentation: <code>CLAUDE.md</code>, <code>plumbline/README.md</code>, <code>plumbline/STATUS.md</code>, <code>plumbline/SPEC.md</code>, <code>plumbline/TRY-IT.md</code>, <code>plumbline/LICENSES.md</code>. If you meant a different document, give me the path. I will do section 4 again.</p>
+</div>
+
+<div class="tiles">
+  <div class="tile"><b>1,344</b><span>tests pass on the six command-line crates <span class="chip CHECKED">CHECKED</span></span></div>
+  <div class="tile"><b>108</b><span>window tests pass, on the build of 7357e9f <span class="chip CHECKED">CHECKED</span></span></div>
+  <div class="tile"><b>69 of 69</b><span>command-line demonstrations pass <span class="chip CHECKED">CHECKED</span></span></div>
+  <div class="tile"><b>1 of 45</b><span>window demonstrations pass on the present build. 1 fails. 1 is not proven. 42 are not run.</span></div>
+  <div class="tile"><b>0 of 13</b><span>release-candidate items are complete with evidence on this commit</span></div>
+  <div class="tile"><b>14</b><span>conflicts between the working documents and the repo</span></div>
+</div>
+
+<h2 id="tree"><span class="n">1</span>Repo tree <span class="chip CHECKED">CHECKED</span></h2>
+<p>The command <code>git ls-files</code> gave the counts. The repo holds two programs. BuildOS is in <code>plumbline/</code>. The earlier program (roofnerd) is at the root. Work is done only on BuildOS.</p>
+<pre><code>roofnerd/                          1,844 tracked files
+|
+|-- CLAUDE.md                      the working rules for the repo
+|
+|-- plumbline/                     BuildOS: the program in work (1,682 files)
+|   |-- crates/                    the code (267 files)
+|   |   |-- world/                 the model            73 source files   45,768 lines
+|   |   |-- app/                   the window           18 source files   21,644 lines
+|   |   |-- plans/                 file readers         19 source files   15,563 lines
+|   |   |-- roofing/               the roof solver      15 source files    8,907 lines
+|   |   |-- cli/                   the command line      5 source files    6,441 lines
+|   |   |-- ifc/                   IFC, BCF              6 source files    5,874 lines
+|   |   `-- sheets/                workbook reader       1 source files      481 lines
+|   |-- demos/                     116 scripts: 69 command-line demonstrations,
+|   |   |                          45 window demonstrations, 2 helpers
+|   |   `-- captured/              1,028 pictures from window demonstrations
+|   |-- library/                   5 tables: items, shapes, cabinet rules, assemblies, prices
+|   |-- tools/                     16 files: licence check, port map, commit check, outside checkers
+|   |-- research/                  154 records: judgments, worker reports, surveys
+|   |-- handoff/                   44 files: contracts for workers, briefs for judges
+|   |-- divisions/                 1 document: what the program has for each of the 16 divisions
+|   `-- STATUS.md  DECISIONS.md  SPEC.md  README.md  QUESTIONS.md  PROPOSALS.md
+|       PORTMAP.md  VISUAL.md  TRY-IT.md  LICENSES.md  Cargo.toml  Cargo.lock
+|
+|-- src-tauri/                     earlier program: the Rust core (31 files)
+|-- packages/                      earlier program: engine and editors, TypeScript (71 files)
+|-- tools/                         the three gates for the whole repo; probes of the earlier program (36 files)
+|-- jobs/  data/                   earlier program: made-up jobs and data (8 and 3 files)
+|-- .githooks/                     the commit hook: build, tests and gates before each commit
+`-- README.md  STATUS.md  DECISIONS.md  QUESTIONS.md  NOTES.md  DEPENDENCIES.md  LICENSE
+    package.json  pnpm-lock.yaml   earlier program: documents and settings
+
+Not in the repo (git ignores them): refs/  fixtures/  evidence/  target/  node_modules/</code></pre>
+
+<h2 id="types"><span class="n">2</span>Code types <span class="chip CHECKED">CHECKED</span></h2>
+<p>The counts are tracked files and their lines. Pictures and plan files have no line count.</p>
+<h3>BuildOS (<code>plumbline/</code>)</h3>
+<div class="scroll"><table>
+<thead><tr><th>Type</th><th>Use</th><th>Files</th><th>Lines</th><th>Share of lines</th></tr></thead>
+<tbody><tr><td class="mono">.rs</td><td>The program and its tests (Rust)</td><td class="num">239</td><td class="num">137,553</td><td><div class="bar"><i style="width:62.5%"></i></div></td></tr>
+<tr><td class="mono">.md</td><td>Documents: status, decisions, the model, records of judges and workers</td><td class="num">213</td><td class="num">48,200</td><td><div class="bar"><i style="width:21.9%"></i></div></td></tr>
+<tr><td class="mono">.sh</td><td>Demonstrations, gates and tools (shell)</td><td class="num">123</td><td class="num">24,411</td><td><div class="bar"><i style="width:11.1%"></i></div></td></tr>
+<tr><td class="mono">.py</td><td>Outside checkers and helpers for demonstrations (Python)</td><td class="num">14</td><td class="num">2,282</td><td><div class="bar"><i style="width:1.0%"></i></div></td></tr>
+<tr><td class="mono">.csv</td><td>The library tables and made-up price lists</td><td class="num">8</td><td class="num">400</td><td><div class="bar"><i style="width:0.2%"></i></div></td></tr>
+<tr><td class="mono">.json</td><td>Made-up jobs for demonstrations</td><td class="num">11</td><td class="num">7,060</td><td><div class="bar"><i style="width:3.2%"></i></div></td></tr>
+<tr><td class="mono">.toml</td><td>Build settings</td><td class="num">9</td><td class="num">180</td><td><div class="bar"><i style="width:0.1%"></i></div></td></tr>
+<tr><td class="mono">.wesl</td><td>One shader for the window</td><td class="num">1</td><td class="num">58</td><td><div class="bar"><i style="width:0.0%"></i></div></td></tr>
+<tr><td class="mono">.png</td><td>Pictures from window demonstrations</td><td class="num">1,023</td><td class="num">–</td><td></td></tr>
+<tr><td class="mono">.pdf</td><td>Made-up plan files for demonstrations</td><td class="num">8</td><td class="num">–</td><td></td></tr>
+<tr><td class="mono">.ifc</td><td>Made-up BIM files for demonstrations</td><td class="num">7</td><td class="num">–</td><td></td></tr>
+<tr><td class="mono">.dxf</td><td>Made-up CAD files for demonstrations</td><td class="num">3</td><td class="num">–</td><td></td></tr>
+<tr><td class="mono">.tif</td><td>Made-up plan pictures</td><td class="num">3</td><td class="num">–</td><td></td></tr>
+<tr><td class="mono">.xlsx</td><td>Made-up workbooks</td><td class="num">2</td><td class="num">–</td><td></td></tr>
+<tr><td class="mono">.otf</td><td>Fonts for the window</td><td class="num">3</td><td class="num">–</td><td></td></tr>
+<tr><td class="mono">other</td><td>Licences, lock file, small files</td><td class="num">15</td><td class="num">–</td><td></td></tr></tbody></table></div>
+<h3>BuildOS code by crate</h3>
+<div class="scroll"><table>
+<thead><tr><th>Crate</th><th>Function</th><th>Source files</th><th>Source lines</th><th>Test files</th><th>Tests that pass</th></tr></thead>
+<tbody><tr><td class="mono">world</td><td>The model: quantities, prices, clashes, the verify-in-field list, the tables</td><td class="num">73</td><td class="num">45,768</td><td class="num">58</td><td class="num">759</td></tr>
+<tr><td class="mono">app</td><td>The window: two windows, panels, tools, the 3D view</td><td class="num">18</td><td class="num">21,644</td><td class="num">in the source files</td><td class="num">108 (on the build of 7357e9f)</td></tr>
+<tr><td class="mono">plans</td><td>Readers: PDF, pictures, TIFF, DXF, scans (PLY, LAS, LAZ, E57), marks on a PDF</td><td class="num">19</td><td class="num">15,563</td><td class="num">6</td><td class="num">231</td></tr>
+<tr><td class="mono">roofing</td><td>The roof solver</td><td class="num">15</td><td class="num">8,907</td><td class="num">7</td><td class="num">122</td></tr>
+<tr><td class="mono">cli</td><td>The command line</td><td class="num">5</td><td class="num">6,441</td><td class="num">15</td><td class="num">94</td></tr>
+<tr><td class="mono">ifc</td><td>IFC in and out, BCF out, a maker&#x27;s model</td><td class="num">6</td><td class="num">5,874</td><td class="num">14</td><td class="num">131</td></tr>
+<tr><td class="mono">sheets</td><td>The workbook reader</td><td class="num">1</td><td class="num">481</td><td class="num">1</td><td class="num">7</td></tr></tbody></table></div>
+<h3>Earlier program (root)</h3>
+<div class="scroll"><table>
+<thead><tr><th>Type</th><th>Use</th><th>Files</th><th>Lines</th></tr></thead>
+<tbody>
+<tr><td class="mono">.ts</td><td>Engine and editors (<code>packages/</code>)</td><td class="num">50</td><td class="num">16,519</td></tr>
+<tr><td class="mono">.mjs</td><td>Probes and gate scripts (<code>tools/</code>)</td><td class="num">46</td><td class="num">17,079</td></tr>
+<tr><td class="mono">.rs</td><td>Rust core (<code>src-tauri/</code>)</td><td class="num">25</td><td class="num">12,373</td></tr>
+<tr><td class="mono">.css</td><td>Styles</td><td class="num">1</td><td class="num">1,454</td></tr>
+<tr><td class="mono">.json .md .sh .py .html</td><td>Settings, documents, scripts</td><td class="num">28</td><td class="num">–</td></tr>
+</tbody></table></div>
+
+<h2 id="state"><span class="n">3</span>State of each part</h2>
+<p>Each row gives one part, its state, the evidence, and the mark. Use the buttons to show one state or one mark.</p>
+<div class="filters" id="f-state">
+  <button data-f="all" aria-pressed="true">All</button>
+  <button data-f="WORKS" aria-pressed="false">WORKS</button>
+  <button data-f="PARTIAL" aria-pressed="false">PARTIAL</button>
+  <button data-f="STUB" aria-pressed="false">STUB</button>
+  <button data-f="BROKEN" aria-pressed="false">BROKEN</button>
+  <button data-f="CHECKED" aria-pressed="false">CHECKED</button>
+  <button data-f="INFERRED" aria-pressed="false">INFERRED</button>
+</div>
+<div class="scroll"><table id="t-state">
+<thead><tr><th>Part</th><th>Where</th><th>State</th><th>Evidence</th><th>Mark</th></tr></thead>
+<tbody><tr data-s="all" data-m="all"><th colspan="5">BuildOS</th></tr>
+<tr data-s="WORKS" data-m="CHECKED"><td><b>The model</b></td><td class="path">crates/world</td><td><span class="chip WORKS">WORKS</span></td><td>759 tests pass. The sample house file has the same checksum as before (880d9fd3c364b5f7). Its estimate is $393,981.66.</td><td><span class="chip CHECKED">CHECKED</span></td></tr>
+<tr data-s="WORKS" data-m="CHECKED"><td><b>The command line</b></td><td class="path">crates/cli</td><td><span class="chip WORKS">WORKS</span></td><td>94 tests pass. All 69 command-line demonstrations pass. No output contains FAIL.</td><td><span class="chip CHECKED">CHECKED</span></td></tr>
+<tr data-s="WORKS" data-m="CHECKED"><td><b>File readers</b></td><td class="path">crates/plans</td><td><span class="chip WORKS">WORKS</span></td><td>231 tests pass. The readers read PDF, PNG, JPEG, TIFF, DXF, PLY, LAS, LAZ, E57 and the measured marks on a PDF. All test files are made-up files.</td><td><span class="chip CHECKED">CHECKED</span></td></tr>
+<tr data-s="PARTIAL" data-m="INFERRED"><td><b>The wall finder</b></td><td class="path">crates/plans</td><td><span class="chip PARTIAL">PARTIAL</span></td><td>The wall finder finds most walls on a clean plan. It does not find all walls on a crowded plan or in a phone scan. A person traces the walls. Real files are not in the repo, thus no test in the repo shows this.</td><td><span class="chip INFERRED">INFERRED</span></td></tr>
+<tr data-s="WORKS" data-m="CHECKED"><td><b>The workbook reader and writer</b></td><td class="path">crates/sheets, crates/world</td><td><span class="chip WORKS">WORKS</span></td><td>7 tests pass. The database demonstration writes all tables to a workbook and reads them back with no change.</td><td><span class="chip CHECKED">CHECKED</span></td></tr>
+<tr data-s="WORKS" data-m="CHECKED"><td><b>IFC out and in. BCF out. A maker&#x27;s model</b></td><td class="path">crates/ifc</td><td><span class="chip WORKS">WORKS</span></td><td>131 tests pass. IfcOpenShell 0.9.0 accepts the IFC4 file (demos/export.sh).</td><td><span class="chip CHECKED">CHECKED</span></td></tr>
+<tr data-s="WORKS" data-m="CHECKED"><td><b>The roof solver</b></td><td class="path">crates/roofing</td><td><span class="chip WORKS">WORKS</span></td><td>122 tests pass.</td><td><span class="chip CHECKED">CHECKED</span></td></tr>
+<tr data-s="WORKS" data-m="CHECKED"><td><b>The library tables</b></td><td class="path">library/</td><td><span class="chip WORKS">WORKS</span></td><td>Items, shapes, cabinet rules, assemblies and prices are open tables. The demonstrations write them out and read them back with no change.</td><td><span class="chip CHECKED">CHECKED</span></td></tr>
+<tr data-s="WORKS" data-m="CHECKED"><td><b>The gates and the tools</b></td><td class="path">tools/, plumbline/tools/</td><td><span class="chip WORKS">WORKS</span></td><td>The language gate, the egress gate, the client-data gate, the port map and the licence check each end with exit status 0.</td><td><span class="chip CHECKED">CHECKED</span></td></tr>
+<tr data-s="WORKS" data-m="INFERRED"><td><b>The commit check</b></td><td class="path">plumbline/tools/committed.sh</td><td><span class="chip WORKS">WORKS</span></td><td>It passed today on commit 1edb650 (108 test runs from a clean copy). I did not run it on the commit of this review.</td><td><span class="chip INFERRED">INFERRED</span></td></tr>
+<tr data-s="WORKS" data-m="CHECKED"><td><b>The window: tests</b></td><td class="path">crates/app</td><td><span class="chip WORKS">WORKS</span></td><td>108 tests pass on the build of 7357e9f. The window code has no change after 7357e9f. I did not build the window on the commit of this review.</td><td><span class="chip CHECKED">CHECKED</span></td></tr>
+<tr data-s="PARTIAL" data-m="CHECKED"><td><b>The window: on the screen</b></td><td class="path">crates/app, demos/*w.sh</td><td><span class="chip PARTIAL">PARTIAL</span></td><td>On the present build I ran 3 of 45 window demonstrations. screensw passes. twoplansw fails (see the next row). tradesw failed two times, each time at a different click, while other builds ran. Its state is not proven. On the build before (2e6f63a) ten window demonstrations passed in my runs.</td><td><span class="chip CHECKED">CHECKED</span></td></tr>
+<tr data-s="BROKEN" data-m="CHECKED"><td><b>A double-click in a plan in the second window</b></td><td class="path">crates/app (nav.rs, scene.rs)</td><td><span class="chip BROKEN">BROKEN</span></td><td>twoplansw step 7 fails two times with the same figures. The double-click selects the thing. It does not move the view in the two windows.</td><td><span class="chip CHECKED">CHECKED</span></td></tr>
+<tr data-s="PARTIAL" data-m="INFERRED"><td><b>The other window demonstrations</b></td><td class="path">demos/*w.sh</td><td><span class="chip PARTIAL">PARTIAL</span></td><td>42 window demonstrations are not run on the present build. 16 of them passed on older builds.</td><td><span class="chip INFERRED">INFERRED</span></td></tr>
+<tr data-s="STUB" data-m="CHECKED"><td><b>The window: entries for the new file types</b></td><td class="path">crates/app (bring.rs, panels.rs)</td><td><span class="chip STUB">STUB</span></td><td>The window brings in PDF, PNG, JPEG, CSV, XLSX, IFC and PLY. It has no entry for DXF, TIFF, LAS, LAZ, E57, marks on a PDF, a maker&#x27;s model, the database, the field sheet, BCF, glTF or cabinet rules. The command line does each of these.</td><td><span class="chip CHECKED">CHECKED</span></td></tr>
+<tr data-s="PARTIAL" data-m="INFERRED"><td><b>The window on the new shapes</b></td><td class="path">crates/app</td><td><span class="chip PARTIAL">PARTIAL</span></td><td>Call 233 adds 14 shapes and 9 items. The window is not built on them. Three window demonstrations count 48 items and must count 57.</td><td><span class="chip INFERRED">INFERRED</span></td></tr>
+<tr data-s="STUB" data-m="CHECKED"><td><b>Functions with a design and no code</b></td><td class="path">PROPOSALS.md, DECISIONS.md</td><td><span class="chip STUB">STUB</span></td><td>A BCF file read back. A mesh brought in. glTF with each thing as its own shape. The 16 division harnesses (PROPOSALS item 21). A search finds no code for them.</td><td><span class="chip CHECKED">CHECKED</span></td></tr>
+<tr data-s="PARTIAL" data-m="CHECKED"><td><b>The documents</b></td><td class="path">CLAUDE.md, plumbline/*.md</td><td><span class="chip PARTIAL">PARTIAL</span></td><td>The decisions and the records are complete to today. Some guide text is old. Section 4 lists each conflict.</td><td><span class="chip CHECKED">CHECKED</span></td></tr>
+<tr data-s="PARTIAL" data-m="CHECKED"><td><b>The release candidate</b></td><td class="path">the branch</td><td><span class="chip PARTIAL">PARTIAL</span></td><td>No tag is on the branch. Section 5 gives the state of each of the 13 items.</td><td><span class="chip CHECKED">CHECKED</span></td></tr>
+<tr data-s="all" data-m="all"><th colspan="5">The earlier program (roofnerd)</th></tr>
+<tr data-s="WORKS" data-m="CHECKED"><td><b>The engine and the editors</b></td><td class="path">packages/</td><td><span class="chip WORKS">WORKS</span></td><td>The commit hook builds them and runs their tests before each commit. The hook passed at each commit today.</td><td><span class="chip CHECKED">CHECKED</span></td></tr>
+<tr data-s="WORKS" data-m="CHECKED"><td><b>The three gates for the whole repo</b></td><td class="path">tools/</td><td><span class="chip WORKS">WORKS</span></td><td>Each ends with exit status 0.</td><td><span class="chip CHECKED">CHECKED</span></td></tr>
+<tr data-s="WORKS" data-m="INFERRED"><td><b>The Rust core</b></td><td class="path">src-tauri/</td><td><span class="chip WORKS">WORKS</span></td><td>Its tests passed in older runs. I did not run them today. No work changes this part.</td><td><span class="chip INFERRED">INFERRED</span></td></tr>
+<tr data-s="WORKS" data-m="INFERRED"><td><b>Its window</b></td><td class="path">src-tauri/, packages/app</td><td><span class="chip WORKS">WORKS</span></td><td>I did not start it today. No work changes this part.</td><td><span class="chip INFERRED">INFERRED</span></td></tr></tbody></table></div>
+
+<h2 id="conflicts"><span class="n">4</span>Conflicts with the working documents</h2>
+<p>Each row gives what a document says and what the repo shows. I did not correct these conflicts. You asked to see them first.</p>
+<div class="scroll"><table>
+<thead><tr><th>#</th><th>Document</th><th>The document says</th><th>The repo shows</th><th>Mark</th></tr></thead>
+<tbody><tr><td class="num">1</td><td>Your message</td><td class="says">The working documentation is at &quot;[path]&quot;.</td><td>The path is not filled in. I used CLAUDE.md and the documents in plumbline/.</td><td><span class="chip CHECKED">CHECKED</span></td></tr>
+<tr><td class="num">2</td><td>STATUS.md, &quot;Start here&quot;</td><td class="says">The block is dated 2026-11-25, 06:00 UTC. It gives 1,043 tests and 14 window demonstrations on commit a40b968. It says that contracts 205W and 207W are not started.</td><td>The repo is more than one day and 20 calls ahead (calls 216 to 235). The command-line crates have 1,344 tests. Contract 205W is built and merged. The folder has 41 contracts.</td><td><span class="chip CHECKED">CHECKED</span></td></tr>
+<tr><td class="num">3</td><td>STATUS.md, the table of 13</td><td class="says">The table gives the items &quot;as they stand on 2026-11-16&quot;.</td><td>Items 9 to 12 have no judgment after 2026-11-16. The window has many changes after that date. The table does not show the state today.</td><td><span class="chip CHECKED">CHECKED</span></td></tr>
+<tr><td class="num">4</td><td>STATUS.md, the first table (D0 to D7)</td><td class="says">&quot;D6 Interchange and reports: Not started.&quot;</td><td>The repo writes xlsx, CSV, IFC, BCF, glTF and three lenses. The file says that it keeps these rows as history. A new reader can read them as the state.</td><td><span class="chip CHECKED">CHECKED</span></td></tr>
+<tr><td class="num">5</td><td>CLAUDE.md, the table &quot;Where each thing is changed&quot;</td><td class="says">It names the files to change for each thing.</td><td>It does not name these files: bench.rs, glass.rs, nav.rs, screen.rs, second.rs, trades.rs (window); database.rs, fieldsheet.rs, marks.rs, solids.rs, pricelist.rs (model).</td><td><span class="chip CHECKED">CHECKED</span></td></tr>
+<tr><td class="num">6</td><td>CLAUDE.md, same table</td><td class="says">&quot;ten forms are BIMCraft&#x27;s, three ours&quot; (13 forms).</td><td>The list of forms has 27 forms.</td><td><span class="chip CHECKED">CHECKED</span></td></tr>
+<tr><td class="num">7</td><td>CLAUDE.md, &quot;What Patrick asked to see&quot;</td><td class="says">These are still not there: joists and rafters, cabinets, a tool to draw a footing.</td><td>The repo counts and prices joists and rafters (demos/joists.sh). It places cabinets by code and by rule (demos/cabinets.sh, cabinetsw.sh). The window assigns a footing its assembly (demos/foundw.sh). I did not check if the window draws joists.</td><td><span class="chip CHECKED">CHECKED</span></td></tr>
+<tr><td class="num">8</td><td>CLAUDE.md, &quot;Running plumbline&quot;</td><td class="says">&quot;each demonstration is a script; README.md lists them&quot;.</td><td>plumbline/README.md does not name 19 of the scripts: bringw, cabinets, cabinetsw, drywall, firstw, foundw, layoutsw, lists, options, planset, receptacles, reno, renow, roomline, roomlinew, scanw, shinglew, slab, taper.</td><td><span class="chip CHECKED">CHECKED</span></td></tr>
+<tr><td class="num">9</td><td>CLAUDE.md, &quot;Small things&quot;</td><td class="says">&quot;the README&#x27;s clone line names this branch&quot;.</td><td>The clone lines in plumbline/README.md and TRY-IT.md name claude/nifty-tesla-qmn44n. The work branch is claude/hopeful-cannon-kng8eo. The two branches are at the same commit.</td><td><span class="chip CHECKED">CHECKED</span></td></tr>
+<tr><td class="num">10</td><td>CLAUDE.md, &quot;For whoever builds next&quot;</td><td class="says">The two surveys are in call 63 &quot;when it exists; until then STATUS.md says where they are&quot;.</td><td>Call 63 is in DECISIONS.md. The sentence is old.</td><td><span class="chip CHECKED">CHECKED</span></td></tr>
+<tr><td class="num">11</td><td>CLAUDE.md, &quot;Use it&quot;</td><td class="says">&quot;Do not run cargo in the tree while a timed window demonstration is running.&quot;</td><td>Today builds ran at low priority while window demonstrations ran. navw, tradesw and twoplansw lost clicks or time in those runs. The rule in the document is correct. The practice did not obey it.</td><td><span class="chip CHECKED">CHECKED</span></td></tr>
+<tr><td class="num">12</td><td>TRY-IT.md</td><td class="says">&quot;Nobody has yet used the window on a real machine with a real graphics card: this hour is that test.&quot;</td><td>Your ruling of 2026-11-25 (call 217) says that this environment and its pictures are the evidence. The sentence is against the ruling.</td><td><span class="chip CHECKED">CHECKED</span></td></tr>
+<tr><td class="num">13</td><td>LICENSES.md</td><td class="says">It lists everything that the workspace links.</td><td>It does not name tiff, laz, e57 or roxmltree. These crates are linked now. tools/licenses.sh reads the true list and passes. The document is not made again.</td><td><span class="chip CHECKED">CHECKED</span></td></tr>
+<tr><td class="num">14</td><td>CLAUDE.md, &quot;Running plumbline&quot;</td><td class="says">plumbline/refs/ holds your brief and the first handoff.</td><td>The folder is not on this clone. CLAUDE.md permits that. Item 13 of the deliverable cannot start: no hand estimate is there.</td><td><span class="chip CHECKED">CHECKED</span></td></tr>
+<tr><td class="num">15</td><td>Root README.md, STATUS.md, DECISIONS.md</td><td class="says">They describe the earlier program.</td><td>I did not compare them with the code of the earlier program. No work changes that program.</td><td><span class="chip INFERRED">INFERRED</span></td></tr></tbody></table></div>
+
+<h2 id="deliverable"><span class="n">5</span>The finished deliverable</h2>
+<p>The finished deliverable for this repo is a <b>release candidate of BuildOS</b>. <code>CLAUDE.md</code> defines it. Three conditions make it finished:</p>
+<ol class="steps">
+  <li><code>plumbline/STATUS.md</code> shows each of the 13 items below with evidence. The evidence is pictures and command output from one commit.</li>
+  <li>A tag for the release candidate is on the branch.</li>
+  <li>The lead stops and asks you for the production ruling.</li>
+</ol>
+<p>The table gives each item, its state today, and the check that you can do.</p>
+<div class="scroll"><table>
+<thead><tr><th>#</th><th>Item is done when</th><th>State today</th><th>How you verify it</th><th>Mark</th></tr></thead>
+<tbody><tr><td class="num">1</td><td>A clean clone installs on Linux. You follow the README one time.</td><td><span class="chip PARTIAL">PARTIAL</span><br>The commit check passed today on 1edb650: a clean copy builds and all tests pass. The last run of the README steps on a new system was on 2026-11-22.</td><td>Do the three steps of plumbline/README.md on a new Ubuntu system. No step must fail.</td><td><span class="chip INFERRED">INFERRED</span></td></tr>
+<tr><td class="num">2</td><td>Each import in the fixed rules works. You pick each file from a list in the window.</td><td><span class="chip PARTIAL">PARTIAL</span><br>The command line reads each file type (CHECKED). The window has an entry for 7 file types only.</td><td>In the window, select Bring in. Bring in one file of each type. The program must say what it read and what it lost.</td><td><span class="chip CHECKED">CHECKED</span></td></tr>
+<tr><td class="num">3</td><td>From an empty job: a real house plan PDF is opened, scaled and traced. The 3D house builds from the tracing.</td><td><span class="chip PARTIAL">PARTIAL</span><br>The window demonstrations trace made-up plans. The records say that real plan sets were read at the command line on 2026-11-24. No run from the window on a real set is recorded.</td><td>Start with an empty job. Bring in a plan PDF. Set the scale from one dimension. Trace walls, openings, floors, rooms and the roof. Look at the 3D house.</td><td><span class="chip INFERRED">INFERRED</span></td></tr>
+<tr><td class="num">4</td><td>Each clash shows its certainty. The verify-in-field list is in the order of dollars.</td><td><span class="chip PARTIAL">PARTIAL</span><br>The command line does this: 11 clashes, 5 findings and 6 field questions; 85 questions with the largest dollars first (CHECKED). The window demonstration (clashw) is not run on the present build.</td><td>Run the vif and clashes commands of section 6. Then open the lists in the window.</td><td><span class="chip CHECKED">CHECKED</span></td></tr>
+<tr><td class="num">5</td><td>A typed or lasered measurement makes a value Known. The clash confirms or clears. The price changes live in the second window.</td><td><span class="chip PARTIAL">PARTIAL</span><br>The window demonstrations fieldw and moneyw passed on older builds. They are not run on the present build. The field sheet by file works at the command line (CHECKED).</td><td>In the window, type a measured length for an Assumed value. Look at the clash and at the price in the second window.</td><td><span class="chip INFERRED">INFERRED</span></td></tr>
+<tr><td class="num">6</td><td>A price per SF or LF grows into line items. The detail rolls up again.</td><td><span class="chip PARTIAL">PARTIAL</span><br>The command-line demonstration d4 passes (CHECKED). The window demonstration d4w is not run on the present build.</td><td>Run demos/d4.sh. Then do the same steps in the window.</td><td><span class="chip CHECKED">CHECKED</span></td></tr>
+<tr><td class="num">7</td><td>The estimate sheet: stretch-out on the line, labor per line, overhead and profit, three suppliers.</td><td><span class="chip PARTIAL">PARTIAL</span><br>The command-line demonstration d5 passes (CHECKED). The window demonstrations d5w and pricew are not run on the present build.</td><td>Run demos/d5.sh. Then change a stretch-out, a labor switch and the profit in the second window.</td><td><span class="chip CHECKED">CHECKED</span></td></tr>
+<tr><td class="num">8</td><td>Exports: xlsx with live formulas, CSV, IFC4 that IfcOpenShell accepts. Three lenses from one estimate.</td><td><span class="chip PARTIAL">PARTIAL</span><br>The command line does all of these and IfcOpenShell accepts the file (CHECKED). The window writes out some of them, not all.</td><td>Run demos/export.sh. Open the xlsx file and change a quantity: the totals must change. Then write each file out from the window.</td><td><span class="chip CHECKED">CHECKED</span></td></tr>
+<tr><td class="num">9</td><td>A judge lists each word on each screen. No word is a software term.</td><td><span class="chip PARTIAL">PARTIAL</span><br>The judge failed this item three times on 2026-11-16. The language gate passes today (CHECKED). No judge did the item again.</td><td>Read the judge&#x27;s list in plumbline/research/. Then read each screen yourself.</td><td><span class="chip INFERRED">INFERRED</span></td></tr>
+<tr><td class="num">10</td><td>A judge with the brief of a veteran estimator does a whole-house takeoff from a PDF with the in-app help only.</td><td><span class="chip PARTIAL">PARTIAL</span><br>A judge passed this item one time, on 2026-11-16, on commit d20ac60. The window has many changes after that. The item must be judged again.</td><td>Read the judgment. Then do the first job in the window with no manual.</td><td><span class="chip INFERRED">INFERRED</span></td></tr>
+<tr><td class="num">11</td><td>The visual judge passes each screen against VISUAL.md.</td><td><span class="chip PARTIAL">PARTIAL</span><br>The judge failed this item three times on 2026-11-16. After that the window got the glass panels and the new navigation. No judge did the item again. A brief for a judge of feel is written and not started.</td><td>Look at the pictures in plumbline/demos/captured/. Your eyes are the test.</td><td><span class="chip INFERRED">INFERRED</span></td></tr>
+<tr><td class="num">12</td><td>A new judge walks the whole path cold and cannot break the money path.</td><td><span class="chip PARTIAL">PARTIAL</span><br>The judge failed this item on 2026-11-16. Window judges on 2026-11-24 and 2026-11-25 found no wrong money. No judge did the whole item again.</td><td>Read the judgment. Then try to make the price wrong in the window.</td><td><span class="chip INFERRED">INFERRED</span></td></tr>
+<tr><td class="num">13</td><td>A hand estimate in refs/ is reproduced. Each difference has an explanation, line by line.</td><td><span class="chip STUB">STUB</span><br>No hand estimate is in refs/. The item cannot start.</td><td>Put a sanitized hand estimate in refs/. Compare the report line by line.</td><td><span class="chip CHECKED">CHECKED</span></td></tr></tbody></table></div>
+<div class="note">
+  <p><b>Items that only you can supply.</b> None of them stops the work.</p>
+  <p>1. A hand estimate in <code>refs/</code>, sanitized. Item 13 cannot start without it.</p>
+  <p>2. A sanitized PDF with your own measured marks (question Q36).</p>
+  <p>3. A real LAZ file and a real E57 file, sanitized. The repo tests these readers with made-up files only.</p>
+  <p>4. The production ruling, after the tag.</p>
+</div>
+
+<h2 id="verify"><span class="n">6</span>How you verify it</h2>
+<h3>A. In a browser. No installation.</h3>
+<ol class="steps">
+  <li>Open the branch <code>claude/hopeful-cannon-kng8eo</code> on GitHub.</li>
+  <li>Open <code>plumbline/STATUS.md</code>. Find the table of the 13 items. Each item must name a commit, a command, and its output.</li>
+  <li>Open <code>plumbline/demos/captured/</code>. Each folder has the pictures of one window demonstration. Look at the pictures. If you do not see the thing, the thing is not there.</li>
+  <li>Open <code>plumbline/research/</code>. Each judgment is a file. A judge writes what it tried and what broke.</li>
+  <li>Make sure that the tag is on the same commit that STATUS.md names.</li>
+</ol>
+<h3>B. From a clone. The commands and the results to expect.</h3>
+<pre><code>git clone -b claude/hopeful-cannon-kng8eo https://github.com/Bitumenmachina/roofnerd
+cd roofnerd/plumbline
+
+# 1. The tests. Each "test result" line must say "ok". No line must say FAILED.
+cargo test --workspace
+
+# 2. The three gates, from the repo root. Each must end with exit status 0.
+(cd .. &amp;&amp; tools/gate-language.sh &amp;&amp; tools/gate-egress.sh &amp;&amp; tools/gate-clientdata.sh --all)
+
+# 3. The licences of all linked crates. Must end with exit status 0.
+tools/licenses.sh
+
+# 4. The last commit builds and passes from its own contents.
+tools/committed.sh                      # the last line must start with "committed: PASS"
+
+# 5. The sample house. The file must be the same on each machine.
+cargo run -p plumbline -- sixteen /tmp/h.json
+sha256sum /tmp/h.json                   # must start with 880d9fd3c364b5f7
+cargo run -p plumbline -- estimate /tmp/h.json   # last line: the sixteen divisions  $393,981.66
+cargo run -p plumbline -- vif /tmp/h.json        # 85 questions, the largest dollars first
+cargo run -p plumbline -- clashes /tmp/h.json    # 11: 5 findings, 6 to verify in the field
+
+# 6. Each command-line demonstration. Each must end with exit status 0 and must not print FAIL.
+for d in demos/*.sh; do
+  case $d in demos/window.sh|demos/field-job.sh) continue;; esac          # two helpers
+  grep -q 'plumbline-app\|open_window\|xdotool\|xvfb' "$d" &amp;&amp; continue      # window demonstrations
+  bash "$d" &gt;/tmp/$(basename $d).log 2&gt;&amp;1 || echo "FAILED $d"
+done
+
+# 7. The window. Two windows open: the model and the estimate.
+cargo run -p plumbline-app -- /tmp/h.json
+
+# 8. One window demonstration. Its pictures go to demos/captured/price.
+xvfb-run -a -s "-screen 0 2500x980x24" demos/pricew.sh
+
+# 9. The BIM file. IfcOpenShell is an outside checker. It is not linked.
+cargo run -p plumbline -- export ifc /tmp/h.json /tmp/h.ifc
+python3 tools/ifc-check.py /tmp/h.ifc</code></pre>
+<p>Step 4 uses much disk space. Keep 15 GB free. The check <code>tools/portmap.sh</code> needs the BIMCraft source on the same machine. It is not in the list for that reason.</p>
+
+<h2 id="open"><span class="n">7</span>Work that is not in the commit</h2>
+<div class="note warn">
+  <p><b>One repair is in work.</b> A window builder repairs the BROKEN item of section 3 (the double-click in a plan). Its changes are in three files of the main checkout: <code>crates/app/src/nav.rs</code>, <code>crates/app/src/scene.rs</code>, <code>demos/twoplansw.sh</code>. They are not committed. I have not accepted them. This review does not include them. <span class="chip CHECKED">CHECKED</span></p>
+  <p>I started no new work for this review. I wait for your reply.</p>
+</div>
+
+<footer>
+  One file. No network connection is necessary to open it. All figures are from the repo. No job data, client data or supplier data is on this page.
+</footer>
+</div>
+<script>
+(function(){
+  var box=document.getElementById('f-state'), rows=document.querySelectorAll('#t-state tbody tr');
+  if(!box) return;
+  box.addEventListener('click',function(e){
+    var b=e.target.closest('button'); if(!b) return;
+    var f=b.getAttribute('data-f');
+    box.querySelectorAll('button').forEach(function(x){x.setAttribute('aria-pressed', x===b ? 'true':'false');});
+    rows.forEach(function(r){
+      var show = f==='all' || r.getAttribute('data-s')===f || r.getAttribute('data-m')===f;
+      r.hidden=!show; r.style.display = show ? '' : 'none';
+    });
+  });
+})();
+</script>
+</body>
+</html>
