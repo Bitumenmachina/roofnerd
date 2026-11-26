@@ -67,7 +67,8 @@ fn step_1_one_workbook_each_tab_is_its_table() {
     made(&dir, "a.json");
     let said = ok(&dir, &["export", "database", "a.json", "my.xlsx"]);
     // call 225: the cabinet rules joined the database (call 223 as built, point 6)
-    assert!(said.contains("a tab for each table") && said.contains("Shapes 50, Items 49, Cabinet codes 8, Connections 5, Assemblies 202, Prices 8"), "{said}");
+    // call 233: the starter chest grew
+    assert!(said.contains("a tab for each table") && said.contains("Shapes 102, Items 58, Cabinet codes 8, Connections 5, Assemblies 202, Prices 8"), "{said}");
     let tabs = tabs_of(&dir.join("my.xlsx"));
     // call 225: the cabinet rules joined the database (call 223 as built, point 6)
     assert_eq!(tabs.iter().map(|(n, _)| n.as_str()).collect::<Vec<_>>(), ["Shapes", "Items", "Cabinet codes", "Connections", "Assemblies", "Prices"]);
@@ -93,10 +94,12 @@ fn steps_2_and_3_in_to_an_empty_job_and_out_again() {
     ok(&dir, &["new", "b.json", "Second (not a real job)"]);
     let said = ok(&dir, &["import", "database", "b.json", "my.xlsx"]);
     // call 225: the cabinet rules joined the database (call 223 as built, point 6)
-    for line in ["(a workbook, 6 tabs): brought in whole", "the tab Shapes: 50 rows under its headings", "the tab Items: 49 rows under its headings", "the tab Connections: 5 rows under its headings", "the tab Assemblies: 202 rows under its headings", "the tab Prices: 8 rows under its headings"] {
+    // call 233: the starter chest grew
+    for line in ["(a workbook, 6 tabs): brought in whole", "the tab Shapes: 102 rows under its headings", "the tab Items: 58 rows under its headings", "the tab Connections: 5 rows under its headings", "the tab Assemblies: 202 rows under its headings", "the tab Prices: 8 rows under its headings"] {
         assert!(said.contains(line), "{line}\n{said}");
     }
-    assert!(said.contains("  set: 49\n"), "49 items added:\n{said}");
+    // call 233: the starter chest grew
+    assert!(said.contains("  set: 58\n"), "58 items added:\n{said}");
     assert!(!said.contains("not used: 1"), "{said}");
     ok(&dir, &["export", "database", "b.json", "my2.xlsx"]);
     assert_eq!(tabs_of(&dir.join("my.xlsx")), tabs_of(&dir.join("my2.xlsx")), "cell for cell");
@@ -124,7 +127,8 @@ fn step_4_a_job_that_has_it_all_is_what_it_was() {
     let before = std::fs::read(dir.join("a.json")).unwrap();
     let said = ok(&dir, &["import", "database", "a.json", "my.xlsx"]);
     assert!(said.contains("in all: 0 set; no row refused"), "{said}");
-    assert!(said.contains("the same as the job already has: 49"), "{said}");
+    // call 233: the starter chest grew
+    assert!(said.contains("the same as the job already has: 58"), "{said}");
     assert_eq!(std::fs::read(dir.join("a.json")).unwrap(), before);
 }
 
@@ -154,7 +158,8 @@ fn step_5_what_it_cannot_read_is_said() {
     let said = ok(&dir, &["import", "database", "b.json", "edited.xlsx"]);
     assert!(said.contains("not read: the tab \"Notes\""), "{said}");
     assert!(said.contains("not read: the column \"My code\""), "{said}");
-    assert!(said.contains("  set: 49\n"), "{said}");
+    // call 233: the starter chest grew
+    assert!(said.contains("  set: 58\n"), "{said}");
     ok(&dir, &["export", "database", "b.json", "my2.xlsx"]);
     assert_eq!(tabs_of(&dir.join("my.xlsx")), tabs_of(&dir.join("my2.xlsx")));
 }

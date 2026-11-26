@@ -914,7 +914,6 @@ pub fn maker_model(job: &mut Job, bytes: &[u8], name: &str, proxies_as: Option<K
                     let world = r.placed(r.arg(port, 5));
                     let d = [world.o[0] - fp.o[0], world.o[1] - fp.o[1], world.o[2] - fp.o[2]];
                     let local = [dot(d, fp.x), dot(d, fp.y), dot(d, fp.z)];
-                    let way = [dot(world.z, fp.x), dot(world.z, fp.y), dot(world.z, fp.z)];
                     let (across, back, up) = ((local[0] - (lo[0] + hi[0]) / 2.0) * inch, (hi[1] - local[1]) * inch, (local[2] - lo[2]) * inch);
                     let outside = [
                         beyond(across, -size_in[0] / 2.0, size_in[0] / 2.0).map(|(far, low)| (far, if low { "to the left of" } else { "to the right of" })),

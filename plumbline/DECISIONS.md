@@ -10551,3 +10551,34 @@ byte for byte).
    timed run, and each was then proved by breaking the code it tests; that was
    the lead's doing (the quiet lock), and is said.
 
+### Call 233, as built: starter shapes and items for appliances and small devices (2026-11-26)
+
+Built by the worker of contract 233M, held, ruled in call 235 and taken up by
+the lead. In the tree: 14 new shapes (52 rows of `library/shapes.csv`); the
+seven items that were boxes drawn as their shapes at the sizes they had; nine
+new items, so the chest is 57; the program's list of forms is 27. The worker's
+report is `research/worker-report-call233M.md`.
+
+What the lead changed on the worker's work, each by call 235:
+1. `crates/world/tests/call205.rs`: the item drawn as a box is W1230.
+2. Six sizes say "an assumption: no published size was found"
+   (`library/items.csv`; tested by name in `crates/world/tests/call233m.rs`;
+   said at the head of `research/device-sizes.md`).
+3. `demos/devices.sh` reads those six by name and reads that the other three
+   new items do not say it. A receptacle's sizes line names each size's source.
+4. `demos/cabinet-rules.sh`, step 8: the checksum of a saved job that holds the
+   chest is 2a869247... . The worker's figure was 66e6a894... . The lead took
+   the job as written now, put the six texts back, and got 66e6a894...: only
+   those six sources moved it.
+
+The lead's run, on the work laid over 08258ab (call 234 in it): 1,344 tests of
+the six command-line crates pass (the model 759, the command line 94, the
+workbook 7, the BIM file 131, the roof 122, the plans 231); 69 command-line
+demonstrations pass and none says FAIL; the three gates, `tools/portmap.sh` and
+`tools/licenses.sh` pass; the sample whole house is 880d9fd3c364b5f7, as it was.
+
+Owed, as call 235 says (points 4 to 6): a starter shape drawn from its rows
+without the list of forms; a washer's round door; the window built on this and
+its three counts of the chest moved from 48 to 57 and run. **The window is not
+built on this commit.**
+

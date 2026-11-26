@@ -12336,27 +12336,23 @@ they differ).
    byte, and its estimate, clash list and verify-in-field list are what they
    were.
 
-**Built by the worker and HELD, not accepted (2026-11-26, 12:55 UTC).** Its
-patch and report are kept (outside the repository, with the lead). By its own
-runs: 14 new shapes (52 rows), the seven box items drawn as their shapes, nine
-new items (57 in all), 1,323 command-line tests passing and **one failing**, 68
-command-line demonstrations passing, the sample whole house unmoved. Why it is
-held:
-- **One existing test fails by the design of the call** (`crates/world/tests/
-  call205.rs`: it takes "Range, 30 in" as its example of an item drawn as a
-  box, and the range is now drawn as a range). Moving it to an item that is
-  still a box is not a count, so the worker rightly did not make the edit under
-  its contract; **it then tried, and the permission check on its own tool call
-  refused the edit.** The lead does not make, on an agent's report, an edit that
-  agent was refused. It is put to Patrick in plain words; nothing else waits on
-  it.
-- Still to rule when it is taken up: nine sizes that could not be sourced were
-  written Assumed where call 233 says Unknown; three demonstrations moved by
-  more than a count (a job's checksum, and the numbers in the names of things
-  made after the chest, which shift by nine); fourteen kinds were added to the
-  program's list of forms because the window draws a starter shape only through
-  that list, which is code for what call 203 made a table; the washer's door is
-  square because a block cannot be a round lying on its side.
+**Built, ruled and accepted (2026-11-26; DECISIONS.md "Call 235" and "Call 233, as
+built").** 14 new shapes (52 rows), the seven box items drawn as their shapes,
+nine new items (57 in all), the list of forms 27. It was held because one
+existing test failed by the call's design and the worker's edit of it was
+refused; Patrick sent it back to the lead (call 235) and the lead ruled each
+point. **Changed, and named here because each is an expectation or a thing a
+person reads:** `call205.rs` takes W1230 as its item drawn as a box; six sizes
+that no published page gave say "an assumption: no published size was found";
+the saved job that holds the chest has a new checksum in `demos/cabinet-rules.sh`
+(with the six texts put back it is the worker's figure); the numbers in the
+names of things made after the chest are nine higher in `itemcost.sh` and
+`judged-1125.sh`. No figure of money moved: the sample whole house is byte for
+byte what it was. Run by the lead on the work laid over call 234: 1,344
+command-line tests, 69 command-line demonstrations, the gates, the port map
+and the licences. **Not right, and owed:** the window is not built on this; its
+three counts of the chest (48) move to 57 then; a starter shape still takes
+the program's list of forms; a washer's door is square.
 
 ## The field's measurements brought back by file: a demonstration, written before it is built (call 234; 2026-11-26)
 

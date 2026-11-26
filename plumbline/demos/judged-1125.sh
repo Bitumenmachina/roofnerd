@@ -29,13 +29,15 @@ J="$T/fridge.json"
 printf 'Material,Unit,Price,How sure,Where from\nRefrigerator,EA,1000,Assumed,a made-up list\n' > "$T/list.csv"
 "$P" import prices "$J" "$T/list.csv" --add >/dev/null
 "$P" place "$J" level-0002 Refrigerator --at "10,5" "${K[@]}" >/dev/null
-"$P" set "$J" equipment-0093 quantity 7 --line "Refrigerator" --status Assumed --source "made-up count" >/dev/null
+# call 233: the starter chest grew
+"$P" set "$J" equipment-0102 quantity 7 --line "Refrigerator" --status Assumed --source "made-up count" >/dev/null
 "$P" estimate "$J" | tr -s ' ' > "$T/sheet.txt"
 says "$T/sheet.txt" "Refrigerator 7.00 EA"
 says "$T/sheet.txt" '$7,000.00'
 "$P" set "$J" Refrigerator priced_as "Mechanical equipment" > "$T/said.txt"
 sed 's/^/    | /' "$T/said.txt"
-says "$T/said.txt" '"Refrigerator" came off equipment-0093, with a quantity of 7.00 EA ("7", where the assembly writes "1") entered on it (it came to $7,000.00)'
+# call 233: the starter chest grew
+says "$T/said.txt" '"Refrigerator" came off equipment-0102, with a quantity of 7.00 EA ("7", where the assembly writes "1") entered on it (it came to $7,000.00)'
 "$P" set "$J" Refrigerator priced_as "Bought and set" >/dev/null
 "$P" estimate "$J" | tr -s ' ' > "$T/sheet.txt"
 says "$T/sheet.txt" "Refrigerator 1.00 EA"
@@ -163,7 +165,8 @@ sed 's/^/    | /' "$T/said.txt"
 says "$T/said.txt" "Refrigerator: changed: its trade; 6 lines on 3 set down from it moved to Division 12 Furnishings"
 "$P" estimate "$J" | tr -s ' ' > "$T/sheet.txt"
 says "$T/sheet.txt" "12 Furnishings"
-for t in equipment-0093 equipment-0094 equipment-0095; do "$P" remove "$J" "$t" >/dev/null; done
+# call 233: the starter chest grew
+for t in equipment-0102 equipment-0103 equipment-0104; do "$P" remove "$J" "$t" >/dev/null; done
 "$P" remove "$J" type-0046 > "$T/said.txt"
 sed 's/^/    | /' "$T/said.txt"
 says "$T/said.txt" "its 2 prices in the price list went with it: the price \$1,000.00/EA, Acme's \$900.00/EA"

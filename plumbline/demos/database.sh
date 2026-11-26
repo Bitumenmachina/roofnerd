@@ -2,9 +2,11 @@
 # "They own their database" (call 223, the command line's half): every table of the job, items, shapes, where the items connect, assemblies
 # and prices by supplier, written out as one workbook (a tab to a table) or one folder (a file to a table), and brought back whole, all of
 # it or none of it. At the command line, from an empty job, in the seven steps of STATUS.md ("The database in one hand"). The figures the
-# program holds on the day: the starter tables are 48 items, 13 shapes (49 rows, a row a block), 5 rows of where items connect (2 items), and
+# call 233: the starter chest grew
+# program holds on the day: the starter tables are 57 items, 27 shapes (101 rows, a row a block), 5 rows of where items connect (2 items), and
 # 42 assemblies in 202 lines; a made-up price list of three suppliers over two materials is 8 rows; one shape and one item of the job's own
-# make it 49 items and 14 shapes in 50 rows.
+# call 233: the starter chest grew
+# make it 58 items and 28 shapes in 102 rows.
 # Run from the repository root:  demos/database.sh
 # The job and every figure are made up (no real job data) and live in a temporary folder. Every step fails the script if the program does not
 # say what the step expects.
@@ -66,10 +68,12 @@ ROWS
 
 echo
 echo "== 1. Written out as my database: one workbook, a tab to a table, each tab what the table's own writing-out gives =="
-echo "      49 items (48 starter and 1 of its own), 50 rows of shapes (14 shapes), 5 rows of connections, 202 rows of assemblies (42), 8 price rows (2 materials by 3 suppliers, and each material's own row)"
+# call 233: the starter chest grew
+echo "      58 items (57 starter and 1 of its own), 102 rows of shapes (28 shapes), 5 rows of connections, 202 rows of assemblies (42), 8 price rows (2 materials by 3 suppliers, and each material's own row)"
 "$P" export database "$T/a.json" "$T/my.xlsx" > "$T/out1.txt"
 # call 225: the cabinet rules joined the database (call 223 as built, point 6)
-says "$T/out1.txt" "a tab for each table: Shapes 50, Items 49, Cabinet codes 8, Connections 5, Assemblies 202, Prices 8"
+# call 233: the starter chest grew
+says "$T/out1.txt" "a tab for each table: Shapes 102, Items 58, Cabinet codes 8, Connections 5, Assemblies 202, Prices 8"
 for t in shapes items connections assemblies prices; do
   "$P" export $t "$T/a.json" "$T/$t.xlsx" >/dev/null
   name="$(printf '%s' "$t" | awk '{print toupper(substr($0,1,1)) substr($0,2)}')"
@@ -79,7 +83,8 @@ for t in shapes items connections assemblies prices; do
 done
 "$P" export database "$T/a.json" "$T/my" > "$T/out1f.txt"
 # call 225: the cabinet rules joined the database (call 223 as built, point 6)
-says "$T/out1f.txt" "a file for each table: Shapes 50, Items 49, Cabinet codes 8, Connections 5, Assemblies 202, Prices 8"
+# call 233: the starter chest grew
+says "$T/out1f.txt" "a file for each table: Shapes 102, Items 58, Cabinet codes 8, Connections 5, Assemblies 202, Prices 8"
 for t in shapes items connections assemblies prices; do
   "$P" export $t "$T/a.json" "$T/$t.csv" >/dev/null
   cmp -s "$T/my/$t.csv" "$T/$t.csv" || { echo "FAIL: my/$t.csv is not the $t table written alone"; exit 1; }
@@ -91,7 +96,9 @@ echo "== 2. Brought into a new, empty job: each tab's count is what was written 
 "$P" new "$T/b.json" "Second (not a real job)" >/dev/null
 "$P" import database "$T/b.json" "$T/my.xlsx" > "$T/in2.txt"
 # call 225: the cabinet rules joined the database (call 223 as built, point 6)
-for line in "(a workbook, 6 tabs): brought in whole" "the tab Shapes: 50 rows under its headings" "the tab Items: 49 rows under its headings" "the tab Connections: 5 rows under its headings" "the tab Assemblies: 202 rows under its headings" "the tab Prices: 8 rows under its headings" "in all: 104 set; no row refused"; do says "$T/in2.txt" "$line"; done
+# call 233: the starter chest grew
+# call 233: the starter chest grew
+for line in "(a workbook, 6 tabs): brought in whole" "the tab Shapes: 102 rows under its headings" "the tab Items: 58 rows under its headings" "the tab Connections: 5 rows under its headings" "the tab Assemblies: 202 rows under its headings" "the tab Prices: 8 rows under its headings" "in all: 113 set; no row refused"; do says "$T/in2.txt" "$line"; done
 lacks "$T/in2.txt" "not used: 1"
 
 echo
@@ -115,7 +122,8 @@ echo "== 4. Brought into a job that already has it all: every row is the same, n
 before="$(cksum < "$T/a.json")"
 "$P" import database "$T/a.json" "$T/my.xlsx" > "$T/in4.txt"
 says "$T/in4.txt" "in all: 0 set; no row refused"
-says "$T/in4.txt" "the same as the job already has: 49"
+# call 233: the starter chest grew
+says "$T/in4.txt" "the same as the job already has: 58"
 lacks "$T/in4.txt" "added"
 [ "$(cksum < "$T/a.json")" = "$before" ] || { echo "FAIL: the job changed"; exit 1; }
 echo "    the job is byte for byte what it was"
@@ -130,7 +138,8 @@ printf 'Remember\ncall the supplier\n' > "$T/edited/notes.csv"
 "$P" import database "$T/d.json" "$T/edited" > "$T/in5.txt"
 says "$T/in5.txt" 'not read: the tab "notes"'
 says "$T/in5.txt" 'not read: the column "My code"'
-says "$T/in5.txt" "in all: 104 set; no row refused"
+# call 233: the starter chest grew
+says "$T/in5.txt" "in all: 113 set; no row refused"
 "$P" export database "$T/d.json" "$T/my4" >/dev/null
 diff -r "$T/my" "$T/my4" >/dev/null || { echo "FAIL: what came in is not what was written"; exit 1; }
 echo "    what was read is what was written, and the job has no code of its own or note"
@@ -158,7 +167,8 @@ for t in items connections assemblies; do "$P" import $t "$T/one.json" starter >
 "$P" new "$T/whole.json" "Starter (not a real job)" >/dev/null
 "$P" import database "$T/whole.json" starter > "$T/in7.txt"
 says "$T/in7.txt" "the starter database: brought in whole"
-says "$T/in7.txt" "the tab Items: 48 rows under its headings"
+# call 233: the starter chest grew
+says "$T/in7.txt" "the tab Items: 57 rows under its headings"
 cmp -s "$T/one.json" "$T/whole.json" || { echo "FAIL: the starter database is not the starter tables"; exit 1; }
 echo "    the two jobs are the same, byte for byte"
 

@@ -12,7 +12,8 @@
 //! the box the thing is, and never leaves it: the box is what is tested for clashes,
 //! and what is drawn must be inside what is tested.
 //!
-//! Since call 198 the thirteen are rows of `library/shapes.csv` (`shape.rs`), one row a block, each
+//! Since call 233 there are twenty-seven (the fourteen after the thirteen are ours: appliances and small devices, no BIMCraft family;
+//! BIMCraft's library was searched, see PORTMAP.md). Since call 198 the thirteen are rows of `library/shapes.csv` (`shape.rs`), one row a block, each
 //! figure a formula in the thing's width, depth and height; `blocks` below works them and nothing else
 //! does. The figures in the rows are the ones the code had (held to it, block for block, at three
 //! sizes, before it was taken out). What is not ported: a family's parameters, types, formulas, connectors
@@ -99,10 +100,38 @@ pub enum Form {
     Tank,
     /// Ours: a heat pump's or a condenser's outdoor unit.
     OutdoorUnit,
+    /// Ours (call 233): range.
+    Range,
+    /// Ours (call 233): refrigerator.
+    Refrigerator,
+    /// Ours (call 233): dishwasher.
+    Dishwasher,
+    /// Ours (call 233): laundry machine.
+    LaundryMachine,
+    /// Ours (call 233): air handler.
+    AirHandler,
+    /// Ours (call 233): panelboard.
+    Panelboard,
+    /// Ours (call 233): receptacle.
+    Receptacle,
+    /// Ours (call 233): switch.
+    Switch,
+    /// Ours (call 233): ceiling light.
+    CeilingLight,
+    /// Ours (call 233): recessed light.
+    RecessedLight,
+    /// Ours (call 233): smoke alarm.
+    SmokeAlarm,
+    /// Ours (call 233): thermostat.
+    Thermostat,
+    /// Ours (call 233): register.
+    Register,
+    /// Ours (call 233): shower base.
+    ShowerBase,
 }
 
 impl Form {
-    pub const ALL: [Form; 13] = [Form::BaseCabinet, Form::Wardrobe, Form::Wc, Form::Washbasin, Form::Bathtub, Form::Table, Form::Chair, Form::Bed, Form::Sofa, Form::Desk, Form::Sink, Form::Tank, Form::OutdoorUnit];
+    pub const ALL: [Form; 27] = [Form::BaseCabinet, Form::Wardrobe, Form::Wc, Form::Washbasin, Form::Bathtub, Form::Table, Form::Chair, Form::Bed, Form::Sofa, Form::Desk, Form::Sink, Form::Tank, Form::OutdoorUnit, Form::Range, Form::Refrigerator, Form::Dishwasher, Form::LaundryMachine, Form::AirHandler, Form::Panelboard, Form::Receptacle, Form::Switch, Form::CeilingLight, Form::RecessedLight, Form::SmokeAlarm, Form::Thermostat, Form::Register, Form::ShowerBase];
 
     /// What it is called where a person picks what an item is drawn as, and in an item
     /// library's "Drawn as" column.
@@ -121,6 +150,20 @@ impl Form {
             Form::Sink => "sink",
             Form::Tank => "tank",
             Form::OutdoorUnit => "outdoor unit",
+            Form::Range => "range",
+            Form::Refrigerator => "refrigerator",
+            Form::Dishwasher => "dishwasher",
+            Form::LaundryMachine => "laundry machine",
+            Form::AirHandler => "air handler",
+            Form::Panelboard => "panelboard",
+            Form::Receptacle => "receptacle",
+            Form::Switch => "switch",
+            Form::CeilingLight => "ceiling light",
+            Form::RecessedLight => "recessed light",
+            Form::SmokeAlarm => "smoke alarm",
+            Form::Thermostat => "thermostat",
+            Form::Register => "register",
+            Form::ShowerBase => "shower base",
         }
     }
 
@@ -211,7 +254,8 @@ pub fn blocks(form: Form, size: P3) -> Vec<Block> {
 mod tests {
     use super::*;
 
-    const ALL: [Form; 13] = Form::ALL;
+    // call 233: the starter chest grew
+    const ALL: [Form; 27] = Form::ALL;
 
     /// What is drawn is inside what is tested for clashes, and fills it: every block of
     /// every form is inside the thing's box, and together they reach each of its six

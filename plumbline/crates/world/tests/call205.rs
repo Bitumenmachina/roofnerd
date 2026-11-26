@@ -137,7 +137,8 @@ fn step_5_a_table_with_a_shape_called_as_a_starter_is_refused_naming_it() {
     // Its own rows, word for word, are the same thing: carried by nobody, counted as the same (call 198).
     let mut k = Job::new("again", "test", "t");
     let said = tables::shapes_in(&mut k, &csv_rows(tables::STARTER_SHAPES), None).unwrap();
-    assert!(k.shapes.is_empty() && said.same == 13 && said.not_used.is_empty(), "{said:?}");
+    // call 233: the starter chest grew
+    assert!(k.shapes.is_empty() && said.same == 27 && said.not_used.is_empty(), "{said:?}");
     let _ = before;
 }
 
@@ -185,13 +186,14 @@ fn a_name_the_job_or_the_starters_have_is_refused_and_so_is_an_empty_one() {
 #[test]
 fn keeping_the_shape_of_an_item_drawn_as_a_box_or_a_form_with_no_rows_says_so() {
     let (mut j, _, _) = job();
-    let range = {
+    // call 235: the range was this test's item drawn as a box until call 233 gave it a shape of its own; a wall box still is one.
+    let boxed = {
         let mut q = j.world.query::<(&plumbline_world::Node, &plumbline_world::Item)>();
-        q.iter(&j.world).find(|(n, _)| n.name == "Range, 30 in").map(|(n, _)| n.path.clone()).unwrap()
+        q.iter(&j.world).find(|(n, _)| n.name == "W1230").map(|(n, _)| n.path.clone()).unwrap()
     };
     let before = file::save(&mut j);
-    let why = ed::keep_shape_as(&mut j, &range, "range shape").unwrap_err();
-    assert!(why.contains("Range, 30 in") && why.contains("box"), "{why}");
+    let why = ed::keep_shape_as(&mut j, &boxed, "wall box shape").unwrap_err();
+    assert!(why.contains("W1230") && why.contains("box"), "{why}");
     assert_eq!(file::save(&mut j), before);
     let why = ed::keep_shape_as(&mut j, "wall-0001", "x").unwrap_err();
     assert!(why.contains("not an item") || why.contains("no element") || why.contains("not in the job"), "{why}");

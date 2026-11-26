@@ -119,7 +119,8 @@ echo "    the sample house has no shapes list"
 cp "$T/house.json" "$T/house-before.json"
 "$P" import shapes "$T/house.json" "$T/shapes1.csv" >/dev/null
 "$P" import shapes "$T/house.json" library/shapes.csv > "$T/starter-in.txt"
-says "$T/starter-in.txt" "the same as the job already has: 13"
+# call 233: the starter chest grew
+says "$T/starter-in.txt" "the same as the job already has: 27"
 "$P" estimate "$T/house.json" > "$T/estimate-after.txt"
 cmp "$T/estimate-before.txt" "$T/estimate-after.txt" && echo "    its estimate is the same to the byte after the shapes are brought in"
 "$P" check "$T/house-before.json" >/dev/null && echo "    the saved job opens and checks"
@@ -214,7 +215,8 @@ says "$T/hand-list.txt" "vanity with a panel (the job's own): 4 blocks"
 test "$(grep -c '^vanity with a panel,' "$T/hand-shapes.csv")" = 4 && echo "    the shapes table has the four rows"
 cp "$T/hand-two.json" "$T/hand-two-saved.json"
 "$P" import shapes "$T/hand-two.json" "$T/hand-shapes.csv" > "$T/again.txt"
-says "$T/again.txt" "the same as the job already has: 1"
+# call 233: the starter chest grew
+says "$T/again.txt" "the same as the job already has: 28"
 cmp "$T/hand-two.json" "$T/hand-two-saved.json" && echo "    opened, the same table brought in, saved again: the job is the same to the byte"
 "$P" export shapes "$T/hand-two.json" "$T/hand-shapes2.csv" >/dev/null
 cmp "$T/hand-shapes.csv" "$T/hand-shapes2.csv" && echo "    written out again: the same to the byte"

@@ -35,8 +35,10 @@ LIVING="$(made "$("$P" room "$J" "$S" "Living" --at "6,8" "${K[@]}")")"
 KITCHEN="$(made "$("$P" room "$J" "$S" "Kitchen" --at "30,8" "${K[@]}")")"
 "$P" room-line "$J" "$S" --points "24,0 24,16" "${N[@]}" >/dev/null
 IN="$("$P" import items "$J" starter)"
-grep -qF "set: 48" <<<"$IN" || { echo "FAIL: the starter tool chest is not 48 items"; echo "$IN"; exit 1; }
-echo "    the tool chest: 48 items, the 27 boxes among them"
+# call 233: the starter chest grew
+grep -qF "set: 57" <<<"$IN" || { echo "FAIL: the starter tool chest is not 57 items"; echo "$IN"; exit 1; }
+# call 233: the starter chest grew
+echo "    the tool chest: 57 items, the 27 boxes among them"
 
 echo
 echo "== 2. A run along the Kitchen's east wall, from 1 ft: B18 SB36 B24 DB18 B36, with its countertop =="

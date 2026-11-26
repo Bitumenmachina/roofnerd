@@ -262,7 +262,7 @@ pub fn export(args: &[String]) -> Result<(), String> {
     let tol = plumbline_world::check::FIT_TOLERANCE_FT;
     let mut w = Writer::new();
     let mut said: Vec<(&str, usize)> = Vec::new();
-    let mut put = |said: &mut Vec<(&'static str, usize)>, layer: &'static str, n: usize| {
+    let put = |said: &mut Vec<(&'static str, usize)>, layer: &'static str, n: usize| {
         if n > 0 {
             match said.iter_mut().find(|(l, _)| *l == layer) {
                 Some(e) => e.1 += n,

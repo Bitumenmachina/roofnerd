@@ -12,7 +12,8 @@ use plumbline_world::building::shape;
 const SIZES: [[f64; 3]; 3] = [[0.4, 0.3, 0.5], [3.0, 1.75, 2.875], [6.5, 3.0, 2.6]];
 
 /// All thirteen forms are rows (call 198, ruling 1).
-const ROWS: [Form; 13] = Form::ALL;
+// call 233: the starter chest grew (Form::ALL is 27; the golden file holds the first thirteen, from the code they replaced)
+const ROWS: [Form; 13] = [Form::BaseCabinet, Form::Wardrobe, Form::Wc, Form::Washbasin, Form::Bathtub, Form::Table, Form::Chair, Form::Bed, Form::Sofa, Form::Desk, Form::Sink, Form::Tank, Form::OutdoorUnit];
 
 fn near(a: &Block, b: &Block, what: &str) {
     for i in 0..3 {
@@ -24,7 +25,8 @@ fn near(a: &Block, b: &Block, what: &str) {
 
 #[test]
 fn the_starter_table_has_the_thirteen_shapes_in_the_order_of_the_forms() {
-    let names: Vec<&str> = shape::starter().iter().map(|s| s.name.as_str()).collect();
+    // call 233: the starter chest grew
+    let names: Vec<&str> = shape::starter().iter().take(13).map(|s| s.name.as_str()).collect();
     let want: Vec<&str> = ROWS.iter().map(|f| f.name()).collect();
     assert_eq!(names, want);
 }

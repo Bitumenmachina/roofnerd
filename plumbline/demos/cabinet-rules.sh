@@ -170,7 +170,9 @@ kitchen "$T/base.json" chest
 lacks "$T/base.txt" "was made by the rule"
 grep -q "cabinetRules" "$T/base.json" && fail "a job that never touched the rules carries them"
 SUM="$(sed 's/"timestamp": ".*"/"timestamp": "-"/' "$T/base.json" | sha256sum | cut -c1-64)"
-BASELINE="e56b41b05dc14d12a37d00cf1014c130272596bc3065cd8f80c9891472c4d453"
+# call 233: the starter chest grew (the job carries the chest). Call 235: six of its sizes say "an assumption: no published
+# size was found"; with those six put back to the typical text the job is 66e6a894...17cd, the figure call 233's worker took.
+BASELINE="2a869247608b0104239f05784a5083a2677bab439e3c27c4dbd376839e7c36a6"
 [ "$SUM" = "$BASELINE" ] || fail "the saved job is not the one the program wrote before: $SUM, not $BASELINE"
 echo "    sha256 $SUM, the job the program wrote before"
 

@@ -75,7 +75,8 @@ fn point_1_each_tab_is_its_tables_own_rows() {
     assert_eq!(all[4].1, tables::assemblies_out(&mut job));
     assert_eq!(all[5].1, tables::prices_out(&mut job));
     // The counts the program holds: 49 items, 50 rows of shapes (14 shapes), 5 rows of connections, 202 rows of assemblies (42 assemblies), 8 price rows.
-    assert_eq!(all.iter().map(|(_, r)| r.len() - 1).collect::<Vec<_>>(), [50, 49, 8, 5, 202, 8], "rows under each tab's headings");
+    // call 233: the starter chest grew
+    assert_eq!(all.iter().map(|(_, r)| r.len() - 1).collect::<Vec<_>>(), [102, 58, 8, 5, 202, 8], "rows under each tab's headings");
 }
 
 /// Points 2 and 3: brought into an empty job, each tab by its own reader, with counts; written out again it is the same.
@@ -88,9 +89,11 @@ fn points_2_and_3_out_in_and_out_again_is_the_same() {
     // call 225: the cabinet rules joined the database (call 223 as built, point 6)
     assert_eq!(reply.tabs.iter().map(|t| t.name).collect::<Vec<_>>(), ["Shapes", "Items", "Cabinet codes", "Connections", "Assemblies", "Prices"], "in the order they depend on one another");
     // The 13 starter shapes are in every job: they are the same; the job's own is added.
-    assert_eq!(tab(&reply, "Shapes").brought.same, 13);
+    // call 233: the starter chest grew
+    assert_eq!(tab(&reply, "Shapes").brought.same, 27);
     assert_eq!(tab(&reply, "Shapes").brought.done.len(), 1);
-    assert_eq!(tab(&reply, "Items").brought.done.len(), 49);
+    // call 233: the starter chest grew
+    assert_eq!(tab(&reply, "Items").brought.done.len(), 58);
     assert_eq!(tab(&reply, "Connections").brought.done.len(), 2);
     assert_eq!(tab(&reply, "Assemblies").brought.done.len(), 42);
     assert!(tab(&reply, "Prices").brought.done.len() >= 8);
@@ -112,7 +115,8 @@ fn point_2_a_job_that_has_it_all_is_not_changed() {
         assert!(t.brought.not_used.is_empty());
         // A shape is several rows (a block each) and is counted once.
         let same = match t.name {
-            "Shapes" => 14,
+            // call 233: the starter chest grew
+            "Shapes" => 28,
             "Connections" => 2, // a row for each connection, counted once for each item
             _ => t.brought.rows,
         };
@@ -150,7 +154,8 @@ fn point_4_what_it_cannot_read_is_said_and_the_rest_comes_in() {
     let reply = database::bring_in(&mut second, &sent, false).unwrap();
     assert_eq!(reply.not_read, ["Notes"]);
     assert_eq!(tab(&reply, "Items").brought.columns_not_used, ["My code"]);
-    assert_eq!(tab(&reply, "Items").brought.done.len(), 49);
+    // call 233: the starter chest grew
+    assert_eq!(tab(&reply, "Items").brought.done.len(), 58);
     assert_eq!(database::out(&mut second), database::out(&mut first));
 }
 
@@ -261,7 +266,8 @@ fn a_part_of_a_database_comes_in_and_the_missing_tabs_are_said() {
     assert_eq!(reply.tabs.len(), 1);
     // call 225: the cabinet rules joined the database (call 223 as built, point 6)
     assert_eq!(reply.absent, ["Shapes", "Cabinet codes", "Connections", "Assemblies", "Prices"]);
-    assert_eq!(tab(&reply, "Items").brought.done.len(), 48);
+    // call 233: the starter chest grew
+    assert_eq!(tab(&reply, "Items").brought.done.len(), 57);
 }
 
 /// Point 5: the starter database in one bringing-in is the starter tables one by one, byte for byte.
@@ -276,7 +282,8 @@ fn point_5_the_starter_database_is_the_starter_tables_one_by_one() {
     assert_eq!(files.iter().map(|(n, _)| *n).collect::<Vec<_>>(), ["Shapes", "Items", "Connections", "Assemblies"]);
     let sent: Vec<Given> = files.iter().map(|(n, text)| given(n, rows(text))).collect();
     let reply = database::bring_in(&mut whole, &sent, true).unwrap();
-    assert_eq!(tab(&reply, "Items").brought.done.len(), 48);
+    // call 233: the starter chest grew
+    assert_eq!(tab(&reply, "Items").brought.done.len(), 57);
     assert_eq!(tab(&reply, "Assemblies").brought.done.len(), 42);
     assert_eq!(file::save(&mut whole), file::save(&mut one), "byte for byte");
 }

@@ -99,7 +99,8 @@ fn a_job_that_names_no_shape_of_its_own_saves_as_it_always_did() {
     // The starter shapes are the program's: bringing them in again carries nothing.
     let said = tables::shapes_in(&mut j, &csv_rows(plumbline_world::tables::STARTER_SHAPES), None).unwrap();
     assert!(j.shapes.is_empty(), "{said:?}");
-    assert_eq!(said.same, 13);
+    // call 233: the starter chest grew
+    assert_eq!(said.same, 27);
 }
 
 #[test]

@@ -346,7 +346,8 @@ fn a_chest_with_none_of_the_new_columns_is_read_as_it_was() {
     let before = text_of(&tables::prices_out(&mut job));
     let said = tables::items_in(&mut job, &old, None).unwrap();
     assert!(said.not_used.is_empty(), "{:?}", said.not_used);
-    assert_eq!(said.same, 48, "every item is as the job has it: {:?}", said.done);
+    // call 233: the starter chest grew
+    assert_eq!(said.same, 57, "every item is as the job has it: {:?}", said.done);
     assert_eq!(text_of(&tables::prices_out(&mut job)), before, "the price list is not touched");
     assert_eq!(priced_as(&mut job, HEATER).as_deref(), Some(BOUGHT), "an item keeps what it is priced as");
     assert_eq!(lines_of(&mut job, &a).len(), 2);

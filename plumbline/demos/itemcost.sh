@@ -79,7 +79,8 @@ says "$T/sheet.txt" "total ~\$3,700.00 ~\$3,580.00"
 
 echo
 echo "== 4. Set in place: 4 hours each at \$85.00/hr = \$340.00 each; job cost 2 x (1,850.00 + 340.00) = \$4,380.00 =="
-for t in equipment-0093 equipment-0094; do
+# call 233: the starter chest grew
+for t in equipment-0102 equipment-0103; do
   "$P" set "$J" "$t" order "4 hr/EA" --line "Set in place" --status Assumed --source "made-up crew" >/dev/null
   "$P" set "$J" "$t" unit_cost '$85.00/hr' --line "Set in place" --status Assumed --source "made-up crew" >/dev/null
 done
@@ -92,7 +93,8 @@ echo "== 5. Priced as \"Mechanical equipment\": 2 follow, the lines are gone and
 "$P" set "$J" "$HEATER" priced_as "Mechanical equipment" > "$T/said.txt"
 sed 's/^/    | /' "$T/said.txt"
 says "$T/said.txt" "2 set down from it follow"
-says "$T/said.txt" "\"Set in place\" came off equipment-0093, with 4 hr/EA and \$85.00/hr entered on it"
+# call 233: the starter chest grew
+says "$T/said.txt" "\"Set in place\" came off equipment-0102, with 4 hr/EA and \$85.00/hr entered on it"
 sheet
 says "$T/sheet.txt" "Equipment, set and connected"
 says "$T/sheet.txt" "leaves out 2 lines, named above"
@@ -138,7 +140,8 @@ for r in rows:
 PY
 "$P" import items "$J" "$T/old.csv" > "$T/said.txt"
 sed 's/^/    | /' "$T/said.txt" | head -5
-says "$T/said.txt" "the same as the job already has: 48"
+# call 233: the starter chest grew
+says "$T/said.txt" "the same as the job already has: 57"
 "$P" items "$J" | grep -F "$HEATER" | tr -s ' ' > "$T/items.txt"
 says "$T/items.txt" "priced as \"$BOUGHT\""
 sheet
