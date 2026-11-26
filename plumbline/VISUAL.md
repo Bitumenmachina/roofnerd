@@ -139,6 +139,53 @@ themselves are named at the top of `crates/app/src/theme.rs`.
    heading and its foot are round cards lifted off the page like its tables, its
    tabs lie on the page, and the heading carries the job's name.)
 
+## G. Quiet, with room (DECISIONS.md calls 239 and 240)
+
+Patrick, 2026-11-26: "it still seems quite busy and the tools look a bit cramped".
+Sections A to F had no number that failed what he saw. Each line here has one, and
+`demos/quietw.sh` measures it from what the program says of every box and size.
+"At rest" is the model window with nothing selected and no tool in hand. Where a line
+of A to F says otherwise, this section is right.
+
+1. **The model keeps the window.** At rest the model keeps at least **90 %** of the
+   model window at 1600 by 960 and **85 %** at 1366 by 768 (the window less every
+   floating thing's box); with a thing selected and a tool in hand, at least **75 %**.
+2. **Few things to press.** At rest no more than **24** things to press are in view;
+   on a new, empty job no more than **16**.
+3. **Lettering.** Nothing is smaller than **11 px**, and 11 px is only for a unit, a
+   count, a field's label. A sentence, and a control's only word, is **13 px** or
+   more; a tool's word is **12 px**.
+4. **Four sizes.** No more than **4** sizes of lettering on one screen (11, 13, 15,
+   20, and the tools' 12 in the dock alone).
+5. **A tool can be read and hit.** A tool is at least **56 by 52 px**, its word whole
+   on one line with at least **6 px** to each edge.
+6. **Tools have room.** At least **6 px** between two tools, **16 px** between two
+   groups.
+7. **Three groups** of tools at most in the dock.
+8. **Three colours carry meaning on the glass**: the accent, assumed, unknown. A
+   trade's colour is in the model and beside its name in the open list of layers,
+   nowhere else.
+9. **Text can be read**: at least **4.5 to 1** against the glass under it at the
+   glass's lightest (3 to 1 for lettering of 24 px or more).
+10. **Nothing tall stands at rest.** Nothing floating at rest is taller than **64 px**.
+    A panel is no taller than what is in it, and the panel for a thing selected is no
+    taller than the window less 136 px.
+11. **A figure once.** The price is on the model window **once**.
+12. **Red is rare.** No more than **2** red words in any one panel or card.
+13. **No key labels at rest**: **0** keys drawn on the glass (they are said when the
+    pointer rests on a control, and on the sheet of keys).
+14. **Nothing floats over the work**: **0 px** of any floating thing over the thing
+    selected or the place under a tool.
+15. **Nothing is cut**: **0** controls or figures cut, at 1366 by 768, 1600 by 960,
+    1920 by 1080 and 2560 by 1440, at every step of lettering.
+16. **The estimate's tabs** are no more than **5** and fit one line at 880 wide at the
+    largest lettering.
+
+And two that have no number: **a control at rest has no box of its own unless it is
+a field; its group is the box**; **how sure a figure is, is a mark before it (none
+for Known, a half-filled amber circle for Assumed, an open red circle for Unknown)
+and the figure stays in ink**.
+
 ## How a screen is judged
 
 Sections A, C and D apply to a 3D picture of the model window; A and E to a plan; F

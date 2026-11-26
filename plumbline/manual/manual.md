@@ -121,7 +121,7 @@ Proven by `demos/fieldw.sh` and `demos/field-sheet.sh`.
   dollars are first.
 - Pick up a thing and move it (section 9). Its clashes light and clear while it moves.
 
-[picture: clash | Clashes marked on the house, and the list of them in the estimate window.]
+[picture: clash | Clashes marked on the house. The Show panel says how many are findings and how many are questions for the field.]
 
 Proven by `demos/clashw.sh`, `demos/tradesw.sh`, `demos/clash.sh` and `demos/vif.sh`.
 

@@ -16,12 +16,12 @@ the build goes on without asking him, and what he is sent is the manual, changed
 | Step | What | Where it stands |
 |---|---|---|
 | 1 | The lead's checks in the repository | **Done.** `tools/check.sh`, `tools/window-run.sh`, `tools/quiet.sh`, `tools/index.sh`. |
-| 2 | Window demonstrations made sure; all forty-five run with nothing beside them | **Begun.** See "The window" below. |
-| 3 | The manual; `demos/captured/` let go | **Done, and it goes on**: `manual/index.html` (written by `tools/manual.py` from `manual/manual.md`, this file and `manual/pictures/`) is published to Patrick as one artifact, `https://claude.ai/artifact/DTAkAoTGMcTYEkVAXdHLYt` (to change it: `tools/manual.py take` the new pictures, `tools/manual.py build`, `tools/manual.py page <file>`, and publish that file with the pictures to the same address). Seventeen pictures, each stamped with the commit it is of (five are of 18e0ad8; the oldest is of 2026-11-23); they are replaced as step 2's runs give new ones. `demos/captured/` is no longer kept in the repository. |
+| 2 | Window demonstrations made sure; all forty-five run with nothing beside them | **The kit is in (20a15ea): a press waits until the window has drawn.** The builder's ten passed, each on its first run. The lead's own run of all forty-five is going, in parts. See "The window" below. |
+| 3 | The manual; `demos/captured/` let go | **Done, and it goes on**: `manual/index.html` (written by `tools/manual.py` from `manual/manual.md`, this file and `manual/pictures/`) is published to Patrick as one artifact, `https://claude.ai/artifact/DTAkAoTGMcTYEkVAXdHLYt` (to change it: `tools/manual.py take` the new pictures, `tools/manual.py build`, `tools/manual.py page <file>`, and publish that file with the pictures to the same address). Seventeen pictures, each stamped with the commit it is of (two are of 18e0ad8, three of 20a15ea; the oldest is of 2026-11-23); they are replaced as step 2's runs give new ones. `demos/captured/` is no longer kept in the repository. |
 | 4 | The documents put right | **Done.** Four lists are written by tools and checked by the commit hook (`DECISIONS-index.md`, the README's demonstrations, the table in `LICENSES.md`, the manual's page). `TRY-IT.md` is gone: the manual takes its place. |
 | 5 | The earlier program off the branch; the commit hook BuildOS's own | **Done.** It is on `main`, whole. |
-| 5b | **Design review, and the window laid out again** (call 239: Patrick finds it busy and the tools cramped; so does the lead, looking as he does) | **Begun.** The prompt for an outside designer is `handoff/design-review-prompt.md`, with five current pictures. A design judge here, and the numbers `VISUAL.md` lacks, follow the kit job. Taken before step 6, which adds buttons. |
-| 6 | The window takes every kind of file the command line takes | Not begun. |
+| 5b | **Design review, and the window laid out again** (calls 239, 240) | **Judged; being built.** A design judge on another model measured the screens and searched what shipping programs do (`research/judgment-design-1126.md`): Patrick is right, and it is now in figures. `VISUAL.md` section G has sixteen numbered lines; `demos/quietw.md` is the check, to be proved red first. Part A is contract 240A; part B (the Job panel into menus and sheets; the tools' second level) follows it. The outside designer's prompt is `handoff/design-review-prompt.md`; one reading is put to Patrick (`QUESTIONS.md` Q37). |
+| 6 | The window takes every kind of file the command line takes | Not begun. Call 240 changes how: Bring in and Write out become one sheet each with a list, so a new kind of file is a row and not a button. Built with part B. |
 | 7 | The eleven files over 2,000 lines cut | Not begun. |
 | 8 | The name BuildOS through the code | Not begun. Last, alone. |
 | 9 | Items 9 to 12 judged again | Not begun. |
@@ -34,7 +34,7 @@ the build goes on without asking him, and what he is sent is the manual, changed
   none says FAIL; the three gates, the port map and the licence check pass; the sample
   whole house (`plumbline sixteen`) is 880d9fd3c364b5f7, as it has been, and prices at
   $393,981.66.
-- **The window's own tests, on the build of 18e0ad8**: 109 pass.
+- **The window's own tests, on the build of 20a15ea**: 110 pass.
 - **`tools/committed.sh` passed on 1edb650** (108 test runs from a clean copy). It has
   not been run since; it is owed before the next push that changes code.
 - After the earlier program left the branch, the roofing crate's 122 tests were run
@@ -45,16 +45,15 @@ the build goes on without asking him, and what he is sent is the manual, changed
 
 ## The window
 
-**Three of forty-five proven on the head; the rest not yet run.** The window builds on
-the head and its 109 tests pass. Run by the lead on 2026-11-26 with nothing beside
-them (`tools/window-run.sh`), on the build of 18e0ad8: `twoplansw`, `tradesw` and
-`navw` each passed on its first run. The double-click in a plan that had failed twice
-was the demonstration's own pacing (two presses 0.75 s apart, where the program
-tells a double-click inside half a second of its clock); it is repaired in 18e0ad8,
-and the three double-clicks of the program are now told by one function. The other
-forty-two were last run on earlier builds, some with builds beside them; they are
-run again, alone, when the kit job (contract 237K: a press waits until the window
-has drawn) is in.
+**Being proven on the head, all forty-five, by the lead's own run** (`tools/window-run.sh`,
+nothing beside it, on the build of 20a15ea; its results are added here when it ends).
+Before the kit: `twoplansw`, `tradesw` and `navw` each passed on its first run on the
+build of 18e0ad8, where the double-click in a plan that had failed twice was
+repaired (it was the demonstration's own pacing). With the kit (20a15ea: a press is
+held until a frame has been drawn with it down; one double-click paced inside the
+program's half second), the builder's ten passed each on its first run: `twoplansw`,
+`navw`, `tradesw`, `glassw`, `moneyw`, `pricew`, `screensw`, `movew`, `planw`, `clashw`.
+The window's 110 tests pass.
 
 **The rule that was broken, and is now held by a tool.** No build runs on the machine
 while a timed window demonstration runs. On 2026-11-26 the lead ran builds beside them
@@ -100,8 +99,8 @@ build it.
 - **The window is busy and its tools are cramped** (Patrick, call 239). At 1600 by 960
   the panels and bars cover a little over half the window; about ninety controls are
   in view at once; eighteen tools sit in one row with labels near 10 px; Show is said
-  twice; the Details panel repeats the estimate window. `VISUAL.md` has no number
-  that fails this. Step 5b.
+  twice; the Details panel repeats the estimate window. `VISUAL.md` now has the numbers (section G); the
+  window does not yet meet them. Step 5b.
 - Eleven source files are over 2,000 lines (step 7): `crates/world/tests/world.rs`
   6,713; `crates/cli/src/main.rs` 4,310; `crates/app/src/panels.rs` 4,017;
   `crates/world/src/building.rs` 3,944; `crates/app/src/scene.rs` 3,248;
@@ -114,9 +113,6 @@ build it.
 - The folder, the crates and the two commands are still named plumbline (step 8).
 - Neither wall finder turns a real phone scan, or a crowded plan, into walls by
   itself: a person traces and the finder helps.
-- `navw`'s north arrow still sends its two presses 0.6 s apart and passes only where
-  a frame is slow, as here. Contract 237K gives the kit one double-click paced inside
-  the half second.
 - Designed and not built: an issue list (BCF) read back; a mesh brought in; glTF with
   each thing as its own shape; the sixteen division harnesses (`PROPOSALS.md` 21).
 

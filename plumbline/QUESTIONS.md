@@ -507,3 +507,14 @@ nothing of a real job on it, placed in `refs/`, would settle it. **Nothing waits
 on this.** Working assumption: the standard's keys as read; a count only when
 asked for.
 
+## Q37. Does a Layers chip with a sheet of switches keep "every layer has a switch that reads on or off at a glance"? (2026-11-26, call 240)
+
+Your rule: every layer of the job has a switch that reads on or off at a glance.
+Today that is twelve switches standing in the left panel, which is part of what
+makes the window busy. The design judgment proposes one chip in the corner that
+says what is off by name ("Layers: Framing off", or "3 off"), which opens a
+sheet with every layer's switch; the sheet can be pinned open for someone who
+wants the switches standing. **Working assumption: that keeps your rule**, and
+part B of the new layout is built that way. If you want the switches standing
+always, say so and they stay as a slim strip. **Nothing waits on this.**
+

@@ -47,6 +47,12 @@ def take(folder, commit, only):
     for name, source, kind in rows("pictures.tsv"):
         if only and source.split("/")[0] not in only:
             continue
+        # A picture no demonstration writes is not evidence of a run: three were once stamped with a run's commit
+        # when they were hand-made pictures of three days before, lying in the same folder (2026-11-26).
+        top = source.split("/")[0]
+        if not any(f"captured/{top}" in open(os.path.join(ROOT, "demos", d)).read() for d in os.listdir(os.path.join(ROOT, "demos")) if d.endswith(".sh")):
+            print(f"  REFUSED {name}: no demonstration writes demos/captured/{top}")
+            continue
         if kind == "pair":
             parts = [os.path.join(folder, source + "-model.png"), os.path.join(folder, source + "-sheet.png")]
         else:

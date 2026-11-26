@@ -5,14 +5,14 @@ plan-scale	plan/03-model.png	one
 trace	first/03-model.png	one
 house-3d	first/06-model.png	one
 field	field/03-model.png	one
-clash	trades/clash-rooms	pair
+clash	layers/16-model.png	one
 estimate	dress/priced/01-sheet.png	one
 items	itemlib/03-model.png	one
 move	movew/04-model.png	one
 bench	benchw/02-model.png	one
 cabinets	cabinetsw/06-model.png	one
 renovation	renow/06-model.png	one
-trades-framing	trades/2-framing.png	one
-trades-hvac	trades/5-hvac.png	one
+trades-framing	layers/03-model.png	one
+trades-hvac	layers/08-model.png	one
 bring-in	bring/03-model.png	one
 two-plans	twoplansw/b/03-sheet.png	one

@@ -10764,3 +10764,80 @@ How it is read.
    the map, every word stays a builder's, every layer keeps a switch that reads at
    a glance, every panel can still be put away, and no number of the job changes.
 
+### Call 240. The design judgment ruled: the numbers for quiet and room, and the window laid out again in two parts (2026-11-26)
+
+The design judge of call 239 (`research/judgment-design-1126.md`; another model,
+cold; it measured the pictures and searched Apple's guidelines, Google Earth's
+help, Figma's account of its redesign, SketchUp, Procreate, a city-builder's
+manual, Nielsen Norman Group and WCAG, each cited) finds Patrick right and
+gives the measure of it: at rest the model window shows 62 things to press, 7
+key labels drawn like buttons and 18 tool numbers; the model keeps 56 % of the
+window; the tools are 48 by 44 with 11 px labels and 3 to 4 px between them and
+"Equipment" is wider than its button; the price is on the model window twice;
+fifteen sizes of lettering are in the code and four near-equal ones carry
+nearly all of it; red means four things and amber four; Assumed amber is 4.09
+to 1 on the glass, under the 4.5 the standard for small text asks.
+
+**A mistake of the lead's that the judge's eye caught, and what it was.** The
+judge saw one job priced $463,527.62 in one picture and $468,050.22 in another.
+The windows do not disagree: the first picture was not of today. Three pictures
+of the manual and one sent to Patrick came from `demos/captured/trades/`, which
+no demonstration writes: they were made by hand on 2026-11-23 and lay in the
+same folder as a run's pictures, and the lead stamped them with the run's
+commit. The manual now takes those three from what `demos/tradesw.sh` writes,
+`tools/manual.py` refuses a picture no demonstration writes, and Patrick is
+told.
+
+Ruled.
+
+1. **The numbers go into `VISUAL.md` as section G, "Quiet, with room"**, sixteen
+   lines a judge passes or fails from one picture (the model's share of the
+   window, the most things to press at rest, the smallest lettering, the number
+   of sizes, the size of a tool and the gap between tools, the groups of tools,
+   the colours carrying meaning, contrast, the height of anything floating at
+   rest, a figure once, red words, key labels, nothing over what is selected,
+   nothing cut, the estimate's tabs). Where a line of sections A to F says
+   otherwise, G is right: a control at rest has no box of its own unless it is
+   a field (A3); how sure a figure is, is a mark before it and the figure stays
+   in ink (A6).
+2. **How sure, as a mark.** No mark for Known, a half-filled amber circle for
+   Assumed, an open red circle for Unknown; the figure in ink. A new job then
+   reads as a job and not as a page of warnings. The estimate's own cells keep
+   their colour, where a column makes it read as one. Every value still says
+   Known, Assumed or Unknown and where it came from: what changes is the ink.
+3. **The layout** is the judge's section 3: five small things float at rest (the
+   job and its menu; the price; the next step on a new job; the tools; the view
+   with its level and layers) and nothing taller than 64 px; a panel for a
+   thing appears when a thing is selected and goes when it is not; the tools
+   are two levels (the six of a first takeoff by name, then "Cabinets and
+   items" and "Systems" opening upward); Bring in and Write out are each one
+   sheet with a list, so that ten more kinds of file are ten more rows and not
+   ten more buttons (this is how step 6 of call 237 is now built).
+4. **Not taken from the judge.** The price keeps its cents on the model window:
+   one figure, said one way in both windows. Layouts stays in the estimate
+   window (under Lists), not under Write out: it compares, it does not write.
+5. **One reading that is Patrick's rule and is put to him** (`QUESTIONS.md` Q37):
+   "every layer has a switch that reads on or off at a glance". Working
+   assumption: a Layers chip in the view cluster that says what is off by name
+   ("Layers: Framing off", or "3 off"), opening a sheet of every layer's switch,
+   and the sheet can be pinned open. The build goes on with that.
+6. **It is built in two parts, each with every demonstration still passing.**
+   **Part A** (contract 240A; no control moves into a menu): no panel for a
+   thing when nothing is selected; the tools at their size, without boxes, with
+   their gaps; key labels off the glass; four sizes of lettering; how sure as a
+   mark and the amber that passes; trade colours off amber and red; one place
+   for a message, never over what is selected; the two top bars made small; the
+   price once. **Part B** (written when A is in): the Job panel gone into the
+   job's menu and the view cluster's sheets, the tools' second level, the two
+   sheets for files, the panel for a thing with one main button. The estimate
+   window follows B.
+7. **What a demonstration expects may move, one decision each.** Several
+   demonstrations measure the old layout (a panel's share of the window in
+   `glassw`, the fold in `screensw`, counts of coloured dots in `tradesw` and
+   `fixes209w`, regions in `trimw`). The builder stops at each, says what was
+   seen, and the lead rules on it in the call's "as built" before it moves.
+   Every control keeps its name on the map.
+8. **`demos/quietw.sh`** measures section G from the map (every box, every
+   size) at 1600 by 960 and 1366 by 768, and is proved red on the window as it
+   is today before anything is changed.
+
