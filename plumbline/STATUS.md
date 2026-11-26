@@ -17,7 +17,7 @@ the build goes on without asking him, and what he is sent is the manual, changed
 |---|---|---|
 | 1 | The lead's checks in the repository | **Done.** `tools/check.sh`, `tools/window-run.sh`, `tools/quiet.sh`, `tools/index.sh`. |
 | 2 | Window demonstrations made sure; all forty-five run with nothing beside them | **Begun.** See "The window" below. |
-| 3 | The manual; `demos/captured/` let go | **Done, and it goes on**: `manual/index.html` (written by `tools/manual.py` from `manual/manual.md`, this file and `manual/pictures/`) is published to Patrick as one artifact, `https://claude.ai/artifact/DTAkAoTGMcTYEkVAXdHLYt` (to change it: `tools/manual.py take` the new pictures, `tools/manual.py build`, `tools/manual.py page <file>`, and publish that file with the pictures to the same address). Seventeen pictures, each stamped with the commit it is of; they are replaced as step 2's runs give new ones. `demos/captured/` is no longer kept in the repository. |
+| 3 | The manual; `demos/captured/` let go | **Done, and it goes on**: `manual/index.html` (written by `tools/manual.py` from `manual/manual.md`, this file and `manual/pictures/`) is published to Patrick as one artifact, `https://claude.ai/artifact/DTAkAoTGMcTYEkVAXdHLYt` (to change it: `tools/manual.py take` the new pictures, `tools/manual.py build`, `tools/manual.py page <file>`, and publish that file with the pictures to the same address). Seventeen pictures, each stamped with the commit it is of (five are of 18e0ad8; the oldest is of 2026-11-23); they are replaced as step 2's runs give new ones. `demos/captured/` is no longer kept in the repository. |
 | 4 | The documents put right | **Done.** Four lists are written by tools and checked by the commit hook (`DECISIONS-index.md`, the README's demonstrations, the table in `LICENSES.md`, the manual's page). `TRY-IT.md` is gone: the manual takes its place. |
 | 5 | The earlier program off the branch; the commit hook BuildOS's own | **Done.** It is on `main`, whole. |
 | 6 | The window takes every kind of file the command line takes | Not begun. |
@@ -33,7 +33,7 @@ the build goes on without asking him, and what he is sent is the manual, changed
   none says FAIL; the three gates, the port map and the licence check pass; the sample
   whole house (`plumbline sixteen`) is 880d9fd3c364b5f7, as it has been, and prices at
   $393,981.66.
-- **The window's own tests, on the head with the double-click repair**: 109 pass.
+- **The window's own tests, on the build of 18e0ad8**: 109 pass.
 - **`tools/committed.sh` passed on 1edb650** (108 test runs from a clean copy). It has
   not been run since; it is owed before the next push that changes code.
 - After the earlier program left the branch, the roofing crate's 122 tests were run
@@ -44,17 +44,16 @@ the build goes on without asking him, and what he is sent is the manual, changed
 
 ## The window
 
-**Not proven on the head.** The window builds on the head and its 109 tests pass.
-Of the forty-five window demonstrations, the lead's last runs (2026-11-26, on the
-build before the head, with builds running beside them) gave: `screensw` passed;
-`twoplansw` failed twice at its step 7 (a double-click in a plan selected and did not
-fly); `tradesw` failed twice at a different click each time; the other forty-two
-were not run. Ten had passed on the build before that. **A repair of the
-double-click is in the working copy, not committed**: the demonstration's two presses
-were 0.75 s apart and the program tells a double-click inside half a second of its own
-clock; the presses now go 0.4 s apart, and the model window's double-click takes the
-same one function as the other two (`nav::again`). It is committed when `twoplansw`
-passes in the lead's own run with nothing beside it.
+**Three of forty-five proven on the head; the rest not yet run.** The window builds on
+the head and its 109 tests pass. Run by the lead on 2026-11-26 with nothing beside
+them (`tools/window-run.sh`), on the build of 18e0ad8: `twoplansw`, `tradesw` and
+`navw` each passed on its first run. The double-click in a plan that had failed twice
+was the demonstration's own pacing (two presses 0.75 s apart, where the program
+tells a double-click inside half a second of its clock); it is repaired in 18e0ad8,
+and the three double-clicks of the program are now told by one function. The other
+forty-two were last run on earlier builds, some with builds beside them; they are
+run again, alone, when the kit job (contract 237K: a press waits until the window
+has drawn) is in.
 
 **The rule that was broken, and is now held by a tool.** No build runs on the machine
 while a timed window demonstration runs. On 2026-11-26 the lead ran builds beside them
@@ -109,10 +108,9 @@ build it.
 - The folder, the crates and the two commands are still named plumbline (step 8).
 - Neither wall finder turns a real phone scan, or a crowded plan, into walls by
   itself: a person traces and the finder helps.
-- A double-click is told by the program's own clock, and a demonstration's two presses
-  must fall inside half a second of it. `twoplansw` was repaired for that;
-  `navw`'s north arrow still sends its presses 0.6 s apart and passes only where a
-  frame is slow. It is put right in step 2.
+- `navw`'s north arrow still sends its two presses 0.6 s apart and passes only where
+  a frame is slow, as here. Contract 237K gives the kit one double-click paced inside
+  the half second.
 - Designed and not built: an issue list (BCF) read back; a mesh brought in; glTF with
   each thing as its own shape; the sixteen division harnesses (`PROPOSALS.md` 21).
 
