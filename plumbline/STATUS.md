@@ -11569,7 +11569,13 @@ the command line the stopped bench step (call 214) taken up again.
   `itemlibw` PASS and `itemneww` PASS (first runs; pictures read).
   `cabinetsw`, `gablew` and `gableendw` PASS (first runs; pictures read).
   `navw` with the machine to itself (06:59 to 07:42): every figure as written
-  but one, the north arrow's double-click (see below).
+  but one: **the north arrow's double-click does not look straight down on
+  this build** (the view stays at a 15.5 degree tilt). It passed on the build
+  before call 222 part A. The lead tried the demonstration's two clicks 0.4 s
+  apart where they are written 0.6 s apart: the same. So it is taken as a fault
+  in the window from part A until shown otherwise, and is with the window
+  builder to run down before the next window work is accepted; `navw.sh` is as
+  it was but for its long session cut in two.
   `navw`: failed twice for time as said above, to be run again cut in two.
   Still to run on it: `tradesw`, `screensw`, `bringw`, `movew`. The builder's own runs
   before the merge: `screensw` (seven sessions), `glassw`, `moneyw`, `benchw`,

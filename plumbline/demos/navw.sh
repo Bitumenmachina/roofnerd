@@ -7,7 +7,7 @@
 # (`selected`, `house`, `arrow`), not from one picture. Pictures are kept for a person to look at, with a strip across the dive and
 # one across the flight.
 #
-# Seven sessions in the window, each on its own run of the program (each under ten minutes), then the checks:
+# Eight sessions in the window, each on its own run of the program (each under ten minutes), then the checks:
 #   a  out to the lot, tilted to 60 degrees, dived to the kitchen receptacle with Tilt as I dive on, the pictures of the strip
 #                                                                                  (steps 1 to 4)
 #   b  the same dive with Tilt as I dive off                                       (step 4)
@@ -18,6 +18,9 @@
 #   e  a double-click on the front door: the flight and its strip; a flight taken over half way; F with the door selected, then with
 #      nothing                                                                     (steps 7 and 8)
 #   f  the north arrow: a quarter turn, a click, a double-click, Home              (step 9)
+#   h  the wheel in on a wall's face and on bare ground: the eye stays outside and over (step 1). These two dives were the end of
+#      session f until 2026-11-26: with any other work on the machine f ran out of its ten minutes twice, every step of it done
+#      up to the second dive and no figure wrong. The session was cut in two; no step and no check changed.
 #
 # The job is the made-up whole house (`plumbline sixteen`): 40 ft by 28 ft, two storeys, with a duplex receptacle in the kitchen
 # (3 by 1 3/16 by 4 13/16 in, its middle 3.4 ft up on the north wall) and the front door. Where a figure of STATUS.md's demonstration
@@ -25,7 +28,7 @@
 # 278 ft (the house is then a sixth of the window's width), and the dive from there to 8 in is about 58 notches (0.81 to a click on this display); a pointer is put on
 # a thing of 5 in only where it is ten dots across (about 30 ft) (about 30 ft), the wheel having come down over what lay under the pointer before.
 #
-# Run from the repository root:  [PLUMBLINE_BIN=<folder>] [ONLY="a b c d e f g"] [STATE=<folder>] demos/navw.sh [folder for the pictures]
+# Run from the repository root:  [PLUMBLINE_BIN=<folder>] [ONLY="a b c d e f g h"] [STATE=<folder>] demos/navw.sh [folder for the pictures]
 # It drives the real program with a real pointer and keyboard on a virtual display (Xvfb, xdotool, a Vulkan driver). Where a flight
 # is read frame by frame it runs with PLUMBLINE_FRAME set (no frame counts for more than that much of the program's own time), so that
 # a flight of a second is made of many frames on a renderer that draws one a second.
@@ -40,7 +43,7 @@ ICD="${VK_ICD_FILENAMES:-/usr/share/vulkan/icd.d/lvp_icd.json}"
 if [ -n "${PLUMBLINE_BIN:-}" ]; then echo "using the program in $PLUMBLINE_BIN, not building"; else cargo build --quiet; fi
 P="${PLUMBLINE_BIN:-$PWD/target/debug}/plumbline"; APP="${PLUMBLINE_BIN:-$PWD/target/debug}/plumbline-app"
 OUT="${1:-$PWD/demos/captured/navw}"; mkdir -p "$OUT"
-ONLY="${ONLY:-a b c d e f g}"
+ONLY="${ONLY:-a b c d e f g h}"
 if [ -n "${STATE:-}" ]; then T="$STATE"; mkdir -p "$T"; else T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT; fi
 wants() { case " $ONLY " in *" $1 "*) return 0;; *) return 1;; esac; }
 J="$T/nav-house.json"
@@ -352,6 +355,14 @@ sleep 3; rest; rec down; shot
 # Home: north up from where it is (turn a little first, then the key).
 xdotool keydown Right; sleep 0.8; xdotool keyup Right; rest; rec turned
 tap Home; rest; rec home_key
+touch "$T/end-f"
+close_window
+STEPS
+
+# ---------------------------------------------------------------------------------------------------------------- session h
+cat > "$T/steps-h.sh" <<'STEPS'
+open_window "$JOB"; rest
+park; rest
 # The wheel does not take the eye through a wall's face, or through the ground: from the whole house, the pointer on the front wall
 # and in to the end; then, back at the whole house, the pointer on bare ground and in to the end (See through is off).
 indive() {   # $1 name, $2 where the pointer is (x y)
@@ -367,13 +378,13 @@ indive() {   # $1 name, $2 where the pointer is (x y)
 }
 indive wall "800 560"
 indive ground "330 700"
-touch "$T/end-f"
+touch "$T/end-h"
 close_window
 STEPS
 
 echo "== The sessions (the program is the one at $APP) =="
 frame_of() { case "$1" in a|b|c) echo 1.0;; e) echo 0.03;; g) echo 0.03;; *) echo "";; esac; }
-for s in a b c d e f g; do if wants "$s"; then session "$s" "$(frame_of "$s")"; fi; done
+for s in a b c d e f g h; do if wants "$s"; then session "$s" "$(frame_of "$s")"; fi; done
 
 [ -z "${NOCHECK:-}" ] || exit 0
 echo
@@ -600,7 +611,9 @@ if "f" in only:
     check("9  a click and the view is north-up within a degree, standing where it stood (ft moved, ft nearer, tilt change)", f"{wrap(cl['turn']):.2f}; {dist(cl['at'], qu['at']):.3f}; {abs(cl['d'] - qu['d']):.3f}; {abs(cl['tilt'] - qu['tilt']):.2f}", abs(wrap(cl["turn"])) < 1.0 and dist(cl["at"], qu["at"]) < 0.1 and abs(cl["d"] - qu["d"]) < 0.1, "north-up, same place")
     check("9  a double-click and it looks straight down, degrees", f"{dn['tilt']:.1f}", dn["tilt"] >= 85.0, "85 or more")
     check("9  Home: north-up from where it stands, degrees", f"{wrap(hk['turn']):.2f}, from {tn['turn']:.1f}", abs(wrap(hk["turn"])) < 1.0 and abs(wrap(tn["turn"])) > 3.0, "north-up")
-    wl, gr = vf("f", "wall"), vf("f", "ground")
+if "h" in only:
+    print("  session h")
+    wl, gr = vf("h", "wall"), vf("h", "ground")
     check("1  in on the front wall's face: how near the eye is to what it looks at, and which side of the wall it stays on (the wall's face lies at 14.25 ft south)", f"{wl['d']:.3f} ft; eye {wl['eye'][2]:.2f} ft south, {wl['eye'][1]:.2f} up", wl["d"] < 0.7 and wl["eye"][2] > 14.2 and wl["eye"][1] > 0.1, "outside the wall, over the ground, 8 in from the place")
     check("1  in on bare ground: how near, and how high the eye stays over it", f"{gr['d']:.3f} ft; eye {gr['eye'][1]:.2f} up", gr["d"] < 0.7 and gr["eye"][1] > 0.1, "over the ground")
 

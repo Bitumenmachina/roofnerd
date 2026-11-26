@@ -10138,3 +10138,39 @@ scanning crew's scan arrives as LAS or E57, not PLY.
    are made by a script, a made-up room, and the script is kept beside them.
 7. Nothing of the sample whole house moves.
 
+### Call 231. What reading the marks turned up, ruled (2026-11-26; the lead's)
+
+The worker of contract 227M read the PDF standard's text (in an English
+rendering of it; not the standard's own document) and the marking program's
+maker's help pages, which say what a person sees and nothing of what is stored.
+
+1. **A count is not brought in unless asked for.** The standard has no count
+   mark; the worker took a symbol placed on the page (a stamp) with a label as
+   one of a count, by label. That is a count this program makes, not one the
+   file states, and a stray "approved" stamp would come in as a line of 1 EA.
+   So: `marks` always lists the symbols by label with how many, saying it is
+   this program's count of the page's symbols; `import marks` brings them in as
+   lines **only with `--counts`**, and without it says how many labels and
+   symbols it left and how to bring them. A line that comes from a count says
+   so in its source.
+2. **What is taken as a mark's label and its figure** (its subject and its own
+   text) is the standard's own keys read in the commonest way, **not confirmed
+   against any file a marking program wrote**; none is in the repository and
+   none may be. It is said so in `research/pdf-marks.md` and in STATUS.md, and a
+   marked set of Patrick's own, made safe, placed in `refs/` would settle it: it
+   is his to give and is asked of him with the other pending things, never
+   waited on.
+3. **The refusal of a file that is no drawing names what is now read**: "it is
+   not a PDF, a PNG, a JPEG, a TIFF or a CAD drawing (DXF)". The two
+   expectations that hold the older sentence (`crates/plans/tests/plans.rs` and
+   `demos/plan.sh`) move with it and say why beside them.
+4. **Kept as built**: the marks' lines sit on the job with their heading
+   printed by `estimate` from their source (a kind of their own, with its place
+   in the window, is the window half's job); a mark is known again by its name
+   in the file and the file's name; a line somebody measured Known is left
+   alone and said.
+5. **Owed and said**: a line a person renamed is added again when the file is
+   brought in again; a scale set for part of a sheet, a metric figure and a
+   curved edge are named and left out; the marks have no picture of their own
+   in the made-up file, so another PDF reader shows the page without them.
+
