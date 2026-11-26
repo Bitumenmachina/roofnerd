@@ -569,6 +569,23 @@ mod settle_tests {
 mod again_tests {
     use super::*;
 
+
+    /// The three double-clicks (the model's, the north arrow's, a plan's) are told by this one function, at the frame times this renderer has and at a fast one.
+    #[test]
+    fn the_same_rule_tells_a_double_click_at_a_slow_frame_and_at_a_fast_one() {
+        // Slow frames (a second to draw: the program's clock counts a quarter of it): presses a frame apart, or in one frame, are a double-click, whatever the
+        // hand's own pace was (0.4, 0.6 or 0.75 s apart in the demonstrations: all inside one or two frames).
+        for (apart_frames, expect) in [(0.0, true), (1.0, true), (2.0, false)] {
+            let (last, now) = (10.0, 10.0 + apart_frames * 0.25);
+            assert_eq!(again(last, now, 0.25), expect, "slow frames, {apart_frames} frames apart");
+        }
+        // Fast frames (a tenth of a second): the usual half second of a double-click, and no more.
+        assert!(again(10.0, 10.4, 0.1), "presses 0.4 s apart: a double-click");
+        assert!(again(10.0, 10.49, 0.1));
+        assert!(!again(10.0, 10.6, 0.1), "0.6 s apart is two clicks at a fast frame");
+        assert!(!again(10.0, 10.75, 0.1), "0.75 s apart (down 0.5, up, 0.25, down) is two clicks at a fast frame");
+    }
+
     #[test]
     fn two_presses_a_slow_frame_apart_are_a_double_click_by_the_programs_clock_and_two_a_second_apart_are_not() {
         // A frame that took a second to draw is a quarter second of the program's clock: the presses of one double-click land a frame apart.

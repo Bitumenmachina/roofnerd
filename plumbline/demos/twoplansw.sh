@@ -51,8 +51,8 @@ rest() { local a b i; for i in 1 2 3 4 5 6 7 8; do a="$(half "$1")"; sleep 3; b=
 drag_right() { xdotool mousemove "$1" "$2"; sleep 1.5; xdotool mousedown 1; sleep 1.5; local i; for i in 1 2 3 4; do xdotool mousemove_relative -- "$(( $3 / 4 ))" 0; sleep 2; done; sleep 4; xdotool mouseup 1; sleep 4; }
 # Notches of the wheel over a place: $3 notches, up (nearer) or down.
 wheel_at() { xdotool mousemove "$1" "$2"; sleep 2; local i; for i in $(seq 1 "$3"); do xdotool click "${4:-4}"; sleep 3; done; sleep 4; }
-# A double-click, held longer than a frame each.
-double_click() { xdotool mousemove "$1" "$2"; sleep 2; xdotool mousedown 1; sleep 0.5; xdotool mouseup 1; sleep 0.25; xdotool mousedown 1; sleep 0.5; xdotool mouseup 1; sleep 8; }
+# A double-click as a hand makes one: the two presses 0.4 s apart (inside the half second every double-click is told by, at a fast frame as at a slow one).
+double_click() { xdotool mousemove "$1" "$2"; sleep 2; xdotool mousedown 1; sleep 0.3; xdotool mouseup 1; sleep 0.1; xdotool mousedown 1; sleep 0.3; xdotool mouseup 1; sleep 8; }
 note() { echo "$2" > "$T/n-$NAME-$1.txt"; }
 keep_map() { cp "$PLUMBLINE_MAP" "$T/m-$NAME-$1.txt"; [ -e "$PLUMBLINE_MAP.view" ] && cp "$PLUMBLINE_MAP.view" "$T/v-$NAME-$1.txt" || : > "$T/v-$NAME-$1.txt"; }
 settle() { sleep "${1:-8}"; }

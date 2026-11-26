@@ -2658,10 +2658,9 @@ pub fn orbit_input(mut orbit: ResMut<Orbit>, mut feel: ResMut<Feel>, buttons: Re
             // A second press of the left button in the same place flies to it.
             if buttons.just_pressed(left) && free && !CARRYING.load(Relaxed) {
                 let now = time.elapsed_secs();
-                // Within half a second (the usual double-click), or within a frame and a
-                // half where frames are slower than that.
-                let window = (time.delta_secs() * 1.5).max(0.5);
-                let again = downs >= 2 || feel.last_press.is_some_and(|(then, at)| now - then < window && cursor.is_some_and(|c| c.distance(at) < 8.0));
+                // Within half a second (the usual double-click), or within a frame and a half where frames are slower than that: one rule for every
+                // double-click (`nav::again`).
+                let again = downs >= 2 || feel.last_press.is_some_and(|(then, at)| crate::nav::again(then, now, time.delta_secs()) && cursor.is_some_and(|c| c.distance(at) < 8.0));
                 feel.last_press = cursor.map(|c| (now, c));
                 // Only to a place where the job is: a double-click on the sky, or on
                 // ground out at the horizon, flew the eye to nothing (J19-50).
