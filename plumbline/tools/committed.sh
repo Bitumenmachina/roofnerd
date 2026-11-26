@@ -54,7 +54,8 @@ for part in deps build .fingerprint; do
   [ -d "$HERE/target/debug/$part" ] && cp -al "$HERE/target/debug/$part" "$SCRATCH/debug/$part"
 done
 rm -rf "$SCRATCH"/debug/.fingerprint/plumbline* "$SCRATCH"/debug/build/plumbline*
-find "$SCRATCH/debug/deps" -maxdepth 1 \( -name 'plumbline*' -o -name 'libplumbline*' \) -delete
+# (Where this folder has no build yet there is nothing to link in and nothing to take out: the check then builds everything afresh.)
+if [ -d "$SCRATCH/debug/deps" ]; then find "$SCRATCH/debug/deps" -maxdepth 1 \( -name 'plumbline*' -o -name 'libplumbline*' \) -delete; fi
 trap 'rm -rf "$T" "$SCRATCH"' EXIT
 export CARGO_TARGET_DIR="$SCRATCH"
 cargo test --workspace --offline 2>&1 | grep -E "^test result|^error|FAILED" > "$T/out.txt" || true
