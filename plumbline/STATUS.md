@@ -11536,7 +11536,15 @@ the command line the stopped bench step (call 214) taken up again.
   command-line demonstrations). **1,424 tests in all.** `demos/cabinetsw.sh`
   asks for Q99 where it asked for B99 (call 225). **`tools/committed.sh` passes
   on the merged head 1edb650 from a clean clone with nothing built beforehand
-  (108 test runs, 12:00 UTC).** Owed on it and said here until done: every window
+  (108 test runs, 12:00 UTC).** **A fault found on it by the lead's runs (13:08
+  UTC): `twoplansw` fails step 7 twice with the same figures, once with nothing
+  beside it: a double-click in a plan selects the thing and flies neither
+  window.** The builder had passed that session on an earlier build of its work
+  and not run it again after its last change (the north arrow's fix, which
+  moved the second window's double-click onto the same function). It is with
+  the window builder; every session is to be run on the last build before it
+  hands back. The rest of that demonstration passes on the merged build. Owed
+  on it and said here until done: every window
   demonstration on its frozen build (the lead's runs are listed here as they
   end); a judge who built none of it on how the two windows feel.
 - **2026-11-26, 03:10 UTC.** Call 222 part A (any screen, work never lost) is
