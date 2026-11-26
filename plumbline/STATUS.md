@@ -11555,9 +11555,10 @@ the command line the stopped bench step (call 214) taken up again.
 - **Window demonstrations on the frozen build of 2e6f63a, the lead's own runs,
   as they end** (the commits since touch no window code): `fixes209w` PASS
   (with six builds beside it), `fixes197w` PASS (first run; its pictures read).
+  `itemlibw` PASS and `itemneww` PASS (first runs; pictures read).
   `navw`: failed twice for time as said above, to be run again cut in two.
-  Still to run on it: `itemlibw`, `itemneww`, `cabinetsw`, `gablew`,
-  `gableendw`, `tradesw`, `screensw`, `bringw`, `movew`. The builder's own runs
+  Still to run on it: `cabinetsw`, `gablew`, `gableendw`, `tradesw`,
+  `screensw`, `bringw`, `movew`. The builder's own runs
   before the merge: `screensw` (seven sessions), `glassw`, `moneyw`, `benchw`,
   `pricew`. `tools/committed.sh` has not been run on 2e6f63a or later.
 
@@ -12027,6 +12028,46 @@ is made up.
    not a stocked width and 42 in not a stocked height (the chest's wall boxes
    are 30, 18 and 12 high). W3030: no flag.
 6. `plumbline sixteen` writes the job it wrote, byte for byte.
+
+Not built yet.
+
+## Marks on a PDF read as quantities, and a TIFF as a plan: a demonstration, written before it is built (call 227; 2026-11-26)
+
+`demos/marks.sh` (contract `handoff/contracts/contract-227M.md`). Every figure is
+made up. The file is `demos/marks/marked-plan.pdf`: the made-up plan (30 ft by 20
+ft) on one page, with marks written as the PDF standard has them: **South wall**,
+a length along the south wall; **Outside walls**, a run of lengths round the plan;
+**Whole floor**, an area over the plan; **Bedroom**, an area 12 ft by 10 ft; four
+counts labelled **Receptacle**; a plain note "verify header"; and **North wall**,
+a length whose own text says 31'-0" though its ends are 30 ft apart at the
+sheet's scale. By hand (the worker says where a figure is wrong):
+
+1. `plumbline marks` lists, in the page's order, 1 length, 1 run of lengths, 2
+   areas, 1 count of 4, 1 note, and the flagged length: **South wall 30 LF,
+   Outside walls 100 LF, Whole floor 600 SF, Bedroom 120 SF, Receptacle 4 EA**;
+   the note is listed as a note with no quantity.
+2. **North wall** is listed with both figures, **31 LF as the mark says and 30
+   LF by its ends at the sheet's scale**, and is flagged.
+3. `import marks` into a new job: **six lines of the estimate** under the file's
+   name (the five and North wall at 31 LF), each Assumed, each source naming its
+   mark and page 1 of the file, none priced; the estimate says six lines are not
+   priced and its division Unknown; the job's price is what it was (nothing
+   priced yet). The reply repeats North wall's flag.
+4. Brought in again: nothing is added; the reply says six are the same.
+5. A copy of the file with **Whole floor** saying 650 SF: brought in, that line
+   is 650 SF and the reply says it was 600; five are the same.
+6. A copy with **Bedroom** taken out: the reply names Bedroom as gone from the
+   file and its line is still there.
+7. A copy with a mark with a curved edge and a mark with no scale: each is named
+   and left out; the others come in.
+8. The made-up plan with no marks (`demos/plans/made-up-plan.pdf`): "no marks on
+   page 1", and the job is byte for byte what it was.
+9. **TIFF**: `demos/marks/made-up-plan.tif` (the made-up plan's picture as a
+   TIFF) is added as a drawing: its size in dots is the PNG's, and a wall traced
+   over it at the same scale is the same wall. A two-page TIFF: page 2 by
+   `--page 2`. A TIFF packed a way the reader does not read: refused by the
+   packing's name.
+10. `plumbline sixteen` writes the job it wrote, byte for byte.
 
 Not built yet.
 

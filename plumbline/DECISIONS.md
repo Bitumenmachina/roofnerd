@@ -9961,3 +9961,54 @@ changed line of an existing expectation against call 225.
    demonstration's B99 moves to Q99 (the next window job on cabinets); call 226
    has the rest.
 
+### Call 227. The marks on a marked-up PDF read as quantities; a TIFF taken in as a plan (2026-11-26; the lead's design, not built)
+
+Call 220's table, two rows: "A Bluebeam-marked PDF: the marks read in as
+quantities, Assumed, each naming its mark" and "TIFF is how scanned sets are
+kept: taken in". An estimator's takeoff often already exists as measured marks
+on the plans; today the program takes the page and drops the marks without a
+word, which is a loss not reported.
+
+1. **What a mark is.** A PDF keeps a measured mark as an ordinary note of the
+   PDF with its points, what it says (its own text), its label, and how the
+   sheet's scale was set when it was drawn. The worker reads the PDF standard's
+   own section on measured notes and what the marking program's maker publishes
+   about what it writes, and says in `research/pdf-marks.md` what each kind
+   holds, with the address and the line quoted. **No file written by the
+   marking program itself is in the repository or read by a test** (a real
+   marked set is a real job's): the made-up file is written to the standard,
+   and that is said wherever the reading is described.
+2. **`plumbline marks <pdf> [--page n]`** lists the marks of a page, in the
+   page's own order: a length, a run of lengths (a perimeter), an area, a count,
+   and a plain note; each with its label, the figure the mark itself says, and
+   where on the page it is. A note that measures nothing is listed as a note.
+3. **One number, and the other said.** The quantity taken is **what the mark
+   says**: it is what the estimator saw and signed off. The program also works
+   the figure from the mark's points at the scale the mark carries; where the
+   two differ by more than a hundredth it says both and flags the mark. It never
+   picks the one it likes.
+4. **`plumbline import marks <job> <pdf> [--page n]`**: each measured mark is a
+   line of the estimate, under a heading that is the file's name: the label as
+   its description, the quantity in LF, SF or EA, no price (said: not priced),
+   **Assumed**, its source naming the mark, the page and the file. Counts of the
+   same label on a page are one line. The division is not guessed: it is Unknown
+   until someone sets it, and the line says so.
+5. **Brought in again**, a mark the job already has is known by the mark's own
+   name in the file and is not added twice; a mark whose figure changed moves
+   its line and says what it was; a mark gone from the file is named and its
+   line is left (nothing is taken away because a file lacks it).
+6. **What cannot be read is said**: a mark with a curved edge, a mark with no
+   scale, a scale set for part of a sheet, a figure in a unit this program does
+   not hold. Each is named with its label and left out, never brought in as
+   nought.
+7. **The marks' shapes are kept with the drawing** when the PDF is added as a
+   drawing (`drawing add`), so the window can show them over the sheet and catch
+   their corners (the window's half is a later job; the model's side holds
+   them).
+8. **TIFF**: a TIFF is a picture of a plan as a PNG is (`drawing add` and the
+   window's Add drawing): one page or several (`--page`), the kinds of packing
+   the linked reader reads, and a kind it does not read is said by name. The
+   reader is the picture crate already linked with its TIFF part switched on, if
+   `tools/licenses.sh` passes with it.
+9. Nothing of the sample whole house moves.
+
