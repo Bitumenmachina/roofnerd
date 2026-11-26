@@ -9679,3 +9679,84 @@ written frame by frame.
     than this work, left as it was, to be ruled); the curves are read with the
     program's clock slowed by `PLUMBLINE_FRAME`, a setting for demonstrations.
     **No model that did not build it has yet tried the feel.**
+
+### Call 222, part A, as built: any screen, and work never lost (2026-11-26)
+
+The window builder's work under contract 222WA, read by the lead in its pictures
+(`demos/captured/screensw/`) and merged at 2e6f63a.
+
+1. **Both windows open whole.** A screen 2,490 wide or more: side by side as
+   before. Narrower: the model takes the screen less 72 dots for the desktop's
+   own bar, and the estimate stands over its right side. Seen at 2,560 by 1,440,
+   1,920 by 1,080 (model 1,920 by 1,008, estimate 880 by 960 at 1,040, 48) and
+   1,366 by 768 (model 1,366 by 696, estimate 880 by 696 at 486, 0).
+2. **A resize is followed.** Details folds below 1,500 wide and Job below 1,100;
+   the tools wrap onto more lines below a bar 960 wide, every tool on the bar at
+   every width; the top bar drops the keys beside Save, Undo and Redo below
+   1,300; the glass is made again at every size. The model window is not let
+   smaller than 720 by 520, the estimate not narrower than 880.
+3. **Kept** in `settings.txt` of the program's own (the operating system's place
+   for a program's settings; plain lines; no new crate): each window's place and
+   size, the panels put away, the lettering. With the map's variable set and no
+   settings file named the program opens as it always did, so every earlier
+   demonstration is unmoved.
+4. **Lettering** in four steps: 1, 1.15, 1.3, 1.5.
+5. **Command does what Ctrl does.**
+6. **Work never lost.** `<job>.json.recovery` beside the job, written whole
+   through a second file, a minute after the first change not saved and a minute
+   after each copy, and at once after every tenth change. Opened with a copy
+   newer than the job and different from it, the window says "Work from 12
+   minutes ago was kept beside this job and never saved. Take it, or leave it
+   and keep the job as it was last saved." with "Take the recovered work" and
+   "Leave it". Taken, it is byte for byte the job the command line makes by
+   drawing the same wall and door. While the offer waits, Save refuses.
+7. **A wording call of the lead's**: the age is said as how long ago ("12 minutes
+   ago") and not as a clock time. Call 222 said "with the time"; a time of day
+   needs the person's clock zone, which the program cannot learn without a new
+   crate, and "how long ago" is what the person needs to decide.
+8. **Found and fixed on the way**: a window moved by hand was not reported by the
+   engine, so the map and the kept place said 0, 0; the program now asks the
+   desktop.
+9. **Run**: the builder's own runs on its frozen build before the merge:
+   `screensw` (seven sessions), `glassw`, `moneyw`, `benchw`, `pricew`, each
+   passing. The lead's runs on the merge are recorded in STATUS.md as they end.
+   The builder twice ran beside a lead's timed run (its guard printed the lock
+   and did not stop); the lead had no timed run going at either time by its own
+   log, and the guard was put right.
+
+### Call 224. What part A turned up, ruled; and part C is built before part B (2026-11-26; the lead's)
+
+1. **Every tab of the estimate can be reached at every width and every size of
+   lettering.** Today the row is cut at 880 wide after "Plumbing" (older than
+   part A: the window was always 880 wide and the sample house has more tabs
+   than fit), and after "Mechanical" at the second step of lettering. The row
+   **wraps onto a second line**; it does not slide (a tab out of sight is a tab
+   nobody finds).
+2. **In a narrow window the price bar gives way in this order**: the counts of
+   Known, Assumed and Unknown first (they are in the Job panel and on the
+   estimate), then the word "PRICE"; the price, Saved or Not saved, and the
+   count to verify are never cut.
+3. **A window is first seen at its size.** The two windows are not shown until
+   they have been put where they go.
+4. **On a Mac the keys on the buttons read Cmd**; elsewhere Ctrl. One function
+   says which, tested for each.
+5. **The any-screen demonstration is run under a window manager** on the same
+   virtual display, as an outside program that is run and never linked (as the
+   IFC checker is), so that title bars and a desktop's bar are seen and
+   measured, not allowed for by a figure. If none can be installed here the
+   builder says which were tried and what each said.
+6. **At 720 by 520 the tools take half the window.** Left as it is: it is the
+   least size, every control is reached, and the Tools switch puts the bar away.
+7. **Part C (a plan in the second window) is built before part B (Field,
+   Estimate, Everything).** Patrick named it twice (call 217: "two windows so I
+   can see estimate while digitizing or look at plans / put two plans next to
+   each other"), and part B's point 10 ("the window says which view has it when
+   someone looks for it") leans on the search of call 219, which is not built.
+8. **Words for part C, the lead's**: the control at the top of the second window
+   reads "Estimate" and "Plan"; "Two plans" and "One plan"; a half's chooser
+   lists the levels by name and the drawings by their sheet names; a click with
+   a tool in hand says "Draw in the model window. This window is for looking."
+   The first window is "the model window" on screen, as its title has it.
+9. **Each plan in the second window keeps its own view and its own layers**, in
+   the program's settings with the rest (call 222, point 3), never in the job.
+

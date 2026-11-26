@@ -11514,6 +11514,24 @@ the command line the stopped bench step (call 214) taken up again.
   right"); **a typed name could stop the window, and is fixed** (reproduced in
   a test, seven places, one helper).
 
+- **2026-11-26, 03:10 UTC.** Call 222 part A (any screen, work never lost) is
+  built, read in its pictures and merged: **pushed head 2e6f63a, 1,241 tests pass
+  on it** (model 672, command line 50, sheets 6, model files 111, roofing 122,
+  plans 187, window 93). It was pushed ahead of two checks that are owed on it
+  and said here until they are done: the window demonstrations on its frozen
+  build, and `tools/committed.sh`. Next in the window: a plan in the second
+  window (call 224, `handoff/contracts/contract-222WC.md`).
+- **How the machine is shared, from 2026-11-26** (an experiment, recorded as it
+  is found): `fixes209w`, the demonstration that failed twice on 2026-11-25
+  while a build ran beside it, was run with six whole builds of the program
+  beside it, the builds in the idle class (`chrt -i 0 nice -n 19 cargo ...`):
+  it passed, its load-sensitive figure the same as alone (87 dots against 15).
+  So builders and workers run every cargo command in the idle class and no
+  longer stop for a timed window run; only two window sessions never run at
+  once (`window-run.lock`). `navw` is being run the same way; if a
+  demonstration fails beside a build it is run alone before it is believed, and
+  this note is put right.
+
 ## How the window moves: a demonstration, written before it is built (call 218; 2026-11-25)
 
 `demos/navw.sh` (contract `handoff/contracts/contract-218W.md`). The job is the
@@ -11763,10 +11781,84 @@ figure (72 dots) and not yet seen (owed: the same demonstration under a window m
 tools' bar and the strip of the tool in hand are as wide as the bar and may cut a long hint; from the second lettering step on the estimate window's tabs are cut off; Cmd shows as Ctrl on the buttons.
 
 
+## A plan in the second window: a demonstration, written before it is built (call 222, part C, and call 224; 2026-11-26)
+
+`demos/twoplansw.sh` (contract `handoff/contracts/contract-222WC.md`). The job is
+the made-up whole house (three levels: foundation at -4 ft, first floor at 0,
+second floor at 10 ft; price $468,050.22), with the made-up plan
+(`demos/plans/made-up-plan.pdf`) added to it as a drawing in step 6. The program
+writes what the second window shows to the map (which of Estimate and Plan; for
+each plan in it, what it shows, where its middle is on the ground and how many
+dots a foot is; what is marked); the script reads that and the pictures.
+
+1. **The second window has "Estimate" and "Plan" at its top**, Estimate on. Plan
+   clicked: the window shows the first floor from straight above, its walls drawn
+   by line type as the first window's plan draws them, whole inside the window
+   with a margin (the house is 40 ft by 28 ft: at 880 dots wide it stands at no
+   less than 15 dots a foot and no more than 20).
+2. **Its own wheel**: six notches of the wheel over a corner of the house bring it
+   nearer by what six notches bring the first window (call 218: a tenth a notch;
+   1.1 to the sixth is 1.77 times), the corner staying under the pointer within 2
+   dots; **the first window's view has not moved** (its view line on the map is
+   the same before and after).
+3. **Its own drag**: a drag of 200 dots to the right carries the corner 200 dots
+   to the right, within 2.
+4. **Its own level**: "second floor" chosen in the second window: it shows the
+   second floor (the map says so); the level in hand in the first window is what
+   it was.
+5. **Two plans side by side**: "Two plans" clicked: the window is two halves with
+   a line between, the first floor in the left and the second floor in the right,
+   each whole in its half. The wheel over the left half moves the left plan only
+   (the right half's line on the map is the same before and after), and the
+   other way about.
+6. **The architect's sheet beside the tracing**: a drawing added in the first
+   window (the made-up plan, 30 ft by 20 ft); in the second window the left half
+   is set to that sheet and the right to the first floor: the sheet is seen whole
+   in the left half and the floor in the right.
+7. **What is selected in one is marked in the other.** A wall clicked in the
+   first window is marked in the second window's plan (the map names the same
+   wall as marked there). A wall clicked in the second window is selected in the
+   first: the Details panel is that wall's. A double-click on a window in the
+   second window's plan flies both: the first window ends with that window
+   between a third and two thirds of its view (call 218's flight), the plan ends
+   with it within 20 dots of the middle of its half.
+8. **Its own layers**: Plumbing switched off in the second window: its plan shows
+   no pipe, and the first window still shows the 94 (the count beside the first
+   window's Plumbing switch is on and unchanged; the map's count of things shown
+   in each window differs by what was switched off).
+9. **The same catches when it is looked at**: the pointer brought to the end of a
+   wall in the second window names what was caught at the pointer, in the words
+   the first window uses.
+10. **Drawing stays in the first window**: with the Wall tool in hand a click in
+    the second window's plan draws nothing (the count of walls is what it was)
+    and the second window says "Draw in the model window. This window is for
+    looking."
+11. **Nothing of the job moved**: the price reads $468,050.22 in both windows;
+    the job saved after all of this differs from the job saved before step 1
+    only by the drawing added in step 6 (the script compares the two with the
+    drawing taken out).
+12. **Back to Estimate**: the sheet is as it was left: the tab that was open is
+    open and the list stands where it was scrolled to.
+13. **Kept**: with a settings file named, the program closed on two plans and
+    opened again shows two plans, the same two.
+14. **Carried from part A (call 224)**: (a) on a screen 1,366 by 768, and at
+    each of the four steps of lettering, **every tab of the estimate can be
+    reached**: the row wraps onto a second line (the map names every tab inside
+    the window); (b) in a model window 720 wide the price bar still shows the
+    price, Saved and the count to verify whole, the counts of Known, Assumed and
+    Unknown having given way first; (c) on a 1,366 screen no picture taken in
+    the first two seconds shows a window at 1,600 wide; (d) `screensw` is run
+    once more under a window manager on the same display (an outside program,
+    run and not linked, as the IFC checker is): each window, with its title bar,
+    is whole on each of the three screens, and what the title bar and a bar of
+    the desktop take is measured and written beside the 72 dots allowed for.
+
+Not built yet.
+
 ## The database in one hand: a demonstration, written before it is built (call 223; 2026-11-25)
 
-`demos/database.sh`, at the command line (contract to be written when its turn
-comes). A new job with the starter tables brought in (the worker gives the counts
+`demos/database.sh`, at the command line (contract
+`handoff/contracts/contract-223M.md`). A new job with the starter tables brought in (the worker gives the counts
 the program holds on the day: at call 211 they were 48 items, 13 shapes, 5 rows of
 where items connect, 42 assemblies of 202 lines), a made-up price list of three
 suppliers, and one shape and one item of the job's own.
