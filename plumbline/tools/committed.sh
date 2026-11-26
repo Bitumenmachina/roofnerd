@@ -13,15 +13,9 @@ set -euo pipefail
 ROOT="$(git -C "$(dirname "$0")" rev-parse --show-toplevel)"
 HERE="$ROOT/plumbline"
 T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
-# And the two files of the earlier program that roofnerd's ported tests hold their
-# conventions to (DECISIONS.md call 138): they read them where they stand in this
-# repository, so the check lays them out where they stand, from the commit like the rest.
-EARLIER=""
-for f in packages/engine/src/roof.ts packages/engine/src/model.ts; do
-  git -C "$ROOT" cat-file -e "${COMMIT:-HEAD}:$f" 2>/dev/null && EARLIER="$EARLIER $f"
-done
-# shellcheck disable=SC2086
-git -C "$ROOT" archive "${COMMIT:-HEAD}" plumbline $EARLIER | tar -x -C "$T"
+# (Until 2026-11-26 two files of the earlier program were laid out beside it for the roofing
+# tests; they are kept inside the roofing crate now: DECISIONS.md call 238, point 6.)
+git -C "$ROOT" archive "${COMMIT:-HEAD}" plumbline | tar -x -C "$T"
 cd "$T/plumbline"
 cargo metadata --offline --no-deps --format-version 1 >/dev/null || { echo "committed: FAIL. The last commit is not a workspace cargo can read: a crate is missing from it."; exit 1; }
 missing=0
@@ -36,7 +30,9 @@ done
 # every commit after. Looked for in the working folder, when it is the last commit that
 # is being checked.
 if [ -z "${COMMIT:-}" ]; then
-  hidden="$(git -C "$ROOT" status --ignored --porcelain -- plumbline/crates plumbline/demos plumbline/tools 2>/dev/null | sed -n 's/^!! //p' || true)"
+  # demos/captured/ is ignored on purpose (call 237): a demonstration writes its pictures there and
+  # nothing reads them back; the line above already leaves it out of what a script may name.
+  hidden="$(git -C "$ROOT" status --ignored --porcelain -- plumbline/crates plumbline/demos plumbline/tools 2>/dev/null | sed -n 's/^!! //p' | grep -vx 'plumbline/demos/captured/' || true)"
   if [ -n "$hidden" ]; then
     echo "committed: git ignores these, and they are inside the program's own folders:"; echo "$hidden" | sed 's/^/  /'
     echo "committed: an ignore line is catching part of the program; anchor the line (/name/) or move the files"; missing=1
