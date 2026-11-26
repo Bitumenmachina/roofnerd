@@ -10704,3 +10704,63 @@ nobody can read whole cannot be kept true. Decided:
    is the three gates and the index check; it no longer builds and tests the
    earlier program (six minutes and 4 GB at every commit).
 
+### Call 239. Patrick, 2026-11-26: the window is still busy and its tools cramped; design review goes on the list and is run
+
+His words, whole: **"I do want to ensure that when you look at the UI interface it
+still seems quite busy and the tools look a bit cramped I know we worked on this
+with previous builds of other html software can we ensure that design review is on
+the list and being run and searched against you have a proclivity to ensuring
+functional code while sacrificing overall design aesthetic you can have both. If
+you feel it's better to get outside review please create a prompt with what is
+current or inquiry and I can paste over to Claude design"**
+
+What the lead saw when it looked as he does (the model window at 1600 by 960, on
+the build of 18e0ad8): three panels and four bars over a little more than half the
+window; about ninety controls in view at once; the Job panel one stack of six
+unlike things; Show said twice (eight buttons and twelve switches); eighteen tools
+in one row with labels near 10 px, three of them touching their neighbours; the
+Details panel repeating the estimate window when nothing is selected; an outline
+on nearly every control and seven or more accent colours in view. `VISUAL.md` has
+"Nothing cut, nothing cramped" as a line and no number behind it, so it passed
+what he fails. He is right, and the charge is true: of the judgments run on this
+branch nearly all went to arithmetic and words, and the look was judged against
+the lead's own written rule.
+
+How it is read.
+
+1. **Design review is a step of the work, taken now, before any button is added.**
+   It is step 5b of call 237's order: after the window demonstrations are made
+   sure (step 2) and before the window is given its ten new file entries (step 6),
+   because those entries would land in the layout that is at fault.
+2. **It is run three ways, and none is the builder judging its own screen.**
+   - **Outside**: `handoff/design-review-prompt.md` is the prompt, with five current
+     pictures. Patrick pastes it into a design session; what comes back goes in
+     `research/` and is ruled on in a call. It does not wait on him: the next two
+     go ahead.
+   - **A design judge here, cold, on another model**, told to search what shipping
+     programs do and to cite each source: it gets the pictures and `VISUAL.md`, not
+     the lead's opinion of them.
+   - **His own eyes**, on the manual: when he says he does not see it, it is not
+     there.
+3. **What was searched for this call**, from the products' own pages: Figma's
+   account of its 2024 redesign (the aim was room on the canvas; panels that
+   collapse and resize; a bar of tools at the bottom; and the floating panels with
+   gaps round them were what people who work in it all day objected to); Shapr3D's
+   adaptive interface (the tools offered follow what is selected, with a few fixed
+   places to return to and a More for the rest); Nielsen Norman Group on
+   progressive disclosure (the few things most people need first, the rest one
+   step away, a third level for the rare); Apple's guidance (tools grouped in
+   sets; an inspector small and dense, with a control that puts it away).
+4. **`VISUAL.md` gets numbers for quiet and room**, written from the review and not
+   before it: how much of the window the model keeps, the smallest lettering, the
+   size of a tool and its label, how many controls a first screen may show, how
+   many colours carry meaning at once. A judge fails a screen on them, and item 11
+   of the deliverable is judged against them.
+5. **The look is part of done for every window job from here.** A window
+   contract's hand-back is not accepted on its demonstrations alone: an agent that
+   did not build it reads its pictures against `VISUAL.md` first. Function and
+   look are both owed; neither buys the other.
+6. **Nothing of meaning moves in the redesign**: every control keeps its name on
+   the map, every word stays a builder's, every layer keeps a switch that reads at
+   a glance, every panel can still be put away, and no number of the job changes.
+

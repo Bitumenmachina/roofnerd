@@ -268,3 +268,4 @@ starts on. A call with "as built" in its heading is the record of what was made.
 | 10554 | Call 233, as built: starter shapes and items for appliances and small devices (2026-11-26) |
 | 10585 | Call 237. Patrick, 2026-11-26: the repo is not acceptable as it is; clean it, then run; one manual in place of piling pictures |
 | 10657 | Call 238. How the records are kept from 2026-11-26 (the lead; call 237, step 4) |
+| 10707 | Call 239. Patrick, 2026-11-26: the window is still busy and its tools cramped; design review goes on the list and is run |

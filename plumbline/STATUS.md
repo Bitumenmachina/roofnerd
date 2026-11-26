@@ -20,6 +20,7 @@ the build goes on without asking him, and what he is sent is the manual, changed
 | 3 | The manual; `demos/captured/` let go | **Done, and it goes on**: `manual/index.html` (written by `tools/manual.py` from `manual/manual.md`, this file and `manual/pictures/`) is published to Patrick as one artifact, `https://claude.ai/artifact/DTAkAoTGMcTYEkVAXdHLYt` (to change it: `tools/manual.py take` the new pictures, `tools/manual.py build`, `tools/manual.py page <file>`, and publish that file with the pictures to the same address). Seventeen pictures, each stamped with the commit it is of (five are of 18e0ad8; the oldest is of 2026-11-23); they are replaced as step 2's runs give new ones. `demos/captured/` is no longer kept in the repository. |
 | 4 | The documents put right | **Done.** Four lists are written by tools and checked by the commit hook (`DECISIONS-index.md`, the README's demonstrations, the table in `LICENSES.md`, the manual's page). `TRY-IT.md` is gone: the manual takes its place. |
 | 5 | The earlier program off the branch; the commit hook BuildOS's own | **Done.** It is on `main`, whole. |
+| 5b | **Design review, and the window laid out again** (call 239: Patrick finds it busy and the tools cramped; so does the lead, looking as he does) | **Begun.** The prompt for an outside designer is `handoff/design-review-prompt.md`, with five current pictures. A design judge here, and the numbers `VISUAL.md` lacks, follow the kit job. Taken before step 6, which adds buttons. |
 | 6 | The window takes every kind of file the command line takes | Not begun. |
 | 7 | The eleven files over 2,000 lines cut | Not begun. |
 | 8 | The name BuildOS through the code | Not begun. Last, alone. |
@@ -96,6 +97,11 @@ build it.
 ## What is not right
 
 - The window is behind the command line and unproven on the head (steps 2 and 6).
+- **The window is busy and its tools are cramped** (Patrick, call 239). At 1600 by 960
+  the panels and bars cover a little over half the window; about ninety controls are
+  in view at once; eighteen tools sit in one row with labels near 10 px; Show is said
+  twice; the Details panel repeats the estimate window. `VISUAL.md` has no number
+  that fails this. Step 5b.
 - Eleven source files are over 2,000 lines (step 7): `crates/world/tests/world.rs`
   6,713; `crates/cli/src/main.rs` 4,310; `crates/app/src/panels.rs` 4,017;
   `crates/world/src/building.rs` 3,944; `crates/app/src/scene.rs` 3,248;

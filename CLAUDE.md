@@ -11,7 +11,8 @@ look and asked for this file's last section). His of 2026-11-13 (calls 75 and 76
 harness for each division) are folded in below. His of 2026-11-25 are folded in too:
 call 217 (the lead makes the calls and runs to the finish without him; **two windows
 stay, and the second can show plans**; the order of work) and call 220 (the main thing
-to remember). His of 2026-11-26 are folded in (call 237: the repository was not
+to remember). His of 2026-11-26 are folded in (call 239: the look is reviewed as the
+function is, and by other eyes than the builder's; call 237: the repository was not
 acceptable as it stood; it is cleaned before anything new is built; **one manual,
 changed in place, takes the place of pictures piling up**).
 
@@ -114,6 +115,13 @@ branch `main`, whole, and left this branch on 2026-11-26 (call 237).
   on or off at a glance. (This replaces "the look is an instrument": flat, dense and
   matte was shown to Patrick and read to him as no better. On a plan, edges are still
   drawn by line type and the plan still reads like a drawing.)
+- **Quiet, with room** (call 239). The window is not busy and its tools are not
+  cramped: the model keeps most of the window, a first screen shows the few things a
+  person needs first and the rest is one step away, and a tool can be read at a
+  glance. `plumbline/VISUAL.md` is to hold the numbers, written from the review call
+  239 orders and not before it. Function does not buy the look and
+  the look does not buy function: both are owed, and a window job is not accepted
+  until an agent that did not build it has read its pictures against the standard.
 - **It looks real.** Physically based materials, soft shadows, light that reads as a
   place. Whether there is a sky is `plumbline/QUESTIONS.md` Q22; the working answer is
   a soft sky and horizon, and no grass, trees or scenery.
