@@ -87,7 +87,7 @@ fn try_says_what_it_would_make_and_changes_nothing() {
     assert_eq!(bytes(&h), before);
     // A wall over the south wall: refused, as the real verb would; nothing is made.
     let said = refused(&h.dir, &with(&["try", "j.json", "wall", &h.level, &h.wall_type, "--points", "2,0 12,0", "--height", "9 ft"], &K).iter().map(String::as_str).collect::<Vec<_>>());
-    assert!(said.contains("it would be refused") && said.contains("lies along wall 1 for 10.00 ft") && said.contains("nothing was changed"), "{said}");
+    assert!(said.contains("it would be refused") && said.contains("lies along wall 1 for 10 ft") && said.contains("nothing was changed"), "{said}");  // call 226: a length in a sentence is said as a builder says it
     assert_eq!(bytes(&h), before);
     let real = refused(&h.dir, &with(&["wall", "j.json", &h.level, &h.wall_type, "--points", "2,0 12,0", "--height", "9 ft"], &K).iter().map(String::as_str).collect::<Vec<_>>());
     assert!(real.contains("lies along") && real.contains("one wall drawn over another would be counted twice"), "{real}");
@@ -173,7 +173,7 @@ fn a_wall_is_copied_with_its_door() {
     let h = house("wallcopy");
     let before = bytes(&h);
     let why = refused(&h.dir, &["copy", "j.json", &h.walls[0], "--by", "12 ft north"]);
-    assert!(why.contains("lies along wall 3 for 20.00 ft"), "{why}");
+    assert!(why.contains("lies along wall 3 for 20 ft"), "{why}");  // call 226: a length in a sentence is said as a builder says it
     assert_eq!(bytes(&h), before);
     let said = ok(&h.dir, &["copy", "j.json", &h.walls[0], "--by", "6 ft north"]);
     assert!(said.contains("wall 5 is a copy of wall 1, with its 1 door or window"), "{said}");

@@ -12029,7 +12029,20 @@ is made up.
    are 30, 18 and 12 high). W3030: no flag.
 6. `plumbline sixteen` writes the job it wrote, byte for byte.
 
-Not built yet.
+**Built (2026-11-26; the worker's, checked by the lead's own run of its copy:
+1,219 command-line tests, 63 command-line demonstrations with no FAIL in any, the
+three gates, the port map, the licences, the sample whole house byte for byte and
+its estimate, takeoff, verify-in-field and clash text as they were).**
+`demos/loose-ends.sh` passes its six steps. **What a try costs** on the sample
+whole house: about 0.29 s in the build the tests use and **0.066 to 0.078 s in
+the build a person is given** (least of five, on a busy machine): under the tenth
+of a second of call 226, so how the job is put back was left as it is, and the
+quicker way is written down for when a heavier house needs it. Twenty-one
+existing expectations moved, each only by how a length in a sentence is written
+and each marked in its file; one more (the cabinet rules' line of headings) by
+the lead's own hand for the new column. Not right: the margin on the try is
+thin; a few older sentences outside this job's search still write a length with
+decimals (DECISIONS.md "Call 226, as built", point 6).
 
 ## Marks on a PDF read as quantities, and a TIFF as a plan: a demonstration, written before it is built (call 227; 2026-11-26)
 
@@ -12068,6 +12081,33 @@ sheet's scale. By hand (the worker says where a figure is wrong):
    `--page 2`. A TIFF packed a way the reader does not read: refused by the
    packing's name.
 10. `plumbline sixteen` writes the job it wrote, byte for byte.
+
+Not built yet.
+
+## Clashes handed over as an issue list: a demonstration, written before it is built (call 228; 2026-11-26)
+
+`demos/bcf.sh` (contract `handoff/contracts/contract-228M.md`). The job is the
+made-up whole house, whose clash list says on the day: **in the same space 11 (5
+findings, 6 to verify in the field)**, set against 10, through a wall or a floor
+47.
+
+1. `plumbline export bcf` writes a file with **11 issues**, in the clash list's
+   order; the first is the first-floor trunk and the soil stack, "in each other
+   by 3.50 in" as the clash list writes it (a line of a list, not a sentence:
+   call 226).
+2. **5 of them say they are findings and 6 say they are questions for the
+   field**, the same five and six as the clash list marks.
+3. Each issue names two things by id, and **every one of the 22 ids is in the
+   BIM file written from the same job** (`export ifc`), on a thing of the same
+   name.
+4. Each issue has a view: the place looked at is within a foot of the clash's
+   place, and the eye is outside both things.
+5. With `--holes`: **58 issues** (11 and 47), the 47 of their own kind.
+6. The file passes buildingSMART's own schema, by the outside checker.
+7. Written twice, the two files differ only in the time of writing.
+8. A job with no clash: the file is written with no issue, and the reply says
+   there was none to hand over.
+9. `plumbline sixteen` writes the job it wrote, byte for byte.
 
 Not built yet.
 

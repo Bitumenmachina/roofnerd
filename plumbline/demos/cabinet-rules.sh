@@ -126,7 +126,8 @@ echo
 echo "== 7. The rules as a table, the rule for B changed to 21 in deep, brought back =="
 "$P" export cabinet-rules "$T/job.json" "$T/rules.csv" | tee "$T/rules-said.txt" | sed 's/^/    | /'
 says "$T/rules-said.txt" "8 rules under its headings"
-[ "$(head -1 "$T/rules.csv")" = "Code,What it is,Number reads,Width,Depth,Height,Stands,Drawn as,Stocked widths,How sure,Where from" ] || fail "the rules' headings are not what they should be"
+# call 226, point 5: the table gains "Stocked heights", last, so a table of eleven columns still reads (the lead's edit)
+[ "$(head -1 "$T/rules.csv")" = "Code,What it is,Number reads,Width,Depth,Height,Stands,Drawn as,Stocked widths,How sure,Where from,Stocked heights" ] || fail "the rules' headings are not what they should be"
 grep -q '^B,base,the width,from the number,24 in,34 1/2 in,on the floor,base cabinet,' "$T/rules.csv" || fail "the rule for B is not written as it should be"
 # The same table brought back: no change at all, and the job carries none of the rules.
 cp "$T/job.json" "$T/job-same.json"

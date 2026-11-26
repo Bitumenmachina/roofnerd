@@ -265,9 +265,25 @@ pub fn run(args: &[String]) -> Result<(), String> {
             if matches!(verb.as_str(), "level" | "storey" | "type" | "system" | "footing" | "low-slope" | "drains" | "mark" | "floor" | "room" | "room-line" | "beam" | "post" | "pad" | "remove" | "split" | "fitting" | "connect" | "cabinets") {
                 return try_on_a_copy(path, &text, verb, &args[3..]);
             }
-            let mut t = Typed::of(&args[3..])?;
+            // `--timed N`: the change is tried N times, each printed with the time it took, and the least of them (call 226 point 1).
+            let mut rest: Vec<String> = args[3..].to_vec();
+            let mut timed: Option<u32> = None;
+            if let Some(i) = rest.iter().position(|a| a == "--timed") {
+                let n = rest.get(i + 1).ok_or("--timed needs a number of tries, like 5")?;
+                timed = Some(n.trim().parse().ok().filter(|n| *n > 0).ok_or("--timed is a whole number of tries, like 5")?);
+                rest.drain(i..i + 2);
+            }
+            let mut t = Typed::of(&rest)?;
             let (change, how, _) = change_of(&mut job, verb, &mut t)?;
+            let mut times: Vec<f64> = Vec::new();
+            for _ in 1..timed.unwrap_or(1) {
+                let began = std::time::Instant::now();
+                let _ = ed::try_change(&mut job, &change, how);
+                times.push(began.elapsed().as_secs_f64());
+            }
+            let began = std::time::Instant::now();
             let tried = ed::try_change(&mut job, &change, how);
+            times.push(began.elapsed().as_secs_f64());
             let lines = tried.said();
             if let Some(why) = &tried.refused {
                 return Err(format!("tried {verb}: it would be refused: {why}\nnothing was changed"));
@@ -275,6 +291,19 @@ pub fn run(args: &[String]) -> Result<(), String> {
             say!("tried {verb}:");
             for l in lines {
                 say!("  {l}");
+            }
+            if timed.is_some() {
+                for (i, x) in times.iter().enumerate() {
+                    say!("try {}: {x:.3} s", i + 1);
+                }
+                say!("the least of {}: {:.3} s", times.len(), times.iter().cloned().fold(f64::INFINITY, f64::min));
+                // Where the time goes: the job written out and read back, which is what a try does to put it back.
+                let began = std::time::Instant::now();
+                let saved = file::save(&mut job);
+                let wrote = began.elapsed().as_secs_f64();
+                let began = std::time::Instant::now();
+                let _ = file::load(&saved);
+                say!("writing the whole job out: {wrote:.3} s; reading it back: {:.3} s", began.elapsed().as_secs_f64());
             }
             say!("nothing was changed: {path} is as it was");
             Ok(())

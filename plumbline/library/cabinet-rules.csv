@@ -1,9 +1,9 @@
-Code,What it is,Number reads,Width,Depth,Height,Stands,Drawn as,Stocked widths,How sure,Where from
-B,base,the width,from the number,24 in,34 1/2 in,on the floor,base cabinet,"12, 15, 18, 21, 24, 27, 30, 33, 36 in",Assumed,the trade's stock sizes by habit; the maker's catalog decides
-SB,base,the width,from the number,24 in,34 1/2 in,on the floor,base cabinet,"30, 33, 36 in",Assumed,the trade's stock sizes by habit; the maker's catalog decides
-DB,base,the width,from the number,24 in,34 1/2 in,on the floor,base cabinet,"18, 24 in",Assumed,the trade's stock sizes by habit; the maker's catalog decides
-BLB,base,the width,from the number,24 in,34 1/2 in,on the floor,base cabinet,36 in,Assumed,the trade's stock sizes by habit; the maker's catalog decides
-LS,base,the width,from the number,36 in,34 1/2 in,on the floor,base cabinet,36 in,Assumed,the trade's stock sizes by habit; the maker's catalog decides
-W,wall box,the width then the height,from the number,12 in,from the number,hung 54 in up,box,"12, 15, 18, 24, 30, 36 in",Assumed,the trade's stock sizes by habit; the maker's catalog decides
-T,tall box,the width then the height,from the number,24 in,from the number,on the floor,wardrobe,"18, 24 in",Assumed,the trade's stock sizes by habit; the maker's catalog decides
-F,filler,the width,from the number,24 in,34 1/2 in,on the floor,box,3 in,Assumed,the trade's stock sizes by habit; the maker's catalog decides
+Code,What it is,Number reads,Width,Depth,Height,Stands,Drawn as,Stocked widths,How sure,Where from,Stocked heights
+B,base,the width,from the number,24 in,34 1/2 in,on the floor,base cabinet,"12, 15, 18, 21, 24, 27, 30, 33, 36 in",Assumed,the trade's stock sizes by habit; the maker's catalog decides,
+SB,base,the width,from the number,24 in,34 1/2 in,on the floor,base cabinet,"30, 33, 36 in",Assumed,the trade's stock sizes by habit; the maker's catalog decides,
+DB,base,the width,from the number,24 in,34 1/2 in,on the floor,base cabinet,"18, 24 in",Assumed,the trade's stock sizes by habit; the maker's catalog decides,
+BLB,base,the width,from the number,24 in,34 1/2 in,on the floor,base cabinet,36 in,Assumed,the trade's stock sizes by habit; the maker's catalog decides,
+LS,base,the width,from the number,36 in,34 1/2 in,on the floor,base cabinet,36 in,Assumed,the trade's stock sizes by habit; the maker's catalog decides,
+W,wall box,the width then the height,from the number,12 in,from the number,hung 54 in up,box,"12, 15, 18, 24, 30, 36 in",Assumed,the trade's stock sizes by habit; the maker's catalog decides,"12, 18, 30 in"
+T,tall box,the width then the height,from the number,24 in,from the number,on the floor,wardrobe,"18, 24 in",Assumed,the trade's stock sizes by habit; the maker's catalog decides,84 in
+F,filler,the width,from the number,24 in,34 1/2 in,on the floor,box,3 in,Assumed,the trade's stock sizes by habit; the maker's catalog decides,

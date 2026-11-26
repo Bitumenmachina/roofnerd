@@ -723,6 +723,74 @@ pub fn inches_said(feet: f64) -> String {
     format!("{} in", sixteenths(feet))
 }
 
+/// A length in feet as a builder says it in a sentence (call 226 point 2): "10 ft", "7 ft 6 in", "14 in", "4 13/16 in"; never "10.00 ft".
+/// Said to the sixteenth of an inch where the length is one (to within a hundredth of an inch); a length that is not (0.4 in) is said as it
+/// is, to two places, and is not rounded to a sixteenth it is not. Feet are separated in thousands as the estimate's figures are.
+/// A **quantity** on a line of the estimate or of a list is not a sentence and is not said this way (`view::figure`).
+pub fn length_said(feet: f64) -> String {
+    if !feet.is_finite() {
+        return "unknown".to_string();
+    }
+    let inches = feet.abs() * 12.0;
+    let sixteenths = (inches * 16.0).round();
+    let (whole_ft, inch_text) = if (inches * 16.0 - sixteenths).abs() <= 0.16 {
+        let ft = (sixteenths / 192.0).floor();
+        let rest = sixteenths - ft * 192.0;
+        let (whole, mut top, mut bottom) = ((rest / 16.0).floor() as u64, (rest % 16.0) as u64, 16u64);
+        while top > 0 && top % 2 == 0 {
+            top /= 2;
+            bottom /= 2;
+        }
+        let text = match (whole, top) {
+            (w, 0) => format!("{w}"),
+            (0, t) => format!("{t}/{bottom}"),
+            (w, t) => format!("{w} {t}/{bottom}"),
+        };
+        (ft, text)
+    } else {
+        let hundredths = (inches * 100.0).round() / 100.0;
+        let ft = (hundredths / 12.0).floor();
+        (ft, crate::view::num(hundredths - ft * 12.0))
+    };
+    let minus = if feet < 0.0 && (whole_ft > 0.0 || inch_text != "0") { "-" } else { "" };
+    let ft_text = crate::view::figure(whole_ft, 0);
+    match (whole_ft > 0.0, inch_text == "0") {
+        (true, true) => format!("{minus}{ft_text} ft"),
+        (true, false) => format!("{minus}{ft_text} ft {inch_text} in"),
+        (false, _) => format!("{minus}{inch_text} in"),
+    }
+}
+
+/// A length in feet said in inches however long it is, for what is cut or drilled ("14 in", "4 13/16 in", "0.4 in"): the sixteenth where it
+/// is one, else as it is to two places (call 226 point 2: a hole is "14 in by 8 in", never "14.00 in by 8.00 in").
+pub fn across_said(feet: f64) -> String {
+    if !feet.is_finite() {
+        return "unknown".to_string();
+    }
+    let inches = feet.abs() * 12.0;
+    let sixteenths = (inches * 16.0).round();
+    let minus = if feet < 0.0 && sixteenths > 0.0 { "-" } else { "" };
+    if (inches * 16.0 - sixteenths).abs() <= 0.16 {
+        format!("{minus}{} in", sixteenths_text(sixteenths as u64))
+    } else {
+        format!("{minus}{} in", crate::view::num((inches * 100.0).round() / 100.0))
+    }
+}
+
+/// Sixteenths of an inch as inches: 70 is "4 3/8", 96 is "6".
+fn sixteenths_text(parts: u64) -> String {
+    let (whole, mut top, mut bottom) = (parts / 16, parts % 16, 16);
+    while top > 0 && top % 2 == 0 {
+        top /= 2;
+        bottom /= 2;
+    }
+    match (whole, top) {
+        (w, 0) => format!("{w}"),
+        (0, t) => format!("{t}/{bottom}"),
+        (w, t) => format!("{w} {t}/{bottom}"),
+    }
+}
+
 pub fn size_said(sides: [f64; 3]) -> String {
     if sides.iter().any(|x| !x.is_finite()) {
         return "unknown".into();

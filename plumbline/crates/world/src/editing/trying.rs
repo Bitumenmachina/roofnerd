@@ -346,7 +346,7 @@ pub fn try_change(job: &mut Job, change: &Change, how: Entered) -> Tried {
                         seen.push(h);
                         let Some(hole) = found.holes.get(h) else { continue };
                         let pieces: Vec<String> = hole.pieces.iter().map(|(p, n)| nm(p, n)).collect();
-                        let size = if hole.size.is_empty() { String::new() } else { format!(", {}", hole.size) };
+                        let size = if hole.size_said.is_empty() { String::new() } else { format!(", {}", hole.size_said) };
                         let paths: Vec<String> = hole.pieces.iter().map(|(p, _)| p.clone()).filter(|p| touched.contains(p)).collect();
                         tried.holes.push(Trouble { said: format!("{} passes through {}{size}", pieces.join(", "), nm(&hole.through, &hole.through_name)), status: hole.status, paths });
                     }

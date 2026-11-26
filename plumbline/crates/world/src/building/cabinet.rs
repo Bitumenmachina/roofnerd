@@ -6,7 +6,7 @@
 //! says how the figures after the letters are read (`B42` reads the width in inches: 42 in
 //! wide; `W3342` reads four digits, the width then the height: 33 in wide, 42 in high); width,
 //! depth and height are each a length or "from the number"; **stands** is on the floor or hung
-//! so far up; **drawn as** is a shape; **stocked widths** are the widths the trade stocks.
+//! so far up; **drawn as** is a shape; **stocked widths** are the widths the trade stocks, and **stocked heights** the heights, for a box whose number gives its height (call 226).
 //! Every rule is Assumed: "the trade's stock sizes by habit; the maker's catalog decides".
 //!
 //! The thirty-odd boxes of the tool chest are what the starter rules make
@@ -29,7 +29,7 @@ use crate::units::{self, Len};
 use crate::value::{Status, Val};
 
 /// The headings of the table of rules as this program writes them.
-pub const HEADINGS: [&str; 11] = ["Code", "What it is", "Number reads", "Width", "Depth", "Height", "Stands", "Drawn as", "Stocked widths", "How sure", "Where from"];
+pub const HEADINGS: [&str; 12] = ["Code", "What it is", "Number reads", "Width", "Depth", "Height", "Stands", "Drawn as", "Stocked widths", "How sure", "Where from", "Stocked heights"];
 
 /// What a width or a height says when the code's number gives it.
 pub const FROM_NUMBER: &str = "from the number";
@@ -128,6 +128,10 @@ pub struct Rule {
     /// The widths the trade stocks, in inches.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub stocked: Vec<u32>,
+    /// The heights the trade stocks, in inches, for a rule that reads the height from the number (a wall box, a tall box; call 226). None
+    /// said: no height is flagged, as before the column was.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub stocked_heights: Vec<u32>,
     pub status: Status,
     pub source: String,
 }
@@ -139,6 +143,8 @@ pub struct Made {
     pub item: Item,
     /// Its width is none the trade stocks: a made-to-order box.
     pub not_stocked: bool,
+    /// Its height, read from the number, is none the trade stocks: a made-to-order box (call 226).
+    pub not_stocked_height: bool,
     /// What a person is told: which rule, its sizes, and a width not stocked.
     pub said: String,
 }
@@ -215,6 +221,9 @@ impl Rule {
         if self.stocked.iter().any(|w| *w == 0) {
             return Err("a stocked width is more than nothing".into());
         }
+        if self.stocked_heights.iter().any(|h| *h == 0) {
+            return Err("a stocked height is more than nothing".into());
+        }
         if self.status != Status::Assumed {
             return Err("how sure it is reads something other than Assumed: a cabinet rule is the trade's habit and the maker's catalog decides, so it is Assumed".into());
         }
@@ -282,12 +291,18 @@ impl Rule {
             let (len, unit) = units::parse_length(text).map_err(|why| format!("{name}: {why}"))?;
             Ok(Val { value: Some(len), unit: unit.to_string(), status: self.status, source })
         };
+        // A height read from the number is flagged as a width is, where the rule says which heights the trade stocks (call 226).
+        let not_stocked_height = height.is_some_and(|h| !self.stocked_heights.is_empty() && !self.stocked_heights.contains(&h));
+        let unstocked_height = match height {
+            Some(h) if not_stocked_height => format!("; {h} in is not a stocked height (stocked: {})", self.stocked_heights.iter().map(u32::to_string).collect::<Vec<_>>().join(", ")),
+            _ => String::new(),
+        };
         let unstocked = if not_stocked { format!("; {width} in is not a stocked width ({stock})") } else { String::new() };
         let w_source = if height.is_some() { format!("{rule}: the first two digits of {digits} are the width in inches; {}{unstocked}", self.source) } else { format!("{rule}: the number {digits} is the width in inches; {}{unstocked}", self.source) };
         let width_val = length(&format!("{width} in"), w_source)?;
         let depth_val = length(self.depth.as_deref().unwrap_or(""), format!("{rule}: {} deep; {}", self.depth.as_deref().unwrap_or(""), self.source))?;
         let height_val = match height {
-            Some(h) => length(&format!("{h} in"), format!("{rule}: the last two digits of {digits} are the height in inches; {}", self.source))?,
+            Some(h) => length(&format!("{h} in"), format!("{rule}: the last two digits of {digits} are the height in inches; {}{unstocked_height}", self.source))?,
             None => length(self.height.as_deref().unwrap_or(""), format!("{rule}: {} high; {}", self.height.as_deref().unwrap_or(""), self.source))?,
         };
         let sizes = [&width_val, &depth_val, &height_val].map(|v| v.value.and_then(|l| l.feet(&v.unit).ok()).map(|f| units::inches_said(f)).unwrap_or_default());
@@ -297,7 +312,12 @@ impl Rule {
             sizes[0],
             sizes[1],
             sizes[2],
-            if not_stocked { format!("; {width} in is not a stocked width of {}, so it is a made-to-order box", self.code) } else { String::new() }
+            match (not_stocked, height) {
+                (true, Some(h)) if not_stocked_height => format!("; {width} in is not a stocked width of {code}; {h} in is not a stocked height of {code}, so it is a made-to-order box", code = self.code),
+                (true, _) => format!("; {width} in is not a stocked width of {}, so it is a made-to-order box", self.code),
+                (false, Some(h)) if not_stocked_height => format!("; {h} in is not a stocked height of {}, so it is a made-to-order box", self.code),
+                _ => String::new(),
+            }
         );
         let item = Item {
             category: Kind::Furnishing,
@@ -312,12 +332,13 @@ impl Rule {
             form: Some(self.drawn_as.to_lowercase()),
             priced_as: None,
         };
-        Ok(Made { name, item, not_stocked, said })
+        Ok(Made { name, item, not_stocked, not_stocked_height, said })
     }
 
     /// The row as the table writes it.
     pub fn cells(&self) -> Vec<String> {
         let stocked = if self.stocked.is_empty() { String::new() } else { format!("{} in", self.stocked.iter().map(u32::to_string).collect::<Vec<_>>().join(", ")) };
+        let stocked_heights = if self.stocked_heights.is_empty() { String::new() } else { format!("{} in", self.stocked_heights.iter().map(u32::to_string).collect::<Vec<_>>().join(", ")) };
         let cell = |c: &Option<String>| c.clone().unwrap_or_else(|| FROM_NUMBER.to_string());
         vec![
             self.code.clone(),
@@ -336,12 +357,13 @@ impl Rule {
             }
             .to_string(),
             self.source.clone(),
+            stocked_heights,
         ]
     }
 
     /// A row of the table, read: each cell as the table writes it. The refusal is in the table's words.
     #[allow(clippy::too_many_arguments)]
-    pub fn from_cells(code: &str, is: &str, reads: &str, width: &str, depth: &str, height: &str, stands: &str, drawn_as: &str, stocked: &str, status: &str, source: &str) -> Result<Rule, String> {
+    pub fn from_cells(code: &str, is: &str, reads: &str, width: &str, depth: &str, height: &str, stands: &str, drawn_as: &str, stocked: &str, stocked_heights: &str, status: &str, source: &str) -> Result<Rule, String> {
         let letters = code.trim().to_uppercase();
         let is = Is::named(is).ok_or_else(|| format!("what it is reads {is:?}: a base, a wall box, a tall box or a filler"))?;
         let reads = Reads::named(reads).ok_or_else(|| format!("its number reads {reads:?}: the width, or the width then the height"))?;
@@ -368,6 +390,16 @@ impl Rule {
                 }
             }
         };
+        let whole_inches = |text: &str, what: &str| -> Result<Vec<u32>, String> {
+            let t = text.trim();
+            let t = t.strip_suffix("in").or_else(|| t.strip_suffix("\"")).unwrap_or(t).trim();
+            if t.is_empty() {
+                Ok(Vec::new())
+            } else {
+                t.split(|c: char| c == ',' || c.is_whitespace()).filter(|p| !p.is_empty()).map(|p| p.parse::<u32>().map_err(|_| format!("the stocked {what} read {p:?}: whole inches, like 12, 15, 18 in"))).collect()
+            }
+        };
+        let stocked_heights = whole_inches(stocked_heights, "heights")?;
         let stocked: Vec<u32> = {
             let t = stocked.trim();
             let t = t.strip_suffix("in").or_else(|| t.strip_suffix("\"")).unwrap_or(t).trim();
@@ -383,7 +415,7 @@ impl Rule {
             "unknown" => Status::Unknown,
             other => return Err(format!("how sure it is reads {other:?}, which is not Known, Assumed or Unknown")),
         };
-        let rule = Rule { code: letters, is, reads, width: cell("width", width)?, depth: cell("depth", depth)?, height: cell("height", height)?, hung, drawn_as: drawn_as.trim().to_string(), stocked, status, source: source.trim().to_string() };
+        let rule = Rule { code: letters, is, reads, width: cell("width", width)?, depth: cell("depth", depth)?, height: cell("height", height)?, hung, drawn_as: drawn_as.trim().to_string(), stocked, stocked_heights, status, source: source.trim().to_string() };
         rule.check()?;
         Ok(rule)
     }

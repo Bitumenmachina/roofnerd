@@ -147,7 +147,7 @@ fn step_3_a_wall_over_a_wall_is_refused_in_the_words_the_real_change_gives() {
     let change = Change::Walls { storey: h.level.clone(), type_path: h.wall_type.clone(), points: vec![[2.0, 0.0], [12.0, 0.0]], closed: false, tall: HowTall::Height("9 ft".into()) };
     let tried = ed::try_change(&mut h.job, &change, KNOWN);
     let why = tried.refused.clone().expect("refused");
-    assert!(why.contains("lies along wall 1 for 10.00 ft") && why.contains("one wall drawn over another would be counted twice"), "{why}");
+    assert!(why.contains("lies along wall 1 for 10 ft") && why.contains("one wall drawn over another would be counted twice"), "{why}");  // call 226: a length in a sentence is said as a builder says it
     assert!(tried.made.is_empty());
     assert_eq!(tried.said(), vec![format!("it would be refused: {why}")]);
     assert_eq!(file::save(&mut h.job), text);
@@ -344,7 +344,7 @@ fn step_8_a_wall_copied_with_its_door() {
     let south = h.walls[0].clone();
     let text = file::save(&mut h.job);
     let why = ed::copy_by(&mut h.job, &south, 0.0, 12.0, KNOWN).unwrap_err();
-    assert!(why.contains("lies along wall 3 for 20.00 ft"), "{why}");
+    assert!(why.contains("lies along wall 3 for 20 ft"), "{why}");  // call 226: a length in a sentence is said as a builder says it
     assert_eq!(file::save(&mut h.job), text);
     let done = ed::copy_by(&mut h.job, &south, 0.0, 6.0, KNOWN).unwrap();
     assert_eq!(done.made.len(), 2, "the wall and its door");

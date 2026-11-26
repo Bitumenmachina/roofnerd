@@ -57,7 +57,7 @@ says "how long the duct is" "24 ft long" "$OUT"
 is "the file is byte for byte what it was" "$(sum)" "$BEFORE"
 
 echo "== 3. Tried where it would be refused: a wall drawn over the south wall =="
-refused "lies along wall 1 for 10.00 ft" "$P" try "$J" wall "$LEVEL" "$WT" --points "2,0 12,0" --height "9 ft" "${K[@]}"
+refused "lies along wall 1 for 10 ft" "$P" try "$J" wall "$LEVEL" "$WT" --points "2,0 12,0" --height "9 ft" "${K[@]}"  # call 226: a length in a sentence is said as a builder says it
 refused "one wall drawn over another would be counted twice" "$P" wall "$J" "$LEVEL" "$WT" --points "2,0 12,0" --height "9 ft" "${K[@]}"
 is "the file is byte for byte what it was" "$(sum)" "$BEFORE"
 
@@ -121,7 +121,7 @@ not_said "the sixth, outside the house, is in nothing" "Lavatory 7 would be in t
 is "the file is byte for byte what it was" "$(sha256sum <"$T/one.json" | cut -d' ' -f1)" "$ONE"
 
 echo "== 8. A wall copied with its door =="
-refused "lies along wall 3 for 20.00 ft" "$P" copy "$J" "$W1" --by "12 ft north"
+refused "lies along wall 3 for 20 ft" "$P" copy "$J" "$W1" --by "12 ft north"  # call 226: a length in a sentence is said as a builder says it
 OUT="$("$P" copy "$J" "$W1" --by "6 ft north")"
 echo "$OUT" | sed 's/^/    | /'
 says "the wall and its door" "with its 1 door or window" "$OUT"

@@ -536,7 +536,7 @@ pub fn opening(job: &mut Job, wall: &str, kind: Kind, type_path: &str, at: OnWal
                 let length = (dx * dx + dy * dy).sqrt();
                 let along = ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / length;
                 if !(0.0..=length).contains(&along) {
-                    return Err(format!("the point ({}, {}) falls {} ft along {wall}, which is {} ft long: it is not on the wall", p[0], p[1], crate::view::figure(along, 2), crate::view::figure(length, 2)));
+                    return Err(format!("the point ({}, {}) falls {} along {wall}, which is {} long: it is not on the wall", p[0], p[1], crate::units::length_said(along), crate::units::length_said(length)));
                 }
                 // And it is in the wall, not out in the room: within half the wall's
                 // thickness of its centre line, which lies to the left of the line it
@@ -551,7 +551,7 @@ pub fn opening(job: &mut Job, wall: &str, kind: Kind, type_path: &str, at: OnWal
                 };
                 let off = (((p[1] - a[1]) * dx - (p[0] - a[0]) * dy) / length - centre).abs();
                 if off > half + crate::check::FIT_TOLERANCE_FT {
-                    return Err(format!("the point ({}, {}) is {} ft off the middle of {wall}, which is {} ft thick: it is not on the wall", p[0], p[1], crate::view::figure(off, 2), crate::view::figure(half * 2.0, 2)));
+                    return Err(format!("the point ({}, {}) is {} off the middle of {wall}, which is {} thick: it is not on the wall", p[0], p[1], crate::units::length_said(off), crate::units::length_said(half * 2.0)));
                 }
                 how.val(Len::One((along * 10_000.0).round() / 10_000.0), "ft")
             }

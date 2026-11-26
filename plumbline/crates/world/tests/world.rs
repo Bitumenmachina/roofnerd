@@ -897,7 +897,7 @@ fn planes_that_disagree_along_a_shared_edge_are_reported_against_each_other() {
     assert_eq!(found.problems.iter().filter(|p| p.contains("disagree about its height")).count(), 2);
     // The ridge is level on both planes, at 20 ft on one and 17.5 ft on the other. That is
     // a step or a misfit; the planes cannot say which, and each keeps its own top edge.
-    assert_eq!(found.problems.iter().filter(|p| p.contains("at different heights (20.00 ft and 17.50 ft)")).count(), 1);
+    assert_eq!(found.problems.iter().filter(|p| p.contains("at different heights (20 ft and 17 ft 6 in)")).count(), 1);  // call 226: a length in a sentence is said as a builder says it
     assert_eq!(found.lines.iter().filter(|l| l.kind == Kind::Ridge && l.planes.len() == 2).count(), 0);
     assert!(found.lines.iter().any(|l| l.kind == Kind::Ridge && l.planes == ["plane-0003"]));
     assert!(found.lines.iter().any(|l| l.kind == Kind::Ridge && l.planes == ["plane-0005"]));
@@ -2304,7 +2304,7 @@ fn an_opening_that_does_not_fit_its_wall_leaves_no_net_area() {
     job.derive();
     let net = measure_of(&mut job, &south, "net_area");
     assert_eq!((net.value, net.status), (None, Status::Unknown));
-    assert!(net.note.contains("ends 42.00 ft along a wall 40.00 ft long"), "{}", net.note);
+    assert!(net.note.contains("ends 42 ft along a wall 40 ft long"), "{}", net.note);  // call 226: a length in a sentence is said as a builder says it
     // One that lies over another: 2 ft wide centred at 7 ft, over the west window (5 to 10 ft).
     let two_by_three = opening_type(&mut job, Kind::Window, len(2.0), len(3.0));
     job.put(&w, Opening { type_name: two_by_three, offset: len(7.0), sill: len(3.0) }).unwrap();
@@ -2741,7 +2741,7 @@ fn a_size_is_entered_once_on_a_type_and_every_opening_of_it_follows() {
     job.put(&door, o).unwrap();
     job.derive();
     let net = measure_of(&mut job, &south, "net_area");
-    assert!(net.note.contains("starts 0.50 ft before the start of its wall"), "{}", net.note);
+    assert!(net.note.contains("starts 6 in before the start of its wall"), "{}", net.note);  // call 226: a length in a sentence is said as a builder says it
     // An opening whose type nobody knows has no size, and its wall no net area.
     job.put(&door, plumbline_world::Opening { type_name: Val::unknown("", "not on the door schedule"), offset: ft(20.0), sill: ft(0.0) }).unwrap();
     job.derive();
@@ -5340,12 +5340,12 @@ fn j12_1_a_wall_drawn_over_another_is_refused_by_the_verbs_and_on_load() {
     // The judge's three: a wall on the south wall, a wall on part of the north wall, and
     // two points closed back on themselves.
     let why = ed::walls(&mut job, &s, &wt, &[[0.0, 0.0], [20.0, 0.0]], false, ed::Top::Height("9 ft"), how).unwrap_err();
-    assert!(why.contains(&format!("lies along {} for 20.00 ft", made[0])) && why.contains("counted twice"), "{why}");
+    assert!(why.contains(&format!("lies along {} for 20 ft", made[0])) && why.contains("counted twice"), "{why}");  // call 226: a length in a sentence is said as a builder says it
     let why = ed::walls(&mut job, &s, &wt, &[[5.0, 10.0], [15.0, 10.0]], false, ed::Top::Height("9 ft"), how).unwrap_err();
-    assert!(why.contains("for 10.00 ft"), "{why}");
+    assert!(why.contains("for 10 ft"), "{why}");  // call 226: a length in a sentence is said as a builder says it
     assert!(ed::walls(&mut job, &s, &wt, &[[30.0, 0.0], [40.0, 0.0]], true, ed::Top::Height("9 ft"), how).unwrap_err().contains("counted twice"));
     // A chain that goes back over itself, and a wall moved onto another.
-    assert!(ed::walls(&mut job, &s, &wt, &[[30.0, 0.0], [40.0, 0.0], [35.0, 0.0]], false, ed::Top::Height("9 ft"), how).unwrap_err().contains("for 5.00 ft"));
+    assert!(ed::walls(&mut job, &s, &wt, &[[30.0, 0.0], [40.0, 0.0], [35.0, 0.0]], false, ed::Top::Height("9 ft"), how).unwrap_err().contains("for 5 ft"));  // call 226: a length in a sentence is said as a builder says it
     assert!(ed::move_alone(&mut job, &made[2], 0.0, -10.0, how).unwrap_err().contains("counted twice"));
     assert_eq!(save(&mut job), before);
     assert_eq!(total(&mut job), Some(60.0));
@@ -5447,7 +5447,7 @@ fn j12_4_5_12_a_run_on_the_wrong_system_an_opening_off_its_wall_and_a_top_held_t
     let wall = ed::walls(&mut job, &s, &wt, &[[0.0, 0.0], [10.0, 0.0]], false, ed::Top::Height("9 ft"), how).unwrap();
     let before = save(&mut job);
     let why = ed::opening(&mut job, &wall[0], Kind::Door, &dt, ed::OnWall::Point([5.0, 500.0]), "0 ft", how).unwrap_err();
-    assert_eq!(why, format!("the point (5, 500) is 500.00 ft off the middle of {}, which is 0.50 ft thick: it is not on the wall", wall[0]));
+    assert_eq!(why, format!("the point (5, 500) is 500 ft off the middle of {}, which is 6 in thick: it is not on the wall", wall[0]));  // call 226: a length in a sentence is said as a builder says it
     assert!(ed::opening(&mut job, &wall[0], Kind::Door, &dt, ed::OnWall::Point([5.0, 4.0 / 12.0]), "0 ft", how).is_err());
     assert_eq!(save(&mut job), before);
     let door = ed::opening(&mut job, &wall[0], Kind::Door, &dt, ed::OnWall::Point([5.0, -2.0 / 12.0]), "0 ft", how).unwrap();
@@ -5493,7 +5493,7 @@ fn j12_6_an_opening_that_does_not_fit_leaves_no_opening_area_and_each_one_is_nam
     for figure in ["opening_area", "net_area"] {
         let d = measure_of(&mut job, &wall[0], figure);
         assert_eq!((d.value, d.status), (None, Status::Unknown), "{figure}");
-        assert!(d.note.contains(&format!("{window} ends 11.50 ft along a wall 10.00 ft long")) && d.note.contains(&format!("{door} and {second} lie over each other")), "{figure}: {}", d.note);
+        assert!(d.note.contains(&format!("{window} ends 11 ft 6 in along a wall 10 ft long")) && d.note.contains(&format!("{door} and {second} lie over each other")), "{figure}: {}", d.note);  // call 226: a length in a sentence is said as a builder says it
     }
 }
 
@@ -5835,7 +5835,7 @@ fn j13_8_9_one_wall_over_another_is_judged_by_their_bodies_and_an_opening_by_its
     // in the first for all of its 10 ft. Refused.
     for line in [[[0.0, 0.02], [10.0, 0.02]], [[0.0, -0.05], [10.0, 0.05]]] {
         let why = ed::walls(&mut job, &s, &wt, &line, false, ed::Top::Height("9 ft"), how).unwrap_err();
-        assert!(why.contains(&format!("lies along {}", first[0])) && why.contains("10.00 ft"), "{why}");
+        assert!(why.contains(&format!("lies along {}", first[0])) && why.contains("10 ft"), "{why}");  // call 226: a length in a sentence is said as a builder says it
     }
     assert_eq!(save(&mut job), before);
     // A wall square across it is in it for their thickness, as walls that cross are; a
@@ -5865,7 +5865,7 @@ fn j13_8_9_one_wall_over_another_is_judged_by_their_bodies_and_an_opening_by_its
     // on, it is on the wall; 0.26 ft in front of that line it is out in the room.
     let before = save(&mut job);
     let why = ed::opening(&mut job, &one[0], Kind::Door, &dt2, ed::OnWall::Point([8.0, 20.26]), "0 ft", how).unwrap_err();
-    assert!(why.contains("0.51 ft off the middle") && why.contains("it is not on the wall"), "{why}");
+    assert!(why.contains("6 1/8 in off the middle") && why.contains("it is not on the wall"), "{why}");  // call 226: a length in a sentence is said as a builder says it
     assert_eq!(save(&mut job), before);
     ed::opening(&mut job, &one[0], Kind::Door, &dt2, ed::OnWall::Point([5.0, 19.55]), "0 ft", how).unwrap();
 

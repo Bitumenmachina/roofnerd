@@ -510,7 +510,7 @@ pub fn check_whole(job: &mut Job) -> Result<(), String> {
             if let Some(shared) = bodies_overlap(*line, *thick, *its, *as_thick) {
                 // Said in the words of what the two are (a footing is held as a wall is).
                 let what = if b.starts_with("footing") { "footing" } else { "wall" };
-                return Err(format!("{b}: lies along {a} for {} ft: one {what} drawn over another would be counted twice", view::figure_shown(shared, 2)));
+                return Err(format!("{b}: lies along {a} for {}: one {what} drawn over another would be counted twice", crate::units::length_said(shared)));
             }
         }
     }
@@ -560,9 +560,9 @@ pub fn drawn_faults(job: &mut Job) -> Vec<(String, String)> {
                 }
             }
             if from < -tol {
-                out.push((format!("{} off the start", c.path), format!("{} starts {} ft before the start of its wall: an opening lies within its wall", c.path, view::figure_shown(-from, 2))));
+                out.push((format!("{} off the start", c.path), format!("{} starts {} before the start of its wall: an opening lies within its wall", c.path, crate::units::length_said(-from))));
             } else if to > length + tol {
-                out.push((format!("{} off the end", c.path), format!("{} ends {} ft along a wall {} ft long: an opening lies within its wall", c.path, view::figure_shown(to, 2), view::figure_shown(length, 2))));
+                out.push((format!("{} off the end", c.path), format!("{} ends {} along a wall {} long: an opening lies within its wall", c.path, crate::units::length_said(to), crate::units::length_said(length))));
             }
             for (other, s) in &spans {
                 if from < s[1] && s[0] < to && span[2] < s[3] && s[2] < span[3] {
@@ -938,7 +938,7 @@ pub(crate) fn wall_heights(tree: &Tree, me: &str, w: &Wall) -> WallHeights {
         }
         (None, None) => (Err("it has no top level and no height".into()), Status::Unknown, String::new()),
     };
-    let height = height.and_then(|h| if h > 0.0 { Ok(h) } else { Err(format!("its top is {} ft above its base; a wall's top is above its base", view::figure_shown(h, 2))) });
+    let height = height.and_then(|h| if h > 0.0 { Ok(h) } else { Err(format!("its top is {} above its base; a wall's top is above its base", crate::units::length_said(h))) });
     let own_status = own.map(|l| l.elevation.status).unwrap_or(Status::Unknown);
     let span = status.max(own_status).max(base_status);
     WallHeights { base, height, status, span, base_status: own_status.max(base_status), formula, inputs }
@@ -1113,11 +1113,11 @@ pub fn measures(world: &mut World) -> HashMap<String, BTreeMap<String, Derived>>
                         let Some([from, to, sill, head]) = hole.span else { continue };
                         // It fits its wall from end to end (BIMCraft `model.rs:6678`).
                         if from < -crate::check::FIT_TOLERANCE_FT {
-                            faults.push(format!("{} starts {} ft before the start of its wall", hole.path, view::figure_shown(-from, 2)));
+                            faults.push(format!("{} starts {} before the start of its wall", hole.path, crate::units::length_said(-from)));
                         } else if to > l + crate::check::FIT_TOLERANCE_FT {
-                            faults.push(format!("{} ends {} ft along a wall {} ft long", hole.path, view::figure_shown(to, 2), view::figure_shown(l, 2)));
+                            faults.push(format!("{} ends {} along a wall {} long", hole.path, crate::units::length_said(to), crate::units::length_said(l)));
                         } else if head > h + crate::check::FIT_TOLERANCE_FT {
-                            faults.push(format!("{} reaches {} ft up a wall {} ft tall", hole.path, view::figure_shown(head, 2), view::figure_shown(*h, 2)));
+                            faults.push(format!("{} reaches {} up a wall {} tall", hole.path, crate::units::length_said(head), crate::units::length_said(*h)));
                         } else if let Some(other) = mine[..i].iter().find(|o| o.span.is_some_and(|s| from < s[1] && s[0] < to && sill < s[3] && s[2] < head)) {
                             faults.push(format!("{} and {} lie over each other", other.path, hole.path));
                         }

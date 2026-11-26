@@ -10012,3 +10012,75 @@ word, which is a loss not reported.
    `tools/licenses.sh` passes with it.
 9. Nothing of the sample whole house moves.
 
+### Call 228. Clashes handed over as an issue list another program opens: BCF (2026-11-26; the lead's design, not built)
+
+Proposal 36, taken up under call 217 (the lead makes the calls) and call 220's
+table ("clashes also go out as an issue list (BCF)"). The mission's own loop
+ends with a veteran confirming or clearing each clash; the other trades and the
+designer work in other programs, and the open way to hand them a list of
+issues, each with the two things and a view of the place, is buildingSMART's
+BCF.
+
+1. **`plumbline export bcf <job> <file.bcfzip>`**: one issue for each clash "in
+   the same space", in the order of the clash list. Its title is the line the
+   clash list gives (the two things by name and by how much they are in each
+   other); its description says where (level and place, in feet and inches),
+   **whether it is a finding or a question for the field** (the program's
+   certainty, in those words), and the dollars riding on it where the
+   verify-in-field list has them.
+2. **Each issue names its two things by the ids the BIM file gives them**: the
+   same job written out as IFC and as BCF, the other program opens the model,
+   opens the issues, and each issue selects its two things. A test holds the
+   ids in the issue list to the ids in the IFC file.
+3. **Each issue has a view of the place**: where to stand and what to look at,
+   worked from the clash's place so both things are in the view.
+4. **Holes to cut go out only when asked** (`--holes`): a pipe through a wall is
+   work to do, not a clash; with the switch each is an issue of its own kind.
+   What is "set against" never goes out.
+5. **Which BCF**: the worker reads buildingSMART's own published format (the
+   version most programs open today, and the newer one), says which is written
+   and why, and checks the file against buildingSMART's own published schema
+   with an outside checker that is run and never linked, as the IFC checker is.
+   The zip is written with what is already linked.
+6. **Who wrote it**: the format wants an author and a time. The program knows no
+   person: the author is the program's name, and the time is the time of
+   writing (so two writings differ in that and nothing else; the demonstration
+   compares everything but the time).
+7. **Not in this call**: reading an issue list back (another party's replies and
+   closings laid against our clashes). It is the natural next step and is
+   written as owed.
+8. Nothing of the sample whole house moves.
+
+### Call 226, as built: loose ends at the command line (2026-11-26)
+
+The worker's work under contract 226M (`research/worker-report-call226M.md`),
+checked by the lead's own run of its copy (1,219 command-line tests: model 723,
+command line 69, sheets 7, model files 111, roofing 122, plans 187; 63
+command-line demonstrations; gates, port map, licences; the sample whole house
+byte for byte) and by the lead reading both sides of every moved expectation.
+
+1. **A try is under a tenth of a second in the build a person is given**: least
+   of five on the sample whole house 0.066 to 0.078 s (0.29 s in the build the
+   tests use), of which writing the job and reading it back is a little over
+   half. By call 226's own rule the putting-back was left alone. `try ...
+   --timed N` prints the figures. **The margin is thin and said**: when a house
+   heavier than the sample crosses it, the job is put back from only what the
+   change touched (the worker's design is in its report); the undo list cannot
+   be the source, since it holds whole texts.
+2. **A length in a sentence is said by one function** (`units::length_said`:
+   "10 ft", "7 ft 6 in", "6 1/8 in"; a length that is no sixteenth is said as it
+   is, never rounded to one the model does not hold); a hole's size in a try's
+   sentence by `units::across_said` ("14 in by 8 in"). Quantities on lists are
+   as they were ("4.00 in round" on the clash list).
+3. **The database's reply** says the line about how cells are shown once; a tab
+   it has no table for is named as typed.
+4. **`plumbline remove-cabinet-rule <job> <code>`**: the three cases of call
+   226, each said; boxes a rule made stay and still say what made them.
+5. **"Stocked heights"** is the table's last column (last, so a table of eleven
+   columns reads as before): W takes 12, 18 and 30 in, T takes 84 in, the bases
+   none (their height is never read from the number). A height read from the
+   number and not listed is flagged as a width is.
+6. **Owed**: sentences outside this job's search that still write a length with
+   decimals (the tolerance sentences to four places; a few written through
+   another helper, "by 3.5 in"); the window's entries for all of this.
+

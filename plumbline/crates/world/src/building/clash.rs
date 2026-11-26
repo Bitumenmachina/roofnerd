@@ -73,6 +73,7 @@ use crate::check::FIT_TOLERANCE_FT;
 use crate::components::{Kind, Node};
 use crate::geom;
 use crate::job::Job;
+use crate::units;
 use crate::value::Status;
 use crate::view;
 
@@ -148,6 +149,9 @@ pub struct Hole {
     /// The widest of them, as a person says it ("6 in round", "12 in by 8 in"); empty where
     /// no piece has a size.
     pub size: String,
+    /// The same size as a builder says it in a sentence ("14 in by 8 in", "4 in round"; call 226 point 2). `size` is the writing of the lists and
+    /// does not change.
+    pub size_said: String,
     /// Where, in feet: east, north, height above the datum.
     pub at: P3,
     pub status: Status,
@@ -1153,7 +1157,7 @@ fn find(job: &mut Job, clearance: Option<f64>, with_walls_coming_down: bool) -> 
             Some(&h) => h,
             None => {
                 let on_b = found[i].b == whole;
-                holes.push(Hole { through: whole, through_name: if on_b { found[i].b_name.clone() } else { found[i].a_name.clone() }, through_kind: if on_b { found[i].b_kind } else { found[i].a_kind }, pieces: Vec::new(), size: String::new(), at: found[i].at, status: found[i].status });
+                holes.push(Hole { through: whole, through_name: if on_b { found[i].b_name.clone() } else { found[i].a_name.clone() }, through_kind: if on_b { found[i].b_kind } else { found[i].a_kind }, pieces: Vec::new(), size: String::new(), size_said: String::new(), at: found[i].at, status: found[i].status });
                 hole_at_root.insert(top(&mut root, x), holes.len() - 1);
                 holes.len() - 1
             }
@@ -1169,21 +1173,23 @@ fn find(job: &mut Job, clearance: Option<f64>, with_walls_coming_down: bool) -> 
     // Each hole's size: the widest run through it, as it is said.
     let as_said = |inches: f64| view::figure_shown(inches, 2);
     for hole in holes.iter_mut() {
-        let mut widest: Option<(f64, String)> = None;
+        let mut widest: Option<(f64, String, String)> = None;
         for (path, _) in &hole.pieces {
             let Some(p) = drawn.iter().find(|p| &p.path == path) else { continue };
             if let Shape::Run { round, rect, .. } = &p.shape {
-                let (across, text) = match (round, rect) {
-                    (Some(d), _) => (*d, format!("{} in round", as_said(d * 12.0))),
-                    (None, Some((w, h))) => (w.max(*h), format!("{} in by {} in", as_said(w * 12.0), as_said(h * 12.0))),
+                let (across, text, said) = match (round, rect) {
+                    (Some(d), _) => (*d, format!("{} in round", as_said(d * 12.0)), format!("{} round", units::across_said(*d))),
+                    (None, Some((w, h))) => (w.max(*h), format!("{} in by {} in", as_said(w * 12.0), as_said(h * 12.0)), format!("{} by {}", units::across_said(*w), units::across_said(*h))),
                     _ => continue,
                 };
-                if widest.as_ref().is_none_or(|(was, _)| across > *was) {
-                    widest = Some((across, text));
+                if widest.as_ref().is_none_or(|(was, _, _)| across > *was) {
+                    widest = Some((across, text, said));
                 }
             }
         }
-        hole.size = widest.map(|(_, t)| t).unwrap_or_default();
+        let (text, said) = widest.map(|(_, t, s)| (t, s)).unwrap_or_default();
+        hole.size = text;
+        hole.size_said = said;
     }
     Ok(Clashes { found, holes, tested, left_out })
 }

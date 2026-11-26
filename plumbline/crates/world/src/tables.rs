@@ -1878,7 +1878,7 @@ pub fn shapes_in(job: &mut Job, rows: &[Vec<String>], numbers: Option<&[usize]>)
 /// number after them make a box, as a table a person can open, change and bring back (call 215). Every row Assumed.
 pub const STARTER_CABINET_RULES: &str = include_str!("../../../library/cabinet-rules.csv");
 
-const CABINET_COLUMNS: [(&str, &[&str]); 11] = [
+const CABINET_COLUMNS: [(&str, &[&str]); 12] = [
     ("code", &["code", "letters", "cabinet code"]),
     ("is", &["what it is", "is", "kind"]),
     ("reads", &["number reads", "number", "reads"]),
@@ -1888,6 +1888,7 @@ const CABINET_COLUMNS: [(&str, &[&str]); 11] = [
     ("stands", &["stands", "where it stands"]),
     ("drawn", &["drawn as", "shape"]),
     ("stocked", &["stocked widths", "stocked", "stock widths"]),
+    ("stocked heights", &["stocked heights", "stock heights"]),
     ("status", &["how sure", "status"]),
     ("source", &["where from", "source"]),
 ];
@@ -1928,7 +1929,7 @@ fn read_cabinet_rules(rows: &[Vec<String>], numbers: Option<&[usize]>, shapes: &
             if cols.cell(row, "source").is_empty() {
                 return Err("it does not say where it came from".into());
             }
-            let rule = Rule::from_cells(code, cols.cell(row, "is"), cols.cell(row, "reads"), cols.cell(row, "width"), cols.cell(row, "depth"), cols.cell(row, "height"), cols.cell(row, "stands"), cols.cell(row, "drawn"), cols.cell(row, "stocked"), cols.cell(row, "status"), cols.cell(row, "source"))?;
+            let rule = Rule::from_cells(code, cols.cell(row, "is"), cols.cell(row, "reads"), cols.cell(row, "width"), cols.cell(row, "depth"), cols.cell(row, "height"), cols.cell(row, "stands"), cols.cell(row, "drawn"), cols.cell(row, "stocked"), cols.cell(row, "stocked heights"), cols.cell(row, "status"), cols.cell(row, "source"))?;
             crate::building::shape::check_drawn_as(shapes, &rule.drawn_as).map_err(|why| format!("drawn as: {why}"))?;
             Ok(rule)
         };
@@ -1973,7 +1974,7 @@ pub fn cabinet_rules_in(job: &mut Job, rows: &[Vec<String>], numbers: Option<&[u
                 Some(h) if h == rule => out.same += 1,
                 Some(h) => {
                     let mut changed: Vec<&str> = Vec::new();
-                    for (what, differs) in [("what it is", h.is != rule.is), ("how its number reads", h.reads != rule.reads), ("its width", h.width != rule.width), ("its depth", h.depth != rule.depth), ("its height", h.height != rule.height), ("where it stands", h.hung != rule.hung), ("what it is drawn as", h.drawn_as != rule.drawn_as), ("its stocked widths", h.stocked != rule.stocked), ("where it came from", h.source != rule.source)] {
+                    for (what, differs) in [("what it is", h.is != rule.is), ("how its number reads", h.reads != rule.reads), ("its width", h.width != rule.width), ("its depth", h.depth != rule.depth), ("its height", h.height != rule.height), ("where it stands", h.hung != rule.hung), ("what it is drawn as", h.drawn_as != rule.drawn_as), ("its stocked widths", h.stocked != rule.stocked), ("its stocked heights", h.stocked_heights != rule.stocked_heights), ("where it came from", h.source != rule.source)] {
                         if differs {
                             changed.push(what);
                         }
@@ -2013,6 +2014,44 @@ pub fn cabinet_rules_in_missing(job: &mut Job, rows: &[Vec<String>], numbers: Op
         their_numbers.push(row_number(numbers, i));
     }
     cabinet_rules_in(job, &wanted, Some(&their_numbers)).map(|brought| (brought, kept))
+}
+
+/// A cabinet rule taken away (call 226 point 4). A rule of the job's own goes; one of the program's own eight that the job had changed
+/// goes back to the program's own; one the job does not carry is said to be the program's own and is left. Returns whether the job
+/// changed, and what a person is told. Boxes already made by the rule stay in the tool chest and still say what made them. A code no rule
+/// reads is refused, with the letters the rules do read.
+pub fn cabinet_rule_away(job: &mut Job, code: &str) -> Result<(bool, String), String> {
+    use crate::building::cabinet;
+    let letters = code.trim().to_uppercase();
+    let known = cabinet::effective(&job.cabinet_rules);
+    if !known.iter().any(|r| r.code == letters) {
+        return Err(format!("no cabinet rule reads {letters}. The letters the rules read are {}", known.iter().map(|r| r.code.as_str()).collect::<Vec<_>>().join(", ")));
+    }
+    let Some(at) = job.cabinet_rules.iter().position(|r| r.code == letters) else {
+        return Ok((false, format!("{letters} is the program's own rule and the job carries nothing of it: nothing was changed")));
+    };
+    // The boxes it made, by the words each one's width says of where it came from.
+    let by = format!("the cabinet rule for {letters}:");
+    let mut made: Vec<String> = {
+        let mut q = job.world.query::<(&Node, &crate::Item)>();
+        q.iter(&job.world).filter(|(_, i)| i.width.source.contains(&by)).map(|(n, _)| n.name.clone()).collect()
+    };
+    made.sort();
+    let stay = if made.is_empty() {
+        "No box was made by it.".to_string()
+    } else {
+        format!("The boxes it made stay in the tool chest, each still saying the rule for {letters} made it: {}.", made.join(", "))
+    };
+    job.cabinet_rules.remove(at);
+    let own = cabinet::starter().iter().any(|r| r.code == letters);
+    Ok((
+        true,
+        if own {
+            format!("{letters} goes back to the program's own: the job's rule for {letters} was taken away. {stay}")
+        } else {
+            format!("the rule for {letters} was taken away: no rule reads {letters} now. {stay}")
+        },
+    ))
 }
 
 // ---------------------------------------------------------------- where an item connects

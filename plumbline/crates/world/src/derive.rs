@@ -700,8 +700,8 @@ fn true_length(kind: Kind, run: Option<&Run>, plan: Option<f64>, planes: &HashMa
             _ => continue,
         };
         let fault = match kind {
-            Kind::Eave | Kind::Ridge | Kind::Headwall if !level => Some(format!("{name} is level, but plane {p} puts this line's ends at {:.2} ft and {:.2} ft; check which edge of the plane is entered as its eave", z[0], z[1])),
-            Kind::Rake | Kind::Hip | Kind::Valley if level && could_climb => Some(format!("{name} climbs the slope, but plane {p} puts both ends of this line at {:.2} ft; check which edge of the plane is entered as its eave", z[0])),
+            Kind::Eave | Kind::Ridge | Kind::Headwall if !level => Some(format!("{name} is level, but plane {p} puts this line's ends at {} and {}; check which edge of the plane is entered as its eave", crate::units::length_said(z[0]), crate::units::length_said(z[1]))),
+            Kind::Rake | Kind::Hip | Kind::Valley if level && could_climb => Some(format!("{name} climbs the slope, but plane {p} puts both ends of this line at {}; check which edge of the plane is entered as its eave", crate::units::length_said(z[0]))),
             _ => None,
         };
         if let Some(fault) = fault {
@@ -716,7 +716,7 @@ fn true_length(kind: Kind, run: Option<&Run>, plan: Option<f64>, planes: &HashMa
         for (end, label) in [(0, "start"), (1, "end")] {
             let (lo, hi) = heights.iter().fold((f64::MAX, f64::MIN), |(lo, hi), (_, z)| (lo.min(z[end]), hi.max(z[end])));
             if hi - lo > FIT_TOLERANCE_FT {
-                let each: Vec<String> = heights.iter().map(|(p, z)| format!("{p} puts it at {:.2} ft", z[end])).collect();
+                let each: Vec<String> = heights.iter().map(|(p, z)| format!("{p} puts it at {}", crate::units::length_said(z[end]))).collect();
                 return refuse(format!("the planes disagree about the height of the line's {label}: {}. The line as drawn does not fit these pitches and eave heights", each.join("; ")));
             }
         }

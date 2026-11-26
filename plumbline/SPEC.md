@@ -148,7 +148,7 @@ valid IFCX.
   two and two), its `width`, `depth` and `height` (a length like `24 in`, left out where the number gives it: the width
   always, the height where the number reads the height), `hung` (how far up its foot hangs, like `54 in`; left out, it
   stands on the floor, and a wall box is the one that hangs), `drawn_as` (a shape's name, or `box`), the `stocked` widths
-  in inches, `status` (always `Assumed`) and `source`. A job has one rule to a code; a job carries at most 200. A rule is
+  in inches, the `stocked_heights` in inches (for a rule that reads the height from the number; left out, no height is flagged; call 226), `status` (always `Assumed`) and `source`. A job has one rule to a code; a job carries at most 200. A rule is
   worked for the next code asked for, and a box already made keeps its sizes.
 * **One entry per element.** A path appears once. A file with a repeated path is refused.
 * **Paths are permanent.** A new element's path is its kind and the job's next number
@@ -878,7 +878,7 @@ window, the left panel's Drawings to trace.
   figure. Written out, brought into a second job and written again it is the same to the byte.
   `library/shapes.csv` is the one the program ships with.
 * **A table of cabinet rules** (call 215) is one row a rule, headed `Code`, `What it is`, `Number reads`, `Width`,
-  `Depth`, `Height`, `Stands`, `Drawn as`, `Stocked widths`, `How sure`, `Where from`: `B,base,the width,from the number,24 in,
+  `Depth`, `Height`, `Stands`, `Drawn as`, `Stocked widths`, `How sure`, `Where from`, `Stocked heights` (last, from call 226: a table without it reads as before and flags no height; a wall box or a tall box whose height is not one of them is made and flagged, as a width is): `B,base,the width,from the number,24 in,
   34 1/2 in,on the floor,base cabinet,"12, 15, 18, 21, 24, 27, 30, 33, 36 in",Assumed,...`. `What it is` is a base, a wall box,
   a tall box or a filler; `Number reads` is the width, or the width then the height; a width or a height that the number gives
   says `from the number`; `Stands` is `on the floor` or `hung 54 in up`. Written out (`export cabinet-rules`) it holds the rules in
