@@ -55,6 +55,20 @@ words; the refusal at the pointer; a door sliding with its two distances; a
 lavatory turned in the hand); its row in `plumbline/README.md`. Where a figure in
 STATUS.md is wrong, say which is right and why; do not bend the program to it.
 
+## Added 2026-11-26 (calls 225 and 232)
+- **The window says when a box was made by a rule** (call 225, point 5): the
+  Cabinets tool shows the model's own "was made by the rule for" lines when a
+  run is set, in the message line and on the card, and `demos/cabinetsw.sh`
+  gains a step that types a code the chest lacks but a rule reads (B42) and
+  holds the window to the model's words (that script's other steps are not
+  edited). The same sentence is what the thing seen through says before the
+  click (point 2 of call 219: the try's own words).
+- Size tags follow call 232 (a tag from 24 dots, the larger thing's kept, moved
+  along its run): what is seen through carries no tag until it is made.
+- Before every cargo command and every window session wait while
+  `SCRATCH/quiet.lock` exists (it stands while one demonstration has the
+  machine to itself).
+
 ## Rules
 - Files you may touch: `crates/app/src/*.rs`, `demos/shownw.sh`,
   `demos/captured/shownw/`, `demos/window.sh` (only to add a helper, changing
