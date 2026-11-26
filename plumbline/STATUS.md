@@ -11528,6 +11528,16 @@ the command line the stopped bench step (call 214) taken up again.
   right"); **a typed name could stop the window, and is fixed** (reproduced in
   a test, seven places, one helper).
 
+- **2026-11-26, 11:40 UTC: the merge baf6684** (call 222 part C, calls 224 and
+  232 and the north arrow's double-click from the window builder, with all the
+  command line's work to 891a086: calls 215, 219, 223, 226 to 230). Built from
+  nothing by the lead: **the window's 108 tests pass on it**; the command
+  line's six crates were run on the same sources at 891a086 (1,316 tests, 67
+  command-line demonstrations). **1,424 tests in all.** `demos/cabinetsw.sh`
+  asks for Q99 where it asked for B99 (call 225). Owed on it and said here
+  until done: `tools/committed.sh` from a clean clone; every window
+  demonstration on its frozen build (the lead's runs are listed here as they
+  end); a judge who built none of it on how the two windows feel.
 - **2026-11-26, 03:10 UTC.** Call 222 part A (any screen, work never lost) is
   built, read in its pictures and merged: **pushed head 2e6f63a, 1,241 tests pass
   on it** (model 672, command line 50, sheets 6, model files 111, roofing 122,
@@ -11999,7 +12009,33 @@ dots a foot is; what is marked); the script reads that and the pictures.
     is whole on each of the three screens, and what the title bar and a bar of
     the desktop take is measured and written beside the 72 dots allowed for.
 
-Not built yet.
+**Built (2026-11-26, the window builder, contract 222WC; its pictures read by the
+lead: `demos/captured/twoplansw/`, `demos/captured/screensw/h1` to `h3`).** The
+second window shows the estimate or a plan; "Two plans" stands two side by side;
+each half has its own wheel, drag, level or sheet, and layers; a selection in
+either window is marked in the other and a double-click flies both; a click
+with a tool in hand says "Draw in the model window. This window is for
+looking." **One way of drawing a plan**: the model window's own building and
+drawing of a house, and its own wheel, drag and flight, were lifted out and
+both windows call them. The estimate's tabs wrap (two lines at 880 wide on the
+sample house); the price bar gives way in the ruled order; the windows are
+first seen at their size; Cmd on a Mac. Under a window manager a title bar is
+20 dots and the desktop's bar 30, against the 72 allowed for; the run found the
+windows 2 dots past the right edge on two screens, now put right.
+**Figures of the lead's above that were wrong**: a notch takes a tenth off the
+distance, so six notches bring a plan nearer by 1/0.9 to the sixth, **1.882
+times**, not 1.77 (measured 1.882); one click of the wheel on this display is
+two notches. What two plans cost: one more building of the house for each plan
+open, about 0.2 to 0.6 s more a frame on this renderer, and noisy.
+The builder's own runs, each session alone: `twoplansw` a and b on its last
+build, c, g, d and e on earlier builds of the same work; `screensw` a to h;
+`glassw`, `moneyw`, `pricew`, `tradesw`. The lead's runs on the merge are
+recorded below as they end.
+Not right: two plans at 438 dots each are readable but small (about 8 dots a
+foot, a margin of 4 ft round the house); a drawing sheet in a half is small in
+it; the drag check read 206 dots for 200 once and 200 on the repeat, cause not
+found; the kept view of a plan is tested but not checked in the window; at the
+largest lettering the estimate's top bar loses the job's name.
 
 ## The database in one hand: a demonstration, written before it is built (call 223; 2026-11-25)
 

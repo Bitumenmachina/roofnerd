@@ -10425,3 +10425,35 @@ licences; the sample whole house byte for byte).
    (its own job); the shift kept as a figure of the job and not only as words;
    the window's picker and entries.
 
+### Call 222, part C, as built; calls 224 and 232 as built; the north arrow's double-click (2026-11-26)
+
+The window builder's work under contract 222WC, read by the lead in its pictures
+and merged with the command line's work at baf6684.
+
+1. **A plan in the second window** (points 11 to 13): as written in STATUS.md.
+   Each plan is drawn by one camera looking straight down into its own half,
+   with the house built once more for that half so that its level and its
+   layers are its own. Nothing about a plan is drawn or moved by a second piece
+   of code: `scene::build_house`, `draw_view`, `plan_wheel`, `plan_drag`,
+   `plan_flight` serve both windows.
+2. **Call 224**, points 1 to 5, 8 and 9: built. What each plan shows, its view
+   and its layers are kept in the program's settings and never in the job.
+3. **Call 232**, points 1 to 5: built. `demos/tradesw.sh` passes on the
+   builder's build with its one ruled edit.
+4. **The north arrow's double-click.** On the build of call 222 part A its two
+   clicks fell a frame apart; the first click draws the panels again, and the
+   disc under the second press was a new one before the button was let go, so
+   the second click was never a click. The arrow now tells a double-click by
+   presses, on the program's own clock, by the one function the model's
+   double-click and the second window's use (`nav::again`). The builder could
+   not make its own tree fail the way the lead's frozen build did; the cause
+   is argued from the mechanism and from call 218's same finding, and the step
+   passes on its build with the demonstration's clicks as written. **It counts
+   as fixed when `navw` passes on the lead's frozen build of the merge**, not
+   before.
+5. **A wording call of the lead's**: the second window's title says what it
+   shows ("BuildOS: estimate", "BuildOS: plan").
+6. **Owed**: a plan fitted closer to its half; the kept view checked in the
+   window; the drag's one odd reading run down if it shows again; a judge who
+   did not build any of it on how the two windows feel (calls 218, 222, 232).
+

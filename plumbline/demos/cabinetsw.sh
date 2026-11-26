@@ -12,7 +12,7 @@
 # The list under the field (the boxes, the corner boxes, the appliances, one line of key), each
 # box's code written on it on the plan, the wall's dimension taken from over the run, and the
 # box lines on the sheet's estimate are each checked. A second run with a code the job's items
-# have not (B99) is refused in words, the job as it was. The job is saved, the view turned to
+# have not (Q99; it was B99 until call 215 made a base of any width by rule: call 225) is refused in words, the job as it was. The job is saved, the view turned to
 # 3D, the run taken back whole with Undo.
 # Run from the repository root:  demos/cabinetsw.sh [folder for the pictures]
 #
@@ -66,7 +66,7 @@ cp "$J" "$T/cli.json"
 
 echo
 echo "== The session: on the plan; Cabinets in hand; the east wall's face clicked 1 ft along; the boxes typed, a dishwasher among them; Enter =="
-echo "   the sheet's Estimate; then a run of B99 (refused); save; 3D; Undo; save =="
+echo "   the sheet's Estimate; then a run of Q99 (refused); save; 3D; Undo; save =="
 # At each shot the pointer is parked: what is measured is the run, not the pointer.
 cat > "$T/session.sh" <<SESSION
 #!/bin/bash
@@ -103,7 +103,7 @@ shot                                     # 06 the sheet's estimate: each box's l
 for i in 1 2 3 4 5 6 7 8; do xdotool mousemove 2000 600; sleep 0.5; xdotool click 5; sleep 2; grep '^sheet' "$T/map.txt" >> "$T/rows-seen.txt"; done
 for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16; do xdotool mousemove 2000 600; sleep 0.5; xdotool click 4; sleep 2; grep '^sheet' "$T/map.txt" >> "$T/rows-seen.txt"; done
 at 35.75 15; sleep 3                     # the same face, 15 ft along
-typed "B99" shot                         # 07 a code the job's items have not: typed, then Enter
+typed "Q99" shot                         # 07 a code the job's items have not: typed, then Enter
 park; sleep 3
 shot                                     # 08 refused, in words; nothing set
 esc; esc; park
@@ -143,10 +143,12 @@ says "$T/said.txt" "Set 6 boxes along wall "
 says "$T/said.txt" " in Kitchen: a run of 13 ft, from 1 ft to 14 ft along the wall; 1.75 ft left to the corner."
 says "$T/said.txt" "Undone: Set 6 boxes along wall "
 says "$T/said.txt" "Countertop: 13 ft long by 25 1/2 in deep, 34 1/2 in up; 27.62 SF, front edge 13 LF."
-says "$T/said.txt" "Can't set the run: B99 is not in the tool chest. The list above the field has the boxes and the appliances this job has."
+# call 225: B99 is now a box made by the rule for B (call 215); a code no rule reads is Q99, and the model says so
+says "$T/said.txt" "Can't set the run: Q99 is not in the tool chest, and no cabinet rule reads Q."
+says "$T/said.txt" "The list above the field has the boxes and the appliances this job has."
 # A refusal is said on the card and in the message line, once: not again in the panel, and the
 # list of what there is is not said again in it either (call 161).
-[ "$(grep -c "B99 is not in" "$T/said.txt")" = 1 ] || { echo "FAIL: the refusal was said more than once"; grep "B99" "$T/said.txt"; exit 1; }
+[ "$(grep -c "Q99 is not in" "$T/said.txt")" = 1 ] || { echo "FAIL: the refusal was said more than once"; grep "Q99" "$T/said.txt"; exit 1; }
 # The window says "the tool chest" where the model does (call 169: Patrick's word, call 151); the
 # stand-in "this job's items" (call 163) is gone.
 if grep -qiE "this job's items" "$T/said.txt"; then echo "FAIL: the window said this job's items, not the tool chest"; exit 1; fi
