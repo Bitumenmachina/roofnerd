@@ -12,21 +12,57 @@
 # is drawn about the middle of the window, at the scale the script says.
 export VK_ICD_FILENAMES="$ICD" WGPU_BACKEND=vulkan PLUMBLINE_SHOTS="$OUT" PLUMBLINE_MAP="$T/map.txt"
 
-focus() { xdotool windowfocus "$(xdotool search --name 'BuildOS: model' | head -1)"; sleep 1; }
+# Waiting is on the window, not on the clock. With PLUMBLINE_MAP set the program writes beside the map
+# (`<map>.frames`) how many frames it has drawn; a press is held until a frame has been drawn with it down, and what a
+# press did is waited for until frames have been drawn after it is let go. A sleep that stays is a floor under that
+# (an animation runs in the program's own time, and a fast machine draws its frames fast). A window that stops
+# drawing is a failure: it is said plainly, the window is closed and the script ends.
+frames() { local n; n="$(cat "$PLUMBLINE_MAP.frames" 2>/dev/null)"; case "$n" in ''|*[!0-9]*) echo 0;; *) echo "$n";; esac; }
+# Until `$1` frames more than when this was called have been drawn, and at least `$2` seconds have gone (a floor).
+drawn_for() {
+  local n="$1" floor="${2:-0}" start now t0=$SECONDS
+  start="$(frames)"
+  [ "$floor" = 0 ] || sleep "$floor"
+  while :; do
+    now="$(frames)"
+    [ "$now" -lt "$start" ] && start="$now"     # a program started again counts from its own zero
+    [ "$now" -ge $((start + n)) ] && return 0
+    if [ $((SECONDS - t0)) -ge "${DRAWN_CEILING:-120}" ]; then
+      echo "the window has stopped drawing: $n frames wanted, $((now - start)) drawn in $((SECONDS - t0)) s (${PLUMBLINE_MAP}.frames reads $now)" | tee -a "$T/missing.txt" >&2
+      close_window; exit 1
+    fi
+    sleep 0.05
+  done
+}
+# `drawn [n]`: returns when the window has drawn n more frames (2 if not said).
+drawn() { drawn_for "${1:-2}"; }
+# A button held down until a frame has been drawn with it down (at least 0.3 s, as a hand holds it).
+hold_button() { xdotool mousedown "$1"; drawn_for 2 0.3; xdotool mouseup "$1"; }
+focus() { xdotool windowfocus "$(xdotool search --name 'BuildOS: model' | head -1)"; drawn_for 2 1; }
 open_window() {
+  rm -f "$PLUMBLINE_MAP.frames"
   "$APP" "$@" > "${LOG:-$T/app.log}" 2>&1 &
   APP_PID=$!
   for i in $(seq 1 60); do xdotool search --name "BuildOS: model" >/dev/null 2>&1 && break; sleep 1; done
   sleep 40   # the first frames are slow on a software renderer
+  DRAWN_CEILING=300 drawn 5   # and it is drawing, or this is a window that never came
   focus
 }
 close_window() { kill "$APP_PID"; wait "$APP_PID" 2>/dev/null; }
 # A picture of both windows. The pointer stays where it is: what it is over is part of
 # the picture. `park` puts it on the model, clear of every panel and of the building.
-shot() { xdotool key F12; sleep 12; }
-park() { xdotool mousemove 1000 800; sleep 1; }
-# A click held for longer than a frame takes to draw.
-click() { xdotool mousemove "$1" "$2"; sleep 1.5; xdotool mousedown 1; sleep 0.7; xdotool mouseup 1; sleep 3; }
+shot() { xdotool key F12; drawn_for 3 12; }
+park() { xdotool mousemove 1000 800; drawn_for 2 1; }
+# A key struck, and what it did waited for ($2 seconds at least, 3 frames).
+strike() { xdotool key "$1"; drawn_for 3 "${2:-2}"; }
+# A click held until a frame has been drawn with the button down.
+click() { xdotool mousemove "$1" "$2"; drawn_for 2 1.5; hold_button 1; drawn_for 3 3; }
+# A double-click as a hand makes one: the second press a frame after the first, so inside the half second the program tells
+# a double-click by (its clock counts no frame for more than a quarter second), at a fast frame as at a slow one.
+# `double_press` is the two presses where the pointer already is: the first is held until a frame has seen it down, the
+# second as a click is. `double_click X Y` moves there first and waits after for what it did.
+double_press() { xdotool mousedown 1; drawn_for 1; xdotool mouseup 1; xdotool mousedown 1; drawn_for 2 0.3; xdotool mouseup 1; }
+double_click() { xdotool mousemove "$1" "$2"; drawn_for 2 2; double_press; drawn_for 3 8; }
 where() { awk -F'\t' -v w="$1" -v n="$2" '$1==w && $2==n {print $3, $4}' "$PLUMBLINE_MAP" 2>/dev/null; }
 found() {
   local at="" try
@@ -57,7 +93,7 @@ on() {
   [ -n "$(where model "$1")" ] || sleep 3
   while [ -z "$(where model "$1")" ] && [ "$n" -lt 40 ]; do
     way="$(away "$1")"; [ -n "$way" ] || break
-    xdotool mousemove 120 400; sleep 0.5; xdotool click "$([ "$way" = down ] && echo 5 || echo 4)"; sleep 2; n=$((n + 1))
+    xdotool mousemove 120 400; drawn_for 1 0.5; xdotool click "$([ "$way" = down ] && echo 5 || echo 4)"; drawn_for 2 2; n=$((n + 1))
   done
   at="$(found model "$1")" || exit 1; click $at
 }
@@ -67,24 +103,24 @@ sheet() { local at; at="$(found sheet "$1")" || exit 1; click $at; focus; }
 # (5 is down, 4 is up), then clicked.
 sheet_at() {
   local n=0 way="${2:-5}" back
-  while [ -z "$(where sheet "$1")" ] && [ "$n" -lt 40 ]; do xdotool mousemove 2000 600; sleep 0.5; xdotool click "$way"; sleep 1.5; n=$((n + 1)); done
+  while [ -z "$(where sheet "$1")" ] && [ "$n" -lt 40 ]; do xdotool mousemove 2000 600; drawn_for 1 0.5; xdotool click "$way"; drawn_for 2 1.5; n=$((n + 1)); done
   # Not that way: it lies the other way (the sheet's lines are in the order of their
   # divisions, and a line is not always where a script written before that put it).
   back=$([ "$way" = 5 ] && echo 4 || echo 5); n=0
-  while [ -z "$(where sheet "$1")" ] && [ "$n" -lt 80 ]; do xdotool mousemove 2000 600; sleep 0.5; xdotool click "$back"; sleep 1.5; n=$((n + 1)); done
+  while [ -z "$(where sheet "$1")" ] && [ "$n" -lt 80 ]; do xdotool mousemove 2000 600; drawn_for 1 0.5; xdotool click "$back"; drawn_for 2 1.5; n=$((n + 1)); done
   sheet "$1"
 }
 # A row of the model window's left panel brought on screen with the wheel, then clicked.
 on_at() {
   local n=0
-  while [ -z "$(where model "$1")" ] && [ "$n" -lt 30 ]; do xdotool mousemove 120 600; sleep 0.5; xdotool click "${2:-5}"; sleep 1.5; n=$((n + 1)); done
+  while [ -z "$(where model "$1")" ] && [ "$n" -lt 30 ]; do xdotool mousemove 120 600; drawn_for 1 0.5; xdotool click "${2:-5}"; drawn_for 2 1.5; n=$((n + 1)); done
   on "$1"
 }
 # The same on the right panel (what is selected, and an item's own panel): the wheel
 # over that panel until the control is on screen, down unless a second word says up (4).
 on_right() {
   local n=0
-  while [ -z "$(where model "$1")" ] && [ "$n" -lt 30 ]; do xdotool mousemove 1450 500; sleep 0.5; xdotool click "${2:-5}"; sleep 1.5; n=$((n + 1)); done
+  while [ -z "$(where model "$1")" ] && [ "$n" -lt 30 ]; do xdotool mousemove 1450 500; drawn_for 1 0.5; xdotool click "${2:-5}"; drawn_for 2 1.5; n=$((n + 1)); done
   on "$1"
 }
 # The plan as it lies on screen, from the program: where its zero is and how many pixels
@@ -96,24 +132,24 @@ plan_ft() { local x0 y0 k; read -r x0 y0 k <<<"$(plan_line)"; awk -v x0="$x0" -v
 # A click at a place on the plan given in feet east and north.
 at() { if [ -z "$(plan_line)" ]; then echo "the plan is not on screen, or the view has not come to rest: no place for $1, $2" >> "$T/missing.txt"; close_window; exit 1; fi; click $(plan_px "$1" "$2"); }
 # Shift held with a click: adds the thing to what is selected, or takes it out (call 169).
-shift_click() { xdotool mousemove "$1" "$2"; sleep 1.5; xdotool keydown shift; sleep 0.8; xdotool mousedown 1; sleep 0.7; xdotool mouseup 1; sleep 0.8; xdotool keyup shift; sleep 3; }
+shift_click() { xdotool mousemove "$1" "$2"; drawn_for 2 1.5; xdotool keydown shift; drawn_for 2 0.8; hold_button 1; drawn_for 2 0.8; xdotool keyup shift; drawn_for 3 3; }
 shift_at() { if [ -z "$(plan_line)" ]; then echo "the plan is not on screen, or the view has not come to rest: no place for $1, $2" >> "$T/missing.txt"; close_window; exit 1; fi; shift_click $(plan_px "$1" "$2"); }
-esc() { xdotool key Escape; sleep 2; }
+esc() { xdotool key Escape; drawn_for 3 2; }
 # Typed, then Enter. With a second word, a picture is taken before the Enter.
-typed() { xdotool type --delay 250 -- "$1"; sleep 1; if [ -n "${2:-}" ]; then shot; fi; xdotool key Return; sleep 3; }
+typed() { xdotool type --delay 250 -- "$1"; drawn_for 2 1; if [ -n "${2:-}" ]; then shot; fi; xdotool key Return; drawn_for 3 3; }
 # A tool taken in hand; with a second word, what it draws with, typed into its fields
 # (a comma goes on to the next field, as Tab does).
 # A tool picked again shows the sizes it will place (DECISIONS.md call 64): with nothing
 # new to type, Enter keeps them as they were.
 tool() {
-  on "$1"; sleep 2
+  on "$1"; drawn_for 2 2
   if [ -n "${2:-}" ]; then typed "$2" "${3:-}"
-  elif awk -F'\t' '$1=="model" && $2 ~ / field$/' "$PLUMBLINE_MAP" 2>/dev/null | grep -q .; then xdotool key Return; sleep 3
+  elif awk -F'\t' '$1=="model" && $2 ~ / field$/' "$PLUMBLINE_MAP" 2>/dev/null | grep -q .; then xdotool key Return; drawn_for 3 3
   fi
 }
 # A length: the pointer shows the way, the first digit opens the field, and the rest is
 # typed once the field is up (on a software renderer the frame that draws a new field is
 # slow, and keys typed during it are lost).
-len() { xdotool mousemove "$1" "$2"; sleep 2; xdotool type "${3:0:1}"; sleep 3; xdotool type --delay 250 "${3:1}"; sleep 1; if [ -n "${4:-}" ]; then shot; fi; xdotool key Return; sleep 4; }
+len() { xdotool mousemove "$1" "$2"; drawn_for 2 2; xdotool type "${3:0:1}"; drawn_for 3 3; xdotool type --delay 250 "${3:1}"; drawn_for 2 1; if [ -n "${4:-}" ]; then shot; fi; xdotool key Return; drawn_for 3 4; }
 # A laser in keyboard mode: the reading typed in one burst, then the key it is set to send.
-laser() { xdotool type --delay 20 -- "$1"; xdotool key "$2"; sleep 4; }
+laser() { xdotool type --delay 20 -- "$1"; xdotool key "$2"; drawn_for 3 4; }

@@ -62,7 +62,7 @@ on "Assembly Foundation wall, poured concrete"; park
 shot                                    # 07 the wall given its assembly
 sheet "Estimate"; sleep 4
 shot                                    # 08 the sheet: the foundation by division
-xdotool key F2; sleep 3                 # save
+xdotool key F2; drawn_for 3 3                 # save
 close_window
 SESSION
 chmod +x "$T/session.sh"

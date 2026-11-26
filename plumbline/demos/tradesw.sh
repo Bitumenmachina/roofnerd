@@ -156,7 +156,7 @@ on "Show Sizes"; sleep 3
 # A far view of the plumbing: a run is never thinner than two dots.
 trade Plumbing
 STEP=far
-for i in 1 2 3 4 5; do xdotool mousemove 800 450; sleep 0.4; xdotool click 5; sleep 1.2; done
+for i in 1 2 3 4 5; do xdotool mousemove 800 450; sleep 0.4; xdotool click 5; drawn_for 2 1.2; done
 sleep 8; park
 shot                                    # 10 far off: the runs are as wide as two dots
 trade All
@@ -171,7 +171,7 @@ shot                                    # 12 the sheet's list of clashes: room f
 : > "\$T/counts.txt"
 for i in 1 2 3 4 5 6 7 8; do
   grep -P '^(sheet|away)\tCount of' "\$PLUMBLINE_MAP" >> "\$T/counts.txt" || true
-  xdotool mousemove 2000 600; sleep 0.5; for j in 1 2 3 4 5 6; do xdotool click 5; sleep 1.5; done; sleep 3
+  xdotool mousemove 2000 600; drawn_for 2 0.5; for j in 1 2 3 4 5 6; do xdotool click 5; drawn_for 2 1.5; done; sleep 3
 done
 close_window
 SESSION

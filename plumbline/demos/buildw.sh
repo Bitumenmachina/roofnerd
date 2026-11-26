@@ -44,7 +44,7 @@ cat > "$T/session.sh" <<SESSION
 export APP="$APP" T="$T" OUT="$OUT" ICD="$ICD"
 . "$PWD/demos/window.sh"
 open_window "$J"
-xdotool key t; sleep 4
+xdotool key t; drawn_for 3 4
 on "Add level"; sleep 2; typed "Ground, 0 ft, 8 ft"    # Add level
 on "Add drawing"; sleep 2; typed "$T/made-up-plan.pdf" # Add drawing
 sleep 8
@@ -78,13 +78,13 @@ click 542 650                           # the footprint's corners, in turn
 click 1058 656
 click 1064 308
 click 536 302
-xdotool mousemove 542 650; sleep 3
+xdotool mousemove 542 650; drawn_for 2 3
 shot                                    # 04 about to close the footprint on its first corner
-xdotool mousedown 1; sleep 0.7; xdotool mouseup 1; sleep 6
+hold_button 1; drawn_for 3 6
 shot                                    # 05 the roof on the plan
-xdotool key t; sleep 8
+xdotool key t; drawn_for 3 8
 shot                                    # 06 the house in 3D with its roof on
-xdotool key F2; sleep 3                 # save
+xdotool key F2; drawn_for 3 3                 # save
 close_window
 SESSION
 chmod +x "$T/session.sh"

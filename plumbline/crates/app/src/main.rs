@@ -146,6 +146,8 @@ fn main() {
             Update,
             ((tools::frame_begins, keys).chain(), plans::dropped, plans::read, tools::clicks, scene::carry, tools::record, (scene::orbit_input, scene::room_for_card).chain(), model::refresh, scene::rebuild, scene::tint, panels::rebuild, sheet::rebuild, (scene::sun_study, scene::place_camera, scene::widen_runs, scene::ground_tone, glass::follow, scene::trace_view, scene::pivot_mark, scene::north_follow).chain(), tools::pointer, scene::draw_lines, tools::preview, panels::place_labels, panels::write_pointer, panels::scroll_panels, map::write).chain(),
         )
+        // The frames drawn, beside the map, for a script that waits on the window and not on the clock (call 237).
+        .add_systems(Update, map::frames.after(map::write))
         .run();
 }
 

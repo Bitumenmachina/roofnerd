@@ -48,8 +48,8 @@ export APP="$APP" T="$T" OUT="$3" ICD="$ICD" LOG="$2"
 . "$PWD/demos/window.sh"
 open_window "$1"
 # Two steps of the wheel over the floor plan: the wheel closes in on what the pointer is on.
-closer() { xdotool mousemove 760 420; sleep 2; xdotool click 4; sleep 2; xdotool click 4; sleep 6; }
-xdotool key t; sleep 4
+closer() { xdotool mousemove 760 420; drawn_for 2 2; xdotool click 4; drawn_for 2 2; xdotool click 4; drawn_for 2 6; }
+xdotool key t; drawn_for 3 4
 on "Add level"; sleep 2; typed "Ground, 0 ft, 8 ft"    # Add level
 SESSION
 }
@@ -89,15 +89,15 @@ click 511 592                           # the southwest outside corner, by eye
 len 972 592 "41' 3\"" yes               # 05 east, the overall dimension, being typed
 len 1060 402 "23' 11\""                 # north
 len 707 274 "41' 3\""                   # west
-xdotool mousemove 512 591; sleep 3
+xdotool mousemove 512 591; drawn_for 2 3
 shot                                    # 06 about to close on the first corner
-xdotool mousedown 1; sleep 0.7; xdotool mouseup 1; sleep 4
+hold_button 1; drawn_for 3 4
 esc; esc
 park
 shot                                    # 07 the outside walls, traced over the sheet
-xdotool key t; sleep 8
+xdotool key t; drawn_for 3 8
 shot                                    # 08 the house in 3D, standing on its sheet
-xdotool key F2; sleep 3                 # save
+xdotool key F2; drawn_for 3 3                 # save
 close_window
 SESSION
 } > "$T/session1.sh"
@@ -116,7 +116,7 @@ echo "== A vector plan: the made-up plan, its own lines snapped to =="
 on "Add drawing"; sleep 2; typed "$T/made-up-plan.pdf" # Add drawing
 sleep 8
 on "Set scale"                          # Set scale, from one dimension
-xdotool mousemove 543 691; sleep 3
+xdotool mousemove 543 691; drawn_for 2 3
 shot                                    # made-up/01 the pointer on the end of the PDF's own dimension line
 click 543 691
 click 1057 691
@@ -127,14 +127,14 @@ click 542 650                           # near each corner of the outline, in tu
 click 1058 656
 click 1064 308
 click 536 302
-xdotool mousemove 542 650; sleep 3
+xdotool mousemove 542 650; drawn_for 2 3
 shot                                    # made-up/02 about to close on the first corner
-xdotool mousedown 1; sleep 0.7; xdotool mouseup 1; sleep 4
+hold_button 1; drawn_for 3 4
 esc; esc
 on "Drawing made-up-plan"               # the drawing, selected
 park
 shot                                    # made-up/03 traced; the drawing's scale as its title block writes it
-xdotool key F2; sleep 3                 # save
+xdotool key F2; drawn_for 3 3                 # save
 close_window
 SESSION
 } > "$T/session2.sh"

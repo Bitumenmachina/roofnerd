@@ -53,7 +53,7 @@ shot                                     # 04 drawn as its box, and so is the on
 on "Tool chest, to keep"; sleep 6         # written out beside the job
 park
 shot                                     # 05 said, with where it is and what to do with it
-xdotool key F2; sleep 3                  # save
+xdotool key F2; drawn_for 3 3                  # save
 close_window
 SESSION
 chmod +x "$T/session.sh"

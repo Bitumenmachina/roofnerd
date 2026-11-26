@@ -85,7 +85,7 @@ click 560 760; sleep 5
 on "Item Vanity, 36 in"; sleep 4
 click 900 760; sleep 5
 esc; park
-xdotool key F2; sleep 3
+xdotool key F2; drawn_for 3 3
 shot; keep_map 01                           # 01 two vanities set down: the top bar says 2 not priced
 cp "$JOB" "$T/a-vanities.json"
 sheet "Building"; sleep 4; park
@@ -97,7 +97,7 @@ click 560 640; sleep 5
 on "Item Water heater, 50 gal"; sleep 4
 click 900 640; sleep 5
 esc; park
-xdotool key F2; sleep 3
+xdotool key F2; drawn_for 3 3
 cp "$JOB" "$T/a-heaters.json"
 on_at "Change item Water heater, 50 gal"; sleep 5; park
 on_right "Priced as" 5; sleep 3; park
@@ -108,7 +108,7 @@ shot; keep_map 05                           # 05 Bought and set picked: what the
 sheet "Estimate"; sleep 5; park
 shot; keep_map 06                           # 06 the sheet's Estimate: the heater's four lines
 n=0
-while [ -z "$(awk -F'\t' '$1=="sheet" && $2 ~ /^Quantity of Water heater, 50 gal on Water heater/ {print $2; exit}' "$PLUMBLINE_MAP")" ] && [ "$n" -lt 40 ]; do xdotool mousemove 2000 600; sleep 0.5; xdotool click 5; sleep 1.5; n=$((n + 1)); done
+while [ -z "$(awk -F'\t' '$1=="sheet" && $2 ~ /^Quantity of Water heater, 50 gal on Water heater/ {print $2; exit}' "$PLUMBLINE_MAP")" ] && [ "$n" -lt 40 ]; do xdotool mousemove 2000 600; drawn_for 2 0.5; xdotool click 5; drawn_for 2 1.5; n=$((n + 1)); done
 sleep 2; shot; keep_map 06b                 # 07 the heater's lines in view
 # There is no field on the sheet for the price of a line made of a material: its price is the price list's. The window's way to a
 # price for the heater is Bring in, Price list: a list of one row, the heater under the name the price list knows it by.
@@ -117,7 +117,7 @@ keep_said 08
 shot; keep_map 08                           # 08 the price list brought in
 sheet "Estimate"; sleep 5; park
 shot; keep_map 09                           # 09 the sheet's Estimate: the price on both heaters
-xdotool key F2; sleep 4
+xdotool key F2; drawn_for 3 4
 cp "$JOB" "$T/a-priced.json"
 close_window
 STEPS
@@ -199,7 +199,7 @@ on_right "Width"; sleep 3
 typed "48 in"; sleep 8; park
 keep_said 03
 shot; keep_map 03                           # 03 the vanity 48 in wide (the model's item_size): said, and how many follow
-xdotool key F2; sleep 4
+xdotool key F2; drawn_for 3 4
 cp "$JOB" "$T/b-after.json"
 close_window
 STEPS
@@ -276,7 +276,7 @@ shot                                        # 06 the run set
 esc; esc; park; sleep 8
 keep_map 06e                                # the tool put down: where the plan lies now
 # A corner refused: a new wall laid along the north wall.
-on "Wall"; sleep 3; xdotool key Return; sleep 3
+on "Wall"; sleep 3; xdotool key Return; drawn_for 3 3
 at 4 10; sleep 3
 at 10 10; sleep 3
 keep_said 07
@@ -290,7 +290,7 @@ park; shot                                  # 08 the question: take its lines of
 at 3 10; sleep 3                            # something else clicked: the north wall
 keep_said 09
 park; shot                                  # 09 the door was not marked
-xdotool key F2; sleep 4
+xdotool key F2; drawn_for 3 4
 cp "$JOB" "$T/c-after.json"
 # A maker's sheet with no trade in it made into an item.
 on "Maker's sheet"; typed "vanity.pdf"; park
@@ -385,7 +385,7 @@ shot                                        # 02 the assemblies that go on a wal
 on_right "Assembly Exterior wall, 2x6, lap siding over a stone wainscot"; sleep 8; park
 keep_said 03
 shot                                        # 03 changed: the message names each line
-xdotool key F2; sleep 4
+xdotool key F2; drawn_for 3 4
 cp "$JOB" "$T/$NAME-after.json"
 close_window
 STEPS
@@ -452,10 +452,10 @@ for w in $SOUTH $EAST $NORTH $WEST; do "$P" apply "$J" "$w" "Exterior wall, 2x6,
 cat > "$T/steps-e.sh" <<'STEPS'
 # A swing: the pointer put somewhere, the right button down, then so many dots along, a step at a time.
 swing() { # x y dx steps
-  xdotool mousemove "$1" "$2"; sleep 2
-  xdotool mousedown 3; sleep 1.2
+  xdotool mousemove "$1" "$2"; drawn_for 2 2
+  xdotool mousedown 3; drawn_for 2 1.2
   for i in $(seq 1 "$4"); do xdotool mousemove_relative -- "$3" 0; sleep 0.4; done
-  sleep 1; xdotool mouseup 3; sleep 10
+  sleep 1; xdotool mouseup 3; drawn_for 2 10
 }
 corner() { # the middle of the nearest corner board, from the map: its foot lowest on the screen
   awk -F'\t' '$1=="trim" && $2=="corner boards" {y=($5>$7)?$5:$7; if (y>best) {best=y; fx=($5>$7)?$4:$6; fy=($5>$7)?$5:$7; tx=($5>$7)?$6:$4; ty=($5>$7)?$7:$5}} END {printf "%d %d", (fx+tx)/2, (fy+ty)/2}' "$1"
@@ -473,18 +473,18 @@ park
 keep_map 01
 shot                                        # 02 a quarter turn from the ground: the house stays where it was, turned
 # Back to the home view, then a swing begun on a wall's corner.
-xdotool key f; sleep 12; park
+xdotool key f; drawn_for 3 12; park
 keep_map 02
 shot                                        # 03 the home view again
 read -r cx cy <<<"$(corner "$T/map-$NAME-02.txt")"
 echo "$cx $cy" > "$T/e-corner.txt"
-xdotool mousemove "$cx" "$cy"; sleep 2
-xdotool mousedown 3; sleep 1.2
+xdotool mousemove "$cx" "$cy"; drawn_for 2 2
+xdotool mousedown 3; drawn_for 2 1.2
 for i in 1 2 3; do xdotool mousemove_relative -- 40 0; sleep 0.4; done
 sleep 1.5; keep_map 03                      # held: mid-turn
 for i in 4 5 6; do xdotool mousemove_relative -- 40 0; sleep 0.4; done
 sleep 1.5; keep_map 04                      # held: the quarter turn done
-xdotool mouseup 3; sleep 10; park
+xdotool mouseup 3; drawn_for 2 10; park
 keep_map 05
 shot                                        # 04 a quarter turn about the corner
 close_window

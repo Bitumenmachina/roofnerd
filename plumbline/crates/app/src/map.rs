@@ -31,6 +31,23 @@ use crate::panels::Cameras;
 use crate::scene::{MainCamera, STATUS_H, TOP_H};
 use crate::theme::Named;
 
+/// One more frame drawn: the count goes up, and with a map asked for it is written whole beside it (`<file>.frames`), so that a script waits for
+/// the window to have drawn, not for the clock (call 237: a press that begins and ends inside one slow frame is lost).
+fn count_frame(file: Option<&str>, n: &mut u64) {
+    *n += 1;
+    let Some(file) = file else { return };
+    let part = format!("{file}.frames.part");
+    if std::fs::write(&part, format!("{n}\n")).is_ok() {
+        let _ = std::fs::rename(&part, format!("{file}.frames"));
+    }
+}
+
+/// Every frame, last of all: the frames drawn so far, for a script that drives the window. Nothing is written unless `PLUMBLINE_MAP` is set.
+pub fn frames(mut n: Local<u64>, mut file: Local<Option<Option<String>>>) {
+    let file = file.get_or_insert_with(|| std::env::var("PLUMBLINE_MAP").ok());
+    count_frame(file.as_deref(), &mut n);
+}
+
 #[allow(clippy::type_complexity, clippy::too_many_arguments)]
 pub fn write(
     doc: Res<Doc>,
@@ -361,5 +378,29 @@ pub fn write(
         if std::fs::write(&part, &out).is_ok() && std::fs::rename(&part, file).is_ok() {
             *last = out;
         }
+    }
+}
+
+#[cfg(test)]
+mod frame_count_tests {
+    use super::*;
+
+    /// A script waits on frames drawn, not on the clock: each frame the count beside the map goes up by one, and only when the map is asked for.
+    #[test]
+    fn the_count_of_frames_is_written_beside_the_map_once_a_frame_and_only_when_asked() {
+        let dir = std::env::temp_dir().join(format!("buildos-frames-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let map = dir.join("map.txt").to_string_lossy().to_string();
+        let mut n = 0u64;
+        for want in 1..=3u64 {
+            count_frame(Some(&map), &mut n);
+            assert_eq!(std::fs::read_to_string(format!("{map}.frames")).unwrap().trim(), want.to_string(), "after frame {want}");
+        }
+        assert!(!std::path::Path::new(&map).exists(), "the map itself is not touched by the count");
+        let none = dir.join("none.txt").to_string_lossy().to_string();
+        count_frame(None, &mut n);
+        assert_eq!(n, 4, "the count goes on without a file");
+        assert!(!std::path::Path::new(&format!("{none}.frames")).exists(), "with no map asked for, nothing is written");
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }

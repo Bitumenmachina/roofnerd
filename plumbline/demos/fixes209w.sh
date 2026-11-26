@@ -126,7 +126,7 @@ click 560 760; sleep 5
 on_at "Item Harbor Stool"; sleep 4
 click 900 760; sleep 5
 esc; park
-xdotool key F2; sleep 3
+xdotool key F2; drawn_for 3 3
 shot; keep_map 01                           # 01 the vanity and the stool set down (the stool has no size to draw)
 sheet "Building"; sleep 4; park
 shot; keep_map 02                           # 02 the sheet's Building list: what is set down on the level

@@ -49,7 +49,7 @@ on "Assembly Asphalt shingle roof, whole roof"; sleep 6; park
 shot                                    # 04 the roof given its assembly: what it comes to
 sheet "Estimate"; sleep 4
 shot                                    # 05 the sheet: the roof in sheets, rolls, bundles and pieces
-xdotool key F2; sleep 3                 # save
+xdotool key F2; drawn_for 3 3                 # save
 close_window
 SESSION
 chmod +x "$T/session.sh"

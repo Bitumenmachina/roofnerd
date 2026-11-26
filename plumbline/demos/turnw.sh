@@ -47,14 +47,14 @@ export APP="$APP" T="$T" OUT="$OUT" ICD="$ICD"
 . "$PWD/demos/window.sh"
 open_window "$J"
 sleep 8; park
-xdotool key t; sleep 8                   # the plan, north up
+xdotool key t; drawn_for 3 8                   # the plan, north up
 on_at "Item Panelboard, 200 A"; sleep 5  # in hand: the plan stays on show
 park
 shot                                     # 01 on plan still, the panelboard in hand
 at 23.5 8; sleep 7                       # its middle 6 in inside the room from the wall's line
 park
 shot                                     # 02 set down, and in the wall: said, and outlined in ink
-xdotool key q; sleep 7                   # a quarter turn
+xdotool key q; drawn_for 3 7                   # a quarter turn
 park
 shot                                     # 03 its 4 in now toward the wall: clear
 on_at "Tool chest, to keep"; sleep 6      # the library written out beside the job
@@ -70,7 +70,7 @@ on_at "Tool chest file" 4; sleep 3          # Bring in: the list as changed
 typed "turned items.csv"; sleep 6
 park
 shot                                     # 04 changed, and the one set down is now that size
-xdotool key F2; sleep 3                  # save
+xdotool key F2; drawn_for 3 3                  # save
 close_window
 SESSION
 chmod +x "$T/session.sh"

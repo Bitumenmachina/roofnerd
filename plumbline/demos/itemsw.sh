@@ -70,7 +70,7 @@ on "BIM model"; park
 shot                                    # 03 the BIM model written, and what is in it said
 on "Estimate workbook"; on "Estimate list"; on "For suppliers"; on "For subcontractors"; on "For the PM"; park
 shot                                    # 04 the last of the six written
-xdotool key F2; sleep 5
+xdotool key F2; drawn_for 3 5
 close_window
 SESSION
 chmod +x "$T/session.sh"

@@ -58,14 +58,14 @@ export APP="$APP" T="$T" OUT="$OUT" ICD="$ICD"
 . "$PWD/demos/window.sh"
 open_window "$J"
 on "Level ground"                       # the level, ground
-xdotool key t; sleep 6                  # the plan
+xdotool key t; drawn_for 3 6                  # the plan
 sheet "Clashes"                         # the sheet's Clashes tab
 park
 shot                                    # 01 two clashes listed, and marked on the plan
 on "Fitting"                            # Fitting, where runs meet
-xdotool mousemove 736 672; sleep 2      # the duct's corner, (10, 2)
+xdotool mousemove 736 672; drawn_for 2 2      # the duct's corner, (10, 2)
 shot                                    # 02 about to put a fitting on the corner
-xdotool mousedown 1; sleep 0.7; xdotool mouseup 1; sleep 4
+hold_button 1; drawn_for 3 4
 park
 shot                                    # 03 an elbow
 click 608 672                           # where the branch meets the duct's side, (6, 2)
@@ -80,9 +80,9 @@ shot                                    # 05 joined: one clash left
 click 2000 205                          # that clash, on the sheet
 park
 shot                                    # 06 the pipe selected on the model
-xdotool key t; sleep 6
+xdotool key t; drawn_for 3 6
 shot                                    # 07 the same in 3D
-xdotool key F2; sleep 3                 # save
+xdotool key F2; drawn_for 3 3                 # save
 close_window
 SESSION
 chmod +x "$T/session.sh"

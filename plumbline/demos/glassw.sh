@@ -55,37 +55,37 @@ export APP="$APP" T="$T" OUT="$OUT" ICD="$ICD"
 # can see, held still at its end for \$6 seconds before it is let go (0: let go moving).
 # Lead's ruling, 2026-11-24: the wheel's ease was not finished when the picture was taken (4 s, then 110 dots on a build that settles at
 # 109); it waits 16 s. The bound below is unchanged.
-wheel() { local i; for i in \$(seq 1 "\$2"); do xdotool click "\$1"; sleep 2; done; sleep 16; }
+wheel() { local i; for i in \$(seq 1 "\$2"); do xdotool click "\$1"; drawn_for 2 2; done; sleep 16; }
 drag() {
-  xdotool mousemove "\$2" "\$3"; sleep 1.5; xdotool mousedown "\$1"; sleep 1.5
+  xdotool mousemove "\$2" "\$3"; drawn_for 2 1.5; xdotool mousedown "\$1"; drawn_for 2 1.5
   local i
-  for i in 1 2 3 4 5 6 7 8; do xdotool mousemove \$(( \$2 + (\$4 - \$2) * i / 8 )) \$(( \$3 + (\$5 - \$3) * i / 8 )); sleep 0.6; done
+  for i in 1 2 3 4 5 6 7 8; do xdotool mousemove \$(( \$2 + (\$4 - \$2) * i / 8 )) \$(( \$3 + (\$5 - \$3) * i / 8 )); drawn_for 2 0.6; done
   if [ "\$6" != 0 ]; then sleep "\$6"; fi
-  xdotool mouseup "\$1"; sleep 4
+  xdotool mouseup "\$1"; drawn_for 2 4
 }
 # A flick: the button goes down, the pointer goes \$3 dots to the left in a fifth of a
 # second, and the button is let go while it is still going.
 flick() {
-  xdotool mousemove "\$1" "\$2"; sleep 1.5; xdotool mousedown 1; sleep 1.5
+  xdotool mousemove "\$1" "\$2"; drawn_for 2 1.5; xdotool mousedown 1; drawn_for 2 1.5
   local i
   for i in 1 2 3 4 5; do xdotool mousemove \$(( \$1 - \$3 * i / 5 )) "\$2"; sleep 0.04; done
-  xdotool mouseup 1; sleep 6
+  xdotool mouseup 1; drawn_for 2 6
 }
 open_window "$J"
 park; shot                              # 01 as opened
 on "Show Roof"; park; shot              # 02 the roof switched off
 on "Show Roof"; park; shot              # 03 and on again
-xdotool mousemove 805 640; sleep 1.5
+xdotool mousemove 805 640; drawn_for 2 1.5
 wheel 4 3; park; shot                   # 04 three notches in, at the door
-xdotool mousemove 1400 500; sleep 1.5
+xdotool mousemove 1400 500; drawn_for 2 1.5
 wheel 5 3; park; shot                   # 05 the wheel over the right panel: the model has not moved
 drag 3 805 640 655 600 2; park; shot    # 06 a turn about the door
 drag 1 805 640 1005 560 3; park; shot   # 07 the ground slid: the door went with the hand
-xdotool mousemove 1005 560; sleep 1.5
-xdotool mousedown 1; sleep 0.12; xdotool mouseup 1; sleep 0.12; xdotool mousedown 1; sleep 0.12; xdotool mouseup 1; sleep 6
+xdotool mousemove 1005 560; drawn_for 2 1.5
+double_press; drawn_for 2 6
 park; shot                              # 08 a double-click on the door: flown to it
 flick 800 480 100; park; shot           # 09 a flick to the left, let go moving
-xdotool key F2; sleep 4
+xdotool key F2; drawn_for 3 4
 close_window
 SESSION
 chmod +x "$T/session.sh"

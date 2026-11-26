@@ -97,17 +97,17 @@ sheet "Estimate"; sleep 5; park
 # the first box's line is on screen (the picture is taken there), and on to the end, keeping
 # every row the sheet listed on the way.
 n=0
-while [ -z "\$(where sheet B18)" ] && [ "\$n" -lt 60 ]; do xdotool mousemove 2000 600; sleep 0.5; xdotool click 5; sleep 1.5; n=\$((n + 1)); done
+while [ -z "\$(where sheet B18)" ] && [ "\$n" -lt 60 ]; do xdotool mousemove 2000 600; drawn_for 2 0.5; xdotool click 5; drawn_for 2 1.5; n=\$((n + 1)); done
 sleep 2; cp "$T/map.txt" "$T/map-estimate.txt"; grep '^sheet' "$T/map.txt" > "$T/rows-seen.txt"
 shot                                     # 06 the sheet's estimate: each box's line
-for i in 1 2 3 4 5 6 7 8; do xdotool mousemove 2000 600; sleep 0.5; xdotool click 5; sleep 2; grep '^sheet' "$T/map.txt" >> "$T/rows-seen.txt"; done
-for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16; do xdotool mousemove 2000 600; sleep 0.5; xdotool click 4; sleep 2; grep '^sheet' "$T/map.txt" >> "$T/rows-seen.txt"; done
+for i in 1 2 3 4 5 6 7 8; do xdotool mousemove 2000 600; drawn_for 2 0.5; xdotool click 5; drawn_for 2 2; grep '^sheet' "$T/map.txt" >> "$T/rows-seen.txt"; done
+for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16; do xdotool mousemove 2000 600; drawn_for 2 0.5; xdotool click 4; drawn_for 2 2; grep '^sheet' "$T/map.txt" >> "$T/rows-seen.txt"; done
 at 35.75 15; sleep 3                     # the same face, 15 ft along
 typed "Q99" shot                         # 07 a code the job's items have not: typed, then Enter
 park; sleep 3
 shot                                     # 08 refused, in words; nothing set
 esc; esc; park
-xdotool key F2; sleep 4                  # save
+xdotool key F2; drawn_for 3 4                  # save
 cp "$J" "$T/after.json"
 on "3D"; sleep 8
 on "Frame"; sleep 8
@@ -118,7 +118,7 @@ shot                                     # 10 undone in one step, in 3D
 on "Plan"; sleep 8; park
 plan_rest "$T/plan-11.txt"
 shot                                     # 11 undone, in plan
-xdotool key F2; sleep 4                  # save again
+xdotool key F2; drawn_for 3 4                  # save again
 cp "$J" "$T/undone.json"
 close_window
 SESSION

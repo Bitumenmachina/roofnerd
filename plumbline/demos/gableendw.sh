@@ -118,7 +118,7 @@ press() {
   local at again n=0
   at="$(found model "$1")" || exit 1
   while [ "$n" -lt 5 ]; do
-    xdotool mousemove $at; sleep 3
+    xdotool mousemove $at; drawn_for 2 3
     again="$(where model "$1")"
     [ "$again" = "$at" ] && break
     [ -n "$again" ] && at="$again"

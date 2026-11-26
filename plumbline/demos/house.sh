@@ -69,16 +69,16 @@ on_at "System Hot water"                                  # Hot water
 sheet "Plumbing"                                        # the sheet's Plumbing tab
 park
 shot                                                    # 04 hot water, with its run of no size
-xdotool key Escape; sleep 1; xdotool key x; sleep 2; xdotool key Prior; sleep 8
+xdotool key Escape; drawn_for 3 1; xdotool key x; drawn_for 3 2; xdotool key Prior; drawn_for 3 8
 sheet "Building"                                        # the sheet's Building tab
 shot                                                    # 05 the first floor alone
-xdotool key t; sleep 9
+xdotool key t; drawn_for 3 9
 shot                                                    # 06 the first floor on plan
-xdotool mousemove 800 500; sleep 1; xdotool click 1; sleep 4; xdotool mousemove 806 505; sleep 2
+xdotool mousemove 800 500; drawn_for 2 1; xdotool click 1; drawn_for 2 4; xdotool mousemove 806 505; drawn_for 2 2
 shot                                                    # 07 something on the plan clicked
-xdotool key Escape; sleep 1; xdotool key t; sleep 3; xdotool key Next; sleep 3; xdotool key v; sleep 10
+xdotool key Escape; drawn_for 3 1; xdotool key t; drawn_for 3 3; xdotool key Next; drawn_for 3 3; xdotool key v; drawn_for 3 10
 shot                                                    # 08 on foot in the living room
-xdotool key F2; sleep 3                                 # save
+xdotool key F2; drawn_for 3 3                                 # save
 close_window
 SESSION
 chmod +x "$T/session.sh"

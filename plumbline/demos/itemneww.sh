@@ -36,7 +36,7 @@ cat > "$T/session.sh" <<SESSION
 #!/bin/bash
 export APP="$APP" T="$T" OUT="$OUT" ICD="$ICD"
 . "$PWD/demos/window.sh"
-field() { xdotool type --delay 250 -- "\$1"; sleep 1; xdotool key "\${2:-Tab}"; sleep 2; }
+field() { xdotool type --delay 250 -- "\$1"; drawn_for 3 1; xdotool key "\${2:-Tab}"; drawn_for 3 2; }
 open_window "$J"
 sleep 8; park
 on_at "New item"; sleep 3
@@ -54,7 +54,7 @@ on_right "Delete item" 4; sleep 5        # refused: one is set down from it
 park
 shot                                     # 03 not deleted from under what stands, and why
 on_right "Rename item" 4; sleep 3
-xdotool type --delay 250 -- "Wall oven, single"; sleep 1; xdotool key Return; sleep 5
+xdotool type --delay 250 -- "Wall oven, single"; drawn_for 3 1; xdotool key Return; drawn_for 3 5
 park
 shot                                     # 04 renamed, and the one set down with it
 on_at "New item" 4; sleep 3
@@ -62,7 +62,7 @@ field "Range hood"; field "fixture"; field "30 in"; field "20 in"; field "9 in" 
 on_right "Delete item" 4; sleep 5        # nothing is set down from it: it goes
 park
 shot                                     # 05 taken out, said, and no longer in the list
-xdotool key F2; sleep 3                  # save
+xdotool key F2; drawn_for 3 3                  # save
 close_window
 SESSION
 chmod +x "$T/session.sh"

@@ -45,8 +45,8 @@ open_window "$J"
 on "Plan"; sleep 6
 on "Door"; sleep 3; park
 shot                                    # 01 the door's fields: a height of 6' 8" and a sill of 0 ft already in them
-xdotool type --delay 250 -- "3' 6\""; sleep 1
-xdotool key Return; sleep 4             # the width, then Enter: it is in hand
+xdotool type --delay 250 -- "3' 6\""; drawn_for 3 1
+xdotool key Return; drawn_for 3 4             # the width, then Enter: it is in hand
 at 6 0; park
 shot                                    # 02 a door 3' 6" wide at 6 ft
 esc; esc
@@ -55,8 +55,8 @@ shot                                    # 03 picked again: its fields show 3' 6"
 at 12 0; park
 shot                                    # 04 a click with the sizes still open: nothing placed, and it says so
 on "Door"; sleep 3
-xdotool type --delay 250 -- "2' 8\""; sleep 1
-xdotool key Return; sleep 4
+xdotool type --delay 250 -- "2' 8\""; drawn_for 3 1
+xdotool key Return; drawn_for 3 4
 at 18 0; park
 shot                                    # 05 a second door, 2' 8" wide, at 18 ft
 esc; esc
@@ -64,7 +64,7 @@ esc; esc
 # have the keyboard, and Save is pressed. This is the only Save of the session: the
 # job read back below has its two doors only if a save with a field open saves.
 on "Door"; sleep 3
-xdotool key F2; sleep 5; park
+xdotool key F2; drawn_for 3 5; park
 shot                                    # 06 saved with the sizes open: the line says so, and that what is being typed is not in it
 close_window
 SESSION

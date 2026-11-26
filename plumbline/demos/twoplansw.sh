@@ -48,11 +48,9 @@ px() { local e n d x y w h E N; read -r E N d x y w h <<<"$(half "$1")"; awk -v 
 # The view is at rest: two reads of it three seconds apart agree.
 rest() { local a b i; for i in 1 2 3 4 5 6 7 8; do a="$(half "$1")"; sleep 3; b="$(half "$1")"; [ "$a" = "$b" ] && return 0; done; echo "plan $1 did not come to rest" >> "$T/missing.txt"; close_window; exit 1; }
 # A press, a drag by dx dots to the right and held still, and let go.
-drag_right() { xdotool mousemove "$1" "$2"; sleep 1.5; xdotool mousedown 1; sleep 1.5; local i; for i in 1 2 3 4; do xdotool mousemove_relative -- "$(( $3 / 4 ))" 0; sleep 2; done; sleep 4; xdotool mouseup 1; sleep 4; }
+drag_right() { xdotool mousemove "$1" "$2"; drawn_for 2 1.5; xdotool mousedown 1; drawn_for 2 1.5; local i; for i in 1 2 3 4; do xdotool mousemove_relative -- "$(( $3 / 4 ))" 0; sleep 2; done; sleep 4; xdotool mouseup 1; drawn_for 2 4; }
 # Notches of the wheel over a place: $3 notches, up (nearer) or down.
-wheel_at() { xdotool mousemove "$1" "$2"; sleep 2; local i; for i in $(seq 1 "$3"); do xdotool click "${4:-4}"; sleep 3; done; sleep 4; }
-# A double-click as a hand makes one: the two presses 0.4 s apart (inside the half second every double-click is told by, at a fast frame as at a slow one).
-double_click() { xdotool mousemove "$1" "$2"; sleep 2; xdotool mousedown 1; sleep 0.3; xdotool mouseup 1; sleep 0.1; xdotool mousedown 1; sleep 0.3; xdotool mouseup 1; sleep 8; }
+wheel_at() { xdotool mousemove "$1" "$2"; drawn_for 2 2; local i; for i in $(seq 1 "$3"); do xdotool click "${4:-4}"; drawn_for 2 3; done; sleep 4; }
 note() { echo "$2" > "$T/n-$NAME-$1.txt"; }
 keep_map() { cp "$PLUMBLINE_MAP" "$T/m-$NAME-$1.txt"; [ -e "$PLUMBLINE_MAP.view" ] && cp "$PLUMBLINE_MAP.view" "$T/v-$NAME-$1.txt" || : > "$T/v-$NAME-$1.txt"; }
 settle() { sleep "${1:-8}"; }
@@ -86,7 +84,7 @@ open_window "$JOB"
 note title-estimate "$(wname sheet)"
 # the estimate, on its Roof tab, its list scrolled a little: to be found as it was left (step 12)
 sheet "Roof"; sleep 4
-xdotool mousemove 1900 600; sleep 2; for i in 1 2 3; do xdotool click 5; sleep 3; done; sleep 4
+xdotool mousemove 1900 600; drawn_for 2 2; for i in 1 2 3; do xdotool click 5; drawn_for 2 3; done; sleep 4
 keep_map estimate-before; park; shot
 cp "$PLUMBLINE_MAP.view" "$T/v-a-0.txt" 2>/dev/null || : > "$T/v-a-0.txt"
 # 1. Plan
@@ -152,14 +150,14 @@ note layers "$S1 $S2 $SM $(mcol shown 1 3) $(mcol shown 2 3) $(mcol shown model 
 keep_map layers-off; shot
 # 9. the catches: the pointer brought to the end of a wall in the left plan
 read -r EX EY <<<"$(px 1 0 0)"
-xdotool mousemove "$EX" "$EY"; sleep 6; xdotool mousemove_relative 1 0; sleep 6
+xdotool mousemove "$EX" "$EY"; drawn_for 2 6; xdotool mousemove_relative 1 0; sleep 6
 note catch "$(mcol catch 1 3)"
 keep_map catch; shot
 # 10. looking, not drawing: the Wall tool in hand, a click in the right plan draws nothing and says where to draw
 tool "Wall"; sleep 3
 read -r WX WY <<<"$(px 2 10 14)"
 click "$WX" "$WY"; sleep 4
-xdotool key F2; sleep 4
+xdotool key F2; drawn_for 3 4
 note said "$(tail -3 "$PLUMBLINE_MAP.said" | tr '\n' '|')"
 cp "$JOB" "$T/b-after.json"
 keep_map tool; shot
@@ -175,7 +173,7 @@ sheet "Two plans"; sleep 10; rest 1; rest 2
 note price-model "$(grep -cE '^text	model	\$468,050.22	' "$PLUMBLINE_MAP" || true)"
 # 7. a wall clicked in the model window (on its plan) is marked in the second window's plan of that level
 on "Plan"; sleep 12
-xdotool key Escape; sleep 2
+xdotool key Escape; drawn_for 3 2
 at_plan() { local x0 y0 k; read -r x0 y0 k <<<"$(plan_line)"; [ -n "$x0" ] || { echo "the model window's plan is not at rest" >> "$T/missing.txt"; close_window; exit 1; }; click $(plan_px "$1" "$2"); }
 at_plan 13 0; sleep 6; park
 note model-click "$(mcol marked model 3)|$(mcol marked 1 3)|$(mcol marked 2 3)"
@@ -204,7 +202,7 @@ cat > "$T/steps-g.sh" <<'STEPS'
 cp "$JOB" "$T/g1.json"
 JOB="$T/g1.json"; open_window "$JOB"
 on "Add drawing"; sleep 2; typed "$T/made-up-plan.pdf"; sleep 8
-xdotool key F2; sleep 5; close_window
+xdotool key F2; drawn_for 3 5; close_window
 sleep 2
 cp "$T/g1.json" "$T/g1-saved.json"
 cp "$T/house.json" "$T/g2.json"
@@ -217,7 +215,7 @@ at="$(found sheet "Plan 1 shows made-up-plan")" || exit 1; click $at; sleep 10; 
 note sheet-beside "$(half 1)|$(half 2)"
 note sheet-names "$(mcol half 1 3)|$(mcol half 2 3)"
 keep_map sheet; shot
-xdotool key F2; sleep 5
+xdotool key F2; drawn_for 3 5
 cp "$T/g2.json" "$T/g2-saved.json"
 close_window
 STEPS

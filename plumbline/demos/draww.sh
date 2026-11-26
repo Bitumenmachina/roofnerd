@@ -42,7 +42,7 @@ cat > "$T/session.sh" <<SESSION
 export APP="$APP" T="$T" OUT="$OUT" ICD="$ICD"
 . "$PWD/demos/window.sh"
 open_window "$J"
-xdotool key t; sleep 4
+xdotool key t; drawn_for 3 4
 shot                                    # 01 the empty job on plan: nothing to draw on yet
 on "Add level"; sleep 2; typed "Ground, 0 ft, 9 ft"   # Add level
 tool "Wall" "6 in, 9 ft" yes            # 02 Wall: what it draws with, being typed
@@ -50,9 +50,9 @@ click 600 600                           # the first corner
 len 900 605 "24 ft" yes                 # 03 east: a length being typed
 len 922 400 "16 ft"                     # north
 len 600 385 "24 ft"                     # west
-xdotool mousemove 603 597; sleep 2
+xdotool mousemove 603 597; drawn_for 2 2
 shot                                    # 04 about to close on the first corner
-xdotool click 1; sleep 4
+xdotool click 1; drawn_for 2 4
 esc
 click 760 602                           # the middle of the south wall
 len 760 400 "16 ft"                     # a partition north from it
@@ -78,18 +78,18 @@ click 780 585
 len 780 400 "14 ft"
 esc; esc
 tool "Fixture" "Lavatory, 2 x 1.5 x 3, 0 ft"      # Fixture
-xdotool mousemove 781 398; sleep 2
+xdotool mousemove 781 398; drawn_for 2 2
 shot                                    # 06 about to stand it on the pipe's end
-xdotool click 1; sleep 3
+xdotool click 1; drawn_for 2 3
 esc
 tool "Equipment" "Air handler, 2 x 2 x 4, 0 ft"   # Equipment
 click 631 571                           # on the duct's start
 esc
 park
 shot                                    # 07 everything drawn
-xdotool key z; sleep 4
+xdotool key z; drawn_for 3 4
 shot                                    # 08 the last step undone: the equipment is gone
-xdotool key y; sleep 4                  # and done again
+xdotool key y; drawn_for 3 4                  # and done again
 click 760 450                           # the partition, selected
 on "Move"                               # Move what is selected
 click 760 493                           # from its middle
@@ -102,21 +102,21 @@ len 1100 702 "5 ft"
 esc; esc
 click 1030 700                          # the stray wall, selected
 shot                                    # 10 the stray wall selected
-xdotool key Delete; sleep 4
+xdotool key Delete; drawn_for 3 4
 park
 shot                                    # 11 removed
 click 860 387                           # the second window in the north wall: on plan, a click on it selects it
 shot                                    # 12 the window selected, not its wall
-xdotool key Delete; sleep 4
+xdotool key Delete; drawn_for 3 4
 park
 shot                                    # 13 the window taken out
 tool "Conduit" "3/4 in, 8 ft, Steam"    # Conduit, on a system no conduit goes on
 park
 shot                                    # 14 refused where it was typed, not at the second pick
 esc                                     # the field is left open to be put right; let go of it
-xdotool key t; sleep 6
+xdotool key t; drawn_for 3 6
 shot                                    # 15 the house in 3D
-xdotool key F2; sleep 3                 # save
+xdotool key F2; drawn_for 3 3                 # save
 close_window
 SESSION
 chmod +x "$T/session.sh"

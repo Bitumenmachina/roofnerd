@@ -44,7 +44,7 @@ cat > "$T/session.sh" <<SESSION
 export APP="$APP" T="$T" OUT="$OUT" ICD="$ICD"
 . "$PWD/demos/window.sh"
 open_window "$J"
-wheel() { xdotool mousemove 2000 600; sleep 1; for i in \$(seq 1 \$1); do xdotool click \$2; sleep 0.3; done; sleep 3; xdotool mousemove 800 860; sleep 1; focus; }
+wheel() { xdotool mousemove 2000 600; drawn_for 2 1; for i in \$(seq 1 \$1); do xdotool click \$2; sleep 0.3; done; sleep 3; xdotool mousemove 800 860; drawn_for 2 1; focus; }
 shot                                                    # 01 as opened
 sheet "Estimate"                                        # the sheet's Estimate tab
 park
@@ -54,31 +54,31 @@ shot                                                    # 03 the sheet: every li
 wheel DOWN2 5
 shot                                                    # 04 at the foot, the suppliers, side by side
 sheet_at "Overhead percent" 4; sleep 2                  # back up to the recap at the top: overhead, typed where it stands
-xdotool type --delay 300 "12"; sleep 2
+xdotool type --delay 300 "12"; drawn_for 3 2
 shot                                                    # 05 the overhead being typed, on its row of the recap
-xdotool key Return; sleep 4
-sheet_at "Profit percent"; sleep 2; xdotool type --delay 300 "8"; sleep 2; xdotool key Return; sleep 4
+xdotool key Return; drawn_for 3 4
+sheet_at "Profit percent"; sleep 2; xdotool type --delay 300 "8"; drawn_for 3 2; xdotool key Return; drawn_for 3 4
 shot                                                    # 06 overhead and profit entered: the price
 sheet_at "Unit cost of Underlayment on south"; sleep 2  # down to the lines: a price, typed on its line
-xdotool type --delay 300 "0.95"; sleep 2
+xdotool type --delay 300 "0.95"; drawn_for 3 2
 shot                                                    # 07 a unit cost being typed on its line
-xdotool key Return; sleep 4
+xdotool key Return; drawn_for 3 4
 sheet_at "Stretch-out of Headwall flashing on headwall"; sleep 2   # down to the headwall: its flashing's stretch-out
-xdotool type --delay 300 "30 in"; sleep 2
+xdotool type --delay 300 "30 in"; drawn_for 3 2
 shot                                                    # 08 a stretch-out being typed on its line
-xdotool key Return; sleep 4
-xdotool mousemove 900 470; sleep 1; xdotool click 1; sleep 4          # the south plane, in the model
+xdotool key Return; drawn_for 3 4
+xdotool mousemove 900 470; drawn_for 2 1; xdotool click 1; drawn_for 2 4          # the south plane, in the model
 park
-on "Material"; sleep 2; xdotool type --delay 300 "Copper, 20 oz"; sleep 2
+on "Material"; sleep 2; xdotool type --delay 300 "Copper, 20 oz"; drawn_for 3 2
 shot                                                    # 09 its material being typed
-xdotool key Return; sleep 4
+xdotool key Return; drawn_for 3 4
 shot                                                    # 10 the material changed: its panels and the recap repriced
 sheet_at "Labor of Install panels on south" 4           # its labor line, switched off on the sheet
 park
 shot                                                    # 11 its labor line switched off
-sheet_at "Overhead percent" 4; sleep 2; xdotool type --delay 300 "ten"; sleep 2; xdotool key Return; sleep 4
+sheet_at "Overhead percent" 4; sleep 2; xdotool type --delay 300 "ten"; drawn_for 3 2; xdotool key Return; drawn_for 3 4
 shot                                                    # 12 an overhead that is not a number is refused, and says why
-xdotool key F2; sleep 3                                 # save
+xdotool key F2; drawn_for 3 3                                 # save
 close_window
 SESSION
 sed -i -e "s/DOWN1/${DOWN1:-9}/" -e "s/DOWN2/${DOWN2:-40}/g" "$T/session.sh"

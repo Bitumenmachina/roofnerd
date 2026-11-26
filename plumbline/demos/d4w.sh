@@ -50,17 +50,17 @@ shot                                                    # 02 the job priced both
 sheet "east"                                            # the east plane's row
 park
 shot                                                    # 03 the east plane picked from the sheet
-on "Unit cost"; sleep 2; xdotool type --delay 300 "31.50"; sleep 2
+on "Unit cost"; sleep 2; xdotool type --delay 300 "31.50"; drawn_for 3 2
 shot                                                    # 04 its line's unit cost being typed
-xdotool key Return; sleep 4
+xdotool key Return; drawn_for 3 4
 shot                                                    # 05 the price set: its detail is whole, and the totals moved
 sheet "north"                                           # the north plane's row
 park
-on "Allowance, \$/SF"; sleep 2; xdotool type --delay 300 "28"; sleep 2; xdotool key Return; sleep 4
+on "Allowance, \$/SF"; sleep 2; xdotool type --delay 300 "28"; drawn_for 3 2; xdotool key Return; drawn_for 3 4
 shot                                                    # 06 the north plane given an allowance
-on "Unit cost"; sleep 2; xdotool type --delay 300 "nonsense"; sleep 2; xdotool key Return; sleep 4
+on "Unit cost"; sleep 2; xdotool type --delay 300 "nonsense"; drawn_for 3 2; xdotool key Return; drawn_for 3 4
 shot                                                    # 07 a price that is not a price is refused, and says why
-xdotool key F2; sleep 3                                 # save
+xdotool key F2; drawn_for 3 3                                 # save
 close_window
 SESSION
 chmod +x "$T/session.sh"

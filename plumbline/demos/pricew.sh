@@ -59,17 +59,17 @@ on "Assembly"
 on "Assembly Exterior wall, 2x6, brick veneer"; park
 shot                                    # 05 changed to brick: what came off is said, and the wall is brick
 sheet_at "Unit cost of Brick veneer on wall 1"; sleep 2
-xdotool type --delay 300 "24"; sleep 2
+xdotool type --delay 300 "24"; drawn_for 3 2
 shot                                    # 06 the brick's price being typed on its line of the sheet
-xdotool key Return; sleep 4
+xdotool key Return; drawn_for 3 4
 focus
 shot                                    # 07 priced: the sheet by division
 sheet_at "Production rate of Frame and sheathe the wall on wall 1"; sleep 2
-xdotool type --delay 300 "40 SF/hr"; sleep 2
-xdotool key Return; sleep 4
+xdotool type --delay 300 "40 SF/hr"; drawn_for 3 2
+xdotool key Return; drawn_for 3 4
 focus
 shot                                    # 08 the framing labor given its production rate: it has hours
-xdotool key F2; sleep 3                 # save
+xdotool key F2; drawn_for 3 3                 # save
 close_window
 SESSION
 chmod +x "$T/session.sh"

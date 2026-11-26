@@ -86,13 +86,13 @@ shot                                     # 01 the Layouts tab, nothing set besid
 sheet "Keep this as another layout"; sleep 3; park
 cp "$T/map.txt" "$T/map-ask.txt"
 shot                                     # 02 the title asked for: this job's, and B
-xdotool key Return; sleep 10; park       # Enter keeps what is offered
+xdotool key Return; drawn_for 3 10; park       # Enter keeps what is offered
 cp "$T/map.txt" "$T/table-kept.txt"
 cp "$T/jobs/addition-12-ft-b.json" "$T/b.kept"
 shot                                     # 03 the copy kept and set beside this job
 sheet "Keep this as another layout"; sleep 3
-xdotool type --delay 250 "Addition 12 ft"; sleep 1   # A's own title: two layouts with one title
-xdotool key Return; sleep 10; park
+xdotool type --delay 250 "Addition 12 ft"; drawn_for 3 1   # A's own title: two layouts with one title
+xdotool key Return; drawn_for 3 10; park
 cp "$T/map.txt" "$T/table-alike.txt"
 shot                                     # 04 three layouts, two with one title: each column headed by its file as well
 sheet "Take it away"; sleep 5
@@ -115,7 +115,7 @@ sheet "Open another layout"; sleep 3; park
 cp "$T/map.txt" "$T/map-grey.txt"
 sheet "Layout addition-12"; sleep 5; park
 shot                                     # 09 refused: Save first (Ctrl+S); nothing opened; the list grey
-xdotool key F2; sleep 4                  # saved: the kept copy, which is the program's own to write
+xdotool key F2; drawn_for 3 4                  # saved: the kept copy, which is the program's own to write
 sheet "Layout addition-12"; sleep 14; park
 cp "$T/map.txt" "$T/map-reopened.txt"
 shot                                     # 10 A open again

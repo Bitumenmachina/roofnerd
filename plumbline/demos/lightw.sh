@@ -23,23 +23,23 @@ cat > "$T/session.sh" <<SESSION
 #!/bin/bash
 export APP="$APP" T="$T" OUT="$OUT" ICD="$ICD"
 . "$PWD/demos/window.sh"
-wheel() { local i; for i in \$(seq 1 "\$2"); do xdotool click "\$1"; sleep 2; done; sleep 6; }
+wheel() { local i; for i in \$(seq 1 "\$2"); do xdotool click "\$1"; drawn_for 2 2; done; sleep 6; }
 open_window "$J"
 on "Show panel Job"; on "Show panel Details"; on "Show panel Tools"
 park
 shot                                    # 01 the whole house from the street
-xdotool mousemove 775 640; sleep 2; wheel 4 5
-xdotool mousemove 1000 880; sleep 2
+xdotool mousemove 775 640; drawn_for 2 2; wheel 4 5
+xdotool mousemove 1000 880; drawn_for 2 2
 shot                                    # 02 close on a window
-xdotool key f; sleep 8
-xdotool mousemove 700 458; sleep 2; wheel 4 5
-xdotool mousemove 1000 880; sleep 2
+xdotool key f; drawn_for 3 8
+xdotool mousemove 700 458; drawn_for 2 2; wheel 4 5
+xdotool mousemove 1000 880; drawn_for 2 2
 shot                                    # 03 close on an eave
-xdotool key f; sleep 8
-xdotool key t; sleep 8
+xdotool key f; drawn_for 3 8
+xdotool key t; drawn_for 3 8
 park
 shot                                    # 04 the plan
-xdotool key t; sleep 8
+xdotool key t; drawn_for 3 8
 if [ -n "${SUN:-}" ]; then
   on "Sun"
   park

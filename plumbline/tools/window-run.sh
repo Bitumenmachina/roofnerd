@@ -7,6 +7,7 @@
 # demonstration on a virtual display, runs a failure once more before it is believed, and writes
 #   target/window-run/results.txt     PASS or FAIL, the name, the run, the times
 #   target/window-run/<name>.<run>.log
+# WINDOW_RUN_KEEP=1 adds to the results of an earlier call, for a long run done in parts.
 # It ends with status 0 only if every demonstration passed (on its first or its second run).
 set -u
 cd "$(dirname "$0")/.." || exit 1
@@ -22,7 +23,8 @@ for n in "${names[@]}"; do [ -f "demos/$n.sh" ] || { echo "no demonstration demo
 SRC="${PLUMBLINE_BIN:-${CARGO_TARGET_DIR:-target}/debug}"
 [ -x "$SRC/plumbline" ] && [ -x "$SRC/plumbline-app" ] || { echo "no built programs in $SRC: build first"; exit 2; }
 mkdir -p "$OUT" "$FROZEN"; cp "$SRC/plumbline" "$SRC/plumbline-app" "$FROZEN/" || exit 1
-: > "$OUT/results.txt"; echo "on $(git rev-parse --short HEAD)$(git diff --quiet HEAD -- . || echo ' with changes not committed'), programs frozen $(date -u +%F' '%H:%M) UTC" >> "$OUT/results.txt"
+# WINDOW_RUN_KEEP=1 adds to the results of an earlier call (a long run is done in parts) instead of starting them again.
+[ -n "${WINDOW_RUN_KEEP:-}" ] || : > "$OUT/results.txt"; echo "on $(git rev-parse --short HEAD)$(git diff --quiet HEAD -- . || echo ' with changes not committed'), programs frozen $(date -u +%F' '%H:%M) UTC" >> "$OUT/results.txt"
 while [ -e "$LOCK" ]; do sleep 15; done
 trap 'rm -f "$LOCK"' EXIT
 touch "$LOCK"
@@ -38,5 +40,5 @@ for n in "${names[@]}"; do
   done
   [ $r = PASS ] || bad=1
 done
-echo "passed $(grep -c '^PASS' "$OUT/results.txt") of ${#names[@]}" | tee -a "$OUT/results.txt"
+echo "this call: ${#names[@]} named; in the results so far, $(grep -c '^PASS' "$OUT/results.txt") passed and $(grep '^FAIL' "$OUT/results.txt" | grep -c '(run 2)') failed twice" | tee -a "$OUT/results.txt"
 exit $bad

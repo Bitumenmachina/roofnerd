@@ -48,7 +48,7 @@ shot                                    # 02 its four pages, at the head of the 
 on "Page 4"; sleep 30                   # the page, clicked; a scanned sheet takes a while to read
 park
 shot                                    # 03 page 4 laid under the level
-xdotool key F2; sleep 3                 # save
+xdotool key F2; drawn_for 3 3                 # save
 close_window
 SESSION
 chmod +x "$T/session.sh"

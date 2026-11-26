@@ -76,7 +76,7 @@ start() {
   on "Item Vanity, 36 in"; sleep 4
   click 900 760; sleep 5
   esc; park
-  xdotool key F2; sleep 3
+  xdotool key F2; drawn_for 3 3
 }
 open_item() { on_at "Change item $1" "${2:-5}"; sleep 5; park; }
 COMMON
@@ -108,7 +108,7 @@ keep_said 03
 keep_map 03k                                # the picked block stays picked on the copy
 on_right "Shape block 3"; sleep 5; park     # (a click on the picked row lets go of it: the picture is the vanity as it was)
 shot; keep_map 04                           # 04 kept as the job's own: Add block and Take block away offered
-xdotool key F2; sleep 3
+xdotool key F2; drawn_for 3 3
 cp "$JOB" "$T/saved-a.json"
 keep_said end
 close_window
@@ -183,13 +183,13 @@ on_right "Up from"; sleep 3; typed "4 in"; sleep 3
 on_right "Up to"; sleep 3; typed "height - 6 in"; sleep 5; park
 keep_said 02
 shot; keep_map 02                           # 02 the panel stands on the vanity's front, 2 in in from each side
-xdotool key F2; sleep 3
+xdotool key F2; drawn_for 3 3
 cp "$JOB" "$T/saved-b.json"
 on_right "Up to"; sleep 3; typed "height + 1 in"; sleep 5; park
 keep_said 03
 shot; keep_map 03                           # 03 refused: the row still reads height - 6 in
 esc
-xdotool key F2; sleep 3
+xdotool key F2; drawn_for 3 3
 cmp "$JOB" "$T/saved-b.json" > "$T/b-after-refusal.txt" 2>&1 && echo same > "$T/b-after-refusal.txt"
 keep_said end
 close_window
@@ -259,10 +259,10 @@ shot; keep_map 01                           # 01 three rows, the picture as the 
 on "Undo"; sleep 6; park
 shot; keep_map 02                           # 02 Undo: four rows again
 on_right "Back to the house"; sleep 12; park
-xdotool mousemove 560 780; sleep 2
-for i in 1 2 3; do xdotool click 4; sleep 2; done; sleep 6; park
+xdotool mousemove 560 780; drawn_for 2 2
+for i in 1 2 3; do xdotool click 4; drawn_for 2 2; done; sleep 6; park
 shot; keep_map 03                           # 03 back in the house, one vanity close up: the panel on its front
-xdotool key F2; sleep 3
+xdotool key F2; drawn_for 3 3
 cp "$JOB" "$T/saved-c.json"
 esc; sleep 2; open_item "Base cabinet, 36 in"
 on_right "Bench"; sleep 12; park

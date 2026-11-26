@@ -123,7 +123,7 @@ export PLUMBLINE_SETTINGS="$T/settings-f.txt"; rm -f "$PLUMBLINE_SETTINGS"
 W="$T/lost.json"; rm -f "$W" "$W.recovery"; "$P" new "$W" "Work not lost (not a real job)" >/dev/null
 draw() {
   open_window "$W"
-  xdotool key t; sleep 4
+  xdotool key t; drawn_for 3 4
   on "Add level"; sleep 2; typed "Ground, 0 ft, 9 ft"
   tool "Wall" "6 in, 9 ft"
   click 600 600; len 900 605 "24 ft"; esc; esc
@@ -141,7 +141,7 @@ sleep 3
 cp "$W.recovery" "$T/f-recovery-copy.json"; cp "$W" "$T/f-job-as-saved.json"
 open_window "$W"; park; shot; keep_map offered
 on "Take the recovered work"; settle 6; park; shot; keep_map taken
-xdotool key F2; sleep 4; shot
+xdotool key F2; drawn_for 3 4; shot
 cp "$W" "$T/f-taken-saved.json"; ls -l "$T"/lost.json* > "$T/f-ls-after-save.txt" 2>&1 || true
 close_window
 STEPS
@@ -152,7 +152,7 @@ export PLUMBLINE_SETTINGS="$T/settings-g.txt"; rm -f "$PLUMBLINE_SETTINGS"
 W="$T/left.json"; cp "$T/f-job-as-saved.json" "$W"; sleep 2; cp "$T/f-recovery-copy.json" "$W.recovery"
 open_window "$W"; park; shot; keep_map offered
 on "Leave it"; settle 5; park; shot; keep_map left
-xdotool key F2; sleep 4; shot
+xdotool key F2; drawn_for 3 4; shot
 cp "$W" "$T/g-left-saved.json"; ls -l "$T"/left.json* > "$T/g-ls.txt" 2>&1 || true
 close_window
 STEPS

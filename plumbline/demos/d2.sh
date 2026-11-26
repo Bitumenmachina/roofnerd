@@ -41,24 +41,24 @@ export APP="$APP" T="$T" OUT="$OUT" ICD="$ICD"
 . "$PWD/demos/window.sh"
 open_window "$T/job.json"
 shot                                                    # 01 as opened
-xdotool mousemove 940 470; sleep 1; xdotool click 1; sleep 3; xdotool mousemove 946 474; sleep 2
+xdotool mousemove 940 470; drawn_for 2 1; xdotool click 1; drawn_for 2 3; xdotool mousemove 946 474; drawn_for 2 2
 shot                                                    # 02 a plane picked with the mouse
 on "Steeper"; on "Steeper"
 shot                                                    # 03 its pitch raised twice: 6 to 8 in 12
 on "Eave out 6 in"
 shot                                                    # 04 its eave moved out 6 in
-on "Pitch"; sleep 2; xdotool type --delay 300 "9:12"; sleep 2
+on "Pitch"; sleep 2; xdotool type --delay 300 "9:12"; drawn_for 3 2
 shot                                                    # 05 a pitch being typed
-xdotool key Return; sleep 3
+xdotool key Return; drawn_for 3 3
 shot                                                    # 06 the typed pitch set
 on "Assembly"; park
 on "Assembly Standing seam copper roof"; park
 shot                                                    # 07 an assembly given to the surface
-xdotool mousemove 2050 500; sleep 1; for i in \$(seq 1 16); do xdotool click 5; sleep 0.4; done; sleep 1
-xdotool mousemove 1400 500; sleep 1; for i in \$(seq 1 9); do xdotool click 5; sleep 0.4; done; sleep 1
-xdotool mousemove 946 474; sleep 1; xdotool key t; sleep 9
+xdotool mousemove 2050 500; drawn_for 2 1; for i in \$(seq 1 16); do xdotool click 5; sleep 0.4; done; sleep 1
+xdotool mousemove 1400 500; drawn_for 2 1; for i in \$(seq 1 9); do xdotool click 5; sleep 0.4; done; sleep 1
+xdotool mousemove 946 474; drawn_for 2 1; xdotool key t; drawn_for 3 9
 shot                                                    # 08 the same roof on plan; the sheet scrolled to its cost lines
-xdotool key F2; sleep 3                                 # save
+xdotool key F2; drawn_for 3 3                                 # save
 close_window
 SESSION
 chmod +x "$T/session.sh"

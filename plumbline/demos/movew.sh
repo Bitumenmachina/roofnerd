@@ -76,7 +76,7 @@ cat > "$T/session.sh" <<SESSION
 export APP="$APP" T="$T" OUT="$OUT" ICD="$ICD"
 . "$PWD/demos/window.sh"
 open_window "$J"
-xdotool key t; sleep 6                  # the plan
+xdotool key t; drawn_for 3 6                  # the plan
 park
 shot                                    # 01 the house on plan, before
 at 24 8                                 # the east wall, selected
@@ -86,18 +86,18 @@ at 24 8                                 # from a point on it
 len \$(plan_px 31 8) "4 ft" yes         # 03 four feet typed, the pointer east of it
 park
 shot                                    # 04 what went with it is said; the sheet shows the price
-xdotool key F2; sleep 4; cp "$J" "$T/window.json"
-xdotool key z; sleep 5                  # one Undo
+xdotool key F2; drawn_for 3 4; cp "$J" "$T/window.json"
+xdotool key z; drawn_for 3 5                  # one Undo
 park
 shot                                    # 05 all of it taken back
-xdotool key F2; sleep 4; cp "$J" "$T/undone.json"
+xdotool key F2; drawn_for 3 4; cp "$J" "$T/undone.json"
 at 24 8                                 # the east wall again
 on "Move"
 at 24 8
 len \$(plan_px 10 8) "30 ft" yes        # 06 thirty feet west, across the west wall
 park
 shot                                    # 07 refused, in the model's words
-xdotool key F2; sleep 4; cp "$J" "$T/refused.json"
+xdotool key F2; drawn_for 3 4; cp "$J" "$T/refused.json"
 # 8: the east wall pressed on and dragged: the button down on it, the pointer glided four feet east, the button up. The
 # right-hand panel is put away first: four feet east of this wall the pointer would be over it, and a place under a panel is
 # not a place on the plan.
@@ -107,11 +107,11 @@ at 24 8                                 # the east wall, selected again
 on "Move"
 read -r px0 py0 <<<"\$(plan_px 24 8)"
 read -r px1 py1 <<<"\$(plan_px 28 8)"
-xdotool mousemove \$px0 \$py0; sleep 1.5; xdotool mousedown 1; sleep 1
-for i in 1 2 3 4 5 6 7 8; do xdotool mousemove \$((px0 + (px1 - px0) * i / 8)) \$py0; sleep 1; done
-sleep 1; xdotool mouseup 1; sleep 5
+xdotool mousemove \$px0 \$py0; drawn_for 2 1.5; xdotool mousedown 1; drawn_for 2 1
+for i in 1 2 3 4 5 6 7 8; do xdotool mousemove \$((px0 + (px1 - px0) * i / 8)) \$py0; drawn_for 2 1; done
+sleep 1; xdotool mouseup 1; drawn_for 2 5
 park
-xdotool key F2; sleep 4; cp "$J" "$T/dragged.json"
+xdotool key F2; drawn_for 3 4; cp "$J" "$T/dragged.json"
 shot                                    # 08 the wall dragged
 close_window
 SESSION

@@ -132,7 +132,7 @@ rec() { cp "\$T/map.txt" "\$T/m-\$NAME-\$1.txt"; tail -1 "\$V" > "\$T/v-\$NAME-\
 mark() { echo "\$1 \$(nview)" >> "\$T/marks-\$NAME.txt"; }
 py() { python3 -I "\$T/nav.py" "\$@"; }
 # One key struck (a letter held for longer than the keyboard's repeat is read as a laser's reading, and not as a key).
-tap() { xdotool key "\$1"; sleep 1.5; }
+tap() { xdotool key "\$1"; drawn_for 3 1.5; }
 tilt_to() {   # the Up or Down arrow, held a little at a time, until the view looks down at about \$1 degrees (within 5 over or 3 under)
   local i t
   for i in \$(seq 1 25); do
@@ -162,7 +162,7 @@ dive() {   # $1 the session's name, $2 clicks of the wheel to a rest in the firs
   local i d px py
   tail -1 "$V" > "$T/cur-$NAME.txt"
   read -r px py <<<"$(py recept "$T/cur-$NAME.txt")"
-  xdotool mousemove "$px" "$py"; sleep 2
+  xdotool mousemove "$px" "$py"; drawn_for 2 2
   echo "$px $py" > "$T/pt1-$NAME.txt"
   # First part: from the lot to about 20 ft, over what lies under the pointer.
   for i in $(seq 1 14); do
@@ -176,8 +176,8 @@ dive() {   # $1 the session's name, $2 clicks of the wheel to a rest in the firs
   # the window ends at the top of it), selected, and in, the pointer not moved.
   tail -1 "$V" > "$T/cur-$NAME.txt"
   read -r px py <<<"$(py recept "$T/cur-$NAME.txt")"
-  xdotool mousemove "$px" "$py"; sleep 1.5; xdotool mousedown 2; sleep 1.2
-  for k in 1 2 3 4 5 6; do xdotool mousemove $(( px + (800 - px) * k / 6 )) $(( py + (440 - py) * k / 6 )); sleep 0.5; done
+  xdotool mousemove "$px" "$py"; drawn_for 2 1.5; xdotool mousedown 2; drawn_for 2 1.2
+  for k in 1 2 3 4 5 6; do xdotool mousemove $(( px + (800 - px) * k / 6 )) $(( py + (440 - py) * k / 6 )); drawn_for 2 0.5; done
   sleep 1.2; xdotool mouseup 2; rest
   tail -1 "$V" > "$T/cur-$NAME.txt"
   read -r px py <<<"$(py recept "$T/cur-$NAME.txt")"
@@ -201,7 +201,7 @@ cat > "$T/steps-a.sh" <<'STEPS'
 . "$T/dive.sh"
 open_window "$JOB"; rest
 park; rest
-xdotool mousemove 800 450; sleep 1
+xdotool mousemove 800 450; drawn_for 2 1
 # Step 1: out to the lot.
 prev=0
 for i in $(seq 1 30); do
@@ -211,11 +211,11 @@ for i in $(seq 1 30); do
 done
 rec out; shot                         # 01 out at the lot, the house solid
 on "Show See through"; park; rest     # then glass, so that the receptacle can be seen and pointed at
-xdotool mousemove 800 450; sleep 1
+xdotool mousemove 800 450; drawn_for 2 1
 tilt_to 60; rec start; mark start; shot   # 02 tilted to 60 degrees
 STRIP=1; dive a 3 1
 shot                                  # the end of the dive
-xdotool key F2; sleep 3
+xdotool key F2; drawn_for 3 3
 touch "$T/end-a"
 close_window
 STEPS
@@ -225,7 +225,7 @@ cat > "$T/steps-b.sh" <<'STEPS'
 . "$T/dive.sh"
 open_window "$JOB"; rest
 on "Show See through"; on "Tilt as I dive"; park; rest
-xdotool mousemove 800 450; sleep 1
+xdotool mousemove 800 450; drawn_for 2 1
 for i in $(seq 1 14); do xdotool click --repeat 3 --delay 150 5; rest; d=$(field 5); if awk "BEGIN{exit !($d>=270)}"; then break; fi; done
 tilt_to 60; rec start; mark start; shot
 dive b 3 1
@@ -239,12 +239,12 @@ cat > "$T/steps-c.sh" <<'STEPS'
 . "$T/dive.sh"
 open_window "$JOB"; rest
 on "Show See through"; park; rest
-xdotool mousemove 800 450; sleep 1
+xdotool mousemove 800 450; drawn_for 2 1
 for i in $(seq 1 14); do xdotool click --repeat 3 --delay 150 5; rest; d=$(field 5); if awk "BEGIN{exit !($d>=270)}"; then break; fi; done
 tilt_to 60; rec start; mark start
 dive c 3 1
 # Back out: the view rights itself.
-xdotool mousemove 800 450; sleep 1
+xdotool mousemove 800 450; drawn_for 2 1
 for i in $(seq 1 30); do
   xdotool click --repeat 3 --delay 150 5; rest; d=$(field 5)
   if awk "BEGIN{exit !($d>=270)}"; then break; fi
@@ -260,7 +260,7 @@ open_window "$JOB"; rest
 park; rest; rec first; mark first
 # Plan, and back (T). The wheel on plan does not tilt it.
 tap t; rest; rec plan; mark plan; shot
-xdotool mousemove 800 450; sleep 1
+xdotool mousemove 800 450; drawn_for 2 1
 for i in 1 2 3; do xdotool click 4; rest; rec "plan$i"; done
 mark plan_wheel
 tap t; rest; rec back; mark back
@@ -280,28 +280,28 @@ tilt_to 30; rest; rec tilt30
 read -r hx hy <<<"$(py corner "$T/v-d-tilt30.txt")"
 echo "$hx $hy" > "$T/pan-start.txt"
 # Step 5: the south-east corner of the house taken and dragged 300 dots to the left and a little up, held still, then let go standing.
-xdotool mousemove "$hx" "$hy"; sleep 1.5; xdotool mousedown 1; sleep 1.5
-for i in 1 2 3 4 5 6 7 8; do xdotool mousemove $(( hx - 300 * i / 8 )) $(( hy - 60 * i / 8 )); sleep 0.6; done
+xdotool mousemove "$hx" "$hy"; drawn_for 2 1.5; xdotool mousedown 1; drawn_for 2 1.5
+for i in 1 2 3 4 5 6 7 8; do xdotool mousemove $(( hx - 300 * i / 8 )) $(( hy - 60 * i / 8 )); drawn_for 2 0.6; done
 sleep 1.5; rest; rec panheld; shot
-xdotool mouseup 1; sleep 3; rest; rec panlet
+xdotool mouseup 1; drawn_for 2 3; rest; rec panlet
 echo "$((hx - 300)) $((hy - 60))" > "$T/pan-end.txt"
 # And let go moving: a flick of 100 dots to the left in a fifth of a second.
 tail -1 "$V" > "$T/cur-$NAME.txt"; read -r fx fy <<<"$(py corner "$T/cur-$NAME.txt")"
 echo "$fx $fy" > "$T/flick-start.txt"
-xdotool mousemove "$fx" "$fy"; sleep 1.5; xdotool mousedown 1; sleep 1.5
+xdotool mousemove "$fx" "$fy"; drawn_for 2 1.5; xdotool mousedown 1; drawn_for 2 1.5
 for i in 1 2 3 4 5; do xdotool mousemove $(( fx - 100 * i / 5 )) "$fy"; sleep 0.04; done
 xdotool mouseup 1; echo "$((fx - 100)) $fy" > "$T/flick-end.txt"; sleep 8; rest; rec flicked
 # Step 6: a turn with the right button, from a place on the front wall; then the same with Shift and the left button.
 tap f; rest; rec turn0
-xdotool mousemove 800 520; sleep 1.5; xdotool mousedown 3; sleep 1.5
-for i in 1 2 3 4 5 6 7 8; do xdotool mousemove $(( 800 - 160 * i / 8 )) $(( 520 - 40 * i / 8 )); sleep 0.6; done
+xdotool mousemove 800 520; drawn_for 2 1.5; xdotool mousedown 3; drawn_for 2 1.5
+for i in 1 2 3 4 5 6 7 8; do xdotool mousemove $(( 800 - 160 * i / 8 )) $(( 520 - 40 * i / 8 )); drawn_for 2 0.6; done
 sleep 1.5; rest; shot; rec turnR
-xdotool mouseup 3; sleep 3; rest; rec turnRend
+xdotool mouseup 3; drawn_for 2 3; rest; rec turnRend
 tap f; rest; rec turn1
-xdotool mousemove 800 520; sleep 1.5; xdotool keydown shift; sleep 0.8; xdotool mousedown 1; sleep 1.5
-for i in 1 2 3 4 5 6 7 8; do xdotool mousemove $(( 800 - 160 * i / 8 )) $(( 520 - 40 * i / 8 )); sleep 0.6; done
+xdotool mousemove 800 520; drawn_for 2 1.5; xdotool keydown shift; sleep 0.8; xdotool mousedown 1; drawn_for 2 1.5
+for i in 1 2 3 4 5 6 7 8; do xdotool mousemove $(( 800 - 160 * i / 8 )) $(( 520 - 40 * i / 8 )); drawn_for 2 0.6; done
 sleep 1.5; rest; shot; rec turnS
-xdotool mouseup 1; sleep 0.8; xdotool keyup shift; sleep 3; rest; rec turnSend
+xdotool mouseup 1; drawn_for 2 0.8; xdotool keyup shift; sleep 3; rest; rec turnSend
 touch "$T/end-d"
 close_window
 STEPS
@@ -314,17 +314,17 @@ read -r dx dy <<<"$(py door "$T/v-$NAME-home.txt")"
 echo "$dx $dy" > "$T/door.txt"
 # Step 7: a double-click on the front door, and the flight read frame by frame; its strip.
 mark flight1
-xdotool mousemove "$dx" "$dy"; sleep 1.5
-xdotool mousedown 1; sleep 0.12; xdotool mouseup 1; sleep 0.12; xdotool mousedown 1; sleep 0.12; xdotool mouseup 1
-for i in 1 2 3 4 5 6 7 8 9; do xdotool key F12; sleep 2.5; done
+xdotool mousemove "$dx" "$dy"; drawn_for 2 1.5
+double_press
+for i in 1 2 3 4 5 6 7 8 9; do xdotool key F12; drawn_for 3 2.5; done
 rest; rec landed1; mark landed1; shot
 # A flight taken over half way: back to the whole house, double-click the door again, and take hold of the view after six frames.
 tap Escape; tap f; rest
 mark flight2
-xdotool mousemove "$dx" "$dy"; sleep 1.5
-base=$(nview); xdotool mousedown 1; sleep 0.12; xdotool mouseup 1; sleep 0.12; xdotool mousedown 1; sleep 0.12; xdotool mouseup 1
+xdotool mousemove "$dx" "$dy"; drawn_for 2 1.5
+base=$(nview); double_press
 for t in $(seq 1 120); do if [ "$(( $(nview) - base ))" -ge 8 ]; then break; fi; sleep 0.5; done
-xdotool mousemove 800 300; sleep 0.3; xdotool mousedown 1; sleep 3; xdotool mouseup 1; sleep 2; rest; rec taken; mark taken
+xdotool mousemove 800 300; sleep 0.3; xdotool mousedown 1; drawn_for 2 3; xdotool mouseup 1; drawn_for 2 2; rest; rec taken; mark taken
 # Step 8: F with the door selected; then, with nothing selected, F again.
 tap Escape; tap f; rest
 click "$dx" "$dy"; rest
@@ -349,8 +349,8 @@ rec quarter; shot
 on "North arrow"; rest; rec clicked; shot
 # A double-click: straight down.
 at="$(found model "North arrow")"; set -- $at
-xdotool mousemove "$1" "$2"; sleep 1.5
-xdotool mousedown 1; sleep 0.5; xdotool mouseup 1; sleep 0.1; xdotool mousedown 1; sleep 0.5; xdotool mouseup 1
+xdotool mousemove "$1" "$2"; drawn_for 2 1.5
+double_press
 sleep 3; rest; rec down; shot
 # Home: north up from where it is (turn a little first, then the key).
 xdotool keydown Right; sleep 0.8; xdotool keyup Right; rest; rec turned
@@ -368,7 +368,7 @@ park; rest
 indive() {   # $1 name, $2 where the pointer is (x y)
   local i d
   tap Escape; tap f; rest
-  xdotool mousemove $2; sleep 2
+  xdotool mousemove $2; drawn_for 2 2
   for i in $(seq 1 14); do
     d=$(field 5)
     if awk "BEGIN{exit !($d<=0.68)}"; then break; fi

@@ -80,7 +80,7 @@ at 6 6; sleep 4; park
 shot                                     # 06 the card says it parts nothing yet
 esc; esc
 on "Undo"; sleep 4; park                 # the short line taken out again
-xdotool key F2; sleep 4                  # save
+xdotool key F2; drawn_for 3 4                  # save
 close_window
 SESSION
 chmod +x "$T/session.sh"

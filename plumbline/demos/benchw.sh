@@ -44,7 +44,7 @@ start() {
   on "Item Vanity, 36 in"; sleep 4
   click 900 760; sleep 5
   esc; park
-  xdotool key F2; sleep 3
+  xdotool key F2; drawn_for 3 3
 }
 # The item opened on the right.
 open_item() { on_at "Change item $1" "${2:-5}"; sleep 5; park; }
@@ -65,30 +65,30 @@ open_item "Vanity, 36 in"
 shot; keep_map 01                          # 01 the house, the vanity's panel open: what the bench is entered from
 on_right "Bench"; sleep 12; park
 shot; keep_map 02                          # 02 the vanity alone on its floor, 36 in wide
-xdotool key 1; sleep 4; keep_map 02k       # a number is a tool's key: none is taken in hand there
-xdotool key t; sleep 3; xdotool key v; sleep 3; keep_map 02t
+xdotool key 1; drawn_for 3 4; keep_map 02k       # a number is a tool's key: none is taken in hand there
+xdotool key t; drawn_for 3 3; xdotool key v; drawn_for 3 3; keep_map 02t
 # A value half typed, and Esc: that is all Esc does there; the bench stays.
 on_right "Width"; sleep 3
-xdotool type --delay 250 -- "4"; sleep 2; esc; keep_map 02e
+xdotool type --delay 250 -- "4"; drawn_for 3 2; esc; keep_map 02e
 on_right "Width"; sleep 3
 typed "48 in"; sleep 8; park
 shot; keep_map 03                          # 03 48 in wide, said, and how many follow
 # Orbit, wheel and drag work as they do on the house: the wheel closes on what is under the pointer,
 # a right-drag turns the view about it, and Back to the house still goes to the view that was left.
-xdotool mousemove 800 520; sleep 2
-for i in 1 2 3; do xdotool click 4; sleep 2; done; sleep 4; keep_map 03w
-xdotool mousemove 800 520; sleep 2; xdotool mousedown 3; sleep 1
-for i in 1 2 3 4 5; do xdotool mousemove_relative -- 40 0; sleep 1; done; xdotool mouseup 3; sleep 6; park; keep_map 03d
+xdotool mousemove 800 520; drawn_for 2 2
+for i in 1 2 3; do xdotool click 4; drawn_for 2 2; done; sleep 4; keep_map 03w
+xdotool mousemove 800 520; drawn_for 2 2; xdotool mousedown 3; drawn_for 2 1
+for i in 1 2 3 4 5; do xdotool mousemove_relative -- 40 0; sleep 1; done; xdotool mouseup 3; drawn_for 2 6; park; keep_map 03d
 shot                                       # 03b zoomed and turned: still the one item, alone
 on_right "Back to the house"; sleep 12; park
 shot; keep_map 04                          # 05 the house again, as it was
-xdotool key F2; sleep 3; cp "$JA" "$T/saved-1.json"
+xdotool key F2; drawn_for 3 3; cp "$JA" "$T/saved-1.json"
 on_right "Bench"; sleep 10; park
 keep_map 05b
 esc; sleep 12; park
 shot; keep_map 05                          # 06 Esc: the same return
 on "Undo"; sleep 6; park
-xdotool key F2; sleep 3; cp "$JA" "$T/saved-2.json"
+xdotool key F2; drawn_for 3 3; cp "$JA" "$T/saved-2.json"
 open_item "Water heater, 50 gal" 5
 on_right "Bench"; sleep 12; park
 shot; keep_map 06                          # 07 the water heater, never set down, alone
@@ -116,7 +116,7 @@ start "$JB"
 open_item "Vanity, 36 in"
 on_right "Width"; sleep 3
 typed "48 in"; sleep 8; park
-xdotool key F2; sleep 3; cp "$JB" "$T/saved-b.json"
+xdotool key F2; drawn_for 3 3; cp "$JB" "$T/saved-b.json"
 close_window
 SESSION
 chmod +x "$T/session-b.sh"

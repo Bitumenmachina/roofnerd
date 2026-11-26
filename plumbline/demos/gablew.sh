@@ -78,7 +78,7 @@ esc
 shot                                     # 03 the east hip plane selected
 on "Gable"; sleep 8
 shot                                     # 04 a gable: three planes; what went, and the job cost before and after
-xdotool key F2; sleep 3                  # save
+xdotool key F2; drawn_for 3 3                  # save
 close_window
 SESSION
 chmod +x "$T/session.sh"

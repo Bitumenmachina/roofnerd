@@ -58,7 +58,7 @@ typed "roof area"; sleep 6
 park
 shot                                     # 03 refused: a wall has no such figure, and the figures it has are named
 esc
-xdotool key F2; sleep 3                  # save
+xdotool key F2; drawn_for 3 3                  # save
 close_window
 SESSION
 chmod +x "$T/session.sh"

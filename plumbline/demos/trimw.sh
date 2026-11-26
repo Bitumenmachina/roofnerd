@@ -105,7 +105,7 @@ press() {
   local at again n=0
   at="\$(found model "\$1")" || exit 1
   while [ "\$n" -lt 5 ]; do
-    xdotool mousemove \$at; sleep 3
+    xdotool mousemove \$at; drawn_for 2 3
     again="\$(where model "\$1")"
     [ "\$again" = "\$at" ] && break
     [ -n "\$again" ] && at="\$again"
@@ -123,14 +123,14 @@ trim_switch() {
 # Where a piece lies on screen, from the map: kind, thing.
 seg() { awk -F'\t' -v k="\$1" -v o="\$2" '\$1=="trim" && \$2==k && \$3==o {print \$4, \$5, \$6, \$7}' "\$PLUMBLINE_MAP"; }
 mid() { awk '{printf "%d %d", (\$1 + \$3) / 2, (\$2 + \$4) / 2}'; }
-wheel() { local i; for i in \$(seq 1 "\$2"); do xdotool click "\$1"; sleep 2; done; sleep 6; }
+wheel() { local i; for i in \$(seq 1 "\$2"); do xdotool click "\$1"; drawn_for 2 2; done; sleep 6; }
 open_window "$J"
 [ "\$(awk -F'\t' '\$1=="count" && \$2=="Trim" {print \$3}' "\$PLUMBLINE_MAP")" = 27 ] || fail "the Trim switch does not read 27: \$(grep -P '^count' "\$PLUMBLINE_MAP" || echo none)"
 [ "\$(st Trim)" = on ] || fail "Trim does not read on as the job opens"
 [ "\$(grep -c -P '^trim\t' "\$PLUMBLINE_MAP")" = 27 ] || fail "the map lists \$(grep -c -P '^trim\t' "\$PLUMBLINE_MAP") pieces, not 27"
 # 00 the Show list, scrolled to its Trim switch
 n=0
-while [ -z "\$(where model 'Show Trim')" ] && [ "\$n" -lt 30 ]; do xdotool mousemove 120 600; sleep 0.5; xdotool click 5; sleep 2; n=\$((n + 1)); done
+while [ -z "\$(where model 'Show Trim')" ] && [ "\$n" -lt 30 ]; do xdotool mousemove 120 600; drawn_for 2 0.5; xdotool click 5; drawn_for 2 2; n=\$((n + 1)); done
 [ -n "\$(where model 'Show Trim')" ] || fail "the Show list has no Trim switch"
 shot                                    # 01 the Show list, its Trim switch and the count
 on "Show panel Job"; on "Show panel Details"; on "Show panel Tools"
@@ -143,21 +143,21 @@ trim_switch; [ "\$(st Trim)" = on ] || fail "Trim does not read on after the swi
 # 03: the eave and the nearest corner, close: the foot of the nearest corner board lowest on screen, its top where the eave meets it
 read -r cx cy <<<"\$(awk -F'\t' '\$1=="trim" && \$2=="corner boards" {y=(\$5>\$7)?\$5:\$7; if (y>best) {best=y; top=(\$5<\$7)?\$5:\$7; x=(\$5<\$7)?\$4:\$6}} END {printf "%d %d", x, top}' "\$T/map-01.txt")"
 echo "close on the corner: \$cx \$cy" >> "\$T/log.txt"
-xdotool mousemove "\$cx" "\$cy"; sleep 2; wheel 4 4
+xdotool mousemove "\$cx" "\$cy"; drawn_for 2 2; wheel 4 4
 park
 shot                                    # 04 the eave and corner close, with trim
 trim_switch; shot                       # 05 the same, Trim off
 trim_switch
-xdotool key f; sleep 10
+xdotool key f; drawn_for 3 10
 # 05: the window and its casing
 read -r wx wy <<<"\$(awk -F'\t' -v o="$WIN" '\$1=="trim" && \$2=="casing" && \$3==o {sx+=\$4+\$6; sy+=\$5+\$7; n+=2} END {printf "%d %d", sx/n, sy/n}' "\$T/map-01.txt")"
 echo "close on the window: \$wx \$wy" >> "\$T/log.txt"
-xdotool mousemove "\$wx" "\$wy"; sleep 2; wheel 4 5
+xdotool mousemove "\$wx" "\$wy"; drawn_for 2 2; wheel 4 5
 park
 shot                                    # 06 the window with its casing
 trim_switch; shot                       # 07 the same, Trim off
 trim_switch
-xdotool key f; sleep 10
+xdotool key f; drawn_for 3 10
 # Clicks, from the street corner: each on the middle of a piece, the model's place for it on the map.
 cp "\$PLUMBLINE_MAP" "\$T/map-home.txt"
 click_on() { local at; at="\$(awk -F'\t' -v k="\$1" -v o="\$2" -v w="\$3" '\$1=="trim" && \$2==k && \$3==o {dx=\$6-\$4; dy=\$7-\$5; if (w=="tall" && (dy<0?-dy:dy) < (dx<0?-dx:dx)) next; printf "%d %d\n", (\$4+\$6)/2, (\$5+\$7)/2}' "\$T/map-home.txt" | head -1)"; echo "click on \$1 of \$2 at \$at" >> "\$T/log.txt"; click \$at; park; }
@@ -169,11 +169,11 @@ click_on casing "$WIN" tall
 said_last > "\$T/said-casing.txt"; echo "casing of $WIN: \$(cat "\$T/said-casing.txt")" >> "\$T/log.txt"
 click_on fascia "$EAVE_S" wide
 said_last > "\$T/said-fascia.txt"; echo "fascia of $EAVE_S: \$(cat "\$T/said-fascia.txt")" >> "\$T/log.txt"
-esc; xdotool mousemove 1000 880; sleep 1
+esc; xdotool mousemove 1000 880; drawn_for 2 1
 # 08: the sun at noon in June (the card: Later twice from ten, Month after twice from April), then closed; the eave and corner close again
 on "Sun"; on "Later"; on "Later"; on "Month after"; on "Month after"; on "Sun"
-xdotool key f; sleep 10
-xdotool mousemove "\$cx" "\$cy"; sleep 2; wheel 4 4
+xdotool key f; drawn_for 3 10
+xdotool mousemove "\$cx" "\$cy"; drawn_for 2 2; wheel 4 4
 park; sleep 6
 shot                                    # 08 noon in June, the eave and corner close, with trim
 cp "\$PLUMBLINE_MAP" "\$T/map-08.txt"

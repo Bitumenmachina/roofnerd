@@ -70,16 +70,16 @@ export APP="$APP" T="$T" OUT="$OUT" ICD="$ICD"
 open_window "$J"
 park; shot                              # 01 as opened: the vanity (wood) stands into the water closet (white)
 click 1010 440; park; shot              # 02 the vanity selected: it is in the water closet, and is drawn red
-xdotool mousemove 1010 440; sleep 1.5; xdotool mousedown 1; sleep 1.5
-xdotool mousemove 1012 440; sleep 1; xdotool mousemove 1015 439; sleep 4
+xdotool mousemove 1010 440; drawn_for 2 1.5; xdotool mousedown 1; drawn_for 2 1.5
+xdotool mousemove 1012 440; drawn_for 2 1; xdotool mousemove 1015 439; drawn_for 2 4
 shot                                    # 03 in the hand, a tenth of a foot on: still in it, still red
-for i in 1 2 3 4 5 6 7 8; do xdotool mousemove \$(( 1015 + 75 * i / 8 )) \$(( 439 - 19 * i / 8 )); sleep 0.7; done
-sleep 4; xdotool mouseup 1; sleep 5
+for i in 1 2 3 4 5 6 7 8; do xdotool mousemove \$(( 1015 + 75 * i / 8 )) \$(( 439 - 19 * i / 8 )); drawn_for 2 0.7; done
+sleep 4; xdotool mouseup 1; drawn_for 2 5
 shot                                    # 04 let go a foot and a half east: clear, and its own colour
-xdotool key F2; sleep 5
+xdotool key F2; drawn_for 3 5
 cp "$J" "$T/moved.json"
 on "Undo"; sleep 4; park; shot          # 05 undone in one step: back where it was, and in the water closet
-xdotool key F2; sleep 5
+xdotool key F2; drawn_for 3 5
 close_window
 SESSION
 chmod +x "$T/session.sh"

@@ -80,22 +80,22 @@ shot                                    # 03 nothing left to verify on the roof:
 sheet_at "Unit cost of Gypsum board, hung and finished on wall 1"; sleep 2   # the wall, by its line on the sheet
 esc
 on "Add cost line"; sleep 3             # labor on the wall
-xdotool type --delay 250 "Hang the board"; sleep 1
+xdotool type --delay 250 "Hang the board"; drawn_for 3 1
 on "Priced by net area"; sleep 3
-xdotool type --delay 250 "labor at 40 SF/hr"; sleep 1
-xdotool key Return; sleep 5
+xdotool type --delay 250 "labor at 40 SF/hr"; drawn_for 3 1
+xdotool key Return; drawn_for 3 5
 focus
 shot                                    # 04 the wall has a labor line: 5.40 hr, no price yet
 on "Delete"; sleep 4                    # the wall deleted
 shot                                    # 05 what went with it is said
 sheet_at "Overhead percent" 4; sleep 2  # overhead, typed ten times too large
-xdotool type --delay 300 "200"; sleep 2; xdotool key Return; sleep 4
+xdotool type --delay 300 "200"; drawn_for 3 2; xdotool key Return; drawn_for 3 4
 focus
 shot                                    # 06 taken, and answered
 sheet_at "Overhead percent" 4; sleep 2
-xdotool type --delay 300 "20"; sleep 2; xdotool key Return; sleep 4
+xdotool type --delay 300 "20"; drawn_for 3 2; xdotool key Return; drawn_for 3 4
 focus
-xdotool key F2; sleep 3                 # save
+xdotool key F2; drawn_for 3 3                 # save
 close_window
 SESSION
 chmod +x "$T/session.sh"

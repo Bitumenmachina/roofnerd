@@ -53,15 +53,15 @@ shot                                     # 01 the assemblies that go on a roof p
 on "Assembly Asphalt shingle roof"; sleep 6
 shot                                     # 02 on the plane clicked, and on the other three: said
 sheet_at "Unit cost of Asphalt shingles on plane 1"; sleep 3
-xdotool type --delay 250 -- "105"; sleep 1; xdotool key Return; sleep 5
+xdotool type --delay 250 -- "105"; drawn_for 3 1; xdotool key Return; drawn_for 3 5
 focus
 shot                                     # 03 \$105.00/SQ on plane 1's shingles, and on the same line of the others
 sheet_at "Production rate of Lay underlayment and shingles on plane 1"; sleep 3
 shot                                     # 04 the field open: it says what could be typed
-xdotool type --delay 250 -- "2 hr/SQ"; sleep 1; xdotool key Return; sleep 5
+xdotool type --delay 250 -- "2 hr/SQ"; drawn_for 3 1; xdotool key Return; drawn_for 3 5
 focus
 shot                                     # 05 hours on every plane, from a rate said in squares
-xdotool key F2; sleep 3                  # save
+xdotool key F2; drawn_for 3 3                  # save
 close_window
 SESSION
 chmod +x "$T/session.sh"

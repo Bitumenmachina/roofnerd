@@ -166,7 +166,7 @@ shot                                    # 04 the scan laid under the plan, to sc
 on "Undo"; sleep 4
 park; sleep 3
 shot                                    # 05 taken back
-xdotool key F2; sleep 4                 # save: the job without the scan
+xdotool key F2; drawn_for 3 4                 # save: the job without the scan
 cp "$J" "$T/undone.json"
 on "Redo"; sleep 6
 park; sleep 3
@@ -178,7 +178,7 @@ len \$(plan_px 16 4) "24 ft" yes        # 07 east along the south wall, its leng
 esc; esc
 park
 shot                                    # 08 the wall, traced over the scan
-xdotool key F2; sleep 4                 # save
+xdotool key F2; drawn_for 3 4                 # save
 cp "$J" "$T/first.json"
 on "Scan file"; sleep 3                 # a second scan, the one on its side
 on "File lying-room.ply"; sleep 14      # brought in by its row, as the first was
@@ -189,7 +189,7 @@ on "It is lying on its side: stand it up"; sleep 14
 park; sleep 6
 cp "$T/map.txt" "\$T/map-stood.txt"
 shot                                    # 10 stood up: brought in again, turned
-xdotool key F2; sleep 4                 # save
+xdotool key F2; drawn_for 3 4                 # save
 cp "$J" "$T/last.json"
 # A scan in the wrong measure (call 169). The first scan is written in meters: chosen as feet it
 # is a house of 8 ft with a ceiling under 3 ft, and nothing of it is 4 ft above its floor.
@@ -216,7 +216,7 @@ on "File big-house.ply"; sleep 14
 park; sleep 4
 cp "$T/map.txt" "\$T/map-twice.txt"
 shot                                    # 14 already in
-xdotool key Escape; sleep 3             # Esc, with no tool in hand, puts the card away
+xdotool key Escape; drawn_for 3 3             # Esc, with no tool in hand, puts the card away
 cp "$T/map.txt" "\$T/map-esc.txt"
 shot                                    # 15 away again
 close_window

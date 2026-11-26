@@ -114,16 +114,16 @@ click \$(plan_px 0.25 0.25)             # and the first again
 cp "\$T/map.txt" "\$T/map-ring.txt"
 park
 shot                                    # 04 the four walls, laid by the face
-xdotool key F2; sleep 4
+xdotool key F2; drawn_for 3 4
 cp "$J" "$T/outside.json"
 on "Other side"; sleep 4
 park
-xdotool key F2; sleep 4
+xdotool key F2; drawn_for 3 4
 cp "$J" "$T/inside.json"
 shot                                    # 05 the same walls, the other side of the line clicked
 on "Other side"; sleep 4
 park
-xdotool key F2; sleep 4
+xdotool key F2; drawn_for 3 4
 cp "$J" "$T/outside2.json"
 esc; esc
 tool "Wall"                             # Wall again: the sizes offered (6 in, 9 ft) are accepted as they are
@@ -132,7 +132,7 @@ cp "\$T/map.txt" "\$T/map-nofirst.txt"
 click \$(plan_px 12 3)
 park
 shot                                    # 06 a wall where the hand put it, and the card says why
-xdotool key F2; sleep 4
+xdotool key F2; drawn_for 3 4
 cp "$J" "$T/noface.json"
 on "Undo"; sleep 4
 esc; esc
@@ -161,7 +161,7 @@ click \$(plan_px 15 8); sleep 2; typed "Hall"
 esc
 park
 shot                                    # 08 the same clicks, centres on the faces
-xdotool key F2; sleep 4
+xdotool key F2; drawn_for 3 4
 cp "$J" "$T/upper.json"
 # Closed and opened again with the scan's own file taken away: the partition, whose two faces the sheet's
 # picture has to give again, and the rooms.
@@ -194,7 +194,7 @@ click \$(plan_px 9 8); sleep 2; typed "West room"
 click \$(plan_px 24 8); sleep 2; typed "East room"
 esc
 park
-xdotool key F2; sleep 4
+xdotool key F2; drawn_for 3 4
 cp "$J" "$T/final.json"
 cp "\$T/map.txt" "\$T/map-final.txt"
 shot                                    # again/03 two rooms inside the walls
@@ -372,26 +372,26 @@ click \$(plan_px 0.25 15.75)
 click \$(plan_px 0.25 0.25)
 park
 shot                                    # 01 the ring, the Wall tool up over the scan: the cut light, the walls heavier, the faces fine
-xdotool key F2; sleep 4; cp "$J2" "$T/d-ring.json"
+xdotool key F2; drawn_for 3 4; cp "$J2" "$T/d-ring.json"
 esc; esc
 park
 cp "\$T/map.txt" "\$T/map-down.txt"
 shot                                    # 02 the tool put down: "Other side" is on the card of the walls just laid
 on "Other side"; sleep 4
 park
-xdotool key F2; sleep 4; cp "$J2" "$T/d-turned.json"
+xdotool key F2; drawn_for 3 4; cp "$J2" "$T/d-turned.json"
 shot                                    # 03 turned with the tool down
-xdotool key z; sleep 5
+xdotool key z; drawn_for 3 5
 park
-xdotool key F2; sleep 4; cp "$J2" "$T/d-undone.json"
+xdotool key F2; drawn_for 3 4; cp "$J2" "$T/d-undone.json"
 cp "\$T/map.txt" "\$T/map-undone.txt"
 on "Other side"; sleep 4
 park
-xdotool key F2; sleep 4; cp "$J2" "$T/d-again.json"
+xdotool key F2; drawn_for 3 4; cp "$J2" "$T/d-again.json"
 shot                                    # 04 Undo, and Other side again
 # a wall of the ring taken out: the walls are changed, and Other side goes from the card
 at 15 15.75; sleep 2                    # the north wall, now 3 in inside the face
-xdotool key Delete; sleep 4
+xdotool key Delete; drawn_for 3 4
 park
 cp "\$T/map.txt" "\$T/map-changed.txt"
 shot                                    # 05 a wall deleted: no Other side
@@ -407,10 +407,10 @@ click \$(plan_px 0.25 0.25)
 click \$(plan_px 29.75 0.25)
 click \$(plan_px 29.75 15.75)
 park
-xdotool key F2; sleep 4; cp "$J2" "$T/b-face.json"
+xdotool key F2; drawn_for 3 4; cp "$J2" "$T/b-face.json"
 on "Centerline"; sleep 4
 park
-xdotool key F2; sleep 4; cp "$J2" "$T/b-centre.json"
+xdotool key F2; drawn_for 3 4; cp "$J2" "$T/b-centre.json"
 shot                                    # 06 the two walls laid again on the faces' own lines
 # C: the loft: a length typed along the face
 on "Level loft"; sleep 5
@@ -421,7 +421,7 @@ click \$(plan_px 0.25 15.75)            # the northwest corner, 3 in inside it
 click \$(plan_px 0.25 0.25)             # down the west face to the southwest corner
 len \$(plan_px 12 0.25) "10 ft" yes     # 07 ten feet typed, going east
 park
-xdotool key F2; sleep 4; cp "$J2" "$T/c-typed.json"
+xdotool key F2; drawn_for 3 4; cp "$J2" "$T/c-typed.json"
 shot                                    # 08 the wall, and what the card says of it
 esc
 click \$(plan_px 5 0.25)                # on the wall just laid

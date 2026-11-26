@@ -48,7 +48,7 @@ cat > "$T/session.sh" <<SESSION
 export APP="$APP" T="$T" OUT="$OUT" ICD="$ICD"
 . "$PWD/demos/window.sh"
 open_window "$J"
-xdotool key t; sleep 6                  # the plan
+xdotool key t; drawn_for 3 6                  # the plan
 sheet "Verify in field"                 # what there is to verify, by the dollars riding on each
 sheet "Verify ground"                   # its first row: the ground level is selected in the model window, and on show
 shot                                    # 01 five questions; \$518.40 rides on each level; the ground level's values say Measure
@@ -73,7 +73,7 @@ laser "7'10\"3/4" Return                # the laser, to the duct's underside
 shot                                    # 06 one clash, a finding
 sheet "Verify in field"                 # what is left to verify
 shot                                    # 07 one question: the upper level's own floor-to-floor, with no dollars riding
-xdotool key F2; sleep 3                 # save
+xdotool key F2; drawn_for 3 3                 # save
 close_window
 SESSION
 chmod +x "$T/session.sh"

@@ -69,9 +69,9 @@ export APP="$APP" T="$T" OUT="$OUT/$2" ICD="$ICD"
 # A turn is about the place under the pointer (Google Earth's rule): about the middle
 # of the roof it carries the eye round the house; about a near eave, half a turn puts
 # the eye over the far corner, looking at roof. turn_at X Y says where the pointer is.
-turn_at() { xdotool mousemove \$1 \$2; sleep 1.5; xdotool mousedown 3; sleep 1.2; for i in \$(seq 1 \$5); do xdotool mousemove_relative -- \$3 \$4; sleep 0.3; done; sleep 1; xdotool mouseup 3; sleep 8; }
-turn() { xdotool mousemove 750 450; sleep 0.6; xdotool mousedown 3; sleep 0.6; for i in \$(seq 1 \$3); do xdotool mousemove_relative -- \$1 \$2; sleep 0.3; done; xdotool mouseup 3; sleep 5; }
-nearer() { xdotool mousemove 750 450; sleep 0.6; for i in \$(seq 1 \$1); do xdotool click 4; sleep 0.5; done; sleep 5; }
+turn_at() { xdotool mousemove \$1 \$2; drawn_for 2 1.5; xdotool mousedown 3; drawn_for 2 1.2; for i in \$(seq 1 \$5); do xdotool mousemove_relative -- \$3 \$4; sleep 0.3; done; sleep 1; xdotool mouseup 3; drawn_for 2 8; }
+turn() { xdotool mousemove 750 450; drawn_for 2 0.6; xdotool mousedown 3; drawn_for 2 0.6; for i in \$(seq 1 \$3); do xdotool mousemove_relative -- \$1 \$2; sleep 0.3; done; xdotool mouseup 3; drawn_for 2 5; }
+nearer() { xdotool mousemove 750 450; drawn_for 2 0.6; for i in \$(seq 1 \$1); do xdotool click 4; drawn_for 2 0.5; done; sleep 5; }
 open_window "$1"
 $3
 close_window
@@ -106,7 +106,7 @@ shot                        # 01 as opened
 turn 0 -10 5
 nearer 2
 shot                        # 02 lower and nearer: lap siding over a stone wainscot, double-hung windows, the entry door
-xdotool key f; sleep 8      # the whole job in view, then the eye raised over it
+xdotool key f; drawn_for 3 8      # the whole job in view, then the eye raised over it
 turn_at 797 262 0 30 8
 park
 shot                        # 03 from above: the seams run up each plane

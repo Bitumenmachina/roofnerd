@@ -49,7 +49,7 @@ export APP="$APP" T="$T" OUT="$OUT" ICD="$ICD"
 . "$PWD/demos/window.sh"
 open_window "$J"
 # Two steps of the wheel over the floor plan: the wheel closes in on what the pointer is on.
-closer() { xdotool mousemove 760 420; sleep 2; xdotool click 4; sleep 2; xdotool click 4; sleep 6; }
+closer() { xdotool mousemove 760 420; drawn_for 2 2; xdotool click 4; drawn_for 2 2; xdotool click 4; drawn_for 2 6; }
 # A place so many feet east and north of the first corner.
 from_corner() { at "\$(awk -v a="\$E0" -v d="\$1" 'BEGIN { print a + d }')" "\$(awk -v a="\$N0" -v d="\$2" 'BEGIN { print a + d }')"; }
 shot                                    # 01 a new job: Next steps says where to start

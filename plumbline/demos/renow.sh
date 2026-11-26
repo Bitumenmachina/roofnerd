@@ -80,7 +80,7 @@ shot                                     # 10 the same house in 3D: the south wa
 on "Show Existing, shown pale"; sleep 4; park
 shot                                     # 11 its switch off: existing drawn as new work is
 on "Show Existing, shown pale"; sleep 4; park
-xdotool key F2; sleep 3                  # save
+xdotool key F2; drawn_for 3 3                  # save
 close_window
 SESSION
 chmod +x "$T/session.sh"
@@ -159,7 +159,7 @@ cp "$T/map.txt" "$T/map-1.txt"
 on "Undo"; sleep 4; park                  # one Undo takes the whole mark back
 cp "$T/map.txt" "$T/map-2.txt"
 shot                                      # 04 none of the three is marked
-xdotool key F2; sleep 3
+xdotool key F2; drawn_for 3 3
 cp "$J2" "$T/after-undo.json"
 at 12 4; sleep 3                          # the partition alone
 on "To demolish"; sleep 4; park
@@ -193,7 +193,7 @@ on "Add cost line"; sleep 3
 typed "Patch and match siding"; typed "60 SF"; typed "material" yes
 sleep 3; park
 shot                                      # 13 a measure typed as the quantity
-xdotool key F2; sleep 4
+xdotool key F2; drawn_for 3 4
 close_window
 SESSION
 chmod +x "$T/session2.sh"
