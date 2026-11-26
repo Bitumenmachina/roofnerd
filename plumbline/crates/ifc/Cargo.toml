@@ -8,3 +8,6 @@ rust-version.workspace = true
 
 [dependencies]
 plumbline-world = { path = "../world" }
+# The issue list (BCF) is a zip of text files: written with the zip crate the workbook writer already links (same version and features, so
+# no crate is added to the build; MIT).
+zip = { version = "9.0", default-features = false, features = ["deflate"] }

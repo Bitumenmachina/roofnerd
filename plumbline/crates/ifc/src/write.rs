@@ -132,10 +132,9 @@ fn name_or_none(s: &str) -> String {
     }
 }
 
-/// A thing's identifier in the file: 22 characters, the same for the same thing of the
-/// same job every time it is written, so a model written again matches the one before.
-fn guid(job: &str, key: &str) -> String {
-    const LETTERS: &[u8; 64] = b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_$";
+/// The 128 bits a thing's identifier is made from: the same for the same thing of the same job every time (call 228: the
+/// issue list's identifiers are made from these, so no thing has two).
+fn id_bits(job: &str, key: &str) -> u128 {
     let hash = |seed: u64| -> u64 {
         let mut h = seed;
         for b in job.bytes().chain([0u8]).chain(key.bytes()) {
@@ -144,13 +143,35 @@ fn guid(job: &str, key: &str) -> String {
         }
         h ^ (h >> 29)
     };
-    let bits = (u128::from(hash(0xCBF2_9CE4_8422_2325)) << 64) | u128::from(hash(0x8422_2325_CBF2_9CE4));
+    (u128::from(hash(0xCBF2_9CE4_8422_2325)) << 64) | u128::from(hash(0x8422_2325_CBF2_9CE4))
+}
+
+/// A thing's identifier in the file: 22 characters, the same for the same thing of the
+/// same job every time it is written, so a model written again matches the one before.
+/// `job` is the job's title and `key` the thing's path (or what else the file names).
+/// The one function that makes it: the issue list (`bcf`) calls this too (call 228).
+pub fn guid(job: &str, key: &str) -> String {
+    const LETTERS: &[u8; 64] = b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_$";
+    let bits = id_bits(job, key);
     let mut out = String::with_capacity(22);
     out.push(LETTERS[((bits >> 126) & 0x3) as usize] as char);
     for i in (0..21).rev() {
         out.push(LETTERS[((bits >> (i * 6)) & 0x3F) as usize] as char);
     }
     out
+}
+
+/// The same 128 bits written as the 8-4-4-4-12 hexadecimal form other formats ask of a list's own entries (an issue's identifier).
+/// Not random: the same job and key give the same one.
+pub fn uuid(job: &str, key: &str) -> String {
+    let bits = id_bits(job, &format!("{key} (as a 8-4-4-4-12 identifier)"));
+    let h = format!("{bits:032x}");
+    format!("{}-{}-{}-{}-{}", &h[0..8], &h[8..12], &h[12..16], &h[16..20], &h[20..32])
+}
+
+/// The title the file names the job by: what every identifier in it is made with.
+pub fn job_title(job: &mut Job) -> String {
+    job.world.get::<JobInfo>(job.root()).map(|j| j.title.clone()).unwrap_or_default()
 }
 
 struct Out {
@@ -334,7 +355,7 @@ fn domain_word(d: Domain) -> &'static str {
 /// The job's building as an IFC4 file. `when` is the moment it is written, as the file's
 /// own heading says it (`2026-01-31T09:30:00`), and `file` what the file is called.
 pub fn export(job: &mut Job, file: &str, when: &str) -> Result<Written, String> {
-    let title = job.world.get::<JobInfo>(job.root()).map(|j| j.title.clone()).unwrap_or_default();
+    let title = job_title(job);
     let elements = view::elements(job);
     let names: HashMap<String, String> = elements.iter().map(|e| (e.path.clone(), e.name.clone())).collect();
     let storeys = building::storey_totals(job);

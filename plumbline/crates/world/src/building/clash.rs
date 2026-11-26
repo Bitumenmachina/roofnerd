@@ -217,6 +217,43 @@ pub fn connection_words(job: &mut Job, c: &Clash) -> Option<String> {
     Some(format!("{name}'s {} connection is {}", near.name, near.away()))
 }
 
+/// The storey a clash is on, by path: the storey of whichever of the two things is not a wall, a floor or a footing (a wall holds the
+/// thing, the thing is where the question is), else the first's. One rule, for the room a clash is in (`rooms_of`) and the level
+/// the issue list says (call 228).
+pub fn storey_of_pair(placed: &[Placement], a: &str, b: &str) -> Option<String> {
+    let storey_of = |path: &str| placed.iter().find(|p| p.path == path).and_then(|p| p.storey.clone());
+    let kind_of = |path: &str| placed.iter().find(|p| p.path == path).map(|p| p.kind);
+    let solid = |k: Option<Kind>| !matches!(k, Some(Kind::Wall | Kind::Floor | Kind::Footing));
+    if solid(kind_of(a)) { storey_of(a) } else if solid(kind_of(b)) { storey_of(b) } else { storey_of(a) }
+}
+
+/// The box that holds a placed thing's solids, as the clash test holds them: its smallest and its largest corner, in feet (east,
+/// north, height above the datum). None for a thing with no solid. The issue list's view is worked from it (call 228).
+pub fn extent(p: &Placement) -> Option<(P3, P3)> {
+    let pieces = pieces_of(p, 0).ok()?;
+    let mut it = pieces.iter();
+    let first = it.next()?;
+    let (mut lo, mut hi) = ([first.aabb.mins.x, first.aabb.mins.y, first.aabb.mins.z], [first.aabb.maxs.x, first.aabb.maxs.y, first.aabb.maxs.z]);
+    for q in it {
+        for (k, (a, b)) in [(q.aabb.mins.x, q.aabb.maxs.x), (q.aabb.mins.y, q.aabb.maxs.y), (q.aabb.mins.z, q.aabb.maxs.z)].into_iter().enumerate() {
+            lo[k] = lo[k].min(a);
+            hi[k] = hi[k].max(b);
+        }
+    }
+    Some((lo, hi))
+}
+
+impl Clash {
+    /// How far they are in each other, as the clash list writes it ("in each other by 3.50 in"): a line of a list, its quantity to
+    /// two places. The command line's list and the issue list's title say it by this one function.
+    pub fn depth_listed(&self) -> String {
+        match self.by {
+            Some(by) => format!("in each other by {:.2} in", by * 12.0 + 0.0),
+            None => "in each other; by how much could not be worked out".to_string(),
+        }
+    }
+}
+
 /// Where each clash and each hole of `found` is, to the room: the name of the room whose
 /// outline holds the place on the storey the thing in it is on, or "outside any room"
 /// where none does (call 177). One for each of `found.found`, then one for each of
@@ -233,15 +270,11 @@ pub fn rooms_of(job: &mut Job, found: &Clashes) -> (Vec<String>, Vec<String>) {
         .collect();
     let placed = placements(job).0;
     let storey_of = |path: &str| placed.iter().find(|p| p.path == path).and_then(|p| p.storey.clone());
-    let kind_of = |path: &str| placed.iter().find(|p| p.path == path).map(|p| p.kind);
     let room = |storey: Option<String>, at: P3| -> String {
         let Some(storey) = storey else { return NONE.to_string() };
         rooms.iter().find(|(of, _, outline)| *of == storey && crate::vif::inside(outline, [at[0], at[1]])).map(|r| r.1.clone()).unwrap_or_else(|| NONE.to_string())
     };
-    let thing = |a: &str, b: &str| -> Option<String> {
-        let solid = |k: Option<Kind>| !matches!(k, Some(Kind::Wall | Kind::Floor | Kind::Footing));
-        if solid(kind_of(a)) { storey_of(a) } else if solid(kind_of(b)) { storey_of(b) } else { storey_of(a) }
-    };
+    let thing = |a: &str, b: &str| -> Option<String> { storey_of_pair(&placed, a, b) };
     let clashes = found.found.iter().map(|c| room(thing(&c.a, &c.b), c.at)).collect();
     let holes = found.holes.iter().map(|h| room(h.pieces.first().and_then(|(p, _)| storey_of(p)).or_else(|| storey_of(&h.through)), h.at)).collect();
     (clashes, holes)

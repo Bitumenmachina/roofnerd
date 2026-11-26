@@ -11589,7 +11589,8 @@ the command line the stopped bench step (call 214) taken up again.
   is written from 24 dots, the larger thing's tag is kept of two, and a run is
   sized by its whole length. With the window builder to build; failed the same
   way on its second run.
-  Still to run on it: `screensw`, `bringw`, `movew`. The builder's own runs
+  `screensw` PASS (first run, 08:45 to 09:05).
+  Still to run on it: `bringw`, `movew`. The builder's own runs
   before the merge: `screensw` (seven sessions), `glassw`, `moneyw`, `benchw`,
   `pricew`. `tools/committed.sh` has not been run on 2e6f63a or later.
 
@@ -12156,7 +12157,21 @@ findings, 6 to verify in the field)**, set against 10, through a wall or a floor
    there was none to hand over.
 9. `plumbline sixteen` writes the job it wrote, byte for byte.
 
-Not built yet.
+**Built (2026-11-26; the worker's, checked by the lead's own run of its copy:
+1,271 command-line tests, 65 command-line demonstrations with no FAIL in any, the
+three gates, the port map, the licences, the sample whole house byte for byte).**
+`demos/bcf.sh` passes its nine steps, the sixth by buildingSMART's own schema
+for BCF 2.1 through an outside checker (`tools/bcf-check.py`; it fetches the
+three schema files when run, since their terms do not allow a copy here, and
+says NOT CHECKED where it cannot). Every figure above was right; one wording
+was not: an id is on the same thing in the BIM file, whose own name is the
+job's name for it (the clash list adds a size or a type to 15 of them).
+**Not confirmed, and said**: which way the format's own axes lie; the model's
+(east, north, up) are written, as the BIM file writes them. Not right: no
+picture of the place is made; the eye is outside the two things but may stand
+behind a wall of the house; only BCF 2.1 is written; reading issues back is
+not built; the reply says "identifiers" and "IFC file" where this program says
+ids and BIM file (a word to put right); the window has no entry for it yet.
 
 ## The house written out as glTF: a demonstration, written before it is built (call 229; 2026-11-26)
 

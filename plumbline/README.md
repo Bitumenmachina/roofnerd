@@ -113,6 +113,7 @@ demos/sixteen-trim.sh      # the sample whole house prices its outside trim (cal
 demos/gable.sh             # a wall under a rake rises to the roof (call 192, the model's half): the gable ends of a gable roof, a shed roof and a hip roof and a house with no roof, each wall's gable area and its top as points beside the figure worked by hand; the starter outside wall priced on net_area + gable_area (the siding, sheathing, weather barrier and hanging bought over the gable) and the inside of it not; the frame of a gable said not to be counted
 demos/kitchen.sh           # a kitchen's base that does not run behind the cabinets, the lump lines said to be in the price beside the things set, and the countertop priced and its corner leg said
 demos/spec.sh              # items made from manufacturers' sheets (PDF), placed, moved clear of a clash, and out to an IFC4 model
+demos/bcf.sh               # the clashes handed over as an issue list another program opens (call 228): the made-up whole house's 11 clashes in the same space as 11 issues in the clash list's order (5 findings, 6 questions for the field, the clash list's own marks), each naming its two things by the ids the IFC file gives them (22, every one in the BIM file written from the same job) with a view of the place (the line of sight within a foot of it), `--holes` adding the 47 holes to cut as issues of their own kind (58), the file against buildingSMART's own BCF 2.1 schema by an outside checker (tools/bcf-check.py, lxml; stops with 2 and says so where it cannot run), two writings differing only in the time, a job with no clash written with no issue, and the sample house byte for byte
 demos/items.sh             # the item library: the things that can be placed, by trade, in a table that is brought in, written out the same, changed and brought back
 demos/found.sh             # the foundation drawn: strip footings and foundation walls, footing concrete by the CY, and out to an IFC4 model
 demos/foundation.sh        # foundation work taken off from the starter library: forms, concrete, bars, anchor bolts, dampproofing and a drain, each against a figure worked by hand, and the same figures in the IFC model
@@ -338,6 +339,7 @@ plumbline export supplier job.json to-quote.xlsx        # what to quote, by what
 plumbline export subcontractor job.json scope.csv       # the scope classed Subcontract; none of our prices
 plumbline export pm job.json for-the-pm.xlsx            # every line with its hours, the budget by class, what is to verify; no markup
 plumbline export ifc job.json building.ifc              # the building as an IFC4 model, lengths in feet
+plumbline export bcf job.json issues.bcfzip [--holes]  # the clashes as an issue list (BCF 2.1) another program opens: each issue names its two things by the ids the IFC file gives them, with a view of the place; --holes adds each hole to cut
 ```
 
 In the window the same six are under **Write out**, one click each: the file is

@@ -10230,3 +10230,37 @@ right.
    `nav::label_shown` gain the tag's own least size and keep every figure they
    hold for a name.
 
+### Call 228, as built: clashes handed over as an issue list, BCF 2.1 (2026-11-26)
+
+The worker's work under contract 228M (`research/worker-report-call228M.md`,
+`research/bcf.md`), checked by the lead's own run of its copy (1,271
+command-line tests: model 734, command line 82, sheets 7, model files 119,
+roofing 122, plans 207; 65 command-line demonstrations; gates, port map,
+licences; the sample whole house byte for byte) and by the lead reading the
+reply and the demonstration's output.
+
+1. **`plumbline export bcf <job> <file.bcfzip> [--holes]`**: one issue for each
+   clash in the same space, in the clash list's order (the sample house: 11; 5
+   findings, 6 questions for the field); its title the list's own line, its
+   description in a builder's words with the level, the room, the place in feet
+   and inches, finding or question, and the dollars riding on a question.
+2. **The two things are named by the BIM file's own ids**, made by the one
+   function that makes them for that file (now public); a test holds 122 ids.
+3. **A view for each**: the place looked at, from outside both things; metres;
+   the model's axes.
+4. **Holes to cut only with `--holes`** (47 more, of their own kind); what is
+   set against never goes out; the reply counts what was not handed over.
+5. **BCF 2.1**, the version the coordination programs' own pages say they open;
+   checked against buildingSMART's own schema by an outside checker that is run
+   and never linked. The schema files' terms forbid a changed copy and are read
+   as not allowing one kept here: they are fetched by the checker when it runs.
+   The zip is written with the crate already linked for workbooks.
+6. **The author is the program's name**; two writings differ in the time only.
+7. **Lead's rulings**: the one line added to `crates/cli/Cargo.toml` (a
+   test-only reader of the zip, a crate already linked) is accepted though the
+   contract did not list the file; "on a thing of the same name" in the
+   demonstration means the job's own name for the thing.
+8. **Owed**: the reply's "identifiers" and "IFC file" said as ids and BIM file;
+   a picture of the place; the eye kept clear of the house's walls; BCF 3.0;
+   issues read back; the window's entry under Write out.
+
