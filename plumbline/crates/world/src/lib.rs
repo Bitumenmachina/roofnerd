@@ -29,6 +29,7 @@ pub mod editing;
 pub mod entered;
 pub mod export;
 pub mod file;
+pub mod fieldsheet;
 pub mod finish;
 pub mod formula;
 pub mod gable;

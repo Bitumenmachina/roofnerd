@@ -10506,3 +10506,48 @@ Rulings on call 233's work, each with the reason beside it in the file:
    by the lead, and are run then; the window's "Drawn as" list now has 27
    choices and its room for them is looked at then.
 
+### Call 234, as built: the field's measurements brought back by file; and call 236, what is ruled on it (2026-11-26)
+
+The worker's work under contract 234M (`research/worker-report-call234M.md`),
+checked by the lead's own run of its copy (1,336 command-line tests: model 753,
+command line 92, sheets 7, model files 131, roofing 122, plans 231; 68
+command-line demonstrations; gates, port map, licences; the sample whole house
+byte for byte).
+
+1. **`plumbline export field-sheet <job> <file.xlsx|csv>`**: a row for each
+   value to measure, in the order of the verify-in-field list: Where, What, What
+   to measure, The job has, How sure, Riding on its question, As found,
+   Measured by, On, Reference. A reference is words, never a number, and has no
+   row number in it, so a sheet sorted or cut down still comes back.
+2. **`plumbline import field-sheet <job> <file> [--anyway]`**: each row with
+   something As found goes through the functions a typed measurement goes
+   through (`editing::measure`, `measure_on_line`) and no other; the price and
+   the clashes are read before and after, never worked out again. Every row is
+   first tried on a copy of the job; only if none is refused are they put on
+   the job, all of them or none.
+3. **Refused by row**: a figure that cannot be read; a bare number (no unit); a
+   date a workbook made of a fraction; a reference the job does not have or has
+   twice; a value changed since the sheet went out, and a second measurement
+   that differs from a Known one (both say what the sheet had and what the job
+   has, and are taken only with `--anyway`).
+4. **A question with nothing a tape answers is not a row** and is said: a clash
+   (its two things have their own rows), a hole to cut, a thing set against
+   another, a thing in the way of a wall coming down, whether a wall bears.
+
+**Call 236, the lead's rulings on what the worker chose or raised:**
+
+5. **Rows are put on the job in the job's own order, the lowest level first**,
+   whatever order the sheet is in. Kept: a floor above follows the floor below
+   as it stands when it is measured, so without this a sheet sorted on site
+   gives a different job.
+6. **A row with a reading and nobody named is taken**, and its source says
+   nobody was named. A measurement is not thrown away for a blank cell.
+7. **Owed, the next small job on it**: the rows of a thing that is in a clash
+   carry the dollars riding on that clash, so they sort where the money is; the
+   export's reply counts the questions that are not rows by kind and lists none
+   of them (they are on the sheet); the workbook's cells for As found are
+   written as text.
+8. The new tests were written with the code while builds were held off for a
+   timed run, and each was then proved by breaking the code it tests; that was
+   the lead's doing (the quiet lock), and is said.
+

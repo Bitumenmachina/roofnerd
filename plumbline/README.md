@@ -100,6 +100,7 @@ demos/tools-feel.sh         # how tools feel, the model's side: a change tried a
 demos/plan.sh              # a plan laid under a level, given its scale from one dimension and traced over, at the command line
 demos/field.sh             # what is measured on site put on a traced job: the floor above moves and the price with it, one clash clears, one becomes a finding
 demos/fieldw.sh            # the same in the window, each reading typed as a laser in keyboard mode types it; pictures in demos/captured/field
+demos/field-sheet.sh       # the same measurements made by file: the list to verify written as a sheet to fill (a row for each value, by dollars, each with its own reference), filled and brought back, each row setting its value Known as a typed one does; a sheet cut down and put in another order, a figure that cannot be read (nothing brought in, the row named), a value changed since the sheet went out (refused unless --anyway), a second sheet that differs
 demos/div.sh               # sixteen divisions: a whole house's lines in all sixteen, the recap by division, and the workbook's Divisions sheet
 demos/library.sh           # the starter assemblies: no price in them, a house's takeoff in fourteen divisions, three prices by division
 demos/partwork.sh          # work on part of a thing typed as a measure ("60 SF", with how sure and where from) and the starter assembly "Take down a partition", each against a figure worked by hand

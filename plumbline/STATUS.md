@@ -12391,7 +12391,25 @@ The figures are that demonstration's own, already worked by hand in STATUS.md
 9. `plumbline sixteen` writes the job it wrote, byte for byte; `export vif` of
    the sample house is what it was.
 
-Not built yet.
+**Built (2026-11-26; the worker's, checked by the lead's own run of its copy:
+1,336 command-line tests, 68 command-line demonstrations with no FAIL in any, the
+three gates, the port map, the licences, the sample whole house byte for byte and
+its printed field sheet as it was).** `demos/field-sheet.sh` passes its nine
+steps: the measurements `demos/field.sh` types, filled into the sheet, leave the
+same job, **text for text the same estimate, clash list and verify-in-field
+list**: the price $615.86 to $607.31, the wall 213.00 SF at $511.20, one clash
+cleared and one confirmed a finding at 2 1/4 in. None of the hand figures above
+was wrong. On the sample whole house 53 of the 85 questions become 86 rows; the
+other 32 have nothing a tape answers (24 holes to cut, 6 in the same space, 2
+set against) and the sheet says so. Rows are put on the job in the job's own
+order, the lowest level first, whatever order the sheet came back in: a floor
+above follows the floor below as it is measured, so the order matters.
+Not right: the rows that settle a clash carry no dollars of the clash and sort
+last; the export's reply lists every question that is not a row, one by one; a
+workbook's cells are not held as text, so a reading a workbook turns into a
+number or a date is refused by row and not prevented; the new tests were
+written with the code while builds were held off, and each was then proved by
+breaking the code it tests; the window has no entry for it yet.
 
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 

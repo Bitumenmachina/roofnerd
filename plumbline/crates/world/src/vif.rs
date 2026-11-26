@@ -115,15 +115,21 @@ struct Line {
 /// sure it is. An assembly's rule values (a strip's width, a swell) are not in these
 /// units and are the estimator's allowances, not a question of the site.
 fn typed_unsure(line: &crate::CostLine) -> Option<(String, Status)> {
+    typed_unsure_named(line).map(|(_, label, status)| (label, status))
+}
+
+/// The same, with the name the value is entered under on the line: what `measure_on_line` is
+/// given to put a measurement on it (the field sheet's reference names it, call 234).
+pub(crate) fn typed_unsure_named(line: &crate::CostLine) -> Option<(String, String, Status)> {
     let names = formula::parse(&line.quantity).map(|e| formula::names(&e)).unwrap_or_default();
     let mut unsure: Vec<(&String, &crate::Val<crate::units::Len>)> = line.inputs.iter().filter(|(n, v)| names.contains(n) && crate::units::is_measure_unit(&v.unit) && v.status != Status::Known).collect();
     unsure.sort_by(|a, b| a.0.cmp(b.0));
-    let (_, v) = unsure.first()?;
+    let (name, v) = unsure.first()?;
     let typed = match &v.value {
         Some(len) => crate::units::show_length(len, &v.unit),
         None => "no figure yet".to_string(),
     };
-    Some((format!("\"{}\" ({typed})", line.description), v.status))
+    Some(((*name).clone(), format!("\"{}\" ({typed})", line.description), v.status))
 }
 
 pub fn vif(job: &mut Job) -> Vif {
@@ -451,6 +457,21 @@ pub(crate) fn inside(outline: &[[f64; 2]], at: [f64; 2]) -> bool {
     odd
 }
 
+/// A value as the to-do sentence names it ("its level height", "where it is"): one wording for the list and the field sheet.
+pub(crate) fn to_do_word(name: &str) -> String {
+    match name {
+        "condition" => "its assembly".to_string(),
+        n if n == crate::hidden::BEARING => "whether it is bearing".to_string(),
+        n if n == crate::hidden::IN_THE_WALL => "what is in the wall".to_string(),
+        n if n.starts_with("what ") => n.to_string(),
+        // A measure typed on a line: the line and what was typed, as they read.
+        n if n.starts_with('"') => n.to_string(),
+        // A room is kept by a point inside it: on site that is where it is.
+        "a point inside it" => "where it is".to_string(),
+        n => format!("its {}", n.replace('_', " ")),
+    }
+}
+
 impl Question {
     /// What it is, as the list names it: the thing, or the two things of a clash.
     pub fn what(&self) -> String {
@@ -495,17 +516,7 @@ impl Question {
             }
             None => {
                 // "Measure its width and its height; check what it is and its size."
-                let said = |name: &str| match name {
-                    "condition" => "its assembly".to_string(),
-                    n if n == crate::hidden::BEARING => "whether it is bearing".to_string(),
-                    n if n == crate::hidden::IN_THE_WALL => "what is in the wall".to_string(),
-                    n if n.starts_with("what ") => n.to_string(),
-                    // A measure typed on a line: the line and what was typed, as they read.
-                    n if n.starts_with('"') => n.to_string(),
-                    // A room is kept by a point inside it: on site that is where it is.
-                    "a point inside it" => "where it is".to_string(),
-                    n => format!("its {}", n.replace('_', " ")),
-                };
+                let said = to_do_word;
                 let listed = |length: bool| -> String {
                     let all: Vec<String> = self.values.iter().filter(|v| v.2 == length).map(|v| said(&v.0)).collect();
                     match all.as_slice() {
