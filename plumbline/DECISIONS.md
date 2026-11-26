@@ -10654,3 +10654,53 @@ The order, the lead's:
 8. The name through the code.
 9. Items 9 to 12 judged again.
 
+### Call 238. How the records are kept from 2026-11-26 (the lead; call 237, step 4)
+
+STATUS.md had grown to 12,687 lines: the state, every demonstration's statement,
+every judge's findings and the story of every day, each added below the last.
+Its head said where the build was on 2026-11-11 and its last section, the one
+CLAUDE.md sent a new builder to, was a day and twenty calls behind. A file
+nobody can read whole cannot be kept true. Decided:
+
+1. **STATUS.md is what is so now, and it is short.** What the program is at the
+   commit named in it, what was run on which commit and what that showed, the
+   thirteen items of the release candidate, what is owed in order, what is not
+   right. It is rewritten in place at each stopping point. Nothing is added
+   below; what is no longer so is taken out.
+2. **STATUS-history.md is everything STATUS.md held on 2026-11-26**, whole,
+   under the headings it had, and it is not added to. Where a script, a
+   contract, a judgment or a call written before that day names STATUS.md and a
+   heading, that file is meant. The references are not rewritten: there are
+   hundreds, and one sentence here and in CLAUDE.md covers them.
+3. **A demonstration's statement, with its figures worked by hand, is written
+   first in `demos/<name>.md`**, beside the script it becomes.
+4. **What was built, and every change to an existing behaviour or number, is the
+   call's "as built" entry in this file**, as it has been since the calls took
+   that form. What a judge found is its own file in `research/`; what was
+   decided about it is a call.
+5. **This file stays one file, in order.** `DECISIONS-index.md` lists every
+   heading and its line; it is written by `tools/index.sh`, never by hand, and
+   the commit hook refuses a commit where it is stale. The same check refuses a
+   demonstration in `demos/` that `README.md` does not name: nineteen were
+   unnamed on 2026-11-26 and are named now.
+6. **The earlier program's two source files the roofing tests read** (call 237,
+   the earlier program leaving the branch): `nrca_figures.rs`, `the_bill.rs`
+   and `the_drawings.rs` read `packages/engine/src/roof.ts` and `model.ts` at
+   test time to hold this crate's conventions to the engine's own statement of
+   them. With the engine off the branch the tests would have had nothing to
+   read. The two files are kept byte for byte in `crates/roofing/tests/engine/`
+   (checked against the last commit that held them) and the three tests read
+   them there. No assertion moved; only the place the files are found. What is
+   given up is said: the engine on `main` can now change without these tests
+   seeing it; nothing builds on that engine.
+7. **The gates when the earlier program left.** `gate-egress.sh` keeps its two
+   checks of BuildOS as they were and drops the checks of code that is gone.
+   `gate-language.sh` had three rules that read only the earlier program and
+   one that read BuildOS's window; the three now read all of BuildOS's source
+   (governance words, less "verify", which is a builder's own word in "verify
+   in the field"; the three authority markers; a programmer's plural inside
+   quotation marks), which they never had. Each of the four was proved red on a
+   line written for it and green on the tree (`--self-test`). The commit hook
+   is the three gates and the index check; it no longer builds and tests the
+   earlier program (six minutes and 4 GB at every commit).
+

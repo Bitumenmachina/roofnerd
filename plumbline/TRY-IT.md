@@ -5,10 +5,10 @@ below from the screen and this page alone and two partly (`STATUS.md`, "Call 161
 What it met is written into the steps below so you do not meet it blind, and is being put
 right (DECISIONS.md call 169).
 
-This is the one page for Patrick's first hour with BuildOS on his Linux desktop. Nobody
-has yet used the window on a real machine with a real graphics card: this hour is that
-test. Write down everything that is wrong, slow, confusing or missing; that list is what
-gets built next.
+This is the one page for Patrick's first hour with BuildOS on his Linux desktop. Write
+down everything that is wrong, slow, confusing or missing; that list is what gets built
+next. (The manual, `manual/`, takes this page's place when it is made: DECISIONS.md call
+237.)
 
 ## 1. Install (once, about 20 minutes, most of it the first build)
 

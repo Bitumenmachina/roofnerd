@@ -11,14 +11,20 @@ look and asked for this file's last section). His of 2026-11-13 (calls 75 and 76
 harness for each division) are folded in below. His of 2026-11-25 are folded in too:
 call 217 (the lead makes the calls and runs to the finish without him; **two windows
 stay, and the second can show plans**; the order of work) and call 220 (the main thing
-to remember).
+to remember). His of 2026-11-26 are folded in (call 237: the repository was not
+acceptable as it stood; it is cleaned before anything new is built; **one manual,
+changed in place, takes the place of pictures piling up**).
 
 ## What this is
 
 **BuildOS** (Patrick's name for it, 2026-11-17; its working name was plumbline, and the folder `plumbline/`, the crates and the two commands are still called that: `plumbline/DECISIONS.md` call 115): a 3D estimating program for the whole house, every trade.
 The job is one world; the 3D view, the estimate sheet, the reports and the lists are
-views of it. `plumbline/STATUS.md` says where the build is, `plumbline/SPEC.md` what the
-model is, `plumbline/DECISIONS.md` what was decided and why.
+views of it. `plumbline/STATUS.md` says where the build is (short, and rewritten in
+place: call 238), `plumbline/SPEC.md` what the model is, `plumbline/DECISIONS.md` what
+was decided and why (`DECISIONS-index.md` finds a call). `plumbline/STATUS-history.md`
+is everything STATUS.md held before 2026-11-26, under the headings it had: a script,
+a contract or a decision of before that day that names STATUS.md and a heading means
+that file.
 
 **The focus is a full 16-division building platform.** The whole building is estimated,
 every division from General Requirements to Electrical: each cost line carries its
@@ -59,8 +65,9 @@ built so that a division can be handed to one and taken back whole
 (`plumbline/PROPOSALS.md` 21; not built yet). `plumbline/divisions/README.md` is what
 the program has for each of the sixteen today.
 
-**The earlier program** (roofnerd: `src-tauri/`, `packages/`, the files at the root) is
-the lineage this came from. It is not being built on. Its own notes are at the end.
+**The earlier program** (roofnerd, roofing estimating in a Tauri shell) is the lineage
+this came from. It is not being built on and it is not on this branch: it is on the
+branch `main`, whole, and left this branch on 2026-11-26 (call 237).
 
 ## Patrick's fixed rules
 
@@ -153,7 +160,7 @@ The order is Patrick's; how each step is done is yours.
 8. IFC export, xlsx export and publishing.
 9. The window rebuilt to call 62: glass with depth, Google Earth navigation, switches,
    smooth scrolling, a thing picked up and moved with its clashes live, items from
-   makers' sheets, everything exported from the window. `plumbline/STATUS.md` ("The
+   makers' sheets, everything exported from the window. `plumbline/STATUS-history.md` ("The
    rebuild after call 62") has the plan, part by part, and where it stands. This comes
    before the release candidate: items 9 to 12 of the deliverable are judged on the
    rebuilt window.
@@ -202,8 +209,8 @@ Each of these was paid for at least once.
 - **Port from source that is open in front of you.** What comes from BIMCraft is listed
   in `plumbline/PORTMAP.md`, item by item, and `plumbline/tools/portmap.sh` checks it.
   Owning the code includes keeping that map true when the code is moved.
-- **Write each demonstration before building what it demonstrates**, in STATUS.md, with
-  the figures worked by hand.
+- **Write each demonstration before building what it demonstrates**, in
+  `demos/<name>.md` beside its script, with the figures worked by hand.
 - **One arithmetic for one number.** A quantity that can be worked out from the model is
   worked out in the core; no window recomputes it. A formula is visible and editable on
   the line. The stretch-out belongs to the detail, not to the material.
@@ -221,15 +228,21 @@ Each of these was paid for at least once.
   deleted, skipped or weakened to get green; an expectation changes only after the
   decision behind the change is written down.
 - **Fix what you find, and say what you changed.** A known defect is not left as a
-  report. Every change to an existing behaviour or number is named in STATUS.md.
+  report. Every change to an existing behaviour or number is named in the call's
+  "as built" entry in DECISIONS.md.
 - **Anything meant to survive is written to disk in the turn it is produced.**
-- **Report by updating STATUS.md** at each stopping point: what was built, what was run
-  and what it showed, what is next, what is not right. Reporting is not stopping.
+- **Report by updating STATUS.md** at each stopping point: what is so now, what was
+  run on which commit and what it showed, what is next, what is not right. It is
+  rewritten, not added to: what is no longer so comes out, and the story of how it
+  got there is the calls in DECISIONS.md. Reporting is not stopping.
 
 ## Running plumbline
 
     cd plumbline
     cargo test --workspace                      # the model, the command line, the window's crate
+    tools/check.sh                              # the whole check before work is accepted: tests one program at a time, every command-line demonstration, gates, licences, the sample house
+    tools/window-run.sh all                     # window demonstrations, one at a time, on a frozen copy, nothing beside them
+    tools/quiet.sh cargo build                  # any cargo command while window runs may be going: it waits for them
     tools/portmap.sh                            # every public item against BIMCraft's source
     tools/licenses.sh                           # every linked crate's licence
     tools/committed.sh                          # the last commit builds and passes from what is in it; before a push
@@ -241,7 +254,7 @@ From the repository root, the three gates that cover the whole tree:
 
     tools/gate-language.sh
     tools/gate-egress.sh
-    tools/gate-clientdata.sh --all              # also a pre-commit hook: git config core.hooksPath .githooks
+    tools/gate-clientdata.sh --all              # the three are the pre-commit hook: git config core.hooksPath .githooks
 
 The window demonstrations run on a virtual display (`xvfb-run`, `xdotool`, Mesa's
 software Vulkan). On that renderer a key or a click that begins and ends inside one slow
@@ -250,30 +263,20 @@ frame can be lost; the scripts hold each one longer than a frame.
 `plumbline/refs/` holds Patrick's brief and the first handoff. It is local-only; if it is
 empty on a clone, the rules above still stand.
 
-## The earlier program, at the repository root
-
-roofnerd is roofing estimating software in a Tauri shell: `src-tauri/core` solves,
-`packages/engine` prices, `packages/app` is the editors. Its own `README.md`,
-`STATUS.md` and `DECISIONS.md` are at the root. Work on it only if Patrick asks. If he
-does, three things there are not obvious: its webview has no `prompt`, `alert` or
-`confirm` (they return nothing and the feature silently does not exist); its runtime
-probes go through the start screen with `openDemoJob(session)` from
-`tools/probe/tauri-harness.mjs` and never call `doc_open`; and its screen vocabulary is
-the list in its `README.md`.
-
-    pnpm install && pnpm test && pnpm gates
-    cargo test --workspace --manifest-path src-tauri/Cargo.toml
-    pnpm build:app && node tools/probe/front-door.mjs && node tools/probe/runtime-check.mjs
-
 ## Who holds what (Patrick asked, 2026-11-17, as the model that built this runs out)
 
 Four seats. One mind does not sit in two of them on the same piece of work.
 
 **Patrick: the owner.** Scope, rulings, the name, real data, and the look. He reads
-the pictures in `demos/captured/` and has all along: when he says he does not see it,
-it is not there, and when a question is his (`plumbline/QUESTIONS.md`) a ruling from
-him is a few words and ends days of a working assumption. Put the question to him
-early and plainly; do not build round it.
+the pictures and has all along: when he says he does not see it, it is not there.
+**What he is shown is the manual** (call 237): one page, `plumbline/manual/`, that
+says how each thing is done in the program with one current picture of it and the
+state of each part, published to him as one artifact at one address. When a thing
+changes, its section and its picture are replaced in place; nothing is added beside
+them, and `demos/captured/` is not kept in the repository (a demonstration writes
+its pictures there for whoever runs it to read). When a question is his
+(`plumbline/QUESTIONS.md`) a ruling from him is a few words and ends days of a
+working assumption. Put the question to him early and plainly; do not build round it.
 
 **The lead: one session at a time, the strongest model on hand.** It holds what
 breaks everything else when it is wrong, and it is never delegated:
@@ -315,16 +318,15 @@ measuring the view's path frame by frame and by strips of pictures across a move
 Patrick asked for this section and named Opus 5.5 as the model that builds next. It is
 how to use the program and how to change it without breaking what it promises.
 
-**Read, in this order, before touching anything.** This file. Then the LAST section
-of `plumbline/STATUS.md`, "Start here": it says where the work stands and what is
+**Read, in this order, before touching anything.** This file. Then
+`plumbline/STATUS.md`, whole: it is short, and says where the work stands and what is
 owed, in order. Then `plumbline/divisions/README.md` and `plumbline/research/README.md`.
-Further back in `plumbline/STATUS.md`: "Self-review, written cold", "Eighteenth judgment: what it
-found" and "The rebuild after call 62" say what is wrong, what an estimator hit, and
-what is half built. Then `plumbline/DECISIONS.md` call 62 (Patrick's words and how
+In `plumbline/STATUS-history.md`: "Self-review, written cold", "Eighteenth judgment: what it
+found" and "The rebuild after call 62" say what was wrong, what an estimator hit, and
+what was half built. Then `plumbline/DECISIONS.md` call 62 (Patrick's words and how
 each clause was read) and `plumbline/QUESTIONS.md` Q22. The two surveys the rebuild
 rests on (what Google Earth, Cesium and building tools do, with numbers; what the
-engine gives, with file and line) are summarised in call 63 of DECISIONS.md when it
-exists; until then STATUS.md says where they are.
+engine gives, with file and line) are summarised in call 63 of DECISIONS.md.
 
 **Use it.**
 
@@ -350,8 +352,12 @@ on the screen, to `$T/map.txt.said`: check what a person was told there
 writes when `PLUMBLINE_MAP` is set (`crates/app/src/map.rs`): **keep every control's
 name when restyling it, or every script that clicks it breaks.** The renderer is
 software and slow (about a frame a second at worst): a click that begins and ends
-inside one frame is lost, so the kit holds each one. F2 saves. Do not run cargo in
-the tree while a timed window demonstration is running; build in a scratch worktree.
+inside one frame is lost, so the kit holds each one. F2 saves. **No build runs on the
+machine while a timed window demonstration is running, in any working copy and at
+any priority**: on 2026-11-26 builds in the idle class beside them cost three
+demonstrations their clicks and a day's window evidence. `tools/window-run.sh` holds
+a lock while it runs and waits for cargo to be gone; every other cargo command goes
+through `tools/quiet.sh`, which waits for the lock.
 
 **Where each thing is changed.**
 
@@ -363,7 +369,16 @@ the tree while a timed window demonstration is running; build in a scratch workt
 | a drawing tool (wall, door, run, move), its fields, what typing does | `crates/app/src/tools.rs`, and the entry state in `crates/app/src/main.rs` |
 | the patterns the house is dressed in (brick, lap siding, shingles) | `crates/app/src/dress.rs`; what finish a priced line names: `crates/world/src/finish.rs` |
 | the sun, the sky's light, how the range of light is folded to the screen | `crates/app/src/scene.rs` (`SKY_LIGHT`, `SUN_LIGHT`, `SUN_COLOUR`, `FOLD`), `crates/app/src/skylight.rs` (the two pictures the sky lights the house from) |
-| what a placed thing is drawn as (a tub, a sink, a water heater: by a word in its name) | `crates/world/src/building/forms.rs` (ten forms are BIMCraft's, three ours); drawn in `scene.rs`; DECISIONS.md call 102 |
+| what a placed thing is drawn as (a tub, a sink, a range, a receptacle: by a word in its name) | `crates/world/src/building/forms.rs` (twenty-seven forms: ten are BIMCraft's, seventeen ours); a shape as rows of a table: `library/shapes.csv`, `crates/world/src/solids.rs`; drawn in `scene.rs`; DECISIONS.md calls 102, 203, 233 |
+| how the view moves (the wheel, a drag, a flight, a double-click, when a label shows) | `crates/app/src/nav.rs`; DECISIONS.md call 218 |
+| the window's place and size, folding panels, lettering size, the recovery copy, what is kept between runs | `crates/app/src/screen.rs`; call 222 |
+| a plan in the second window | `crates/app/src/second.rs`; call 222 part C |
+| the bench (an item looked at alone, its shape, its price) | `crates/app/src/bench.rs`; calls 195, 205 |
+| the frosted panels themselves; the trades drawn in the model | `crates/app/src/glass.rs`; `crates/app/src/trades.rs` |
+| every table of the job in one workbook, out and back | `crates/world/src/database.rs`; call 223 |
+| a price list as rows; a price set by name | `crates/world/src/pricelist.rs`; call 207 |
+| measured marks on a PDF read as quantities | `crates/plans/src/marks.rs`, `crates/world/src/marks.rs`; call 227 |
+| the field's sheet written out and its measurements brought back | `crates/world/src/fieldsheet.rs`; call 234 |
 | which panels are on screen, and their switches at the lower right | `crates/app/src/panels.rs` (`panels_on`, `status_line`); a panel's "more below" strip: `more_below` |
 | a footing (a strip footing is held as a wall is, and is never counted as one) | `crates/world/src/building.rs` (search `Kind::Footing`), `editing.rs` (`footings`); DECISIONS.md call 70 |
 | how a wall's frame is laid out; what a framing line names | `crates/world/src/building/framing.rs`; drawn in `scene.rs` behind the Framing switch; call 71 |
@@ -378,7 +393,7 @@ the tree while a timed window demonstration is running; build in a scratch workt
 
 **Change it the way that has held.** In this order, every time:
 
-1. Write the demonstration first, in STATUS.md, with the figures worked by hand.
+1. Write the demonstration first, in `demos/<name>.md`, with the figures worked by hand.
 2. If the change alters something a person sees or a number, write the decision in
    DECISIONS.md before changing any expectation. A wording question is yours; decide
    it and write it down.
@@ -388,11 +403,11 @@ the tree while a timed window demonstration is running; build in a scratch workt
    "Running plumbline" (`tools/portmap.sh` after any new public item in
    `crates/world/src/building*` or `editing*`: say where in BIMCraft you looked).
 5. Look at every picture yourself, as a person opening it for the first time.
-6. Have an agent that did not build it try to break it, and record what it finds in
-   STATUS.md the turn it arrives. Tell a judge to write its notes as it goes: a usage
+6. Have an agent that did not build it try to break it; its notes are a file in
+   `research/`, written the turn they arrive, and what is decided about them is a call. Tell a judge to write its notes as it goes: a usage
    limit can cut one off mid-run, and the eighteenth was cut off once.
-7. Say in STATUS.md what changed and what is not right. `tools/committed.sh`, then
-   commit and push to the branch.
+7. Say what changed in the call's "as built" entry, and bring STATUS.md to what is so
+   now, with what is not right. `tools/committed.sh`, then commit and push to the branch.
 
 **What the last builder got wrong, so you do not.** Seventeen judgments went to the
 command line and the arithmetic and one, cut short, to the window a person uses. The
@@ -430,21 +445,21 @@ footings, a kind of their own, and foundation walls; the Ground switch; the made
 whole house has one, priced by what is drawn); **framing** (a wall with a framing
 line as its frame; the Framing switch); **waterproofing** (the weather barrier and
 opening flashing with the Finishes switch off); **interior woodwork** (base in each
-room with base priced). `demos/captured/trades/` has a picture of each and STATUS.md
-has a table of what each still lacks: joists and rafters, roof underlayment and roof
-flashing, interior casing and cabinets, pad footings, a tool to draw a footing in the
-window. **The four new layers have one window demonstration** (`demos/tradesw.sh`: the
+room with base priced). The manual has a picture of each. Since then joists and rafters are
+counted and priced (call 165) and cabinets are set by code and by rule (calls 157,
+215); still lacking are roof underlayment and roof flashing, interior casing, pad
+footings, joists and rafters drawn, and a tool to draw a footing in the window. **The four new layers have one window demonstration** (`demos/tradesw.sh`: the
 Ground, Finishes and Framing switches and a level looked into, each measured, and
 the concrete of the foundation wall with the ground away; it does not yet measure
 the flashing, the base or the footing itself), **and
 the twenty-first judgment (2026-11-16) walked them to the end**: its findings and
-where each stands are in STATUS.md. What is owed next is the last section of
-STATUS.md, "Start here": the look and the words were judged on 2026-11-16 and
-failed, and the table of thirteen at the head of STATUS.md says where each item is.
+where each stood are in STATUS-history.md. What is owed next is in STATUS.md: the
+look and the words were last judged on 2026-11-16 and failed, and its table of
+thirteen says where each item is today.
 
 **A tool's sizes accepted, then a length typed** is the path every first wall takes,
 and no demonstration walked it until `planw` was repaired: it found the first digit
-of the length thrown away (STATUS.md, 2026-11-13). When a demonstration is written,
+of the length thrown away (STATUS-history.md, 2026-11-13). When a demonstration is written,
 make it accept what is offered at least once, not only type over it.
 
 **Small things that cost time.** Disk is a fixed allowance: `target/` grows past 12
@@ -453,4 +468,7 @@ frozen copy of the program kept for `PLUMBLINE_BIN` is half a gigabyte: delete t
 old ones (the machine was restarted once at 92 % full). The
 harness refuses `rm -rf` on a shell variable: use the literal path. IfcOpenShell is
 LGPL and is only ever run as an outside checker (`tools/ifc-check.py`), never linked.
-The default branch has none of this; the README's clone line names this branch.
+The default branch `main` has none of this (it holds the earlier program). The same
+commits are pushed to two branches, `claude/hopeful-cannon-kng8eo` and
+`claude/nifty-tesla-qmn44n`; the README's clone line names the second, which is the
+one Patrick was first given.

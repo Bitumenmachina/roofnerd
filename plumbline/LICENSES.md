@@ -6,7 +6,8 @@ No dependency is linked before its license is confirmed.
 ## Linked crates
 
 Everything the workspace links, direct and transitive, with the license each crate
-declares in the registry. Regenerate with `tools/licenses.sh`. It parses each license
+declares in the registry. The table below is written by `tools/licenses.sh --write`
+and the commit hook refuses a commit where it is stale (`--check`). It parses each license
 expression properly (brackets, then AND, then OR) and exits non-zero if any crate can
 only be used by accepting a license outside the permissive list (MIT, MIT-0, Apache-2.0,
 BSD-2/3-Clause, ISC, Zlib, 0BSD, Unicode-3.0, Unicode-DFS-2016, CC0-1.0, BSL-1.0,
@@ -14,13 +15,17 @@ Unlicense; the only exception clause accepted is `WITH LLVM-exception`).
 `tools/licenses.sh --self-test` checks that logic against 24 cases, including
 `GPL-3.0 AND (MIT OR Apache-2.0)`, which has to fail.
 
-The table has 345 rows for 334 crates; 10 are linked in more than one version
-(`foldhash`, `hashbrown`, `itertools`, `linux-raw-sys`, `miniz_oxide`, `rustc-hash`, `rustix`, `syn`, `thiserror`, `thiserror-impl`).
+<!-- written by tools/licenses.sh --write; not edited by hand -->
+The table has 438 rows for 421 crates; 15 are linked in more than one version (`constant_time_eq`, `fearless_simd`, `foldhash`, `hashbrown`, `itertools`, `linux-raw-sys`, `miniz_oxide`, `read-fonts`, `rstar`, `rustc-hash`, `rustix`, `skrifa`, `syn`, `thiserror`, `thiserror-impl`).
 
-Direct dependencies: `bevy_ecs` 0.20.1, `serde` 1 and `serde_json` 1 in the world crate, and
-`bevy` 0.20.1 in the application crate (with audio, gamepad and Wayland support left off).
-The rest come in through those. The world crate and the command line still link only the
-first three and what they bring; the engine is linked by the 3D application alone.
+Direct dependencies, by crate of this workspace (the rest come in through these):
+
+- `plumbline-app`: `bevy` =0.20.1
+- `plumbline-ifc`: `serde_json` 1, `zip` 9.0
+- `plumbline-plans`: `e57` 0.11, `hayro-cmap` 0.1.1, `hayro` 0.9.0, `image` 0.25, `laz` 0.14, `tiff` 0.11
+- `plumbline-roofing`: `cavalier_contours` 0.4.0, `geo` 0.29.3, `serde_json` 1, `serde` 1
+- `plumbline-sheets`: `calamine` 0.38.0, `csv` 1.4.0, `rust_xlsxwriter` 0.102.0
+- `plumbline-world`: `bevy_ecs` 0.20.1, `flate2` 1.1, `parry3d-f64` 0.31.1, `serde_json` 1, `serde` 1
 
 | Crate | Version | License |
 |---|---|---|
@@ -128,6 +133,7 @@ first three and what they bring; the engine is linked by the 3D application alon
 | byteorder | 1.5.0 | Unlicense OR MIT |
 | calamine | 0.38.0 | MIT |
 | calloop | 0.13.0 | MIT |
+| cavalier_contours | 0.4.0 | MIT OR Apache-2.0 |
 | cc | 1.11.1 | MIT OR Apache-2.0 |
 | cfg-if | 1.0.5 | MIT OR Apache-2.0 |
 | cfg_aliases | 0.2.2 | MIT |
@@ -147,6 +153,8 @@ first three and what they bring; the engine is linked by the 3D application alon
 | cpufeatures | 0.3.1 | MIT OR Apache-2.0 |
 | crc32fast | 1.5.5 | MIT OR Apache-2.0 |
 | crossbeam-channel | 0.5.17 | MIT OR Apache-2.0 |
+| crossbeam-deque | 0.8.8 | MIT OR Apache-2.0 |
+| crossbeam-epoch | 0.9.21 | MIT OR Apache-2.0 |
 | crossbeam-queue | 0.3.14 | MIT OR Apache-2.0 |
 | crossbeam-utils | 0.8.23 | MIT OR Apache-2.0 |
 | csv-core | 0.1.13 | Unlicense/MIT |
@@ -162,6 +170,8 @@ first three and what they bring; the engine is linked by the 3D application alon
 | document-features | 0.2.12 | MIT OR Apache-2.0 |
 | downcast-rs | 2.0.2 | MIT OR Apache-2.0 |
 | dpi | 0.1.2 | Apache-2.0 AND MIT |
+| e57 | 0.11.14 | MIT |
+| earcutr | 0.4.3 | ISC |
 | either | 1.19.0 | MIT OR Apache-2.0 |
 | ena | 0.14.4 | MIT OR Apache-2.0 |
 | encase_derive_impl | 0.12.1 | MIT-0 |
@@ -175,12 +185,14 @@ first three and what they bring; the engine is linked by the 3D application alon
 | event-listener | 5.4.2 | Apache-2.0 OR MIT |
 | fast-float2 | 0.2.4 | MIT OR Apache-2.0 |
 | fastrand | 2.5.0 | Apache-2.0 OR MIT |
+| fax | 0.2.7 | MIT |
 | fdeflate | 0.3.7 | MIT OR Apache-2.0 |
 | fearless_simd | 0.7.0 | Apache-2.0 OR MIT |
 | fearless_simd | 1.2.0 | Apache-2.0 OR MIT |
 | find-msvc-tools | 0.1.15 | MIT OR Apache-2.0 |
 | fixedbitset | 0.5.9 | MIT OR Apache-2.0 |
 | flate2 | 1.1.11 | MIT OR Apache-2.0 |
+| float_next_after | 1.0.0 | MIT |
 | fnv | 1.0.7 | Apache-2.0 / MIT |
 | foldhash | 0.1.5 | Zlib |
 | foldhash | 0.2.0 | Zlib |
@@ -193,6 +205,9 @@ first three and what they bring; the engine is linked by the 3D application alon
 | futures-macro | 0.3.34 | MIT OR Apache-2.0 |
 | futures-task | 0.3.34 | MIT OR Apache-2.0 |
 | futures-util | 0.3.34 | MIT OR Apache-2.0 |
+| geo-types | 0.7.20 | MIT OR Apache-2.0 |
+| geographiclib-rs | 0.2.7 | MIT |
+| geo | 0.29.3 | MIT OR Apache-2.0 |
 | gethostname | 1.1.0 | Apache-2.0 |
 | getrandom | 0.4.3 | MIT OR Apache-2.0 |
 | glamx | 0.3.1 | MIT OR Apache-2.0 |
@@ -217,6 +232,11 @@ first three and what they bring; the engine is linked by the 3D application alon
 | hayro | 0.9.0 | Apache-2.0 OR MIT |
 | heapless | 0.8.0 | MIT OR Apache-2.0 |
 | hexasphere | 19.0.0 | MIT OR Apache-2.0 |
+| i_float | 1.6.0 | MIT |
+| i_key_sort | 0.2.0 | MIT |
+| i_overlay | 1.9.4 | MIT |
+| i_shape | 1.6.0 | MIT |
+| i_tree | 0.8.3 | MIT |
 | icu_collections | 2.4.0 | Unicode-3.0 |
 | icu_locale_core | 2.4.0 | Unicode-3.0 |
 | icu_locale_fallback_data | 2.4.0 | Unicode-3.0 |
@@ -232,6 +252,7 @@ first three and what they bring; the engine is linked by the 3D application alon
 | indexmap | 2.14.2 | Apache-2.0 OR MIT |
 | inventory | 0.3.25 | MIT OR Apache-2.0 |
 | is_terminal_polyfill | 1.70.2 | MIT OR Apache-2.0 |
+| itertools | 0.11.0 | MIT OR Apache-2.0 |
 | itertools | 0.14.0 | MIT OR Apache-2.0 |
 | itertools | 0.15.0 | MIT OR Apache-2.0 |
 | itoa | 1.0.19 | MIT OR Apache-2.0 |
@@ -239,6 +260,7 @@ first three and what they bring; the engine is linked by the 3D application alon
 | kurbo | 0.13.1 | Apache-2.0 OR MIT |
 | lalrpop-util | 0.23.2 | Apache-2.0 OR MIT |
 | lazy_static | 1.5.1 | MIT OR Apache-2.0 |
+| laz | 0.14.0 | Apache-2.0 |
 | lexical-core | 1.0.6 | MIT/Apache-2.0 |
 | lexical-parse-float | 1.0.6 | MIT/Apache-2.0 |
 | lexical-parse-integer | 1.0.6 | MIT/Apache-2.0 |
@@ -304,6 +326,7 @@ first three and what they bring; the engine is linked by the 3D application alon
 | proc-macro2 | 1.0.107 | MIT OR Apache-2.0 |
 | profiling | 1.0.18 | MIT OR Apache-2.0 |
 | pxfm | 0.1.30 | BSD-3-Clause OR Apache-2.0 |
+| quick-error | 2.0.1 | MIT/Apache-2.0 |
 | quick-xml | 0.42.0 | MIT |
 | quote | 1.0.47 | MIT OR Apache-2.0 |
 | radium | 0.7.0 | MIT |
@@ -312,14 +335,20 @@ first three and what they bring; the engine is linked by the 3D application alon
 | rand_distr | 0.6.0 | MIT OR Apache-2.0 |
 | rand | 0.10.3 | MIT OR Apache-2.0 |
 | raw-window-handle | 0.6.2 | MIT OR Apache-2.0 OR Zlib |
+| rayon-core | 1.13.0 | MIT OR Apache-2.0 |
+| rayon | 1.12.0 | MIT OR Apache-2.0 |
 | read-fonts | 0.41.0 | MIT OR Apache-2.0 |
 | read-fonts | 0.46.0 | MIT OR Apache-2.0 |
 | rectangle-pack | 0.4.2 | MIT/Apache-2.0 |
 | regex-automata | 0.4.18 | MIT OR Apache-2.0 |
 | regex-syntax | 0.8.11 | MIT OR Apache-2.0 |
 | renderdoc-sys | 1.1.0 | MIT OR Apache-2.0 |
+| robust | 1.2.0 | MIT OR Apache-2.0 |
 | ron | 0.12.3 | MIT OR Apache-2.0 |
+| roxmltree | 0.21.2 | MIT OR Apache-2.0 |
+| rstar | 0.12.2 | MIT OR Apache-2.0 |
 | rstar | 0.13.1 | MIT OR Apache-2.0 |
+| rust_xlsxwriter | 0.102.0 | MIT OR Apache-2.0 |
 | rustc-hash | 1.1.0 | Apache-2.0/MIT |
 | rustc-hash | 2.1.3 | Apache-2.0 OR MIT |
 | rustc_version | 0.4.1 | MIT OR Apache-2.0 |
@@ -348,10 +377,12 @@ first three and what they bring; the engine is linked by the 3D application alon
 | slotmap | 1.1.1 | Zlib |
 | smallvec | 1.16.5 | MIT OR Apache-2.0 |
 | smol_str | 0.2.2 | MIT OR Apache-2.0 |
+| spade | 2.15.1 | MIT OR Apache-2.0 |
 | spin | 0.12.3 | MIT |
 | spirv | 0.4.0+sdk-1.4.341.0 | Apache-2.0 |
 | stable_deref_trait | 1.2.1 | MIT OR Apache-2.0 |
 | stackfuture | 0.3.1 | MIT |
+| static_aabb2d_index | 2.1.0 | MIT OR Apache-2.0 |
 | static_assertions | 1.1.0 | MIT OR Apache-2.0 |
 | swash | 0.2.10 | Apache-2.0 OR MIT |
 | synstructure | 0.14.0 | MIT |
@@ -365,6 +396,7 @@ first three and what they bring; the engine is linked by the 3D application alon
 | thiserror | 1.0.69 | MIT OR Apache-2.0 |
 | thiserror | 2.0.21 | MIT OR Apache-2.0 |
 | thread_local | 1.1.10 | MIT OR Apache-2.0 |
+| tiff | 0.11.3 | MIT |
 | tinystr | 0.8.5 | Unicode-3.0 |
 | toml_datetime | 1.1.3+spec-1.1.0 | MIT OR Apache-2.0 |
 | toml_edit | 0.25.19+spec-1.1.0 | MIT OR Apache-2.0 |
@@ -394,6 +426,7 @@ first three and what they bring; the engine is linked by the 3D application alon
 | vello_cpu | 0.3.0 | Apache-2.0 OR MIT |
 | version_check | 0.9.5 | MIT/Apache-2.0 |
 | weak-table | 0.4.0 | MIT |
+| weezl | 0.1.12 | MIT OR Apache-2.0 |
 | wesl-core | 0.1.0 | MIT OR Apache-2.0 |
 | wesl-macros | 0.6.0 | MIT OR Apache-2.0 |
 | wesl | 0.6.0 | MIT OR Apache-2.0 |
@@ -434,6 +467,7 @@ first three and what they bring; the engine is linked by the 3D application alon
 | zopfli | 0.8.4 | Apache-2.0 |
 | zune-core | 0.5.3 | MIT OR Apache-2.0 OR Zlib |
 | zune-jpeg | 0.5.15 | MIT OR Apache-2.0 OR Zlib |
+<!-- end of what tools/licenses.sh writes -->
 
 ## Candidates checked and not linked
 

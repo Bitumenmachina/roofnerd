@@ -407,7 +407,7 @@ fn dimension(drawing: &Drawing, what: &str) -> String {
 fn the_core_and_the_engine_stack_a_roof_in_the_same_order() {
     let source = std::fs::read_to_string(
         std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("../../../packages/engine/src/model.ts"),
+            .join("tests/engine/model.ts"),
     )
     .expect("the engine's layer order is in the repository");
 

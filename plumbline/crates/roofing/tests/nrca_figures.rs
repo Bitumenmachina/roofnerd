@@ -355,7 +355,7 @@ fn a_slanted_pair_of_drains_does_not_give_one_ridge_thickness_and_says_so() {
 #[test]
 fn the_core_and_the_engine_state_the_same_conventions() {
     let source = std::fs::read_to_string(
-        std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../packages/engine/src/roof.ts"),
+        std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/engine/roof.ts"),
     )
     .expect("the engine's conventions are in the repository");
 

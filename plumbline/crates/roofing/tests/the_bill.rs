@@ -535,7 +535,7 @@ fn the_typed_profile_set_picks_the_other_chart_or_says_it_did_not() {
 fn the_core_and_the_engine_state_the_same_sump_rule() {
     let source = std::fs::read_to_string(
         std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("../../../packages/engine/src/roof.ts"),
+            .join("tests/engine/roof.ts"),
     )
     .expect("the engine's conventions are in the repository");
     let line = source
