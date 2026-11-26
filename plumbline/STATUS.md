@@ -11651,7 +11651,21 @@ inserted twice. By hand:
 9. A drawing with things the reader cannot carry (a hatch, an image, a 3D
    solid): each is counted in the reply as not brought in, by kind.
 
-Not built yet.
+**Built (2026-11-26).** Accepted by the lead's own run in the worker's copy: 1,148
+tests in the six command-line crates (672, 50, 6, 111, 122, 187), 59 command-line
+demonstrations, no output with FAIL in it, the gates, portmap and licences; the
+sample whole house unchanged to the byte.
+- Step 1 as written: the sheet covers 20' 0" by 12' 0" with nothing to
+  calibrate; a wall traced along its bottom line is 20.00 LF.
+- Step 2 reads "holds 8 lines, 1 circle": 4 on WALLS, 4 lines and the circle on
+  FURNITURE, the word KITCHEN on NOTES, the block set twice.
+- Step 5: on a house drawn with one line a wall the finder offers no wall and
+  says why (a thickness cannot be read from one line).
+- Step 7, the lead's figures corrected: 10 long lines on A-WALL (a door cuts
+  both faces of its wall); the room's text is 224.25 SF, as `takeoff` gives it;
+  the outer faces span 20 ft 6 in by 12 ft 6 in. Read back, the finder gives 4
+  walls 20 ft by 12 ft on their centers, 6 in thick, and the 3 ft door.
+- Not right: a circle's center is not caught; the window has no entry for it.
 
 ## Any screen, and work never lost: a demonstration, written before it is built (call 222, part A; 2026-11-25)
 

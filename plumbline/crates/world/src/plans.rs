@@ -60,6 +60,10 @@ pub struct Drawing {
     /// still where that scale put it.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub earlier: Vec<Earlier>,
+    /// The layers of a CAD drawing (DXF) switched off on this sheet, by their own names (call 221). Empty for a
+    /// PDF or a picture, and for a CAD drawing with every layer on; a job saved before this was kept reads as it did.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub layers_off: Vec<String>,
 }
 
 /// A place on a drawing's page and the place on the plan, in feet, it was said to be.
@@ -131,6 +135,9 @@ impl Drawing {
             return Some(format!("1\" = {}", units::feet_as_ft_in(1.0 / paper, 8)));
         }
         let [w, h] = self.size;
+        if self.file.value.as_deref().is_some_and(|f| f.to_ascii_lowercase().ends_with(".dxf")) {
+            return Some(format!("a CAD drawing at true size, covering {} x {}", units::feet_as_ft_in(w * k, 1), units::feet_as_ft_in(h * k, 1)));
+        }
         Some(format!("sheet covers {} x {}", units::feet_as_ft_in(w * k, 1), units::feet_as_ft_in(h * k, 1)))
     }
     /// A caution when the scale is not one drawings are made at (call 186): the architect's and the engineer's scales
@@ -276,6 +283,9 @@ pub fn check(path: &str, kind: Kind, d: &Drawing) -> Result<(), String> {
             return Err(format!("{path} scale distance: is more than nothing"));
         }
     }
+    if d.layers_off.iter().any(|l| l.trim().is_empty() || l.chars().any(char::is_control)) {
+        return Err(format!("{path}: a layer is switched off by a name that is not usable"));
+    }
     if let Some(l) = &d.lined_up {
         if !l.page.iter().chain(&l.plan).all(|x| x.is_finite() && x.abs() <= crate::check::MAX_COORDINATE_FT * 1.0e3) {
             return Err(format!("{path}: what it was lined up by is not two usable points"));
@@ -356,11 +366,42 @@ pub fn add(job: &mut Job, storey: &str, name: &str, read: Read, how: Entered) ->
             at: Val { value: Some([0.0, 0.0]), unit: units::FT.into(), status: Status::Assumed, source: "its lower-left corner put at the plan's corner; not yet lined up with anything".into() },
             lined_up: None,
             earlier: Vec::new(),
+            layers_off: Vec::new(),
         };
         let path = job.add(storey, Kind::Drawing, name)?;
         check(&path, Kind::Drawing, &drawing)?;
         job.put(&path, drawing)?;
         Ok(path)
+    })
+}
+
+/// Switch a layer of a CAD drawing on or off on its sheet (call 221). The layer is named as the file names it
+/// (capitals and all); the caller says which layers the file has. Returns the layers that are off after.
+pub fn switch_layer(job: &mut Job, drawing: &str, layer: &str, on: bool) -> Result<Vec<String>, String> {
+    all_or_nothing(job, |job| {
+        let mut d = drawing_of(job, drawing)?;
+        d.layers_off.retain(|l| l != layer);
+        if !on {
+            d.layers_off.push(layer.to_string());
+        }
+        d.layers_off.sort();
+        let off = d.layers_off.clone();
+        check(drawing, Kind::Drawing, &d)?;
+        job.put(drawing, d)?;
+        Ok(off)
+    })
+}
+
+/// Set the layers off on a CAD drawing's sheet, all at once.
+pub fn set_layers_off(job: &mut Job, drawing: &str, off: &[String]) -> Result<(), String> {
+    all_or_nothing(job, |job| {
+        let mut d = drawing_of(job, drawing)?;
+        d.layers_off = off.to_vec();
+        d.layers_off.sort();
+        d.layers_off.dedup();
+        check(drawing, Kind::Drawing, &d)?;
+        job.put(drawing, d)?;
+        Ok(())
     })
 }
 
