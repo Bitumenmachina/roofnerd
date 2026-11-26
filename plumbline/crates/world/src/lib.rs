@@ -23,6 +23,7 @@ pub mod building;
 pub mod carries;
 pub mod check;
 pub mod components;
+pub mod database;
 pub mod derive;
 pub mod editing;
 pub mod entered;

@@ -11956,7 +11956,18 @@ suppliers, and one shape and one item of the job's own.
 7. The starter database in one bringing-in gives the same job as the starter
    tables brought in one by one, byte for byte.
 
-Not built yet.
+**Built (2026-11-26; the worker's, checked by the lead's own run of its copy:
+1,191 command-line tests, 61 command-line demonstrations with no FAIL in any, the
+three gates, the port map, the licences, the sample whole house byte for byte).**
+`demos/database.sh` passes its seven steps. The counts on the day: the starter
+tables are 48 items, 13 shapes in 49 rows, 5 rows of where items connect, 42
+assemblies in 202 lines; with the made-up job's own shape and item and its eight
+price rows, the workbook's tabs are Shapes 50, Items 49, Connections 5, Assemblies
+202, Prices 8. A workbook is compared cell for cell (two writings of the same job
+differ only in the time the file says it was made); a folder byte for byte. Not
+right: the reply says the same line about how cells are shown once for every tab;
+a tab added by hand is named in small letters whatever was typed; the window has
+no entry for it yet (DECISIONS.md "Call 223, as built").
 
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 

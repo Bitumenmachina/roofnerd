@@ -9809,3 +9809,41 @@ whole house byte for byte.
 7. Nothing was ported from BIMCraft (the port map says where it was looked for);
    no public item changed its shape.
 
+### Call 223, as built: the database written out as one workbook and brought back whole (2026-11-26)
+
+The worker's work under contract 223M (`research/worker-report-call223M.md`),
+checked by the lead's own run of its copy (1,191 command-line tests: model 700,
+command line 64, sheets 7, model files 111, roofing 122, plans 187; 61
+command-line demonstrations; gates, port map, licences; the sample whole house
+byte for byte) and by the lead reading the reply of a database written out and
+brought into an empty job.
+
+1. **`export database <job> <file.xlsx | folder>`**: five tabs, or five files:
+   Shapes, Items, Connections, Assemblies, Prices. Each is exactly what the
+   table's own verb writes: the same headings, order and cells. No table's own
+   writing-out changed.
+2. **`import database <job> <file.xlsx | folder | starter>`**: each tab by its
+   own reader, in the order the tables lean on one another (shapes, items,
+   connections, assemblies, prices) wherever the tabs lie in the file; **all of
+   it or none of it**, on the model's own all-or-nothing; every refusal named by
+   tab, row and the table's own reason, all of them together. A tab or a column
+   the program does not know is named and left alone. A database with some tabs
+   missing comes in and names the tabs it did not have; the job's own tables
+   for those are left as they are.
+3. **Out, in to an empty job, and out again**: the same workbook cell for cell,
+   the same folder byte for byte. A workbook is not compared by its bytes: two
+   writings of one job differ in the time the file says it was made, and that
+   time is left true.
+4. **Prices come in adding what they name**: a material only the price list
+   knows is made again, or a database could not be brought into an empty job.
+5. **The starter database** is the starter shapes, items, connections and
+   assemblies in one bringing-in, the same job byte for byte as the three one
+   by one. There is no starter price list (prices are a supplier's, never ours).
+6. **Rulings of the lead's**: prior estimates are not a tab (they are jobs, not
+   tables); **the cabinet rules of call 215 join the workbook as a tab when they
+   are built**; the count "set" stays a count of things (items, assemblies), as
+   each single verb counts.
+7. **Owed, small**: the line about how cells are shown is said once for the
+   workbook and not once a tab; a tab added by hand is named as it was typed;
+   the window's entry under Bring in and Write out ("My database").
+

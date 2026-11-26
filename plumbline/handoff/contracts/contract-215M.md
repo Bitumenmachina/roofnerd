@@ -38,6 +38,18 @@ Tests FIRST, run red, quoted. `demos/cabinet-rules.sh` (new) to the eight steps 
 STATUS.md, every step ending the script when the program does not say what the
 step expects; its row in `README.md`; `SPEC.md` for the one new key.
 
+## Added 2026-11-26 (call 223, as built, point 6)
+The table of cabinet rules joins the database: `export database` writes it as a
+tab (and a file in the folder) named for what a cabinet maker would call it, and
+`import database` brings it back with the rest, all or none, in its place in the
+order (after Items, which it names). `crates/world/src/database.rs` is yours to
+touch for that; `demos/database.sh` is NOT edited (its counts are of the five
+tabs it names: if a sixth tab moves one of its checks, hand that back with what
+was seen). Your own demonstration shows the tab written out and brought back.
+
+Sharing the machine (this replaces the cargo line below): every cargo command and
+every demonstration runs as `chrt -i 0 nice -n 19 ...`, and no lock is waited on.
+
 ## Rules
 - Files you may touch: `crates/world/src/` and `crates/world/tests/`,
   `crates/cli/src/`, `library/cabinet-rules.csv`, `demos/cabinet-rules.sh`,
