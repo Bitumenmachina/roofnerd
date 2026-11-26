@@ -9847,3 +9847,78 @@ brought into an empty job.
    workbook and not once a tab; a tab added by hand is named as it was typed;
    the window's entry under Bring in and Write out ("My database").
 
+### Call 225. What the cabinet rules move, ruled before any expectation moves (2026-11-26; the lead's)
+
+The worker of contract 215M handed back with nine expectations that fail by the
+design of calls 215 and 223 and edited none. Each is ruled here, with the reason
+that goes beside it in the file.
+
+1. **"B99" was the tests' word for a box the chest does not have. Under call 215
+   (point 3) a base of any width is made by the rule for B, so B99 is now a
+   box.** Where an expectation means "a code nothing reads" it moves to **Q99**
+   (no rule reads Q) and to the sentence the program now gives for it; nothing
+   else in those tests moves. The places: `crates/world/tests/world.rs` (the
+   run of boxes worked by hand, the B99 refusal), `demos/cabinets.sh` (its B99
+   line), and `demos/cabinetsw.sh` (its B99 line: moved by the lead when the
+   window is next built on the model, and run then).
+2. **The database has six tabs once cabinet rules exist** (call 223 as built,
+   point 6, said so before it was built): Shapes, Items, **Cabinet codes**,
+   Connections, Assemblies, Prices. The expectations that count five in
+   `crates/world/tests/call223m.rs`, `crates/cli/tests/call223m.rs` and
+   `demos/database.sh` move to six, with "Cabinet codes 8" (the eight rules the
+   made-up job carries when its rules are written out) where the list of tabs is
+   said. No other figure of those files moves.
+   **Added the same day, after the worker stopped on three tests as told:** the
+   same move covers, in the same files, the places that find a table by where
+   its tab lies (the cabinet codes lie third, so connections, assemblies and
+   prices are fourth, fifth and sixth), the list of the tabs' row counts (50,
+   49, **8**, 5, 202, 8), "(a folder, **6** files)", and the test's own list of
+   tables, which gains the cabinet rules as a verb and its file's name. No
+   count of any other table moves.
+3. **No box is made wider than 96 in** (a sheet's length; nobody builds one box
+   longer than the sheet it is cut from): a code that reads wider is refused,
+   saying what it read and the limit, in inches. Below that a width the rule
+   does not list is made and flagged, as call 215 has it.
+4. **The tab and the file are "Cabinet codes"** (the worker's word, kept: a
+   cabinet maker calls B36 a code).
+5. **Left as they are, and owed**: a height the rule does not stock is not
+   flagged (only widths are); a rule of the job's own cannot yet be taken away
+   (the program's own eight can be changed and changed back, never removed);
+   **the window does not yet say that a box was made by a rule**: until it does
+   a box made that way in the window arrives without a word, which is against
+   "nothing silently", so the window's next job on cabinets shows the model's
+   own "was made by the rule for" lines, and the window is not built on the
+   model past this call without it being said in STATUS.md.
+6. **The starter database has no Cabinet codes tab** (the worker's decision,
+   kept): the program's own rules are always in force, and a starter bring-in
+   must not write over rules a job has changed.
+
+### Call 226. Loose ends at the command line: a try made quick, lengths said as a builder says them, the database's reply, a cabinet rule taken away, heights flagged (2026-11-26; the lead's design, not built)
+
+What calls 219, 223 and 215 left owed, in one job (`handoff/contracts/contract-226M.md`).
+
+1. **A try is quick enough to be made at every rest of the pointer.** Measured in
+   the build a person is given (not the build the tests use), on the sample
+   whole house. Over a tenth of a second there, the job is put back without
+   writing and reading its whole text (the worker says how: from the undo list,
+   or by taking back only what the change made), and the three proofs stay: the
+   saved text byte for byte, the next name the job would give, the undo list.
+   The figure before and after is written down either way.
+2. **A length in a sentence is said as a builder says it**: "10 ft", "7 ft 6 in",
+   "14 in by 8 in"; never "10.00 ft" or "14.00 in". This is the rule of call 211
+   for refusals, carried to every sentence the command line gives. **A quantity
+   on a line of the estimate or a list is not a sentence**: "160.00 SF" and "210
+   LF" stay as the estimate writes them. The expectations that hold the old
+   writing of a length in a sentence move with it, and only by that writing;
+   each is listed in the worker's report.
+3. **The database's reply**: the line about how cells are shown is said once
+   for a workbook; a tab the program does not know is named as it was typed.
+4. **A cabinet rule can be taken away.** A rule of the job's own goes; one of
+   the program's own eight that the job had changed goes back to the program's
+   own; one the job does not carry is said to be the program's own and is left.
+   Boxes already made by a rule stay in the chest and still say what made them.
+5. **A height the rule does not stock is flagged**, as a width is: the table
+   gains "Stocked heights" (a table without the column reads as before, and
+   flags no height). The starter rows take the heights the chest already has.
+6. Nothing of the sample whole house moves.
+

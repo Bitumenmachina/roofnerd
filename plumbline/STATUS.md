@@ -11528,9 +11528,24 @@ the command line the stopped bench step (call 214) taken up again.
   it passed, its load-sensitive figure the same as alone (87 dots against 15).
   So builders and workers run every cargo command in the idle class and no
   longer stop for a timed window run; only two window sessions never run at
-  once (`window-run.lock`). `navw` is being run the same way; if a
-  demonstration fails beside a build it is run alone before it is believed, and
-  this note is put right.
+  once (`window-run.lock`). **Put right the same day:** `navw` did not hold.
+  Run twice on the frozen build of 2e6f63a with idle-class work beside it (once
+  with a whole build going round and round, once with only the workers' own
+  builds), its sessions a to e passed and **session f ran out of its ten
+  minutes both times**, every step done up to its second dive and no figure
+  wrong: the idle class keeps a build from costing a click, and it still slows
+  the software renderer. `navw`'s session f was the longest of any
+  demonstration; it is cut in two (f: the north arrow; h: the two dives; no
+  step and no check changed) and run again. A demonstration that fails for time
+  beside a build is not believed until it has run with nothing beside it.
+- **Window demonstrations on the frozen build of 2e6f63a, the lead's own runs,
+  as they end** (the commits since touch no window code): `fixes209w` PASS
+  (with six builds beside it), `fixes197w` PASS (first run; its pictures read).
+  `navw`: failed twice for time as said above, to be run again cut in two.
+  Still to run on it: `itemlibw`, `itemneww`, `cabinetsw`, `gablew`,
+  `gableendw`, `tradesw`, `screensw`, `bringw`, `movew`. The builder's own runs
+  before the merge: `screensw` (seven sessions), `glassw`, `moneyw`, `benchw`,
+  `pricew`. `tools/committed.sh` has not been run on 2e6f63a or later.
 
 ## How the window moves: a demonstration, written before it is built (call 218; 2026-11-25)
 
@@ -11968,6 +11983,38 @@ differ only in the time the file says it was made); a folder byte for byte. Not
 right: the reply says the same line about how cells are shown once for every tab;
 a tab added by hand is named in small letters whatever was typed; the window has
 no entry for it yet (DECISIONS.md "Call 223, as built").
+
+## Loose ends at the command line: a demonstration, written before it is built (call 226; 2026-11-26)
+
+`demos/loose-ends.sh` (contract `handoff/contracts/contract-226M.md`). Every figure
+is made up.
+
+1. **Lengths in sentences.** On the job of `demos/tools-feel.sh` (walls on a 20
+   ft by 12 ft line): a wall tried from (0, 0) to (10, 0), over the south wall,
+   is refused saying it lies along that wall for **10 ft** (the sentence has no
+   "10.00"); a duct 14 in by 8 in tried through two walls says **14 in by 8
+   in** for each hole. `plumbline takeoff` on the same job still writes its
+   quantities as it did (the script holds its text to what it was before).
+2. **What a try costs**, on the sample whole house, in the build a person is
+   given: a partition tried five times, the least of the five printed. It is
+   under a tenth of a second, or the script says the figure and stops. After the
+   five tries the job's text, the next name and the undo list are what they
+   were.
+3. **The database's reply.** The workbook of `demos/database.sh` with a tab
+   "Notes" added by hand, brought into an empty job: the line about how cells
+   are shown is in the reply **once**; the tab is named **"Notes"**.
+4. **A rule taken away.** A rule X brought in (reads the width; 24 in deep, 30
+   in high; a base). X30 asked for: made, 30 by 24 by 30. The rule taken away:
+   X33 is refused (no rule reads X); X30 is still in the chest and still says
+   the rule for X made it. B changed to 21 in deep and then taken away: B45 is
+   made **24** in deep. A rule the job does not carry, taken away: the reply
+   says it is the program's own and nothing changes.
+5. **Heights.** W3342 asked for: made 33 by 12 by 42 and flagged twice, 33 in
+   not a stocked width and 42 in not a stocked height (the chest's wall boxes
+   are 30, 18 and 12 high). W3030: no flag.
+6. `plumbline sixteen` writes the job it wrote, byte for byte.
+
+Not built yet.
 
 ## Start here (written 2026-11-17, late; this is the last section, and the one CLAUDE.md sends you to)
 
