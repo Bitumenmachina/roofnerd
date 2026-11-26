@@ -22,6 +22,7 @@
 
 use bevy::prelude::*;
 use bevy::ui::{ComputedUiTargetCamera, UiGlobalTransform};
+use bevy::camera::RenderTarget;
 use bevy::window::PrimaryWindow;
 
 use plumbline_world::building::Shape;
@@ -38,6 +39,10 @@ pub fn write(
     cameras: Option<Res<Cameras>>,
     named: Query<(&Named, &ComputedNode, &UiGlobalTransform, &ComputedUiTargetCamera, &InheritedVisibility, Option<&CalculatedClip>)>,
     windows: Query<(&Window, Has<PrimaryWindow>)>,
+    ui: Res<UiScale>,
+    kept: Res<crate::screen::Kept>,
+    glass_pictures: Query<&RenderTarget, With<crate::glass::Behind>>,
+    images: Res<Assets<Image>>,
     camera: Query<(&Camera, &GlobalTransform, &Projection), With<MainCamera>>,
     texts: Query<(&Text, &ComputedNode, &UiGlobalTransform, &ComputedUiTargetCamera, &InheritedVisibility, Option<&CalculatedClip>)>,
     mut last: Local<String>,
@@ -72,7 +77,9 @@ pub fn write(
             sheet = (at, Vec2::new(window.width(), window.height()));
         }
     }
-    let mut found: Vec<(&str, String, f32, f32)> = Vec::new();
+    // The panels are drawn in units the lettering's step scales: a place on the screen is those units times the scale.
+    let s = ui.0.max(0.1);
+    let mut found: Vec<(&str, String, f32, f32, f32, f32)> = Vec::new();
     let mut away: Vec<(String, &str)> = Vec::new();
     for (name, node, place, target, visible, clip) in &named {
         if !visible.get() || node.size.x <= 0.0 {
@@ -94,18 +101,19 @@ pub fn write(
             }
             continue;
         }
-        let at = place.translation * node.inverse_scale_factor;
+        let in_units = place.translation * node.inverse_scale_factor;
+        let at = in_units * s;
         let on_model = target.get() == Some(cameras.ui);
         // What has scrolled off its panel is not on screen.
-        if name.scrolls && on_model && (at.y < TOP_H + 2.0 * crate::theme::GAP || at.y > model.1.y - STATUS_H - 2.0 * crate::theme::GAP) {
+        if name.scrolls && on_model && (in_units.y < TOP_H + 2.0 * crate::theme::GAP || in_units.y > model.1.y / s - STATUS_H - 2.0 * crate::theme::GAP) {
             continue;
         }
         // The sheet's tables scroll under its heading and its tabs, over its foot.
-        if name.scrolls && !on_model && (at.y < crate::sheet::HEAD_H || at.y > sheet.1.y - crate::sheet::FOOT_H) {
+        if name.scrolls && !on_model && (in_units.y < crate::sheet::HEAD_H || in_units.y > sheet.1.y / s - crate::sheet::FOOT_H) {
             continue;
         }
         let (window, corner) = if on_model { ("model", model.0) } else { ("sheet", sheet.0) };
-        found.push((window, name.name.clone(), at.x + corner.x as f32, at.y + corner.y as f32));
+        found.push((window, name.name.clone(), at.x + corner.x as f32, at.y + corner.y as f32, node.size.x * node.inverse_scale_factor * s, node.size.y * node.inverse_scale_factor * s));
     }
     // The words on both windows that are in sight, as they read: `text<TAB>model or sheet<TAB>the words<TAB>x<TAB>y`. A demonstration that counts what a
     // panel says (a word that stood twice, a line that is there) reads these.
@@ -118,7 +126,7 @@ pub fn write(
             continue;
         }
         let on_model = target.get() == Some(cameras.ui);
-        let at = place.translation * node.inverse_scale_factor;
+        let at = place.translation * node.inverse_scale_factor * s;
         let corner = if on_model { model.0 } else { sheet.0 };
         words.push((if on_model { "model" } else { "sheet" }, words_of.0.replace(['\t', '\n'], " "), at.x + corner.x as f32, at.y + corner.y as f32));
     }
@@ -132,7 +140,7 @@ pub fn write(
     let mut boxes = String::new();
     for (name, node, place, target, visible, _) in &named {
         if visible.get() && node.size.x > 0.0 && name.name.ends_with(" card") && target.get() == Some(cameras.ui) {
-            let (c, half) = (place.translation * node.inverse_scale_factor, node.size * node.inverse_scale_factor / 2.0);
+            let (c, half) = (place.translation * node.inverse_scale_factor * s, node.size * node.inverse_scale_factor * s / 2.0);
             boxes.push_str(&format!("box\t{}\t{}\t{}\t{}\t{}\n", name.name, (c.x - half.x + model.0.x as f32).round(), (c.y - half.y + model.0.y as f32).round(), (c.x + half.x + model.0.x as f32).round(), (c.y + half.y + model.0.y as f32).round()));
         }
     }
@@ -140,7 +148,8 @@ pub fn write(
     let mut out = String::new();
     let mut before: Option<(&str, String)> = None;
     let mut count = 1;
-    for (window, name, x, y) in &found {
+    let mut sizes = String::new();
+    for (window, name, x, y, w, h) in &found {
         if before.as_ref().is_some_and(|b| b.0 == *window && b.1 == *name) {
             count += 1;
         } else {
@@ -149,6 +158,7 @@ pub fn write(
         before = Some((window, name.clone()));
         let called = if count == 1 { name.clone() } else { format!("{name} #{count}") };
         out.push_str(&format!("{window}\t{called}\t{}\t{}\n", x.round(), y.round()));
+        sizes.push_str(&format!("size\t{window}\t{called}\t{}\t{}\n", w.round(), h.round()));
     }
     // What each switch of the Show list reads, so that a script can check what a button of
     // a trade set (call 177): `state<TAB>Ground<TAB>off`. And the level on show alone.
@@ -303,7 +313,7 @@ pub fn write(
     // The north arrow: how far its needle is turned (degrees clockwise from up) and how flat the disc lies (call 218, point 7).
     {
         let a = crate::nav::north_arrow(orbit.now.1, orbit.now.2);
-        let across = named.iter().find(|(n, _, _, _, v, _)| n.name == "North arrow" && v.get()).map(|(_, node, ..)| node.size.x * node.inverse_scale_factor).unwrap_or(0.0);
+        let across = named.iter().find(|(n, _, _, _, v, _)| n.name == "North arrow" && v.get()).map(|(_, node, ..)| node.size.x * node.inverse_scale_factor * s).unwrap_or(0.0);
         out.push_str(&format!("arrow\t{:.1}\t{:.2}\t{:.0}\n", a.needle.to_degrees().rem_euclid(360.0), a.flat, across));
     }
     // The selected thing as it lies on the screen: its name, the middle of its box, and its width and height in dots
@@ -316,6 +326,28 @@ pub fn write(
             out.push_str(&format!("selected\t{}\t{:.0}\t{:.0}\t{:.0}\t{:.0}\n", name, (lo.x + hi.x) / 2.0 + model.0.x as f32, (lo.y + hi.y) / 2.0 + model.0.y as f32, hi.x - lo.x, hi.y - lo.y));
         }
     }
+    // Where the two windows stand, the screen they are on, which panels are in the model window and why, the lettering, and the size
+    // of every control on both (call 222): `window<TAB>model<TAB>x<TAB>y<TAB>width<TAB>height`, `screen<TAB>width<TAB>height`,
+    // `panel<TAB>Job<TAB>shown`, `size<TAB>model<TAB>Wall<TAB>52<TAB>44`.
+    out.push_str(&format!("window\tmodel\t{}\t{}\t{}\t{}\n", model.0.x, model.0.y, model.1.x.round(), model.1.y.round()));
+    out.push_str(&format!("window\tsheet\t{}\t{}\t{}\t{}\n", sheet.0.x, sheet.0.y, sheet.1.x.round(), sheet.1.y.round()));
+    if let Some(screen) = kept.screen {
+        out.push_str(&format!("screen\t{}\t{}\n", screen.0, screen.1));
+    }
+    let lay = crate::panels::layout(&doc);
+    for (i, name) in ["Job", "Details", "Tools"].into_iter().enumerate() {
+        let why = if lay.shown[i] { "shown" } else if i < 2 && doc.fit.folded[i] && !doc.show.away[i] { "folded" } else { "away" };
+        out.push_str(&format!("panel\t{name}\t{why}\n"));
+    }
+    out.push_str(&format!("tools\tlines\t{}\t{}\n", lay.lines, lay.bar.round()));
+    out.push_str(&format!("lettering\t{}\t{:.2}\n", doc.fit.lettering, s));
+    // The picture behind the glass, against the window's own size: it is the window's size over six, each way.
+    if let (Ok(RenderTarget::Image(behind)), Some((window, _))) = (glass_pictures.single(), windows.iter().find(|(_, primary)| *primary)) {
+        if let Some(picture) = images.get(&behind.handle) {
+            out.push_str(&format!("glass\t{}\t{}\t{}\t{}\n", picture.width(), picture.height(), window.physical_width(), window.physical_height()));
+        }
+    }
+    out.push_str(&sizes);
     out.push_str(&spoken);
     if out != *last {
         // Written whole, then put in place, so a script never reads half of it.

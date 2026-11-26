@@ -1781,7 +1781,7 @@ pub fn north_follow(orbit: Res<Orbit>, mut rotor: Query<&mut UiTransform, (With<
 /// the south wall of a room was under it). The view eases so that what is drawn stands in the band above the card, below the
 /// top bar's row: down and up, and zoomed out when it does not fit. It does nothing when the whole building already stands
 /// clear of the card, and it is one ease, as any change of view is.
-pub fn room_for_card(doc: Res<Doc>, snap: Res<Snapshot>, mut orbit: ResMut<Orbit>, window: Query<&Window, With<PrimaryWindow>>, card: Query<(&crate::theme::Named, &ComputedNode)>, mut was: Local<(bool, bool)>) {
+pub fn room_for_card(doc: Res<Doc>, snap: Res<Snapshot>, mut orbit: ResMut<Orbit>, window: Query<&Window, With<PrimaryWindow>>, card: Query<(&crate::theme::Named, &ComputedNode)>, mut was: Local<(bool, bool)>, ui: Res<UiScale>) {
     let in_hand = doc.plan && doc.bench.is_none() && !doc.walk && (doc.draw.tool == Some(crate::tools::Tool::Cabinets) || matches!(doc.entry, Some((crate::model::Entry::Cabinets, _))));
     if !in_hand {
         *was = (false, false);
@@ -1804,8 +1804,10 @@ pub fn room_for_card(doc: Res<Doc>, snap: Res<Snapshot>, mut orbit: ResMut<Orbit
     };
     was.1 = false;
     let h = window.height().max(1.0);
-    let top = TOP_H + 80.0;
-    let bottom = h - (STATUS_H + BUILD_H + 10.0 + 2.0 * crate::theme::GAP) - card_h - 14.0;
+    // The card and the bars are drawn in units the lettering's step scales (call 222): their edges are those units times the scale.
+    let k = ui.0.max(0.1);
+    let top = (TOP_H + 80.0) * k;
+    let bottom = h - (STATUS_H + crate::panels::bar_height(&doc) + 10.0 + 2.0 * crate::theme::GAP) * k - card_h * k - 14.0 * k;
     if bottom - top < 120.0 {
         return;
     }
@@ -2644,7 +2646,7 @@ pub fn orbit_input(mut orbit: ResMut<Orbit>, mut feel: ResMut<Feel>, buttons: Re
         feel.slide = Vec3::ZERO;
     }
     // While a value is typed the keys are its letters; with Ctrl held they are Save and Undo.
-    if doc.entry.is_some() || keys.pressed(KeyCode::ControlLeft) || keys.pressed(KeyCode::ControlRight) {
+    if doc.entry.is_some() || crate::screen::command_held(&keys) {
         return;
     }
     // W A S D move over the ground; Q and E go down and up. Shift goes faster.

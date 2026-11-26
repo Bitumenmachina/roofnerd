@@ -53,6 +53,7 @@ mod panels;
 mod plans;
 mod glass;
 mod scene;
+mod screen;
 mod sheet;
 mod skylight;
 mod theme;
@@ -86,10 +87,16 @@ fn main() {
         }
     };
     let graphics = scene::Graphics { full: std::env::var("PLUMBLINE_GRAPHICS").map(|v| v != "plain").unwrap_or(true) };
+    // What a person set on this computer, and how the two windows open (call 222). A demonstration that names no settings opens them
+    // as the program always did.
+    let kept = screen::Kept::start();
+    let (model_size, _) = screen::opening(&kept);
+    let least = screen::MODEL_LEAST;
+    let resize_constraints = bevy::window::WindowResizeConstraints { min_width: least.0 as f32, min_height: least.1 as f32, ..default() };
 
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
-            primary_window: Some(Window { title: "BuildOS: model".into(), resolution: (1600u32, 960u32).into(), position: WindowPosition::At(IVec2::new(0, 0)), ..default() }),
+            primary_window: Some(Window { title: "BuildOS: model".into(), resolution: model_size.into(), position: WindowPosition::At(IVec2::new(0, 0)), resize_constraints, ..default() }),
             // Closing is ours to answer: work not saved is never dropped without a word.
             close_when_requested: false,
             ..default()
@@ -103,6 +110,7 @@ fn main() {
         .init_gizmo_group::<scene::RoomLines>()
         .insert_resource(ClearColor(theme::canvas()))
         .insert_resource(doc)
+        .insert_resource(kept)
         .insert_resource(graphics)
         .init_resource::<Snapshot>()
         .init_resource::<scene::Drawing>()
@@ -118,6 +126,8 @@ fn main() {
         .add_systems(Startup, (scene::setup, glass::setup, setup).chain())
         .add_systems(Startup, game_time)
         .add_systems(Last, closing)
+        .add_systems(Update, glass::resize)
+        .add_systems(Update, (screen::track, screen::put_windows, screen::keep_least, screen::follow, screen::recover, screen::keep).chain().before(model::refresh))
         .add_systems(
             Update,
             ((tools::frame_begins, keys).chain(), plans::dropped, plans::read, tools::clicks, scene::carry, tools::record, (scene::orbit_input, scene::room_for_card).chain(), model::refresh, scene::rebuild, scene::tint, panels::rebuild, sheet::rebuild, (scene::sun_study, scene::place_camera, scene::widen_runs, scene::ground_tone, glass::follow, scene::trace_view, scene::pivot_mark, scene::north_follow).chain(), tools::pointer, scene::draw_lines, tools::preview, panels::place_labels, panels::write_pointer, panels::scroll_panels, map::write).chain(),
@@ -136,15 +146,21 @@ fn game_time(mut time: ResMut<Time<Virtual>>) {
 
 /// A job opened as a window holds it: read from its file (or new, where there is none yet).
 pub fn build_doc(path: String, roof_arg: Option<String>) -> Result<Doc, String> {
+    build_doc_with(path, roof_arg, None)
+}
+
+/// The same, with the job's text given where it was taken from a recovery copy: it is the job, not yet saved.
+pub fn build_doc_with(path: String, roof_arg: Option<String>, taken: Option<String>) -> Result<Doc, String> {
     // A job file that is not there yet is a new job: it is written when it is first saved.
-    let fresh = !std::path::Path::new(&path).exists();
+    let fresh = taken.is_none() && !std::path::Path::new(&path).exists();
     let (mut job, report) = if fresh {
         let title = std::path::Path::new(&path).file_stem().and_then(|s| s.to_str()).unwrap_or("job").replace(['-', '_'], " ");
         (plumbline_world::Job::new(&title, "plumbline", &plumbline_world::job::now()[..10]), file::LoadReport::default())
     } else {
-        let text = match std::fs::read_to_string(&path) {
-            Ok(t) => t,
-            Err(e) => {
+        let text = match (&taken, std::fs::read_to_string(&path)) {
+            (Some(t), _) => t.clone(),
+            (None, Ok(t)) => t,
+            (None, Err(e)) => {
                 return Err(format!("cannot read {path}: {e}"));
             }
         };
@@ -164,7 +180,9 @@ pub fn build_doc(path: String, roof_arg: Option<String>) -> Result<Doc, String> 
     // The roof on show: the one named, else the first solved from a footprint, else the first.
     let roof = roof_arg.or_else(|| solve::roofs(&mut job).into_iter().next()).or_else(|| job.order.iter().find_map(|e| (job.world.get::<Kind>(*e) == Some(&Kind::Roof)).then(|| job.world.get::<plumbline_world::Node>(*e).map(|n| n.path.clone())).flatten()));
     let carried = plumbline_world::view::carried_now(&mut job);
-    let (tone, message) = if fresh {
+    let (tone, message) = if taken.is_some() {
+        (Tone::Done, "Took the recovered work. It is not saved yet: Save keeps it.".to_string())
+    } else if fresh {
         (Tone::Done, format!("A new job. Next steps, on the left, says where to start. Save keeps it as {}.", std::path::Path::new(&path).file_stem().and_then(|s| s.to_str()).unwrap_or("this job")))
     } else if report.stale.is_empty() {
         (Tone::Done, "Opened.".to_string())
@@ -173,6 +191,8 @@ pub fn build_doc(path: String, roof_arg: Option<String>) -> Result<Doc, String> 
     let has_lines = job.order.iter().any(|e| job.world.get::<plumbline_world::Cost>(*e).is_some_and(|c| !c.lines.is_empty()));
     // The job as it was opened: what the first step undone goes back to.
     let draw = tools::Draw { last_text: file::save(&mut job), ..default() };
+    // Work from before the program stopped, beside this job and newer than it (call 222, point 6).
+    let recovered = if taken.is_none() && !screen::old_ways() { screen::find_recovery(std::path::Path::new(&path)) } else { None };
     let doc = Doc {
         job,
         path: PathBuf::from(path),
@@ -214,7 +234,7 @@ pub fn build_doc(path: String, roof_arg: Option<String>) -> Result<Doc, String> 
         frame_on: None,
         pointer: None,
         shots: 0,
-        edited: fresh,
+        edited: fresh || taken.is_some(),
         plan: false,
         plan_level: None,
         carried,
@@ -237,17 +257,22 @@ pub fn build_doc(path: String, roof_arg: Option<String>) -> Result<Doc, String> 
         jobs_here: Vec::new(),
         scan_feet: false,
         scan_side: None,
+        fit: screen::Fit::default(),
+        recovered,
     };
     Ok(doc)
 }
 
-fn setup(mut commands: Commands, mut fonts: ResMut<Assets<Font>>, camera: Query<Entity, With<scene::MainCamera>>) {
+fn setup(mut commands: Commands, mut fonts: ResMut<Assets<Font>>, camera: Query<Entity, With<scene::MainCamera>>, kept: Res<screen::Kept>) {
     commands.insert_resource(theme::load_fonts(&mut fonts));
     // The main window's panels are drawn by the 3D camera itself, over the finished picture.
     let ui = camera.single().expect("the 3D camera is there");
     // The sheet: a second window on the same world. Its camera looks at a layer nothing
     // 3D is on, so the model's lines are not drawn over the sheet.
-    let window = commands.spawn((Window { title: "BuildOS: sheet".into(), resolution: (880u32, 960u32).into(), position: WindowPosition::At(IVec2::new(1610, 0)), ..default() }, sheet::SheetWindow)).id();
+    let (_, sheet_size) = screen::opening(&kept);
+    let least = screen::SHEET_LEAST;
+    let resize_constraints = bevy::window::WindowResizeConstraints { min_width: least.0 as f32, min_height: least.1 as f32, ..default() };
+    let window = commands.spawn((Window { title: "BuildOS: sheet".into(), resolution: sheet_size.into(), position: WindowPosition::At(IVec2::new(1610, 0)), resize_constraints, ..default() }, sheet::SheetWindow)).id();
     let sheet = commands.spawn((Camera2d, Msaa::Off, RenderLayers::layer(1), RenderTarget::Window(WindowRef::Entity(window)))).id();
     commands.insert_resource(panels::Cameras { ui, sheet });
 }
@@ -437,6 +462,14 @@ fn closing(mut commands: Commands, mut asked: MessageReader<bevy::window::Window
         doc.say(Tone::Ask, "Not closed: the job has changes that are not saved. Save (Ctrl+S), or close again to leave without saving them.");
         doc.touch();
     } else {
+        // A clean close leaves no recovery copy; a close with work not saved leaves the job's latest, whole.
+        if !screen::old_ways() && doc.recovered.is_none() {
+            if doc.edited {
+                let _ = screen::write_copy(&mut *doc);
+            } else {
+                screen::remove_recovery(&doc.path);
+            }
+        }
         for window in &windows {
             commands.entity(window).try_insert(Shutting);
         }
@@ -445,9 +478,17 @@ fn closing(mut commands: Commands, mut asked: MessageReader<bevy::window::Window
 
 /// Save the job to its file.
 fn save(doc: &mut Doc) {
+    // Work found beside the job is taken or left first: a save over it would lose it without a word (call 222, point 6).
+    if doc.recovered.is_some() {
+        doc.say(Tone::Ask, "Not saved: there is recovered work beside this job. Take the recovered work, or leave it, first.");
+        doc.touch();
+        return;
+    }
     match std::fs::write(&doc.path, file::save(&mut doc.job)) {
         Ok(()) => {
             doc.edited = false;
+            // Saved: what was kept in case the program stopped is no longer needed.
+            screen::remove_recovery(&doc.path);
             // By its name: where it lies on the computer is not a builder's word (J19-47).
             // "Saved." and no more: the file's own name is not a builder's word and the
             // job's name is at the top of the window (VISUAL.md A8; J22A-1).
@@ -544,7 +585,7 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
     let mut alone: Vec<KeyCode> = Vec::new();
     let mut at_once: Vec<KeyCode> = Vec::new();
     let mut chord: Vec<KeyCode> = Vec::new();
-    let ctrl = keys.pressed(KeyCode::ControlLeft) || keys.pressed(KeyCode::ControlRight);
+    let ctrl = screen::command_held(&keys);
     for event in struck.read() {
         if !event.state.is_pressed() {
             continue;
@@ -627,11 +668,11 @@ fn keys(mut seen_alone: Local<Option<String>>, mut under_ground: Local<f32>, mut
         // Ctrl as the keys themselves tell it, in the order they came: on a slow frame
         // Ctrl, a letter and both let go arrive together, and by the frame's end Ctrl
         // is up (Ctrl+A typed an "a" into a thickness: J24A-1).
-        let either = [KeyCode::ControlLeft, KeyCode::ControlRight];
+        let either = [KeyCode::ControlLeft, KeyCode::ControlRight, KeyCode::SuperLeft, KeyCode::SuperRight];
         let mut ctrl = either.iter().any(|k| (keys.pressed(*k) && !keys.just_pressed(*k)) || (keys.just_released(*k) && !keys.just_pressed(*k)));
         let was_fresh = doc.fresh;
         for event in typed.read() {
-            if event.logical_key == Key::Control {
+            if matches!(event.logical_key, Key::Control | Key::Super) {
                 ctrl = event.state.is_pressed();
                 continue;
             }

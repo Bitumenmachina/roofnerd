@@ -99,3 +99,23 @@ pub fn follow(main: Query<(&Transform, &Projection, &Tonemapping), (With<MainCam
         *f = *fold;
     }
 }
+
+/// The small picture is the window's size over six, each way, at every size the window is: drawn in or out, it is made again at the
+/// size the window now is, and the glass is pointed at it (call 222). The picture is replaced rather than stretched: stretched, what
+/// is behind a panel would lie a little off from what is drawn there.
+pub fn resize(window: Query<&Window, With<bevy::window::PrimaryWindow>>, mut images: ResMut<Assets<Image>>, mut glass: ResMut<Assets<Frost>>, mut behind: Query<&mut RenderTarget, With<Behind>>) {
+    let (Ok(window), Ok(mut target)) = (window.single(), behind.single_mut()) else { return };
+    let want = ((window.physical_width() / SMALLER).max(16), (window.physical_height() / SMALLER).max(16));
+    let RenderTarget::Image(held) = &mut *target else { return };
+    if images.get(&held.handle).is_some_and(|picture| (picture.width(), picture.height()) == want) {
+        return;
+    }
+    let made = images.add(Image::new_target_texture(want.0, want.1, TextureFormat::Bgra8UnormSrgb, None));
+    let old = std::mem::replace(&mut held.handle, made.clone());
+    if let Some(handle) = PANEL.get() {
+        if let Some(mut material) = glass.get_mut(handle) {
+            material.scene = made;
+        }
+    }
+    images.remove(old.id());
+}

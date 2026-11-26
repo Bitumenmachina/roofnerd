@@ -455,6 +455,10 @@ pub struct Doc {
     /// it was taken (true: z), and the step it was brought in as. The button "It is lying on
     /// its side" is there while that step is the last (call 161).
     pub scan_side: Option<(String, bool, u64)>,
+    /// How the main window is at the moment: its width, the panels folded by it, the lettering (call 222). Never saved in the job.
+    pub fit: crate::screen::Fit,
+    /// Work found beside the job that was never saved, offered on opening (call 222, point 6).
+    pub recovered: crate::screen::Offer,
 }
 
 impl Doc {

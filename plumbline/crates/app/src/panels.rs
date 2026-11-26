@@ -384,6 +384,7 @@ pub fn rebuild(mut commands: Commands, doc: Res<Doc>, snap: Res<Snapshot>, plans
     let fonts = &*fonts;
     commands.spawn((Node { width: percent(100.0), height: percent(100.0), ..default() }, UiTargetCamera(cameras.ui), Pickable::IGNORE, MainUi)).with_children(|root| {
         overlay(root, fonts, &doc, &snap);
+        recovered_card(root, fonts, &doc);
         let on = panels_on(&doc);
         if on[0] {
             left(root, fonts, &doc, &snap, &plans, scrolls.browser);
@@ -402,6 +403,23 @@ pub fn rebuild(mut commands: Commands, doc: Res<Doc>, snap: Res<Snapshot>, plans
     });
 }
 
+/// Work from before the program stopped, found beside this job and newer than it: said in one sentence with when it was kept, and
+/// two answers. Nothing is taken without the click (call 222, point 6).
+fn recovered_card(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc) {
+    let Some(found) = doc.recovered.as_ref() else { return };
+    let l = layout(doc);
+    // Under the view buttons, between the panels, where the other cards of the model are put.
+    p.spawn((Node { position_type: PositionType::Absolute, top: px(TOP_H + 2.0 * theme::GAP + 54.0), left: px(l.left_in + 3.0 * theme::GAP), right: px(l.right_in + 3.0 * theme::GAP), justify_content: JustifyContent::Center, ..default() }, Pickable::IGNORE)).with_children(|row| {
+        row.spawn((glass_card(Node { flex_direction: FlexDirection::Column, row_gap: px(8.0), padding: UiRect::all(px(14.0)), max_width: px(520.0), ..default() }), named("Recovered work card"))).with_children(|c| {
+            c.spawn(text(fonts, format!("Work from {} was kept beside this job and never saved. Take it, or leave it and keep the job as it was last saved.", crate::screen::age_said(found.age)), 13.0, Weight::Medium, theme::ink()));
+            c.spawn(Node { column_gap: px(8.0), ..default() }).with_children(|b| {
+                on_click(&mut button(b, fonts, "Take the recovered work", "", true), crate::screen::take);
+                on_click(&mut button(b, fonts, "Leave it", "", false), crate::screen::leave);
+            });
+        });
+    });
+}
+
 /// Which of the three panels are on screen: the job's lists, what is selected, the
 /// tools. A panel put away is not drawn; it comes back by itself while something in it
 /// is being typed or a tool is in hand, so that nothing is ever typed out of sight,
@@ -411,15 +429,38 @@ fn panels_on(doc: &Doc) -> [bool; 3] {
     let in_left = matches!(typing, Some(Entry::Storey | Entry::NewItem | Entry::BringIn(_) | Entry::Drawing));
     let in_tools = matches!(typing, Some(Entry::Settings(_) | Entry::Length | Entry::Distance | Entry::Room | Entry::Cabinets));
     let in_right = typing.is_some() && !in_left && !in_tools && typing != Some(Entry::LayoutName);
+    // A panel the window is too narrow for is folded away by itself, and comes back as the window widens (call 222); one asked for
+    // with its switch, or one something is being typed in, stands over the model all the same.
+    let held = |i: usize, forced: bool| !doc.fit.folded[i] || doc.fit.opened[i] || forced;
     // On the bench (call 195) no tool is offered: the tools are put away and come back with the house.
-    [!doc.show.away[0] || in_left, !doc.show.away[1] || in_right, (!doc.show.away[2] || in_tools || doc.draw.tool.is_some()) && doc.bench.is_none()]
+    [(!doc.show.away[0] || in_left) && held(0, in_left), (!doc.show.away[1] || in_right) && held(1, in_right), (!doc.show.away[2] || in_tools || doc.draw.tool.is_some()) && doc.bench.is_none()]
+}
+
+/// How the main window is laid out now: which panels are in it, how far in from each side the cards over the model begin, and how
+/// many lines the tools are on. A panel folded by the window's width gives its room back to the model; one put away with its switch
+/// keeps its room, as it always did (call 222).
+pub fn layout(doc: &Doc) -> crate::screen::Layout {
+    let shown = panels_on(doc);
+    let gone = [doc.fit.folded[0] && !shown[0], doc.fit.folded[1] && !shown[1]];
+    let left_in = if gone[0] { 0.0 } else { LEFT_W };
+    let right_in = if gone[1] { 0.0 } else { RIGHT_W };
+    let known = doc.fit.width > 0.0;
+    let width = if known { doc.fit.width } else { crate::screen::MODEL_FULL.0 as f32 };
+    let inset = |x: f32| if x == 0.0 { theme::GAP } else { x + 2.0 * theme::GAP };
+    let bar = width - inset(left_in) - inset(right_in);
+    crate::screen::Layout { shown, left_in, right_in, bar, tight: known && width < crate::screen::TIGHT_BELOW, lines: if bar >= crate::screen::BAR_SQUEEZE_AT { 0 } else { crate::screen::bar_plan(bar).len() } }
+}
+
+/// How tall the tools' bar is now.
+pub fn bar_height(doc: &Doc) -> f32 {
+    crate::screen::bar_height(layout(doc).bar)
 }
 
 /// How the model is looked at, in a small cluster of its own over the model's top right:
 /// 3D, Plan, Walk, and Frame to bring the whole job back into view. (They were in the
 /// top bar, which they crowded until the tally ran off its end.)
 fn views(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc) {
-    let mut node = Node { top: px(TOP_H), right: px(RIGHT_W), padding: UiRect::all(px(6.0)), align_items: AlignItems::Center, column_gap: px(6.0), ..default() };
+    let mut node = Node { top: px(TOP_H), right: px(layout(doc).right_in), padding: UiRect::all(px(6.0)), align_items: AlignItems::Center, column_gap: px(6.0), ..default() };
     node.border_radius = BorderRadius::all(px(theme::BUTTON_RADIUS + 6.0));
     p.spawn(docked(node)).with_children(|bar| {
         for (label, key, plan, walk) in [("3D", "", false, false), ("Plan", "T", true, false), ("Walk", "V", false, true)] {
@@ -465,7 +506,7 @@ fn north_card(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc) {
     if doc.bench.is_some() || doc.walk {
         return;
     }
-    let mut node = Node { top: px(TOP_H), left: px(LEFT_W), padding: UiRect::all(px(6.0)), flex_direction: FlexDirection::Column, align_items: AlignItems::Center, row_gap: px(3.0), ..default() };
+    let mut node = Node { top: px(TOP_H), left: px(layout(doc).left_in), padding: UiRect::all(px(6.0)), flex_direction: FlexDirection::Column, align_items: AlignItems::Center, row_gap: px(3.0), ..default() };
     node.border_radius = BorderRadius::all(px(44.0));
     p.spawn(docked(node)).with_children(|card| {
         let mut disc = card.spawn((
@@ -549,7 +590,7 @@ fn sun_card(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc) {
     let bearing = toward.x.atan2(-toward.z).to_degrees().rem_euclid(360.0);
     let point = ["north", "northeast", "east", "southeast", "south", "southwest", "west", "northwest"][((bearing + 22.5) / 45.0) as usize % 8];
     let where_it_is = if height > 0.0 { format!("The sun stands {:.0} degrees high, in the {point}.", height) } else { "The sun is below the horizon: no light from it.".to_string() };
-    let mut node = Node { top: px(TOP_H + 44.0), right: px(RIGHT_W), flex_direction: FlexDirection::Column, row_gap: px(6.0), padding: UiRect::all(px(10.0)), ..default() };
+    let mut node = Node { top: px(TOP_H + 44.0), right: px(layout(doc).right_in), flex_direction: FlexDirection::Column, row_gap: px(6.0), padding: UiRect::all(px(10.0)), ..default() };
     node.border_radius = BorderRadius::all(px(theme::BUTTON_RADIUS + 6.0));
     p.spawn(docked(node)).with_children(|c| {
         let row = |c: &mut ChildSpawnerCommands, label: &str, before: &str, value: String, after: &str, step: fn(&mut Doc, bool)| {
@@ -580,6 +621,9 @@ fn sun_card(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc) {
 /// Along the top: the job, Save, Undo and Redo, and at all times the price and how
 /// much of the job is not yet sure.
 fn top_bar(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapshot) {
+    // In a narrow window the keys beside Save, Undo and Redo are left off and the job's name is cut shorter: what stays whole is the
+    // price and whether the job is saved (call 222).
+    let tight = layout(doc).tight;
     // Two cards, each as wide as what is on it, with the model between them: one strip
     // across the whole window read as a bar the model was docked under (J22B-3, A1).
     let card = |shrinks: bool| glass_card(Node { height: percent(100.0), padding: UiRect::horizontal(px(12.0)), align_items: AlignItems::Center, column_gap: px(8.0), overflow: Overflow::clip(), flex_shrink: if shrinks { 1.0 } else { 0.0 }, min_width: px(0.0), ..default() });
@@ -589,11 +633,11 @@ fn top_bar(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
         divider(bar);
         // A long title is cut and says it is cut; it is whole on the right. Cut at 44
         // letters: at 26 a job's name was cut with half the bar empty beside it.
-        bar.spawn(Node { flex_shrink: 0.0, ..default() }).with_child((theme::name(fonts, one_line(&snap.title, 44), 13.0, Weight::Semibold, theme::ink()), TextLayout::no_wrap()));
+        bar.spawn(Node { flex_shrink: 0.0, ..default() }).with_child((theme::name(fonts, one_line(&snap.title, if tight { 16 } else { 44 }), 13.0, Weight::Semibold, theme::ink()), TextLayout::no_wrap()));
         divider(bar);
-        on_click(&mut button(bar, fonts, "Save", "Ctrl+S", false), |doc| doc.press(KeyCode::F2));
-        on_click(&mut button(bar, fonts, "Undo", "Ctrl+Z", false), |doc| doc.press(KeyCode::KeyZ));
-        on_click(&mut button(bar, fonts, "Redo", "Ctrl+Y", false), |doc| doc.press(KeyCode::KeyY));
+        on_click(&mut button(bar, fonts, "Save", if tight { "" } else { "Ctrl+S" }, false), |doc| doc.press(KeyCode::F2));
+        on_click(&mut button(bar, fonts, "Undo", if tight { "" } else { "Ctrl+Z" }, false), |doc| doc.press(KeyCode::KeyZ));
+        on_click(&mut button(bar, fonts, "Redo", if tight { "" } else { "Ctrl+Y" }, false), |doc| doc.press(KeyCode::KeyY));
     });
     row.spawn(card(true)).with_children(|bar| {
         // The price, in the colour of how sure it is.
@@ -604,7 +648,9 @@ fn top_bar(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
             _ => ("nothing priced yet".to_string(), Status::Known),
         };
         bar.spawn(Node { align_items: AlignItems::Baseline, column_gap: px(7.0), flex_shrink: 0.0, ..default() }).with_children(|b| {
-            b.spawn((text(fonts, "PRICE", 11.0, Weight::Semibold, theme::ink_faint()), TextLayout::no_wrap()));
+            if !(tight && doc.fit.width < crate::screen::BARE_BELOW) {
+                b.spawn((text(fonts, "PRICE", 11.0, Weight::Semibold, theme::ink_faint()), TextLayout::no_wrap()));
+            }
             b.spawn((text(fonts, price, if priced { 16.0 } else { 12.0 }, if priced { Weight::Semibold } else { Weight::Regular }, if priced { theme::status_ink(status) } else { theme::ink_faint() }), TextLayout::no_wrap()));
         });
         // How sure the price is, in a word, unless what follows says why in more: the
@@ -613,6 +659,14 @@ fn top_bar(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
         let says_why = snap.estimate.as_ref().is_some_and(|e| !e.job_cost.left_out.is_empty()) || snap.pricing.as_ref().is_some_and(|p| p.allowances_alone().is_some());
         if !says_why {
             status_chip(bar, fonts, status);
+        }
+        // In a tight bar whether the job is saved comes straight after the price: what follows may be cut off at the bar's end.
+        if tight {
+            if doc.edited {
+                chip(bar, fonts, "Not saved", theme::amber(), theme::amber_wash());
+            } else {
+                chip(bar, fonts, "Saved", theme::green(), theme::panel());
+            }
         }
         // Beside the price: how many things are built and in no line of it (J19-48).
         if let Some(n) = snap.pricing.as_ref().map(|p| p.not_priced.iter().map(|x| x.1).sum::<usize>()).filter(|n| *n > 0) {
@@ -661,12 +715,14 @@ fn top_bar(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
         // (The job's title is at the left of this bar. The name of the file it is kept
         // in is not said here: it is not a builder's word, and it crowded the tally off
         // the end of the bar, J18-4.)
-        if doc.edited {
+        if tight {
+            // Said already, beside the price.
+        } else if doc.edited {
             chip(bar, fonts, "Not saved", theme::amber(), theme::amber_wash());
         } else {
             chip(bar, fonts, "Saved", theme::green(), theme::panel());
         }
-        if notes.iter().filter(|n| **n).count() < 3 {
+        if notes.iter().filter(|n| **n).count() < 3 && !tight {
             divider(bar);
             tally_chips(bar, fonts, snap.tally);
         }
@@ -700,6 +756,19 @@ fn status_line(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc) {
             for (i, name) in ["Job", "Details", "Tools"].into_iter().enumerate() {
                 bar.spawn((text(fonts, name, 12.0, Weight::Medium, theme::ink_soft()), Pickable::IGNORE));
                 switch_at(bar, on[i], format!("Show panel {name}"), false, move |doc| {
+                    // A panel the window is too narrow for stands over the model when its switch is put on, and goes again when it is
+                    // put off (call 222).
+                    if i < 2 && doc.fit.folded[i] && !panels_on(doc)[i] {
+                        doc.fit.opened[i] = true;
+                        doc.show.away[i] = false;
+                        doc.touch();
+                        return;
+                    }
+                    if i < 2 && doc.fit.folded[i] && doc.fit.opened[i] {
+                        doc.fit.opened[i] = false;
+                        doc.touch();
+                        return;
+                    }
                     // Switched off while something in it is in hand, that is let go
                     // of first: the panel goes, as the switch says.
                     if !doc.show.away[i] || panels_on(doc)[i] {
@@ -717,6 +786,14 @@ fn status_line(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc) {
                     }
                     doc.touch();
                 });
+            }
+            // The lettering, a step larger or smaller: every word and control together (call 222, point 4).
+            divider(bar);
+            bar.spawn((text(fonts, "Lettering", 12.0, Weight::Medium, theme::ink_soft()), Pickable::IGNORE));
+            for (label, name, by) in [("Smaller", "Smaller lettering", -1_i8), ("Larger", "Larger lettering", 1_i8)] {
+                let mut e = bar.spawn((Node { padding: UiRect::axes(px(7.0), px(1.0)), border: UiRect::all(px(1.0)), border_radius: BorderRadius::all(px(theme::SMALL_RADIUS)), flex_shrink: 0.0, ..default() }, BackgroundColor(theme::control()), BorderColor::all(theme::control_edge()), named(name)));
+                e.with_child((text(fonts, label, 12.0, Weight::Medium, theme::ink()), TextLayout::no_wrap(), Pickable::IGNORE));
+                on_click(&mut e, move |doc| crate::screen::lettering_step(doc, by));
             }
         });
         row.spawn(card(false)).with_children(|bar| {
@@ -1758,12 +1835,12 @@ fn tool_button<'a>(p: &'a mut ChildSpawnerCommands, fonts: &Fonts, label: &str, 
 /// The width of the card's left column: the longest heading ("Marks on the plan", in capitals) fits in it with room over.
 const CARD_HEAD_W: f32 = 140.0;
 
-fn cabinets_card(p: &mut ChildSpawnerCommands, fonts: &Fonts, snap: &Snapshot) {
+fn cabinets_card(p: &mut ChildSpawnerCommands, fonts: &Fonts, snap: &Snapshot, doc: &Doc) {
     let corner = |c: &&String| c.starts_with("BLB") || c.starts_with("LS");
     let straight: Vec<&String> = snap.boxes.iter().filter(|c| !corner(c)).collect();
     let corners: Vec<&String> = snap.boxes.iter().filter(corner).collect();
     let appliances: Vec<String> = snap.items.iter().filter(|i| i.4 == 11).map(|i| format!("[{}]", i.1)).collect();
-    p.spawn((docked(Node { left: px(LEFT_W), right: px(RIGHT_W), bottom: px(STATUS_H + BUILD_H + 10.0), flex_direction: FlexDirection::Column, row_gap: px(3.0), padding: UiRect::axes(px(12.0), px(8.0)), ..default() }), theme::named("Cabinets card"))).with_children(|c| {
+    p.spawn((docked(Node { left: px(layout(doc).left_in), right: px(layout(doc).right_in), bottom: px(STATUS_H + bar_height(doc) + 10.0), flex_direction: FlexDirection::Column, row_gap: px(3.0), padding: UiRect::axes(px(12.0), px(8.0)), ..default() }), theme::named("Cabinets card"))).with_children(|c| {
         let line = |c: &mut ChildSpawnerCommands, head: &str, body: String| {
             c.spawn(Node { column_gap: px(8.0), ..default() }).with_children(|r| {
                 r.spawn(Node { width: px(CARD_HEAD_W), flex_shrink: 0.0, ..default() }).with_child((text(fonts, head.to_uppercase(), 11.0, Weight::Semibold, theme::ink_faint()), TextLayout::no_wrap()));
@@ -1792,9 +1869,9 @@ fn build_bar(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snap
     use crate::tools::{self, Tool};
     // The boxes a run can be made of, and their key, over the bar while Cabinets is in hand.
     if doc.draw.tool == Some(Tool::Cabinets) || matches!(doc.entry, Some((Entry::Cabinets, _))) {
-        cabinets_card(p, fonts, snap);
+        cabinets_card(p, fonts, snap, doc);
     }
-    p.spawn(docked(Node { left: px(LEFT_W), right: px(RIGHT_W), bottom: px(STATUS_H), height: px(BUILD_H), flex_direction: FlexDirection::Column, ..default() })).with_children(|bar| {
+    p.spawn(docked(Node { left: px(layout(doc).left_in), right: px(layout(doc).right_in), bottom: px(STATUS_H), height: px(bar_height(doc)), flex_direction: FlexDirection::Column, ..default() })).with_children(|bar| {
         // The tool in hand: its fields, each typed into where it stands.
         let typing = match doc.entry {
             Some((Entry::Settings(tool), _)) => Some(tool),
@@ -1893,8 +1970,15 @@ fn build_bar(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snap
             };
             strip.spawn(Node { flex_grow: 1.0, flex_basis: px(0.0), min_width: px(0.0), ..default() }).with_child(text(fonts, hint, 11.5, Weight::Regular, theme::ink_soft()));
         });
-        // Every tool, in three groups.
-        bar.spawn(Node { flex_grow: 1.0, padding: UiRect::horizontal(px(6.0)), align_items: AlignItems::Center, column_gap: px(8.0), overflow: Overflow::clip(), ..default() }).with_children(|all| {
+        // Every tool, in three groups. Where the bar is too narrow for them side by side they go on as many lines as they need (call 222):
+        // every tool is on the bar at every width, none squeezed to a sliver or pushed off its end.
+        let wrapped = layout(doc);
+        let lines = if wrapped.lines > 0 { crate::screen::bar_plan(wrapped.bar) } else { Vec::new() };
+        bar.spawn(if lines.is_empty() {
+            Node { flex_grow: 1.0, padding: UiRect::horizontal(px(6.0)), align_items: AlignItems::Center, column_gap: px(8.0), overflow: Overflow::clip(), ..default() }
+        } else {
+            Node { flex_grow: 1.0, flex_direction: FlexDirection::Column, padding: UiRect::horizontal(px(6.0)), overflow: Overflow::clip(), ..default() }
+        }).with_children(|all| {
             let in_hand = typing.or(doc.draw.tool);
             let group = |all: &mut ChildSpawnerCommands, name: &str, tools: &[Tool], delete: bool| {
                 // A group may be narrower than its buttons side by side (`min_width` 0), so that
@@ -1912,11 +1996,25 @@ fn build_bar(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snap
                     });
                 });
             };
-            group(all, "Building", &Tool::BUILDING, false);
-            divider(all);
-            group(all, "Mechanical, electrical, plumbing", &Tool::MEP, false);
-            divider(all);
-            group(all, "Edit", &[Tool::Move], true);
+            if lines.is_empty() {
+                group(all, "Building", &Tool::BUILDING, false);
+                divider(all);
+                group(all, "Mechanical, electrical, plumbing", &Tool::MEP, false);
+                divider(all);
+                group(all, "Edit", &[Tool::Move], true);
+            } else {
+                for line in &lines {
+                    all.spawn(Node { height: px(crate::screen::LINE_H), align_items: AlignItems::Center, column_gap: px(crate::screen::GROUP_GAP), flex_shrink: 0.0, ..default() }).with_children(|row| {
+                        for (g, from, to) in line.iter().copied() {
+                            match g {
+                                0 => group(row, "Building", &Tool::BUILDING[from..to], false),
+                                1 => group(row, "Mechanical, electrical, plumbing", &Tool::MEP[from..to], false),
+                                _ => group(row, "Edit", &[Tool::Move][from.min(1)..to.min(1)], to >= 2),
+                            }
+                        }
+                    });
+                }
+            }
         });
     });
 }
@@ -2443,7 +2541,7 @@ fn overlay(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snapsh
         // "Brought in 30 starter assemblies ... then Assembl" at its edge, and the
         // rest could be read nowhere (J22A-4, J22B-30).
         if message_card_up(doc) {
-            o.spawn((Node { position_type: PositionType::Absolute, top: px(TOP_H + 2.0 * theme::GAP + 54.0), left: px(LEFT_W + 3.0 * theme::GAP), right: px(RIGHT_W + 3.0 * theme::GAP), flex_direction: FlexDirection::Column, align_items: AlignItems::Center, ..default() }, Pickable::IGNORE)).with_children(|mid| {
+            o.spawn((Node { position_type: PositionType::Absolute, top: px(TOP_H + 2.0 * theme::GAP + 54.0), left: px(layout(doc).left_in + 3.0 * theme::GAP), right: px(layout(doc).right_in + 3.0 * theme::GAP), flex_direction: FlexDirection::Column, align_items: AlignItems::Center, ..default() }, Pickable::IGNORE)).with_children(|mid| {
                 let ink = match doc.tone {
                     Tone::Refused => theme::red(),
                     Tone::Done => theme::green(),
@@ -3563,7 +3661,7 @@ fn selection(p: &mut ChildSpawnerCommands, fonts: &Fonts, doc: &Doc, snap: &Snap
 
 /// Keep each label at its point of the model as the view moves. Where two would lie over
 /// each other, the one nearer the eye stays and the other waits until there is room.
-pub fn place_labels(doc: Res<Doc>, camera: Query<(&Camera, &GlobalTransform), With<MainCamera>>, mut labels: Query<(Entity, &Label, &mut Node, &mut Visibility, &ComputedNode, Option<&Detail>)>, window: Query<&Window, With<PrimaryWindow>>, mut fitted: Query<(&Fit, &ComputedNode, &mut UiTransform)>) {
+pub fn place_labels(doc: Res<Doc>, camera: Query<(&Camera, &GlobalTransform), With<MainCamera>>, mut labels: Query<(Entity, &Label, &mut Node, &mut Visibility, &ComputedNode, Option<&Detail>)>, window: Query<&Window, With<PrimaryWindow>>, mut fitted: Query<(&Fit, &ComputedNode, &mut UiTransform)>, ui: Res<UiScale>) {
     let Ok((camera, eye)) = camera.single() else { return };
     // A label that has to stay inside its box is lettered smaller where its words are
     // wider than the box is on the screen (call 169).
@@ -3580,7 +3678,10 @@ pub fn place_labels(doc: Res<Doc>, camera: Query<(&Camera, &GlobalTransform), Wi
         }
     }
     let mut wanted: Vec<(Entity, u8, f32, Vec2, Vec2)> = Vec::new();
+    // The window's own dots, and the panels' edges in them: the panels are drawn in units that the lettering's step scales (call 222).
     let (width, height) = window.single().map(|w| (w.width(), w.height())).unwrap_or((1600.0, 900.0));
+    let (k, lay) = (ui.0.max(0.1), layout(&doc));
+    let (left_px, right_px, bar_px) = (lay.left_in * k, lay.right_in * k, bar_height(&doc) * k);
     for (entity, label, _, _, computed, detail) in &labels {
         // A thing's name is written over it only while it is a fit size on the screen (call 218, point 2). On plan the drawing
         // keeps its words as it always did.
@@ -3590,7 +3691,7 @@ pub fn place_labels(doc: Res<Doc>, camera: Query<(&Camera, &GlobalTransform), Wi
                 crate::nav::label_shown(d.feet, away, height)
             } else {
                 // No layer on: the selected thing, or the one that fills the middle of the clear part of the window.
-                let middle = Vec2::new((LEFT_W + width - RIGHT_W) / 2.0, (TOP_H + 70.0 + height - BUILD_H - STATUS_H) / 2.0);
+                let middle = Vec2::new((left_px + width - right_px) / 2.0, (TOP_H * k + 70.0 * k + height - bar_px - STATUS_H * k) / 2.0);
                 let centre = camera.world_to_viewport(eye, label.at - Vec3::Y * (0.25 + d.drop)).ok();
                 centre.is_some_and(|c| crate::nav::name_without_layer(d.keep_in_view, crate::nav::dots_across(d.feet, away, height), c.distance(middle), height))
             };
@@ -3603,13 +3704,16 @@ pub fn place_labels(doc: Res<Doc>, camera: Query<(&Camera, &GlobalTransform), Wi
             continue;
         }
         let Ok(at) = camera.world_to_viewport(eye, label.at) else { continue };
+        // From here the place is in the panels' units.
+        let at = at / k;
+        let (width, height_ui) = (width / k, height / k);
         let half = computed.size * computed.inverse_scale_factor / 2.0 + Vec2::splat(2.0);
         // A thing that fills the window has its name written above it, out of sight: the name is kept in the clear part of the window.
         let at = match detail.filter(|d| (d.keep_in_view || !d.layer) && !doc.plan) {
             Some(d) => {
-                let dots = crate::nav::dots_across(d.feet, eye.translation().distance(label.at), height);
-                let lo = Vec2::new(LEFT_W + 20.0, TOP_H + 70.0) + half;
-                let hi = Vec2::new(width - RIGHT_W - 20.0, height - BUILD_H - STATUS_H - 20.0) - half;
+                let dots = crate::nav::dots_across(d.feet, eye.translation().distance(label.at), height) / k;
+                let lo = Vec2::new(lay.left_in + 20.0, TOP_H + 70.0) + half;
+                let hi = Vec2::new(width - lay.right_in - 20.0, height_ui - bar_height(&doc) - STATUS_H - 20.0) - half;
                 // The name stands a quarter foot above the thing: it is the thing's size plus that gap that may lie out of the window.
                 let reach = dots * (1.0 + 0.25 / d.feet.max(0.01));
                 crate::nav::pull_in(at, reach, lo, hi)
@@ -3713,6 +3817,7 @@ pub fn more_below(card: &mut ChildSpawnerCommands, fonts: &Fonts, which: usize) 
 /// where the wheel sent it), with a thumb at its edge that shows where it is.
 #[allow(clippy::type_complexity)]
 pub fn scroll_panels(
+    ui: Res<UiScale>,
     scroll: Res<AccumulatedMouseScroll>,
     time: Res<Time>,
     windows: Query<(&Window, Has<PrimaryWindow>)>,
@@ -3750,8 +3855,8 @@ pub fn scroll_panels(
         // model's.
         let on_panel = crate::scene::OVER_PANEL.load(std::sync::atomic::Ordering::Relaxed);
         over = match primary {
-            true if on_panel && at.x > window.width() - RIGHT_W - theme::GAP && at.y > TOP_H => Some(0),
-            true if on_panel && at.x < LEFT_W + theme::GAP && at.y > TOP_H => Some(2),
+            true if on_panel && at.x > window.width() - (RIGHT_W + theme::GAP) * ui.0 && at.y > TOP_H * ui.0 => Some(0),
+            true if on_panel && at.x < (LEFT_W + theme::GAP) * ui.0 && at.y > TOP_H * ui.0 => Some(2),
             true => None,
             false => Some(1),
         };

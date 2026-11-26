@@ -11690,7 +11690,45 @@ after another.
 8. Every window demonstration that ran before runs as it did (the builder runs
    `glassw`, `moneyw`, `benchw` and `pricew` and says so).
 
-Not built yet.
+**Built (2026-11-26, the window builder, contract 222WA).** `crates/app/src/screen.rs` is new; `main.rs`,
+`panels.rs`, `map.rs`, `glass.rs`, `scene.rs` and `model.rs` were edited. Each point:
+1. *Both windows open whole.* `place` (tested on every screen from 640 by 480 to 3840 by 2160): 2,490 wide or more, side by side as always
+   (1600 by 960 at 0,0 and 880 by 960 at 1610,0); else the model takes the screen (less 72 dots for the desktop's own bar) and the
+   estimate stands over its right side. Seen: 1920 by 1080 gives 1920 by 1008 and 880 by 960 at (1040, 48); 1366 by 768 gives
+   1366 by 696 and 880 by 696 at (486, 0). The screen is read from the monitor the engine reports; the windows are made at the old
+   size and put where they go in the first frames (a brief flash of the old size on a small screen is not hidden).
+2. *Resize is followed.* The glass picture is made again at the window's size over six at every size (map line `glass`); the Details
+   panel folds below 1500 wide and the Job panel below 1100 (in the lettering's units), by themselves, and a switch put on stands the
+   folded one over the model until it is put off or the window widens; the top bar drops the keys beside Save, Undo and Redo below
+   1300 and puts Saved or Not saved straight after the price, and drops "PRICE" below 900; the tools **wrap** onto as many lines as the
+   bar needs below 960 wide (each tool on the bar at every width; tested for every width 420 to 1100). The model window is not let be
+   smaller than 720 by 520, the estimate window not narrower than 880 (its tabs clip narrower) nor shorter than 420.
+3. *What a person set is kept* in `settings.txt` of the program's own, in `$XDG_CONFIG_HOME/buildos` or `~/.config/buildos` (macOS
+   `Library/Application Support/BuildOS`, Windows `%APPDATA%\BuildOS`; no new crate): where each window stands and how big, the panels
+   put away, the lettering. Plain lines. `PLUMBLINE_SETTINGS=<file>` names one; **with PLUMBLINE_MAP set and none named the program
+   opens the two windows as it always did, reads and writes no settings and keeps no recovery copy** (the old ways), so every earlier
+   demonstration is as it was. Nothing is kept in the job.
+4. *Lettering*: four steps (1, 1.15, 1.3, 1.5), "Smaller" and "Larger" beside the panel switches (map names "Smaller lettering",
+   "Larger lettering"); the engine's own UI scale, so every word and control moves together. The Wall button is 44 dots tall, then 50,
+   then 57. Known limit, seen in the picture: at the second step the estimate window's tab row is cut after "Mechanical" (Electrical and Plumbing cannot be reached: the strip clips and does not scroll).
+5. *Command does what Ctrl does* (`screen::command_held`, tested); the labels still say Ctrl.
+6. *Work never lost.* `<job>.json.recovery` beside the job, written whole through a `.part` file; a minute after the first unsaved change
+   and a minute after each copy, and at once after every tenth change; Save and a clean close remove it; a close with work not saved
+   writes a last copy. Opened with a copy newer than the job and different from it: a card under the view buttons, "Work from 12 minutes
+   ago was kept beside this job and never saved. Take it, or leave it and keep the job as it was last saved.", with "Take the recovered
+   work" and "Leave it". Nothing is taken without the click; while the offer waits Save refuses (it would write over the work) and the
+   copy is not written over. The time is said as how long ago: the program has no way to know the person's clock zone.
+Changes to existing behaviour: the window's Ctrl keys read Command too; the status line has the lettering controls; `Doc` has two new
+fields; the map writes more line kinds (`window`, `screen`, `panel`, `tools`, `lettering`, `glass`, `size`) and positions are the
+panels' units times the lettering's scale (the same at step 0). Found and fixed on the way: a window moved by a hand was not reported
+by the engine (the window's own record said 0,0), so the map and the kept place were wrong; they now ask the desktop each frame.
+Run on the frozen build f43 (each alone): `screensw` a to g PASS; `glassw`, `moneyw`, `benchw`, `pricew` PASS (their pictures were
+written to a scratch folder, not over the committed ones). App tests 93 passed (45 new); world 175+; the three root gates and
+`tools/licenses.sh` pass. Pictures: `demos/captured/screensw/`.
+Not right: the demonstration's display runs no window manager, so a title bar, a taskbar and a second screen are allowed for by
+figure (72 dots) and not yet seen (owed: the same demonstration under a window manager on this display); at 720 by 520 the model is a strip between the bars; the verify button on the price bar is cut off in a narrow window; the
+tools' bar and the strip of the tool in hand are as wide as the bar and may cut a long hint; from the second lettering step on the estimate window's tabs are cut off; Cmd shows as Ctrl on the buttons.
+
 
 ## The database in one hand: a demonstration, written before it is built (call 223; 2026-11-25)
 
