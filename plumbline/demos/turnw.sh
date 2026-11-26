@@ -97,7 +97,7 @@ echo "    set down: in the same space as wall 2, $SAID_IN in into each other"
 # A quarter turn: its 4 in is now east and west, 2 in each way of 23.5: to 23.667 ft,
 # an inch short of the wall's face.
 says "the turn" "Turned Panelboard, 200 A a quarter: its width runs north and south. It is clear of everything." "$LOG"
-says "the library written out" "Wrote “turned items”, beside the job: the job's tool chest, 48 items under their headings." "$LOG"
+says "the library written out" "Wrote “turned items”, beside the job: the job's tool chest, 57 items under their headings." "$LOG"
 says "the change, and what stands" "Panelboard, 200 A: changed: its width; the one set down is now that size" "$LOG"
 
 echo

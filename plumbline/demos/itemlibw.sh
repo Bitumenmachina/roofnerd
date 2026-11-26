@@ -69,10 +69,10 @@ echo "  10 pictures saved to $OUT (model and sheet, after each of 5 steps)"
 echo
 echo "== What the program said as it went =="
 LOG="$(cat "$T/map.txt.said")"
-says "the starter" "Brought in 48 starter items, trade by trade, at typical sizes: each size is Assumed until the product is chosen." "$LOG"
+says "the starter" "Brought in 57 starter items, trade by trade, at typical sizes: each size is Assumed until the product is chosen." "$LOG"
 says "one set down" "Set one down on Ground." "$LOG"
 says "what it is drawn as" "Vanity, 36 in is drawn as a box, wherever one stands." "$LOG"
-says "the library written out" "Wrote “bench items”, beside the job: the job's tool chest, 48 items under their headings." "$LOG"
+says "the library written out" "Wrote “bench items”, beside the job: the job's tool chest, 57 items under their headings." "$LOG"
 
 echo
 echo "== What the session left: the saved job, and the library beside it =="
@@ -80,11 +80,11 @@ echo "== What the session left: the saved job, and the library beside it =="
 "$P" check "$J"
 LIST="$("$P" items "$J")"
 says "the vanity, in the job" "furnishing, drawn as a box; ~36 in wide, ~21 in deep, ~34 1/2 in high; 1 placed" "$LIST"
-# The library as written, into a job with nothing in it: the same 48 items, the vanity
+# The library as written, into a job with nothing in it: the same 57 items (call 235, point 6: 48 before call 233), the vanity
 # drawn as its box there too.
 "$P" new "$T/other.json" "Another job (not a real job)" >/dev/null
 IN="$("$P" import items "$T/other.json" "$T/job/bench items.csv")"
-says "read back" "  set: 48" "$IN"
+says "read back" "  set: 57" "$IN"
 says "all of it" "  not used: 0" "$IN"
 says "the change went with it" "furnishing, drawn as a box; ~36 in wide, ~21 in deep, ~34 1/2 in high; 0 placed" "$("$P" items "$T/other.json")"
 echo "  PASS: the starter items came into the job in the window trade by trade, one was set down, an item was opened and what it is drawn as changed with a click, the library was written out beside the job, and another job read the same items from it"
