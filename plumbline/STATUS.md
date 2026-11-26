@@ -11534,8 +11534,9 @@ the command line the stopped bench step (call 214) taken up again.
   nothing by the lead: **the window's 108 tests pass on it**; the command
   line's six crates were run on the same sources at 891a086 (1,316 tests, 67
   command-line demonstrations). **1,424 tests in all.** `demos/cabinetsw.sh`
-  asks for Q99 where it asked for B99 (call 225). Owed on it and said here
-  until done: `tools/committed.sh` from a clean clone; every window
+  asks for Q99 where it asked for B99 (call 225). **`tools/committed.sh` passes
+  on the merged head 1edb650 from a clean clone with nothing built beforehand
+  (108 test runs, 12:00 UTC).** Owed on it and said here until done: every window
   demonstration on its frozen build (the lead's runs are listed here as they
   end); a judge who built none of it on how the two windows feel.
 - **2026-11-26, 03:10 UTC.** Call 222 part A (any screen, work never lost) is
