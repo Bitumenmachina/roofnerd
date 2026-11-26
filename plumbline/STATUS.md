@@ -12246,7 +12246,25 @@ LAS with the same points.
    saying what to save it as, as the licences decide.
 7. `plumbline sixteen` writes the job it wrote, byte for byte.
 
-Not built yet.
+**Built (2026-11-26; the worker's, checked by the lead's own run of its copy:
+1,316 command-line tests, 67 command-line demonstrations with no FAIL in any, the
+three gates, the port map, the licences, the sample whole house byte for byte).**
+`demos/scan-files.sh` passes. **Read**: LAS 1.1 to 1.4, every kind of point record
+(a reader written here from the publisher's own text); LAZ and E57 through two
+crates whose licences were read at their source (Apache-2.0 and MIT; three
+crates added in all). The made-up room is 9,474 points, and its sheet at 4 ft is
+byte for byte the same from the PLY, the LAS, the LAZ and the E57. None of the
+hand figures above was wrong. Units: where a LAS says its unit it is offered and
+said, a person's word wins, two units are refused until one is said; an E57 is
+meters. A scan lying far from the zero (a map grid) has its southwest corner
+taken to zero, and its sheet's source says how far east and north it lay.
+**Not confirmed, and said**: no LAZ or E57 written by a scanner's own program
+has been read (the made-up ones are written by the crates that read them); the
+E57 standard itself and the packed format's own text were not reached. **A fault
+older than this job, found by it and not touched**: the walls finder cuts the
+plan into cells by rounding down, so points on a whole-foot line fall either
+side on a difference of 1e-16 and the finding can change; owed, its own job.
+Not right: the window's picker still lists a PLY only.
 
 ## Starter shapes and items for appliances and small devices: a demonstration, written before it is built (call 233; 2026-11-26)
 

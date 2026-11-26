@@ -342,11 +342,18 @@ pub fn path_from(folder: &std::path::Path, file: &std::path::Path) -> Result<Str
 /// drawing's path.
 #[allow(clippy::too_many_arguments)]
 pub fn lay_scan_sheet(job: &mut Job, level: &str, folder: &std::path::Path, called: &str, taken: &str, cut_at: f64, png: &[u8], checksum: &str, size: P2, cut_size: [u32; 2], dots: f64, corner: P2) -> Result<String, String> {
+    lay_scan_sheet_of(job, level, folder, called, "ply", taken, cut_at, png, checksum, size, cut_size, dots, corner)
+}
+
+/// The same, for a scan of any kind (call 230): `ext` is the scan file's own ending ("ply", "las", "laz", "e57"), which the
+/// drawing's source names, so that a sheet from a LAS says it came from one.
+#[allow(clippy::too_many_arguments)]
+pub fn lay_scan_sheet_of(job: &mut Job, level: &str, folder: &std::path::Path, called: &str, ext: &str, taken: &str, cut_at: f64, png: &[u8], checksum: &str, size: P2, cut_size: [u32; 2], dots: f64, corner: P2) -> Result<String, String> {
     let ft_in = |x: f64| units::feet_as_ft_in(x, 16);
     let sheet = folder.join(format!("{called} cut at {}.png", ft_in(cut_at).replace('\'', " ft").replace('"', " in").replace("  ", " ").trim()));
     std::fs::write(&sheet, png).map_err(|e| format!("the sheet could not be written beside the job ({}): {e}", folder.display()))?;
     let kept = path_from(folder, &sheet)?;
-    let source = format!("scan {called}.ply, cut {} above its floor ({taken})", ft_in(cut_at));
+    let source = format!("scan {called}.{ext}, cut {} above its floor ({taken})", ft_in(cut_at));
     let how = Entered { status: Status::Assumed, source: &source };
     let made = add(job, level, called, Read { file: &kept, page: 1, bytes: png.len() as u64, checksum, size }, how)?;
     let wide = f64::from(cut_size[0]);

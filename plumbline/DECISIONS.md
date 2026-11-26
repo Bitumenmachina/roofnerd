@@ -10392,3 +10392,36 @@ connection).
    photo kept with a measurement, are later jobs.
 8. Nothing of the sample whole house moves.
 
+### Call 230, as built: a scanner's own files taken in, LAS, LAZ and E57 (2026-11-26)
+
+The worker's work under contract 230M (`research/worker-report-call230M.md`,
+`research/scan-files.md`), checked by the lead's own run of its copy (1,316
+command-line tests: model 740, command line 85, sheets 7, model files 131,
+roofing 122, plans 231; 67 command-line demonstrations; gates, port map,
+licences; the sample whole house byte for byte).
+
+1. **A LAS is read as a PLY is**, by a reader written here from the publisher's
+   own text: versions 1.1 to 1.4, every kind of point record (the waveform not
+   kept, and said); another version, a kind above the tenth, a file cut short
+   (saying how many points it says and how many it holds), a file of no points
+   and a file in degrees are refused by name.
+2. **LAZ and E57 are read**, through `laz` (Apache-2.0; older versions were
+   LGPL, so the version is held at the permissive one) and `e57` (MIT), each
+   licence read in the crate's own files, with what each links in turn;
+   `tools/licenses.sh` passes.
+3. **Units**: a LAS says its unit only in its coordinate-system record; one
+   unit is offered and said, a person's word wins and both are said, two units
+   are refused until one is said. An E57 is meters by its standard. Which way
+   is up is said, never guessed.
+4. **A scan far from the zero** has its southwest corner taken to zero, and the
+   sheet's source says how far east and north it lay in the file's own grid.
+   Before, such a scan could not be brought in at all.
+5. A scan is never Known; the sheet's source names the file by its own ending.
+6. **Lead's rulings**: nothing of a standard is from memory (the one code that
+   was is now quoted from its source); the program that writes the made-up LAZ
+   and E57 is an example, not a command a person is given.
+7. **Owed**: a LAZ and an E57 from a scanner's own program read (Patrick's to
+   give, made safe; nothing waits on it); the walls finder's cells put right
+   (its own job); the shift kept as a figure of the job and not only as words;
+   the window's picker and entries.
+

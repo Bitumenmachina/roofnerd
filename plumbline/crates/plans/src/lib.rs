@@ -33,6 +33,8 @@ mod found_189_tests;
 mod found_scenes;
 pub mod marks;
 pub mod scan;
+mod scan_e57;
+mod scan_las;
 mod tiffs;
 use hayro::hayro_interpret::font::GlyphRun;
 use hayro::hayro_interpret::util::TransformExt;
@@ -120,6 +122,14 @@ pub fn sort_of(bytes: &[u8]) -> Option<Sort> {
         Some(Sort::Tiff)
     } else {
         None
+    }
+}
+
+/// What to say of a file that is no drawing: a scan is told where it goes, anything else what a drawing is.
+fn not_a_drawing(bytes: &[u8]) -> String {
+    match scan::kind_of(bytes) {
+        Some(kind) => format!("it is a {} scan, a cloud of points, not a drawing: bring it in with `plumbline import scan`", kind.said()),
+        None => "it is not a PDF, a PNG, a JPEG, a TIFF or a CAD drawing (DXF)".into(),
     }
 }
 
@@ -408,7 +418,7 @@ pub fn read_with(bytes: &[u8], page: usize, off: Option<&[String]>) -> Result<Pa
         return Err(why);
     }
     match sort_of(bytes) {
-        None => Err("it is not a PDF, a PNG, a JPEG, a TIFF or a CAD drawing (DXF)".into()),
+        None => Err(not_a_drawing(bytes)),
         Some(Sort::Dxf) => {
             if page != 1 {
                 return Err(format!("a CAD drawing has one page; page {page} was asked for"));
@@ -466,7 +476,7 @@ pub fn size_of(bytes: &[u8], page: usize) -> Result<(Sort, usize, [f64; 2]), Str
         return Err(why);
     }
     match sort_of(bytes) {
-        None => Err("it is not a PDF, a PNG, a JPEG, a TIFF or a CAD drawing (DXF)".into()),
+        None => Err(not_a_drawing(bytes)),
         Some(Sort::Dxf) => {
             if page != 1 {
                 return Err(format!("a CAD drawing has one page; page {page} was asked for"));

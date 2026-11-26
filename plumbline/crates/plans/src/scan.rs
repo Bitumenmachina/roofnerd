@@ -1,4 +1,4 @@
-//! A scan of a building as a point cloud (a PLY file), read and cut into a sheet to
+//! A scan of a building as a point cloud (a PLY file; and, from call 230, a LAS, LAZ or E57 file), read and cut into a sheet to
 //! trace over (DECISIONS.md call 128).
 //!
 //! PLY is a short public format: a header in words, then the points as text or as
@@ -28,6 +28,22 @@ pub struct Scan {
     pub lost: Vec<String>,
 }
 
+/// A whole number of a unit with its thousands set off: "512,000 m".
+fn grouped(x: f64, unit: &str) -> String {
+    let n = x.round().abs() as u64;
+    let digits = n.to_string();
+    let mut out = String::new();
+    for (i, c) in digits.chars().enumerate() {
+        if i > 0 && (digits.len() - i) % 3 == 0 {
+            out.push(',');
+        }
+        out.push(c);
+    }
+    format!("{}{out} {unit}", if x < 0.0 { "-" } else { "" })
+}
+
+/// A scan whose southwest corner is farther than this from the zero, east or north, is taken to the zero (call 230).
+const FAR_FROM_ZERO: f64 = 1000.0;
 const FEET_PER_METRE: f64 = 1.0 / 0.3048;
 /// The most points read: past this a file is refused, not half read.
 pub const MOST_POINTS: usize = 60_000_000;
@@ -142,12 +158,7 @@ pub fn read_ply(bytes: &[u8], units: Units, up: Up) -> Result<Scan, String> {
     if raw.len() < count {
         return Err(format!("it is cut short: it says {count} points and holds {}", raw.len()));
     }
-    if raw.iter().any(|p| p.iter().any(|c| !c.is_finite())) {
-        return Err("a point in it is not a number".into());
-    }
-    let k = if units == Units::Metres { FEET_PER_METRE } else { 1.0 };
-    // East, north, up. With y up, north is the file's minus z (a right-handed turn).
-    let points = raw.into_iter().map(|[x, y, z]| if up == Up::Z { [x * k, y * k, z * k] } else { [x * k, -z * k, y * k] }).collect();
+    let points = finish(raw, units, up)?;
     let others: Vec<&str> = props.iter().map(|p| p.0.as_str()).filter(|n| !matches!(*n, "x" | "y" | "z")).collect();
     let mut lost = Vec::new();
     if !others.is_empty() {
@@ -159,6 +170,130 @@ pub fn read_ply(bytes: &[u8], units: Units, up: Up) -> Result<Scan, String> {
         lost.push(format!("its {faces} faces (the surface drawn over the points: only where the points are is kept)"));
     }
     Ok(Scan { points, lost })
+}
+
+
+/// The kinds of scan file this reads (DECISIONS.md call 230).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Kind {
+    /// A phone's scan: PLY.
+    Ply,
+    /// A surveyor's or scanning crew's: LAS.
+    Las,
+    /// LAS packed (LASzip).
+    Laz,
+    /// A scanner's exchange file: E57.
+    E57,
+}
+
+impl Kind {
+    /// What a builder calls it.
+    pub fn said(self) -> &'static str {
+        match self {
+            Kind::Ply => "PLY",
+            Kind::Las => "LAS",
+            Kind::Laz => "LAZ",
+            Kind::E57 => "E57",
+        }
+    }
+}
+
+/// What kind of scan file these bytes are, by how they begin; none if they are no scan this knows.
+pub fn kind_of(bytes: &[u8]) -> Option<Kind> {
+    if bytes.starts_with(b"ply") {
+        Some(Kind::Ply)
+    } else if bytes.starts_with(b"LASF") {
+        // LASzip marks its packing on the high bit of the point record format.
+        Some(if bytes.get(104).is_some_and(|f| f & 0x80 != 0) { Kind::Laz } else { Kind::Las })
+    } else if bytes.starts_with(b"ASTM-E57") {
+        Some(Kind::E57)
+    } else {
+        None
+    }
+}
+
+/// Read a scan file's points, whichever kind it is, to feet east, north and up. A PLY is read by `read_ply`, as it was.
+pub fn read(bytes: &[u8], units: Units, up: Up) -> Result<Scan, String> {
+    let raw = match kind_of(bytes) {
+        Some(Kind::Ply) => return read_ply(bytes, units, up),
+        Some(Kind::Las | Kind::Laz) => crate::scan_las::read(bytes)?,
+        Some(Kind::E57) => crate::scan_e57::read(bytes)?,
+        None => return Err("it is not a PLY file (a PLY file begins with the word ply), nor a LAS, LAZ or E57 file".into()),
+    };
+    Ok(Scan { points: finish(raw.points, units, up)?, lost: raw.lost })
+}
+
+/// What a file says of the unit its lengths are in.
+#[derive(Clone, Debug, PartialEq)]
+pub enum FileSays {
+    /// Nothing: a PLY never does, and a LAS often does not.
+    Silent,
+    /// One unit, with the name a builder says it by ("feet", "US survey feet", "meters").
+    Unit(Units, String),
+    /// More than one, or one this does not know: the sentence says what the file says.
+    Unclear(String),
+    /// Degrees of latitude and longitude: no length at all.
+    Degrees,
+}
+
+/// What the file says of its unit (a LAS in its coordinate system records, an E57 by its standard: meters).
+pub fn file_says(bytes: &[u8]) -> FileSays {
+    match kind_of(bytes) {
+        Some(Kind::Las | Kind::Laz) => crate::scan_las::says(bytes),
+        Some(Kind::E57) => {
+            let (u, n) = crate::scan_e57::unit();
+            FileSays::Unit(u, n)
+        }
+        _ => FileSays::Silent,
+    }
+}
+
+/// The unit to read a file in: what the person said; else what the file says; else meters, as for a PLY. A file that
+/// says two things, or a thing this does not know, is not guessed between: it is an error until the person says.
+pub fn units_to_use(bytes: &[u8], said: Option<Units>) -> Result<Units, String> {
+    if let Some(u) = said {
+        return Ok(u);
+    }
+    match file_says(bytes) {
+        FileSays::Unit(u, _) => Ok(u),
+        FileSays::Silent => Ok(Units::Metres),
+        FileSays::Unclear(why) => Err(format!("{why}: say which it is with --units m or --units ft")),
+        FileSays::Degrees => Err("its points are in degrees of latitude and longitude, which are not lengths: save it again in a projected system in feet or meters".into()),
+    }
+}
+
+fn unit_word(u: Units) -> &'static str {
+    if u == Units::Metres { "meters" } else { "feet" }
+}
+
+/// What a LAS, LAZ or E57 file itself says of its unit and of which way is up, beside what the person said, each in a
+/// sentence. A PLY says nothing of either, so there is nothing to add for one.
+pub fn file_notes(bytes: &[u8], units: Units, up: Option<Up>) -> Vec<String> {
+    let Some(kind @ (Kind::Las | Kind::Laz | Kind::E57)) = kind_of(bytes) else { return Vec::new() };
+    let mut out = Vec::new();
+    match file_says(bytes) {
+        FileSays::Silent => out.push("the file does not say what its unit is".to_string()),
+        FileSays::Unit(u, name) if u == units => out.push(format!("the file says its unit is {name}")),
+        FileSays::Unit(_, name) => out.push(format!("the file says its unit is {name} and you said {}: taken as {}, as you said", unit_word(units), unit_word(units))),
+        FileSays::Unclear(why) => out.push(format!("the file's unit is not clear ({why}): taken as {}, as you said", unit_word(units))),
+        FileSays::Degrees => {}
+    }
+    match (kind, up) {
+        (Kind::E57, _) => out.push("the file does not say which way is up".to_string()),
+        (_, Some(Up::Y)) => out.push("a LAS file keeps height in z, and you said y: taken as y, as you said".to_string()),
+        _ => {}
+    }
+    out
+}
+
+/// Feet, east, north and up from the file's own unit and axes. A point that is no number is refused.
+fn finish(raw: Vec<[f64; 3]>, units: Units, up: Up) -> Result<Vec<[f64; 3]>, String> {
+    if raw.iter().any(|p| p.iter().any(|c| !c.is_finite())) {
+        return Err("a point in it is not a number".into());
+    }
+    let k = if units == Units::Metres { FEET_PER_METRE } else { 1.0 };
+    // East, north, up. With y up, north is the file's minus z (a right-handed turn).
+    Ok(raw.into_iter().map(|[x, y, z]| if up == Up::Z { [x * k, y * k, z * k] } else { [x * k, -z * k, y * k] }).collect())
 }
 
 impl Scan {
@@ -362,6 +497,11 @@ pub struct Brought {
     /// What laying the sheet returned (the drawing's path).
     pub laid: String,
     pub lost: Vec<String>,
+    /// What a LAS, LAZ or E57 file itself says of its unit and of which way is up, beside what was said (none for a PLY).
+    pub file_said: Vec<String>,
+    /// How far east and north of the job's zero the scan's southwest corner lay in its file, in feet, where it was farther than
+    /// a job's place can be and was taken to the zero (a LAS or E57 in a map grid): the caller says it. None for a PLY.
+    pub moved: Option<[f64; 2]>,
 }
 
 /// Bring a scan in: read it, say which way is up (as it was said, or the way the house
@@ -374,7 +514,7 @@ pub fn bring_in(bytes: &[u8], label: &str, stem: &str, said: &Said, lay: &mut dy
         Some(up) => (up, "as you said"),
         None => {
             // The file's own axes, as read with z up: its y and its z, how far each runs.
-            let flat = read_ply(bytes, said.units, Up::Z).map_err(|why| format!("{label}: {why}"))?;
+            let flat = read(bytes, said.units, Up::Z).map_err(|why| format!("{label}: {why}"))?;
             let (lo, hi) = flat.bounds().ok_or_else(|| format!("{label}: it has no points"))?;
             let (along_y, along_z) = (hi[1] - lo[1], hi[2] - lo[2]);
             if along_y < 0.8 * along_z {
@@ -386,11 +526,30 @@ pub fn bring_in(bytes: &[u8], label: &str, stem: &str, said: &Said, lay: &mut dy
             }
         }
     };
-    let mut scan = read_ply(bytes, said.units, up).map_err(|why| format!("{label}: {why}"))?;
+    let mut scan = read(bytes, said.units, up).map_err(|why| format!("{label}: {why}"))?;
     // A scan made by hand is seldom level: it is levelled by its own floor, and how far
     // it leaned is said.
     let leaned = scan.level_by_floor();
-    let taken = format!("taken as {} with {} up", if said.units == Units::Metres { "meters" } else { "feet" }, if up == Up::Z { "z" } else { "y" });
+    // A surveyor's or a scanning crew's file lies in a map grid, a million feet or more from the job's own zero, farther
+    // than a job can have a place (call 230). Its southwest corner is taken to the zero, and how far it was is handed back
+    // to be said. A PLY is left where its file put it, as it was.
+    let moved = if kind_of(bytes) == Some(Kind::Ply) {
+        None
+    } else {
+        scan.bounds().map(|(lo, _)| [lo[0], lo[1]]).filter(|lo| lo[0].abs() > FAR_FROM_ZERO || lo[1].abs() > FAR_FROM_ZERO)
+    };
+    if let Some(lo) = moved {
+        for p in scan.points.iter_mut() {
+            p[0] -= lo[0];
+            p[1] -= lo[1];
+        }
+    }
+    let mut taken = format!("taken as {} with {} up", if said.units == Units::Metres { "meters" } else { "feet" }, if up == Up::Z { "z" } else { "y" });
+    // Said where the sheet's source is read later, not only in the reply: how far it lay, in the file's own unit.
+    if let Some(lo) = moved {
+        let (k, word) = if said.units == Units::Metres { (1.0 / FEET_PER_METRE, "m") } else { (1.0, "ft") };
+        taken.push_str(&format!("; its southwest corner taken to zero: it lay {} east and {} north in the file's own grid", grouped(lo[0] * k, word), grouped(lo[1] * k, word)));
+    }
     let (lo, _) = scan.bounds().ok_or_else(|| format!("{label}: it has no points"))?;
     let (floor, ceiling) = scan.floor_and_ceiling();
     // Cut above the floor; where no floor shows, above the lowest point, and said.
@@ -399,7 +558,7 @@ pub fn bring_in(bytes: &[u8], label: &str, stem: &str, said: &Said, lay: &mut dy
     let read = crate::read(&cut.png, 1).map_err(|why| format!("{label}: the sheet made from it: {why}"))?;
     let checksum = crate::checksum(&cut.png);
     let laid = lay(&Sheet { called: stem, taken: &taken, cut_at: said.cut_at, png: &cut.png, checksum: &checksum, size: read.size, cut: &cut })?;
-    Ok(Brought { called: stem.to_string(), taken, why_up, points: scan.points.len(), leaned, floor, ceiling, base, cut, laid, lost: scan.lost })
+    Ok(Brought { called: stem.to_string(), taken, why_up, points: scan.points.len(), leaned, floor, ceiling, base, cut, laid, lost: scan.lost, file_said: file_notes(bytes, said.units, said.up), moved })
 }
 
 #[cfg(test)]
