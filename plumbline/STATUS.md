@@ -12204,7 +12204,26 @@ at -4 ft, the first floor at 0, the second at 10 ft.
    installed, finds no error.
 8. `plumbline sixteen` writes the job it wrote, byte for byte.
 
-Not built yet.
+**Built (2026-11-26; the worker's, checked by the lead's own run of its copy:
+1,292 command-line tests, 66 command-line demonstrations with no FAIL in any, the
+three gates, the port map, the licences, the sample whole house byte for byte and
+its BIM file as it was but for the time it says).** `demos/gltf.sh` passes its
+eight steps, the seventh by the format's own checker (`tools/gltf-check.sh`, run
+and never linked): no error, no warning. **The lead opened the file in a
+browser** (a 3D viewer library fetched into scratch, the page drawn by the
+browser already on this machine): `demos/captured/gltf/` has the house whole
+and with the roof and second floor put away. It is the house, the right way
+round, its openings cut, the foundation under it, the ducts and pipes inside.
+**Figures of the lead's above that were wrong**: the parts are **236**, the
+things the BIM file gives a body or a line (two fittings with no size have
+neither and are named as not carried); the first floor is 40 ft 6 in by 28 ft
+6 in over its walls' thickness and the footings and roof reach 42 ft by 30 ft;
+the lowest point is the footing's bottom at -5 ft. Not right, and said in the
+file's own reply: a thing set down is its box, not its shape; a window is one
+pane; a roof plane has no thickness; the window's patterns are not carried;
+rooms are written as faint see-through volumes because the BIM file writes
+them; part names are the clash list's and are not unique (each part carries its
+path). The tests were written after the code and shown red by breaking it.
 
 ## A scanner's own files: a demonstration, written before it is built (call 230; 2026-11-26)
 

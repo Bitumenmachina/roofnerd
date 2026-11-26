@@ -47,6 +47,7 @@ pub mod trim;
 pub mod roof;
 pub mod sample;
 pub mod skeleton;
+pub mod solids;
 pub mod solve;
 pub mod spec;
 pub mod structure;

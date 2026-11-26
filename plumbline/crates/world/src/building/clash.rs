@@ -729,6 +729,19 @@ fn carried_on(drawn: &[Placement], net: &network::Network) -> BTreeMap<usize, (P
     out
 }
 
+/// What each thing set down is, by its path: the name of its item, where it has one.
+fn what_of(job: &mut Job) -> BTreeMap<String, String> {
+    let mut q = job.world.query::<(&Node, &Placed)>();
+    q.iter(&job.world).filter_map(|(n, p)| p.what.value.clone().map(|w| (n.path.clone(), w))).collect()
+}
+
+/// The name each drawn thing goes by in the clash list and everything that names a clash, by path (call 229: the parts of the house
+/// written as glTF are named by it). One rule: the same `said` the clashes themselves are named with.
+pub fn called(job: &mut Job, drawn: &[Placement]) -> std::collections::HashMap<String, String> {
+    let what = what_of(job);
+    drawn.iter().map(|p| (p.path.clone(), said(p, &what))).collect()
+}
+
 /// What an element is called in a report: a placed thing by what it is, with its name.
 fn said(p: &Placement, what: &BTreeMap<String, String>) -> String {
     match what.get(&p.path) {
@@ -874,10 +887,7 @@ fn find(job: &mut Job, clearance: Option<f64>, with_walls_coming_down: bool) -> 
         }
     }
     let (drawn, not_drawn) = placements(job);
-    let what: BTreeMap<String, String> = {
-        let mut q = job.world.query::<(&Node, &Placed)>();
-        q.iter(&job.world).filter_map(|(n, p)| p.what.value.clone().map(|w| (n.path.clone(), w))).collect()
-    };
+    let what = what_of(job);
     let net = network::network(job, None, None, network::TOLERANCE_FT)?;
     // What is joined, and where: every two elements that meet at one joint.
     let mut joined: BTreeMap<(String, String), Vec<P3>> = BTreeMap::new();

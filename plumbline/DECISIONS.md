@@ -10315,3 +10315,35 @@ job, not code.
 7. The window draws shapes from the table already; its pictures are retaken at
    the next window merge, and the dive's last picture is looked at then.
 
+### Call 229, as built: the house written out as glTF (2026-11-26)
+
+The worker's work under contract 229M (`research/worker-report-call229M.md`,
+`research/gltf.md`), checked by the lead's own run of its copy (1,292
+command-line tests: model 740, command line 85, sheets 7, model files 131,
+roofing 122, plans 207; 66 command-line demonstrations; gates, port map,
+licences; the sample whole house byte for byte) and by the lead opening the
+file in a browser and looking at it.
+
+1. **`plumbline export gltf <job> <file.glb>`**: one file, a named part for each
+   thing the BIM file gives a body or a line (the sample house: 236), under its
+   level; the reply lists what was written and what was not carried.
+2. **One source of solids**: the two rules that lived inside the BIM file's
+   writer (which wall runs through a corner; the frame a run is drawn in) moved
+   to `world::solids`, and both writers call them. The BIM file is what it was.
+   A test holds every part's box to the BIM file's box for the same thing.
+3. **Metres; up as the format has it; not mirrored**: a place east, north, up
+   in feet is written east, up, minus north in metres. A corner worked by hand
+   is held by a test.
+4. **Colour by finish**, plain; glass and rooms see-through.
+5. **Not carried, and said in the reply and in the file**: prices and
+   certainty; the window's patterns; what a thing set down is drawn as; a
+   wall's layers and a window's frame and sash; systems; a roof plane's
+   thickness; a thing with no size.
+6. **Checked** by a reader written for the tests, by the format's own checker
+   run as an outside program, and by eye in a browser.
+7. BIMCraft's own glTF writer (MIT) was read and its layout followed; the port
+   map says so.
+8. **Owed**: things set down written as their shapes (the shapes are a table
+   now, so the same blocks can be written); a window's frame; unique names;
+   the window's entry under Write out; a mesh brought in (its own call).
+

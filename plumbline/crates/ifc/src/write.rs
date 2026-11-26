@@ -19,6 +19,7 @@
 //! which is how the two are checked against each other.
 
 use plumbline_world::building::forms::Form;
+use plumbline_world::solids::along;
 use std::collections::{BTreeMap, HashMap};
 
 use plumbline_world::building::{self, ConnectorKind, Connectors, Domain, Flow, FittingKind, InSystem, Shape, SystemInfo};
@@ -289,20 +290,6 @@ impl Out {
     }
 }
 
-/// Along a run: the unit way from `a` to `b`, and a level way across it.
-fn along(a: P3, b: P3) -> Option<(P3, P3, f64)> {
-    let d = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
-    let length = (d[0] * d[0] + d[1] * d[1] + d[2] * d[2]).sqrt();
-    if length < 1.0e-9 {
-        return None;
-    }
-    let way = [d[0] / length, d[1] / length, d[2] / length];
-    let flat = (way[0] * way[0] + way[1] * way[1]).sqrt();
-    // Across, and level: square to the run on plan; for a riser, east.
-    let across = if flat < 1.0e-9 { [1.0, 0.0, 0.0] } else { [-way[1] / flat, way[0] / flat, 0.0] };
-    Some((way, across, length))
-}
-
 /// What IFC calls a fitting, by what it joins and what it is (call 204 point 6 writes one with no size by the same words).
 fn fitting_class(discipline: Discipline, kind: Option<FittingKind>) -> (&'static str, &'static str) {
     match (discipline, kind) {
@@ -456,26 +443,7 @@ pub fn export(job: &mut Job, file: &str, when: &str) -> Result<Written, String> 
     // centre line to the corner point, so written as drawn each corner had a notch
     // (J20-6: a 1 ft square missing at each outside corner of a ring of footings).
     // How much longer (or, below nought, shorter) each end of each is written.
-    let carried: std::collections::HashMap<&str, [f64; 2]> = {
-        let lines: Vec<(usize, &plumbline_world::building::Placement, [f64; 2], [f64; 2], f64)> = placed.iter().enumerate().filter_map(|(i, p)| match &p.shape { Shape::Wall { a, b, thickness, .. } => Some((i, p, *a, *b, *thickness)), _ => None }).collect();
-        let same = |x: [f64; 2], y: [f64; 2]| (x[0] - y[0]).hypot(x[1] - y[1]) < 0.01;
-        let mut out = std::collections::HashMap::new();
-        for (i, p, a, b, _) in &lines {
-            let mut by = [0.0, 0.0];
-            for (which, end) in [a, b].into_iter().enumerate() {
-                let meeting: Vec<&(usize, &plumbline_world::building::Placement, [f64; 2], [f64; 2], f64)> = lines.iter().filter(|o| o.0 != *i && o.1.kind == p.kind && o.1.storey == p.storey && (same(o.2, *end) || same(o.3, *end))).collect();
-                let [other] = meeting.as_slice() else { continue };
-                let (ux, uy) = (b[0] - a[0], b[1] - a[1]);
-                let (vx, vy) = (other.3[0] - other.2[0], other.3[1] - other.2[1]);
-                let turn = ((ux * vy - uy * vx) / (ux.hypot(uy) * vx.hypot(vy)).max(1.0e-12)).abs();
-                if turn > 0.98 {
-                    by[which] = if *i < other.0 { other.4 / 2.0 } else { -other.4 / 2.0 };
-                }
-            }
-            out.insert(p.path.as_str(), by);
-        }
-        out
-    };
+    let carried = plumbline_world::solids::corner_carry(&placed);
 
     for p in &placed {
         // Where it is placed from: its level's floor, or the building's zero.
@@ -492,7 +460,7 @@ pub fn export(job: &mut Job, file: &str, when: &str) -> Result<Written, String> 
                 };
                 let at = o.placed(Some(within), [a[0], a[1], base - floor], up, way);
                 // From so far before its first end to so far past its last (a corner).
-                let [before, after] = carried.get(p.path.as_str()).copied().unwrap_or([0.0, 0.0]);
+                let [before, after] = carried.get(&p.path).copied().unwrap_or([0.0, 0.0]);
                 let body = o.pushed_rect_on_axis([(length + after - before) / 2.0, 0.0], length + before + after, *thickness, *height, 0.0, length);
                 // A strip footing is IFC's footing of that sort; anything else here is a wall.
                 let wall = if p.kind == plumbline_world::Kind::Footing {
@@ -786,7 +754,7 @@ pub fn export(job: &mut Job, file: &str, when: &str) -> Result<Written, String> 
             rooms_no_walls += 1;
             continue;
         };
-        let high = storeys.iter().find(|s| level_of.get(&s.path).is_some_and(|l| l.0 == level)).and_then(|s| job.find(&s.path)).and_then(|e| job.world.get::<Level>(e)).and_then(|l| l.height.feet()).filter(|h| *h > 0.0);
+        let high = storeys.iter().find(|s| level_of.get(&s.path).is_some_and(|l| l.0 == level)).and_then(|s| plumbline_world::solids::level_height(job, &s.path));
         let Some(high) = high else {
             rooms_no_height += 1;
             continue;
