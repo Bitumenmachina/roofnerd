@@ -11589,8 +11589,11 @@ the command line the stopped bench step (call 214) taken up again.
   is written from 24 dots, the larger thing's tag is kept of two, and a run is
   sized by its whole length. With the window builder to build; failed the same
   way on its second run.
-  `screensw` PASS (first run, 08:45 to 09:05).
-  Still to run on it: `bringw`, `movew`. The builder's own runs
+  `screensw` PASS (first run, 08:45 to 09:05). `bringw` PASS (first run).
+  Still to run on it: `movew`. `trimw`, `benchw`, `dressw`, `shapebenchw`,
+  `glassw`, `moneyw` and `pricew` were last run by the lead on the build before
+  call 222 part A, and four of them by its builder since; they are run again
+  on the next merge, which is near. The builder's own runs
   before the merge: `screensw` (seven sessions), `glassw`, `moneyw`, `benchw`,
   `pricew`. `tools/committed.sh` has not been run on 2e6f63a or later.
 

@@ -10229,6 +10229,19 @@ right.
 4. `demos/tradesw.sh` is not edited and passes again; the tests of
    `nav::label_shown` gain the tag's own least size and keep every figure they
    hold for a name.
+5. **Added the same day, after the builder built points 1 to 3 and handed back
+   what moved.** (a) The two missing tags are back, and the 3/4 in cold water
+   run then had none: both its tags lost their places to the stack and to the
+   hot water. **A tag that loses its place is moved along its own run to the
+   nearest place where it lies over no tag that is kept, and is dropped only
+   when its run has no such place.** A run in a trade's view is not left
+   without its size while there is room on it to write one. (b) The Plumbing
+   picture's count of wire-coloured dots rose from under 100 to 171 with no
+   wire drawn: the tags that now show carry the swatches of the pipes they
+   name, and the hot water's is near the wire's colour to the script's eye.
+   The check means "no wire is drawn"; it is narrowed to count outside the
+   tags' own boxes, which the map gives, with this reason beside it in
+   `demos/tradesw.sh`. That one measure is the only edit to the demonstration.
 
 ### Call 228, as built: clashes handed over as an issue list, BCF 2.1 (2026-11-26)
 
