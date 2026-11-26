@@ -11552,13 +11552,26 @@ the command line the stopped bench step (call 214) taken up again.
   demonstration; it is cut in two (f: the north arrow; h: the two dives; no
   step and no check changed) and run again. A demonstration that fails for time
   beside a build is not believed until it has run with nothing beside it.
+  **And put right once more (06:20 UTC):** cut in two, `navw` ran all eight
+  sessions to their end with three builds going beside it and failed three
+  figures: the north arrow's double-click was not taken (the view tilted 15.5
+  degrees, not straight down) and the two dives stopped short (0.73 ft and 0.90
+  ft from the place where 0.68 is asked). Those are lost clicks. So the idle
+  class does NOT keep a build from costing a click on the demonstration that
+  counts clicks most closely; it did on the others run so far. The rule now:
+  builds go on beside the window demonstrations in the idle class, **except
+  while `quiet.lock` stands**, which the lead sets for a demonstration that has
+  failed beside a build; no cargo and no session starts while it stands. `navw`
+  runs next with the machine to itself.
 - **Window demonstrations on the frozen build of 2e6f63a, the lead's own runs,
   as they end** (the commits since touch no window code): `fixes209w` PASS
   (with six builds beside it), `fixes197w` PASS (first run; its pictures read).
   `itemlibw` PASS and `itemneww` PASS (first runs; pictures read).
+  `cabinetsw`, `gablew` and `gableendw` PASS (first runs; pictures read).
+  `navw` with the machine to itself (06:59 to 07:42): every figure as written
+  but one, the north arrow's double-click (see below).
   `navw`: failed twice for time as said above, to be run again cut in two.
-  Still to run on it: `cabinetsw`, `gablew`, `gableendw`, `tradesw`,
-  `screensw`, `bringw`, `movew`. The builder's own runs
+  Still to run on it: `tradesw`, `screensw`, `bringw`, `movew`. The builder's own runs
   before the merge: `screensw` (seven sessions), `glassw`, `moneyw`, `benchw`,
   `pricew`. `tools/committed.sh` has not been run on 2e6f63a or later.
 
@@ -12108,6 +12121,55 @@ findings, 6 to verify in the field)**, set against 10, through a wall or a floor
 8. A job with no clash: the file is written with no issue, and the reply says
    there was none to hand over.
 9. `plumbline sixteen` writes the job it wrote, byte for byte.
+
+Not built yet.
+
+## The house written out as glTF: a demonstration, written before it is built (call 229; 2026-11-26)
+
+`demos/gltf.sh` (contract `handoff/contracts/contract-229M.md`). The job is the
+made-up whole house: 40 ft by 28 ft on its outside line, the foundation's floor
+at -4 ft, the first floor at 0, the second at 10 ft.
+
+1. `plumbline export gltf` writes one file; the reply says how many parts, and
+   what was not carried (prices, certainty, the window's patterns).
+2. **The count of parts is the count of things the BIM file writes** from the
+   same job (the script counts both).
+3. **In metres**: the house's box on the ground is at least 12.192 m by 8.534 m
+   (40 ft and 28 ft) and no more than that by the overhang of the eaves the
+   worker names; its lowest point is at or below -1.219 m (-4 ft).
+4. **Not mirrored**: the front door's part lies on the south side of the
+   house's middle, and the kitchen sink's on the north, by the axes the format
+   gives.
+5. Each part has a name a builder knows it by (the name the clash list uses).
+6. A wall with a window in it has the hole: its part's volume is less than its
+   box's by the opening's.
+7. The file read back by the test's own reader is whole (every length the
+   file's table of contents gives is there); the format's own checker, where
+   installed, finds no error.
+8. `plumbline sixteen` writes the job it wrote, byte for byte.
+
+Not built yet.
+
+## A scanner's own files: a demonstration, written before it is built (call 230; 2026-11-26)
+
+`demos/scan-files.sh` (contract `handoff/contracts/contract-230M.md`). A made-up
+room, 12 ft by 10 ft and 8 ft high, as points on its floor, ceiling and four
+walls, written by the demonstration's own script as a PLY (as today) and as a
+LAS with the same points.
+
+1. The LAS is read: **the same count of points as the PLY**, the same box (12
+   ft by 10 ft by 8 ft within a hundredth of a foot: LAS keeps a point as a
+   whole number times a scale), the same floor and ceiling found.
+2. Cut at 4 ft into a sheet to trace: the sheet from the LAS is the sheet from
+   the PLY (the script compares the two pictures).
+3. A wall traced over the LAS's sheet is Assumed, and says the scan.
+4. A LAS of a kind of point record the reader does not read is refused by the
+   kind's name; a file cut short is refused saying where.
+5. A LAZ: read, or refused saying to save it as LAS, as the licences decide
+   (the worker says which, and why).
+6. An E57 of the same room: read to the same figures, or refused by name
+   saying what to save it as, as the licences decide.
+7. `plumbline sixteen` writes the job it wrote, byte for byte.
 
 Not built yet.
 

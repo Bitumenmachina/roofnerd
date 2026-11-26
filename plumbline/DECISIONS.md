@@ -10084,3 +10084,57 @@ byte for byte) and by the lead reading both sides of every moved expectation.
    decimals (the tolerance sentences to four places; a few written through
    another helper, "by 3.5 in"); the window's entries for all of this.
 
+### Call 229. The house written out as glTF, to be looked at anywhere (2026-11-26; the lead's design, not built)
+
+Call 220's table: "A scan or a model as a mesh: the house out as glTF to look at
+anywhere". An owner, a designer or a sub opens a glTF in a browser, a phone or
+any 3D program with nothing installed; the BIM file needs a BIM program.
+
+1. **`plumbline export gltf <job> <file.glb>`**: the house as its solids, one
+   named part for each thing the BIM file writes (a wall with its openings cut,
+   a floor, a roof plane, a footing, a run, a thing set down by its shape), in
+   one file.
+2. **One source of solids.** The parts are worked from what the BIM file's
+   writer already works them from; nothing about a thing's shape is worked out a
+   second way. A test holds the count of parts and each part's box to the BIM
+   file's for the sample whole house.
+3. **The format's own measure and axes**: metres, and up as the format has it;
+   the plan's north is kept so the house is not mirrored (the worker says the
+   axes from the format's own text, and a test holds a corner known by hand).
+4. **Colour by what a thing is finished in**, plain: the finish the estimate
+   prices gives the part its colour. The window's patterns (lap, brick,
+   shingle) are not carried and the reply says so: it is a model to look at,
+   not the window's picture.
+5. **What is not carried is said** in the reply: prices, certainty, the
+   patterns, anything the BIM file's writer itself leaves out.
+6. **Checked** by reading the file back with a reader written for the test (its
+   parts, their boxes, every length of data as the file's own table of contents
+   says), and by the format's own published checker run as an outside program
+   where it can be installed.
+7. Not in this call: a mesh brought in to trace over (its own call).
+8. Nothing of the sample whole house moves.
+
+### Call 230. A scanner's own files taken in: LAS and E57 (2026-11-26; the lead's design, not built)
+
+Call 220's table: "A phone scan: points (PLY) yes; **LAS and E57 taken in** if a
+reader under a permitted licence exists; said if not". A surveyor's or a
+scanning crew's scan arrives as LAS or E57, not PLY.
+
+1. **A LAS file is read as a PLY is** and goes everywhere a scan goes today
+   (the same verbs, the same cut into a sheet to trace). LAS is a short public
+   format; the reader is written here from its published text, for the
+   versions and the kinds of point record the worker finds in that text, and a
+   kind it does not read is refused by name.
+2. **The packed kind of LAS (LAZ)** is read only if a reader under a permitted
+   licence can be linked; if not the program says so when one is picked and
+   says to save it as LAS.
+3. **E57** is read if a reader under a permitted licence can be linked (the
+   worker shows the licence of every crate it would add; `tools/licenses.sh`
+   passes); if not, it is refused by name with what to save it as.
+4. **Units and which way is up are asked, never guessed**, as for a PLY; where
+   the file itself says its unit, that is offered and said.
+5. **A scan is never Known.** What is traced over it is Assumed, as today.
+6. **Real scans never enter the repository**: the files of the demonstration
+   are made by a script, a made-up room, and the script is kept beside them.
+7. Nothing of the sample whole house moves.
+
