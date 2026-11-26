@@ -9760,3 +9760,52 @@ The window builder's work under contract 222WA, read by the lead in its pictures
 9. **Each plan in the second window keeps its own view and its own layers**, in
    the program's settings with the rest (call 222, point 3), never in the job.
 
+### Call 219, the model's side, as built: a change tried and taken back, an opening moved, copies, find (2026-11-26)
+
+The worker's work under contract 219M (`research/worker-report-call219M.md`),
+checked by the lead's own run of its copy: 1,169 command-line tests (model 686,
+command line 57, sheets 6, model files 111, roofing 122, plans 187), 60
+command-line demonstrations, the gates, the port map, the licences; the sample
+whole house byte for byte.
+
+1. **One change, tried or made.** `editing::Change` is the one thing the window
+   will try when the pointer rests and make when it is clicked: walls, an
+   opening, runs, an item, a thing set down, a move, a turn, an opening moved, a
+   copy, a row. `try_change` makes it by the real function, reads what it made,
+   what it is in the same space as, what holes it would cut and what it is set
+   against, and puts the job back: the saved text byte for byte, the name the
+   next thing would be given, and the undo list are what they were (tested on
+   the small job and on the sample house). `apply` makes the same change for
+   real. `Tried::said` is the sentence the window shows; the window writes none
+   of its own.
+2. **A door or a window moved** along its wall or into another, keeping its
+   type and lines; refused, with by how much in feet and inches, where it would
+   run past an end or lie over another opening. Each wall's face less openings
+   is said before and after.
+3. **Rulings of the lead's on what the worker chose**, each kept:
+   (a) "clear of each end" is measured to the opening's **edges**, as a framer
+   measures it; the place of an opening is still its middle. (b) **A copy is new
+   work**: it is Assumed whatever it was copied from, says what it was copied
+   from, carries type, sizes and cost lines, and does not carry a mark of
+   existing or to be demolished, what is known to be inside a wall, or the
+   connections a run had made; the reply says each that was left. (c) A row is
+   all or nothing, and names the copy that failed. (d) Find's order: an exact
+   name, then names that begin with what was typed, then names with every word;
+   within each, level, room, thing set down, what is built, item, type, system,
+   material, line of the estimate.
+4. **The command line**: `try`, `copy`, `repeat`, `find`, and `move` of a door
+   or a window. `try` goes through `try_change` for the ten kinds; the other
+   making verbs are tried on a copy of the job.
+5. **What a try costs**: about a third of a second on the sample whole house in
+   the build the tests use, most of it writing and reading the job to put it
+   back. It is right before it is quick. **Owed before the window leans on it at
+   every rest of the pointer**: the cost measured in the build a person is given,
+   and if it is over a tenth of a second there, the job put back from the undo
+   list and not from its saved text, with the same three proofs (text, next
+   name, undo list).
+6. **Older words the new verbs pass on, to be put right in the next wording
+   job** (no refusal speaks in feet with decimals: call 211): "lies along wall 1
+   for 10.00 ft"; "14.00 in by 8.00 in" for a hole to cut.
+7. Nothing was ported from BIMCraft (the port map says where it was looked for);
+   no public item changed its shape.
+

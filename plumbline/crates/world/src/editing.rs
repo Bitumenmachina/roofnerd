@@ -27,15 +27,23 @@
 
 pub mod carry;
 pub mod connections;
+pub mod copies;
+pub mod find;
 pub mod history;
 pub mod join;
 pub mod measure;
 pub mod shapes;
+pub mod slide;
 pub mod snap;
 pub mod stretch;
+pub mod trying;
 
 pub use connections::{connection_add, connection_row, connection_row_facing, connection_set, connection_set_how, connection_take, connections_outside_their_boxes, connections_standing, item_connections_worked, item_rows, ConnectionDone, ConnectionsFollowed, Near, Standing, StandsHow, StandsOff, WorkedConnection};
+pub use copies::{copy_by, copy_row, row_said, Copied};
+pub use find::{find_in_job, find_lines, find_names, nothing_said, NameFound};
 pub use history::{History, UNDO_LIMIT};
+pub use slide::{move_opening, wall_ends, FaceChange, OpeningMoved, OpeningTo};
+pub use trying::{apply, try_change, ChangeDone, AtOpening, Change, HowTall, Tried, Trouble, WouldMake};
 pub use shapes::{keep_shape_as, shape_block_add, shape_block_set, shape_block_take, BlockSet, ShapeChanged};
 pub use stretch::{move_wall, read_move, way_said, Followed, Moved, Resized, RoofMoved};
 pub use join::{connect, connect_at, connect_port, fit_all, fitting, split, Fitted, PassedOver, PortSaid};

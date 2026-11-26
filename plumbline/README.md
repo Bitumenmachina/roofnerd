@@ -95,6 +95,7 @@ demos/clash.sh             # what is in the same space as what, what passes thro
 demos/clashw.sh            # fittings, a connection and the clashes in the window; pictures in demos/captured/clash
 demos/fixes197w.sh          # the six window points of call 197 and what came with them (set down listed, the Cabinets card, a refused corner, a mark left, the swing, an assembly changed, Priced as), a session at a time (ONLY="a b c d d2 e"); pictures in demos/captured/fixes197w
 demos/dxf.sh               # a CAD drawing (DXF) in and out: a made-up room in inches at true size with its layers switched, the walls finder on it, DWG, Revit and SketchUp refused by name, the plan of a level written out and read back, what cannot be carried counted
+demos/tools-feel.sh         # how tools feel, the model's side: a change tried and taken back (what it would make, what it would be in the same space as, the holes, the refusal), a door moved along its wall and to another wall, a copy that is Assumed, a row of copies, a wall copied with its door, and one search by name; the file is byte for byte what it was after every try
 demos/plan.sh              # a plan laid under a level, given its scale from one dimension and traced over, at the command line
 demos/field.sh             # what is measured on site put on a traced job: the floor above moves and the price with it, one clash clears, one becomes a finding
 demos/fieldw.sh            # the same in the window, each reading typed as a laser in keyboard mode types it; pictures in demos/captured/field

@@ -11647,6 +11647,83 @@ words the verbs already take, and says where a figure of the lead's is wrong):
 10. Nothing of the sample whole house moves: `plumbline sixteen` writes the job
     it wrote, byte for byte.
 
+**Built (2026-11-26; the worker's, checked by the lead's own run of its copy:
+1,169 command-line tests, 60 command-line demonstrations with no FAIL in any, the
+three gates, the port map, the licences, and the sample whole house byte for
+byte).** `demos/tools-feel.sh` passes its ten steps. **Figures of the lead's above
+that were wrong, and what is right** (the program was not bent to them):
+- Step 4: a door's place in its wall is its **middle**. Moved 5 ft east its
+  middle is 9 ft from the west end, 7 ft 6 in clear of the west end and 9 ft 6 in
+  clear of the east. Moved 15 ft east its middle would be at 19 ft and its east
+  edge at 20 ft 6 in: refused, **6 in** past the end, not 2 ft.
+- Step 5: the north wall was drawn from its east end, so the door is said "6 ft
+  from the east end in wall 3"; the faces move by 20.00 SF as worked (160 to
+  180, 180 to 160).
+- Step 7: copies are numbered from 2, so the copy on the east wall's line is
+  "Lavatory 6" (the fifth copy) and the sixth is "Lavatory 7".
+What a try costs on the sample whole house, in the build the tests use and on a
+shared machine: about a third of a second (the job written 62 ms, read 111 ms,
+the clash test 41 ms, and the change's own writing and reading). Not right: two
+older sentences the new verbs pass on still write "10.00 ft" and "14.00 in by
+8.00 in" (DECISIONS.md "Call 219, the model's side, as built", point 6).
+
+## How tools feel, in the window, the first job: shown before the click: a demonstration, written before it is built (call 219, points 1 to 4 and 8; 2026-11-26)
+
+`demos/shownw.sh` (contract `handoff/contracts/contract-219WA.md`). The job is the
+made-up one of `demos/tools-feel.sh`: one level, four outside walls 6 in thick on
+a 20 ft by 12 ft line, a door 3 ft wide whose middle is 4 ft from the south wall's
+west end, the starter items. The program writes to the map what is in hand (what
+the next click would make, where, its sizes and its turn), what the last try said,
+what the pointer caught, and how many tries it has made; the script reads those
+and counts ink in the pictures. **Every sentence about fitting is the model's own
+(`try_change`, `Tried::said`), the words `plumbline try` prints for the same
+change**: the script asks the command line and compares.
+
+1. **A wall is seen before it is made.** Wall in hand, **its sizes accepted as
+   they are offered**. A first corner clicked at (10, 0); the pointer moved to
+   (10, 6) and no click: a wall is seen through from (10, 0) to (10, 6) at its
+   thickness and height (ink of the seen-through thing along that line, none
+   there before); at the pointer the lettering reads **6' 0"** and **90°** (the
+   angle to the wall it leaves; on a first leg in the open, to the plan's east).
+2. **Whether it fits is said when the pointer rests.** Brought to (10, 12) and
+   rested: the words at the pointer are what `plumbline try` says of that wall
+   (one wall, with its length). While the pointer was moving the count of tries
+   did not rise; the rest made **one**. The saved job, written out now, is byte
+   for byte what it was.
+3. **The click makes what was seen.** Clicked: one more wall; the edges of the
+   wall made lie within 2 dots of the edges of the wall seen through.
+4. **Where it would clash it is drawn in the ink of a clash, with the words.** A
+   duct 14 in by 8 in, 8 ft up, from (-2, 6): the pointer rested at (22, 6): the
+   thing seen through is in the clash ink and the words say **2 holes to cut**
+   and name the west and the east wall. The click makes it (a hole to cut is not
+   a refusal), and the clash list has what the words said.
+5. **Where the model would refuse, the refusal is at the pointer, word for
+   word.** A wall from the south wall's west end to its east end, rested: the
+   refusal `plumbline try` gives. Clicked: refused as today; the count of walls
+   is what it was.
+6. **A door slides along the wall under the pointer.** Door in hand, the pointer
+   over the south wall 12 ft from its west end: a door is seen through in the
+   wall there; the lettering reads how far its edges are from each end as the
+   model gives them (a 3 ft door with its middle at 12 ft on a 20 ft line: 10 ft
+   6 in and 6 ft 6 in on the line; the builder says whether the model measures
+   on the line or to the faces, and the figure follows the model). Brought to 5
+   ft from the west end, over the door that is there (its edges at 2 ft 6 in and
+   5 ft 6 in): clash ink, and the model's refusal with by how much.
+7. **Typing still takes the length over.** Wall in hand, a corner clicked, "8"
+   typed and Enter: a wall 8 ft long toward the pointer, as today; the first
+   digit is not lost.
+8. **Turned in the hand.** A Lavatory in hand: the key that turns a thing set
+   down turns the one in hand a quarter (the map says a quarter; the seen-through
+   lavatory's long side lies the other way in the picture); an angle of 30
+   typed in the tool's own field turns it to 30; set down, the saved job has 30.
+   A thing set down and selected takes 45 typed on its panel: the saved job has
+   45, and the panel offered more than quarters.
+9. **Snaps can be let go.** Each kind of catch has a switch. With all on, the
+   pointer 3 in from the end of a wall is caught and the pointer says what by.
+   With that kind switched off it is not caught by it. With the letting-go key
+   held nothing is caught; let go, it is caught again.
+10. **Nothing else moved.** `planw`, `movew` and `moneyw` pass as they did.
+
 Not built yet.
 
 ## A CAD drawing in and out: a demonstration, written before it is built (call 221; 2026-11-25)
