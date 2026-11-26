@@ -73,6 +73,7 @@ use crate::check::FIT_TOLERANCE_FT;
 use crate::components::{Kind, Node};
 use crate::geom;
 use crate::job::Job;
+use crate::units;
 use crate::value::Status;
 use crate::view;
 
@@ -148,6 +149,9 @@ pub struct Hole {
     /// The widest of them, as a person says it ("6 in round", "12 in by 8 in"); empty where
     /// no piece has a size.
     pub size: String,
+    /// The same size as a builder says it in a sentence ("14 in by 8 in", "4 in round"; call 226 point 2). `size` is the writing of the lists and
+    /// does not change.
+    pub size_said: String,
     /// Where, in feet: east, north, height above the datum.
     pub at: P3,
     pub status: Status,
@@ -213,6 +217,43 @@ pub fn connection_words(job: &mut Job, c: &Clash) -> Option<String> {
     Some(format!("{name}'s {} connection is {}", near.name, near.away()))
 }
 
+/// The storey a clash is on, by path: the storey of whichever of the two things is not a wall, a floor or a footing (a wall holds the
+/// thing, the thing is where the question is), else the first's. One rule, for the room a clash is in (`rooms_of`) and the level
+/// the issue list says (call 228).
+pub fn storey_of_pair(placed: &[Placement], a: &str, b: &str) -> Option<String> {
+    let storey_of = |path: &str| placed.iter().find(|p| p.path == path).and_then(|p| p.storey.clone());
+    let kind_of = |path: &str| placed.iter().find(|p| p.path == path).map(|p| p.kind);
+    let solid = |k: Option<Kind>| !matches!(k, Some(Kind::Wall | Kind::Floor | Kind::Footing));
+    if solid(kind_of(a)) { storey_of(a) } else if solid(kind_of(b)) { storey_of(b) } else { storey_of(a) }
+}
+
+/// The box that holds a placed thing's solids, as the clash test holds them: its smallest and its largest corner, in feet (east,
+/// north, height above the datum). None for a thing with no solid. The issue list's view is worked from it (call 228).
+pub fn extent(p: &Placement) -> Option<(P3, P3)> {
+    let pieces = pieces_of(p, 0).ok()?;
+    let mut it = pieces.iter();
+    let first = it.next()?;
+    let (mut lo, mut hi) = ([first.aabb.mins.x, first.aabb.mins.y, first.aabb.mins.z], [first.aabb.maxs.x, first.aabb.maxs.y, first.aabb.maxs.z]);
+    for q in it {
+        for (k, (a, b)) in [(q.aabb.mins.x, q.aabb.maxs.x), (q.aabb.mins.y, q.aabb.maxs.y), (q.aabb.mins.z, q.aabb.maxs.z)].into_iter().enumerate() {
+            lo[k] = lo[k].min(a);
+            hi[k] = hi[k].max(b);
+        }
+    }
+    Some((lo, hi))
+}
+
+impl Clash {
+    /// How far they are in each other, as the clash list writes it ("in each other by 3.50 in"): a line of a list, its quantity to
+    /// two places. The command line's list and the issue list's title say it by this one function.
+    pub fn depth_listed(&self) -> String {
+        match self.by {
+            Some(by) => format!("in each other by {:.2} in", by * 12.0 + 0.0),
+            None => "in each other; by how much could not be worked out".to_string(),
+        }
+    }
+}
+
 /// Where each clash and each hole of `found` is, to the room: the name of the room whose
 /// outline holds the place on the storey the thing in it is on, or "outside any room"
 /// where none does (call 177). One for each of `found.found`, then one for each of
@@ -229,15 +270,11 @@ pub fn rooms_of(job: &mut Job, found: &Clashes) -> (Vec<String>, Vec<String>) {
         .collect();
     let placed = placements(job).0;
     let storey_of = |path: &str| placed.iter().find(|p| p.path == path).and_then(|p| p.storey.clone());
-    let kind_of = |path: &str| placed.iter().find(|p| p.path == path).map(|p| p.kind);
     let room = |storey: Option<String>, at: P3| -> String {
         let Some(storey) = storey else { return NONE.to_string() };
         rooms.iter().find(|(of, _, outline)| *of == storey && crate::vif::inside(outline, [at[0], at[1]])).map(|r| r.1.clone()).unwrap_or_else(|| NONE.to_string())
     };
-    let thing = |a: &str, b: &str| -> Option<String> {
-        let solid = |k: Option<Kind>| !matches!(k, Some(Kind::Wall | Kind::Floor | Kind::Footing));
-        if solid(kind_of(a)) { storey_of(a) } else if solid(kind_of(b)) { storey_of(b) } else { storey_of(a) }
-    };
+    let thing = |a: &str, b: &str| -> Option<String> { storey_of_pair(&placed, a, b) };
     let clashes = found.found.iter().map(|c| room(thing(&c.a, &c.b), c.at)).collect();
     let holes = found.holes.iter().map(|h| room(h.pieces.first().and_then(|(p, _)| storey_of(p)).or_else(|| storey_of(&h.through)), h.at)).collect();
     (clashes, holes)
@@ -692,6 +729,19 @@ fn carried_on(drawn: &[Placement], net: &network::Network) -> BTreeMap<usize, (P
     out
 }
 
+/// What each thing set down is, by its path: the name of its item, where it has one.
+fn what_of(job: &mut Job) -> BTreeMap<String, String> {
+    let mut q = job.world.query::<(&Node, &Placed)>();
+    q.iter(&job.world).filter_map(|(n, p)| p.what.value.clone().map(|w| (n.path.clone(), w))).collect()
+}
+
+/// The name each drawn thing goes by in the clash list and everything that names a clash, by path (call 229: the parts of the house
+/// written as glTF are named by it). One rule: the same `said` the clashes themselves are named with.
+pub fn called(job: &mut Job, drawn: &[Placement]) -> std::collections::HashMap<String, String> {
+    let what = what_of(job);
+    drawn.iter().map(|p| (p.path.clone(), said(p, &what))).collect()
+}
+
 /// What an element is called in a report: a placed thing by what it is, with its name.
 fn said(p: &Placement, what: &BTreeMap<String, String>) -> String {
     match what.get(&p.path) {
@@ -837,10 +887,7 @@ fn find(job: &mut Job, clearance: Option<f64>, with_walls_coming_down: bool) -> 
         }
     }
     let (drawn, not_drawn) = placements(job);
-    let what: BTreeMap<String, String> = {
-        let mut q = job.world.query::<(&Node, &Placed)>();
-        q.iter(&job.world).filter_map(|(n, p)| p.what.value.clone().map(|w| (n.path.clone(), w))).collect()
-    };
+    let what = what_of(job);
     let net = network::network(job, None, None, network::TOLERANCE_FT)?;
     // What is joined, and where: every two elements that meet at one joint.
     let mut joined: BTreeMap<(String, String), Vec<P3>> = BTreeMap::new();
@@ -1153,7 +1200,7 @@ fn find(job: &mut Job, clearance: Option<f64>, with_walls_coming_down: bool) -> 
             Some(&h) => h,
             None => {
                 let on_b = found[i].b == whole;
-                holes.push(Hole { through: whole, through_name: if on_b { found[i].b_name.clone() } else { found[i].a_name.clone() }, through_kind: if on_b { found[i].b_kind } else { found[i].a_kind }, pieces: Vec::new(), size: String::new(), at: found[i].at, status: found[i].status });
+                holes.push(Hole { through: whole, through_name: if on_b { found[i].b_name.clone() } else { found[i].a_name.clone() }, through_kind: if on_b { found[i].b_kind } else { found[i].a_kind }, pieces: Vec::new(), size: String::new(), size_said: String::new(), at: found[i].at, status: found[i].status });
                 hole_at_root.insert(top(&mut root, x), holes.len() - 1);
                 holes.len() - 1
             }
@@ -1169,21 +1216,23 @@ fn find(job: &mut Job, clearance: Option<f64>, with_walls_coming_down: bool) -> 
     // Each hole's size: the widest run through it, as it is said.
     let as_said = |inches: f64| view::figure_shown(inches, 2);
     for hole in holes.iter_mut() {
-        let mut widest: Option<(f64, String)> = None;
+        let mut widest: Option<(f64, String, String)> = None;
         for (path, _) in &hole.pieces {
             let Some(p) = drawn.iter().find(|p| &p.path == path) else { continue };
             if let Shape::Run { round, rect, .. } = &p.shape {
-                let (across, text) = match (round, rect) {
-                    (Some(d), _) => (*d, format!("{} in round", as_said(d * 12.0))),
-                    (None, Some((w, h))) => (w.max(*h), format!("{} in by {} in", as_said(w * 12.0), as_said(h * 12.0))),
+                let (across, text, said) = match (round, rect) {
+                    (Some(d), _) => (*d, format!("{} in round", as_said(d * 12.0)), format!("{} round", units::across_said(*d))),
+                    (None, Some((w, h))) => (w.max(*h), format!("{} in by {} in", as_said(w * 12.0), as_said(h * 12.0)), format!("{} by {}", units::across_said(*w), units::across_said(*h))),
                     _ => continue,
                 };
-                if widest.as_ref().is_none_or(|(was, _)| across > *was) {
-                    widest = Some((across, text));
+                if widest.as_ref().is_none_or(|(was, _, _)| across > *was) {
+                    widest = Some((across, text, said));
                 }
             }
         }
-        hole.size = widest.map(|(_, t)| t).unwrap_or_default();
+        let (text, said) = widest.map(|(_, t, s)| (t, s)).unwrap_or_default();
+        hole.size = text;
+        hole.size_said = said;
     }
     Ok(Clashes { found, holes, tested, left_out })
 }

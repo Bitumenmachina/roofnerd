@@ -294,13 +294,13 @@ pub fn lines_of(planes: &[SolidPlane]) -> Found {
                         // Level on both, at two heights: on plan one line, in the air two.
                         // A step with a wall between them, or pitches that do not fit; the
                         // planes cannot say which. Each plane keeps its own edge.
-                        say(&mut found, format!("{} and {} meet on plan {span} at different heights ({:.2} ft and {:.2} ft): a step with a wall between them, or pitches that do not fit. Each plane's own edge is listed", a.path, b.path, za, zb0));
+                        say(&mut found, format!("{} and {} meet on plan {span} at different heights ({} and {}): a step with a wall between them, or pitches that do not fit. Each plane's own edge is listed", a.path, b.path, crate::units::length_said(za), crate::units::length_said(zb0)));
                         own_edge(&mut found);
                     } else {
                         // Not level, and not at one height: a wall between them where a
                         // gable stands beside a lower roof, or planes that do not fit.
                         // Either way each plane has an edge of its own there.
-                        say(&mut found, format!("{} and {} share an edge {span} but disagree about its height: {} puts its ends at {:.2} ft and {:.2} ft, {} at {:.2} ft and {:.2} ft. A wall stands between them there, or they do not fit. Each plane's own edge is listed", a.path, b.path, a.path, za, zb, b.path, zb0, zb1));
+                        say(&mut found, format!("{} and {} share an edge {span} but disagree about its height: {} puts its ends at {} and {}, {} at {} and {}. A wall stands between them there, or they do not fit. Each plane's own edge is listed", a.path, b.path, a.path, crate::units::length_said(za), crate::units::length_said(zb), b.path, crate::units::length_said(zb0), crate::units::length_said(zb1)));
                         own_edge(&mut found);
                     }
                     continue;

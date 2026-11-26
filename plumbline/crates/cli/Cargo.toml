@@ -19,3 +19,5 @@ plumbline-ifc = { path = "../ifc" }
 [dev-dependencies]
 # For the tests only: a job file is edited as data. Already linked by plumbline-world.
 serde_json = { workspace = true }
+# For the tests only: the issue list (a zip) is opened and read back. The same zip crate, version and features the workbook writer links.
+zip = { version = "9.0", default-features = false, features = ["deflate"] }

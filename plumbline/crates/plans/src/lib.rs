@@ -31,7 +31,11 @@ mod found_188_tests;
 mod found_189_tests;
 #[cfg(test)]
 mod found_scenes;
+pub mod marks;
 pub mod scan;
+mod scan_e57;
+mod scan_las;
+mod tiffs;
 use hayro::hayro_interpret::font::GlyphRun;
 use hayro::hayro_interpret::util::TransformExt;
 use hayro::hayro_interpret::{interpret_page, BlendMode, ClipPath, Context, Device, DrawMode, DrawProps, ImageDrawProps, InterpreterSettings, SoftMask};
@@ -85,6 +89,8 @@ pub enum Sort {
     Pdf,
     Png,
     Jpeg,
+    /// A TIFF picture of a plan: one page or several (call 227).
+    Tiff,
     /// A CAD drawing (DXF): lines, curves and words, at the scale of its own unit.
     Dxf,
 }
@@ -95,6 +101,7 @@ impl Sort {
             Sort::Pdf => "PDF",
             Sort::Png => "PNG picture",
             Sort::Jpeg => "JPEG picture",
+            Sort::Tiff => "TIFF picture",
             Sort::Dxf => "CAD drawing (DXF)",
         }
     }
@@ -111,8 +118,18 @@ pub fn sort_of(bytes: &[u8]) -> Option<Sort> {
         Some(Sort::Png)
     } else if bytes.starts_with(&[0xFF, 0xD8]) {
         Some(Sort::Jpeg)
+    } else if tiffs::is_tiff(bytes) {
+        Some(Sort::Tiff)
     } else {
         None
+    }
+}
+
+/// What to say of a file that is no drawing: a scan is told where it goes, anything else what a drawing is.
+fn not_a_drawing(bytes: &[u8]) -> String {
+    match scan::kind_of(bytes) {
+        Some(kind) => format!("it is a {} scan, a cloud of points, not a drawing: bring it in with `plumbline import scan`", kind.said()),
+        None => "it is not a PDF, a PNG, a JPEG, a TIFF or a CAD drawing (DXF)".into(),
     }
 }
 
@@ -401,7 +418,7 @@ pub fn read_with(bytes: &[u8], page: usize, off: Option<&[String]>) -> Result<Pa
         return Err(why);
     }
     match sort_of(bytes) {
-        None => Err("it is not a PDF, a PNG or a JPEG".into()),
+        None => Err(not_a_drawing(bytes)),
         Some(Sort::Dxf) => {
             if page != 1 {
                 return Err(format!("a CAD drawing has one page; page {page} was asked for"));
@@ -412,10 +429,15 @@ pub fn read_with(bytes: &[u8], page: usize, off: Option<&[String]>) -> Result<Pa
         }
         Some(Sort::Pdf) => read_pdf(bytes, page),
         Some(sort) => {
-            if page != 1 {
-                return Err(format!("a picture has one page; page {page} was asked for"));
-            }
-            let (opened, turned) = opened(bytes)?;
+            let (opened, turned, pages) = if sort == Sort::Tiff {
+                tiffs::opened(bytes, page, MOST_DOTS)?
+            } else {
+                if page != 1 {
+                    return Err(format!("a picture has one page; page {page} was asked for"));
+                }
+                let (o, t) = opened(bytes)?;
+                (o, t, 1)
+            };
             let (width, height) = (opened.width(), opened.height());
             if width == 0 || height == 0 {
                 return Err("the picture has no size".into());
@@ -434,7 +456,7 @@ pub fn read_with(bytes: &[u8], page: usize, off: Option<&[String]>) -> Result<Pa
             } else {
                 opened.to_rgba8()
             };
-            Ok(Page { sort, pages: 1, size: [f64::from(width), f64::from(height)], picture: Picture { width: shown.width(), height: shown.height(), rgba: shown.into_raw() }, lines: Vec::new(), dashed: Vec::new(), cuts: Vec::new(), pictures: 0, lost })
+            Ok(Page { sort, pages, size: [f64::from(width), f64::from(height)], picture: Picture { width: shown.width(), height: shown.height(), rgba: shown.into_raw() }, lines: Vec::new(), dashed: Vec::new(), cuts: Vec::new(), pictures: 0, lost })
         }
     }
 }
@@ -454,7 +476,7 @@ pub fn size_of(bytes: &[u8], page: usize) -> Result<(Sort, usize, [f64; 2]), Str
         return Err(why);
     }
     match sort_of(bytes) {
-        None => Err("it is not a PDF, a PNG or a JPEG".into()),
+        None => Err(not_a_drawing(bytes)),
         Some(Sort::Dxf) => {
             if page != 1 {
                 return Err(format!("a CAD drawing has one page; page {page} was asked for"));
@@ -467,6 +489,16 @@ pub fn size_of(bytes: &[u8], page: usize) -> Result<(Sort, usize, [f64; 2]), Str
             let count = pages.len();
             let (width, height) = page_size(pages, page)?;
             Ok((Sort::Pdf, count, [f64::from(width), f64::from(height)]))
+        }
+        Some(Sort::Tiff) => {
+            let (pages, size) = tiffs::size_of(bytes, page)?;
+            if size[0] == 0 || size[1] == 0 {
+                return Err("the picture has no size".into());
+            }
+            if u64::from(size[0]) * u64::from(size[1]) > MOST_DOTS {
+                return Err(format!("the picture is {} by {} dots, more than this program opens ({} million): save it smaller", size[0], size[1], MOST_DOTS / 1_000_000));
+            }
+            Ok((Sort::Tiff, pages, [f64::from(size[0]), f64::from(size[1])]))
         }
         Some(sort) => {
             if page != 1 {

@@ -245,7 +245,7 @@ fn a_job_that_already_holds_such_a_thing_still_opens_says_so_and_can_be_changed(
     assert_eq!(file::save(&mut back), text, "byte for byte");
     let said = building::drawn_faults(&mut back);
     assert_eq!(said.len(), 1, "{said:?}");
-    assert!(said[0].1.contains("starts 1.50 ft before the start of its wall"), "{said:?}");
+    assert!(said[0].1.contains("starts 1 ft 6 in before the start of its wall"), "{said:?}");  // call 226: a length in a sentence is said as a builder says it
     // Another fault is refused; a change that brings none is taken.
     assert!(refused(ed::opening(&mut back, &wall, Kind::Door, &dt, ed::OnWall::Offset("40 ft"), "0 ft", known())).contains("an opening lies within its wall"));
     ed::opening(&mut back, &wall, Kind::Door, &dt, ed::OnWall::Offset("20 ft"), "0 ft", known()).unwrap();

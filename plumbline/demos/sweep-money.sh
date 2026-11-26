@@ -363,8 +363,8 @@ O12T="$(made "$("$P" type "$J12" post "post 3 1/2" --width "3 1/2 in" --depth "3
 A12T="$(made "$("$P" type "$J12" pad "pad 24" --width "24 in" --depth "24 in" "${K[@]}")")"
 W12="$("$P" wall "$J12" "$L12" "$W12T" --points "0,0 20,0" --height "9 ft" "${K[@]}" | grep -oE 'wall-[0-9]+' | head -1)"
 refuses() { if "$@" > "$T/refused.txt" 2>&1; then echo "FAIL: this was taken: $*"; cat "$T/refused.txt"; exit 1; fi; }
-refuses "$P" door "$J12" "$W12" "$D12T" --offset "20 ft" --sill "0 ft" "${K[@]}"; says "$T/refused.txt" "ends 21.50 ft along a wall 20.00 ft long: an opening lies within its wall"
-refuses "$P" door "$J12" "$W12" "$D12T" --offset "0 ft" --sill "0 ft" "${K[@]}"; says "$T/refused.txt" "starts 1.50 ft before the start of its wall"
+refuses "$P" door "$J12" "$W12" "$D12T" --offset "20 ft" --sill "0 ft" "${K[@]}"; says "$T/refused.txt" "ends 21 ft 6 in along a wall 20 ft long: an opening lies within its wall"  # call 226: a length in a sentence is said as a builder says it
+refuses "$P" door "$J12" "$W12" "$D12T" --offset "0 ft" --sill "0 ft" "${K[@]}"; says "$T/refused.txt" "starts 1 ft 6 in before the start of its wall"  # call 226: a length in a sentence is said as a builder says it
 "$P" door "$J12" "$W12" "$D12T" --offset "1.5 ft" --sill "0 ft" "${K[@]}" >/dev/null
 echo "    a door whose edge is at the end of the wall (middle at 1.5 ft) is taken"
 "$P" window "$J12" "$W12" "$N12T" --offset "10 ft" --sill "3 ft" "${K[@]}" >/dev/null

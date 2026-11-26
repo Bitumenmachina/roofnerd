@@ -117,7 +117,7 @@ pub struct Moved {
     pub opened: Vec<(String, f64)>,
 }
 
-fn feet_said(x: f64) -> String {
+pub(crate) fn feet_said(x: f64) -> String {
     let x = x.abs();
     if (x - x.round()).abs() < 1.0e-6 {
         format!("{} ft", x.round())
@@ -330,7 +330,7 @@ fn crossing(a: P, b: P, c: P, d: P) -> Option<P> {
     Some(add(a, scale(r, t)))
 }
 /// A figure as the file holds it: no stray digits from the arithmetic.
-fn tidy(x: f64) -> f64 {
+pub(crate) fn tidy(x: f64) -> f64 {
     (x * 1.0e9).round() / 1.0e9 + 0.0
 }
 fn number_of(path: &str) -> u64 {
@@ -338,7 +338,7 @@ fn number_of(path: &str) -> u64 {
 }
 
 /// A length in feet as a value of the unit it was held in.
-fn len_in(feet: f64, unit: &str) -> Option<Len> {
+pub(crate) fn len_in(feet: f64, unit: &str) -> Option<Len> {
     match unit {
         "ft" => Some(Len::One(tidy(feet))),
         "in" => Some(Len::One(tidy(feet * 12.0))),
@@ -522,7 +522,7 @@ fn refuse_crossing(bodies: &[carries::Body], path: &str, d: P, called: &dyn Fn(&
 
 /// What each thing is called ("wall 2"), and where more than one level has things of a kind,
 /// with its level ("wall 2 on second floor"): every level has a wall 2.
-fn names_of(job: &mut Job) -> HashMap<String, String> {
+pub(crate) fn names_of(job: &mut Job) -> HashMap<String, String> {
     let tree = building::Tree::of(&mut job.world);
     let mut names: HashMap<String, String> = tree.names.iter().filter(|(_, n)| !n.is_empty()).map(|(p, n)| (p.clone(), n.clone())).collect();
     for kind in [Kind::Wall, Kind::Floor, Kind::Footing, Kind::RoomLine] {

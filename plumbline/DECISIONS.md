@@ -9760,3 +9760,668 @@ The window builder's work under contract 222WA, read by the lead in its pictures
 9. **Each plan in the second window keeps its own view and its own layers**, in
    the program's settings with the rest (call 222, point 3), never in the job.
 
+### Call 219, the model's side, as built: a change tried and taken back, an opening moved, copies, find (2026-11-26)
+
+The worker's work under contract 219M (`research/worker-report-call219M.md`),
+checked by the lead's own run of its copy: 1,169 command-line tests (model 686,
+command line 57, sheets 6, model files 111, roofing 122, plans 187), 60
+command-line demonstrations, the gates, the port map, the licences; the sample
+whole house byte for byte.
+
+1. **One change, tried or made.** `editing::Change` is the one thing the window
+   will try when the pointer rests and make when it is clicked: walls, an
+   opening, runs, an item, a thing set down, a move, a turn, an opening moved, a
+   copy, a row. `try_change` makes it by the real function, reads what it made,
+   what it is in the same space as, what holes it would cut and what it is set
+   against, and puts the job back: the saved text byte for byte, the name the
+   next thing would be given, and the undo list are what they were (tested on
+   the small job and on the sample house). `apply` makes the same change for
+   real. `Tried::said` is the sentence the window shows; the window writes none
+   of its own.
+2. **A door or a window moved** along its wall or into another, keeping its
+   type and lines; refused, with by how much in feet and inches, where it would
+   run past an end or lie over another opening. Each wall's face less openings
+   is said before and after.
+3. **Rulings of the lead's on what the worker chose**, each kept:
+   (a) "clear of each end" is measured to the opening's **edges**, as a framer
+   measures it; the place of an opening is still its middle. (b) **A copy is new
+   work**: it is Assumed whatever it was copied from, says what it was copied
+   from, carries type, sizes and cost lines, and does not carry a mark of
+   existing or to be demolished, what is known to be inside a wall, or the
+   connections a run had made; the reply says each that was left. (c) A row is
+   all or nothing, and names the copy that failed. (d) Find's order: an exact
+   name, then names that begin with what was typed, then names with every word;
+   within each, level, room, thing set down, what is built, item, type, system,
+   material, line of the estimate.
+4. **The command line**: `try`, `copy`, `repeat`, `find`, and `move` of a door
+   or a window. `try` goes through `try_change` for the ten kinds; the other
+   making verbs are tried on a copy of the job.
+5. **What a try costs**: about a third of a second on the sample whole house in
+   the build the tests use, most of it writing and reading the job to put it
+   back. It is right before it is quick. **Owed before the window leans on it at
+   every rest of the pointer**: the cost measured in the build a person is given,
+   and if it is over a tenth of a second there, the job put back from the undo
+   list and not from its saved text, with the same three proofs (text, next
+   name, undo list).
+6. **Older words the new verbs pass on, to be put right in the next wording
+   job** (no refusal speaks in feet with decimals: call 211): "lies along wall 1
+   for 10.00 ft"; "14.00 in by 8.00 in" for a hole to cut.
+7. Nothing was ported from BIMCraft (the port map says where it was looked for);
+   no public item changed its shape.
+
+### Call 223, as built: the database written out as one workbook and brought back whole (2026-11-26)
+
+The worker's work under contract 223M (`research/worker-report-call223M.md`),
+checked by the lead's own run of its copy (1,191 command-line tests: model 700,
+command line 64, sheets 7, model files 111, roofing 122, plans 187; 61
+command-line demonstrations; gates, port map, licences; the sample whole house
+byte for byte) and by the lead reading the reply of a database written out and
+brought into an empty job.
+
+1. **`export database <job> <file.xlsx | folder>`**: five tabs, or five files:
+   Shapes, Items, Connections, Assemblies, Prices. Each is exactly what the
+   table's own verb writes: the same headings, order and cells. No table's own
+   writing-out changed.
+2. **`import database <job> <file.xlsx | folder | starter>`**: each tab by its
+   own reader, in the order the tables lean on one another (shapes, items,
+   connections, assemblies, prices) wherever the tabs lie in the file; **all of
+   it or none of it**, on the model's own all-or-nothing; every refusal named by
+   tab, row and the table's own reason, all of them together. A tab or a column
+   the program does not know is named and left alone. A database with some tabs
+   missing comes in and names the tabs it did not have; the job's own tables
+   for those are left as they are.
+3. **Out, in to an empty job, and out again**: the same workbook cell for cell,
+   the same folder byte for byte. A workbook is not compared by its bytes: two
+   writings of one job differ in the time the file says it was made, and that
+   time is left true.
+4. **Prices come in adding what they name**: a material only the price list
+   knows is made again, or a database could not be brought into an empty job.
+5. **The starter database** is the starter shapes, items, connections and
+   assemblies in one bringing-in, the same job byte for byte as the three one
+   by one. There is no starter price list (prices are a supplier's, never ours).
+6. **Rulings of the lead's**: prior estimates are not a tab (they are jobs, not
+   tables); **the cabinet rules of call 215 join the workbook as a tab when they
+   are built**; the count "set" stays a count of things (items, assemblies), as
+   each single verb counts.
+7. **Owed, small**: the line about how cells are shown is said once for the
+   workbook and not once a tab; a tab added by hand is named as it was typed;
+   the window's entry under Bring in and Write out ("My database").
+
+### Call 225. What the cabinet rules move, ruled before any expectation moves (2026-11-26; the lead's)
+
+The worker of contract 215M handed back with nine expectations that fail by the
+design of calls 215 and 223 and edited none. Each is ruled here, with the reason
+that goes beside it in the file.
+
+1. **"B99" was the tests' word for a box the chest does not have. Under call 215
+   (point 3) a base of any width is made by the rule for B, so B99 is now a
+   box.** Where an expectation means "a code nothing reads" it moves to **Q99**
+   (no rule reads Q) and to the sentence the program now gives for it; nothing
+   else in those tests moves. The places: `crates/world/tests/world.rs` (the
+   run of boxes worked by hand, the B99 refusal), `demos/cabinets.sh` (its B99
+   line), and `demos/cabinetsw.sh` (its B99 line: moved by the lead when the
+   window is next built on the model, and run then).
+2. **The database has six tabs once cabinet rules exist** (call 223 as built,
+   point 6, said so before it was built): Shapes, Items, **Cabinet codes**,
+   Connections, Assemblies, Prices. The expectations that count five in
+   `crates/world/tests/call223m.rs`, `crates/cli/tests/call223m.rs` and
+   `demos/database.sh` move to six, with "Cabinet codes 8" (the eight rules the
+   made-up job carries when its rules are written out) where the list of tabs is
+   said. No other figure of those files moves.
+   **Added the same day, after the worker stopped on three tests as told:** the
+   same move covers, in the same files, the places that find a table by where
+   its tab lies (the cabinet codes lie third, so connections, assemblies and
+   prices are fourth, fifth and sixth), the list of the tabs' row counts (50,
+   49, **8**, 5, 202, 8), "(a folder, **6** files)", and the test's own list of
+   tables, which gains the cabinet rules as a verb and its file's name. No
+   count of any other table moves.
+3. **No box is made wider than 96 in** (a sheet's length; nobody builds one box
+   longer than the sheet it is cut from): a code that reads wider is refused,
+   saying what it read and the limit, in inches. Below that a width the rule
+   does not list is made and flagged, as call 215 has it.
+4. **The tab and the file are "Cabinet codes"** (the worker's word, kept: a
+   cabinet maker calls B36 a code).
+5. **Left as they are, and owed**: a height the rule does not stock is not
+   flagged (only widths are); a rule of the job's own cannot yet be taken away
+   (the program's own eight can be changed and changed back, never removed);
+   **the window does not yet say that a box was made by a rule**: until it does
+   a box made that way in the window arrives without a word, which is against
+   "nothing silently", so the window's next job on cabinets shows the model's
+   own "was made by the rule for" lines, and the window is not built on the
+   model past this call without it being said in STATUS.md.
+6. **The starter database has no Cabinet codes tab** (the worker's decision,
+   kept): the program's own rules are always in force, and a starter bring-in
+   must not write over rules a job has changed.
+
+### Call 226. Loose ends at the command line: a try made quick, lengths said as a builder says them, the database's reply, a cabinet rule taken away, heights flagged (2026-11-26; the lead's design, not built)
+
+What calls 219, 223 and 215 left owed, in one job (`handoff/contracts/contract-226M.md`).
+
+1. **A try is quick enough to be made at every rest of the pointer.** Measured in
+   the build a person is given (not the build the tests use), on the sample
+   whole house. Over a tenth of a second there, the job is put back without
+   writing and reading its whole text (the worker says how: from the undo list,
+   or by taking back only what the change made), and the three proofs stay: the
+   saved text byte for byte, the next name the job would give, the undo list.
+   The figure before and after is written down either way.
+2. **A length in a sentence is said as a builder says it**: "10 ft", "7 ft 6 in",
+   "14 in by 8 in"; never "10.00 ft" or "14.00 in". This is the rule of call 211
+   for refusals, carried to every sentence the command line gives. **A quantity
+   on a line of the estimate or a list is not a sentence**: "160.00 SF" and "210
+   LF" stay as the estimate writes them. The expectations that hold the old
+   writing of a length in a sentence move with it, and only by that writing;
+   each is listed in the worker's report.
+3. **The database's reply**: the line about how cells are shown is said once
+   for a workbook; a tab the program does not know is named as it was typed.
+4. **A cabinet rule can be taken away.** A rule of the job's own goes; one of
+   the program's own eight that the job had changed goes back to the program's
+   own; one the job does not carry is said to be the program's own and is left.
+   Boxes already made by a rule stay in the chest and still say what made them.
+5. **A height the rule does not stock is flagged**, as a width is: the table
+   gains "Stocked heights" (a table without the column reads as before, and
+   flags no height). The starter rows take the heights the chest already has.
+6. Nothing of the sample whole house moves.
+
+### Call 215, as built: a cabinet by rule (2026-11-26)
+
+The worker's work under contract 215M (`research/worker-report-call215M.md`), with
+call 225's rulings applied, checked by the lead's own run of its copy (1,203
+command-line tests: model 712, command line 64, sheets 7, model files 111,
+roofing 122, plans 187; 62 command-line demonstrations; gates, port map,
+licences; the sample whole house byte for byte) and by the lead reading every
+changed line of an existing expectation against call 225.
+
+1. **The rules are a table** (`library/cabinet-rules.csv`; `import` and `export
+   cabinet-rules`): Code, What it is, Number reads, Width, Depth, Height, Stands,
+   Drawn as, Stocked widths, How sure, Where from. Eight starter rows: B, SB, DB
+   and BLB (24 in deep, 34 1/2 in high), LS (36 in deep), W (four digits, the
+   width then the height; 12 in deep; hung 54 in up), T (four digits; 24 in
+   deep), F (a filler). A rule is always Assumed and says where it is from.
+2. **The 27 starter boxes are exactly what their rules make** (a test holds each:
+   size for size, what it is drawn as, its kind and trade).
+3. **A code the chest lacks is made by its rule when asked for**, by the rule
+   whose letters are the code's letters (SB36 is SB's, never B's). The item is
+   made in the chest, its sizes Assumed, saying the rule and how the number was
+   read; the reply says so ("B42 was made by the rule for B: 42 in wide, 24 in
+   deep and 34 1/2 in high; Assumed"). A width the rule does not list is made
+   and flagged a made-to-order box. **No box is made wider than 96 in** (call
+   225).
+4. **A code no rule reads is refused**, with the letters the rules read and how
+   the nearest rule reads its number.
+5. **Where a box stands is its rule's**, not its first letter's; wall boxes whose
+   rules hang at different heights are two runs.
+6. **The job carries only rules brought in or changed** (`cabinetRules`, absent
+   when there are none): a job that never touched the rules is byte for byte
+   what the program wrote before.
+7. **The database has a sixth tab, "Cabinet codes"**, after Items; the starter
+   database has none (the program's own rules are always in force).
+8. Nothing was ported from BIMCraft (its family types are labels; nothing there
+   reads a size out of a name: the port map says where it was looked for).
+9. **Owed**: the window says when a box was made by a rule, and its
+   demonstration's B99 moves to Q99 (the next window job on cabinets); call 226
+   has the rest.
+
+### Call 227. The marks on a marked-up PDF read as quantities; a TIFF taken in as a plan (2026-11-26; the lead's design, not built)
+
+Call 220's table, two rows: "A Bluebeam-marked PDF: the marks read in as
+quantities, Assumed, each naming its mark" and "TIFF is how scanned sets are
+kept: taken in". An estimator's takeoff often already exists as measured marks
+on the plans; today the program takes the page and drops the marks without a
+word, which is a loss not reported.
+
+1. **What a mark is.** A PDF keeps a measured mark as an ordinary note of the
+   PDF with its points, what it says (its own text), its label, and how the
+   sheet's scale was set when it was drawn. The worker reads the PDF standard's
+   own section on measured notes and what the marking program's maker publishes
+   about what it writes, and says in `research/pdf-marks.md` what each kind
+   holds, with the address and the line quoted. **No file written by the
+   marking program itself is in the repository or read by a test** (a real
+   marked set is a real job's): the made-up file is written to the standard,
+   and that is said wherever the reading is described.
+2. **`plumbline marks <pdf> [--page n]`** lists the marks of a page, in the
+   page's own order: a length, a run of lengths (a perimeter), an area, a count,
+   and a plain note; each with its label, the figure the mark itself says, and
+   where on the page it is. A note that measures nothing is listed as a note.
+3. **One number, and the other said.** The quantity taken is **what the mark
+   says**: it is what the estimator saw and signed off. The program also works
+   the figure from the mark's points at the scale the mark carries; where the
+   two differ by more than a hundredth it says both and flags the mark. It never
+   picks the one it likes.
+4. **`plumbline import marks <job> <pdf> [--page n]`**: each measured mark is a
+   line of the estimate, under a heading that is the file's name: the label as
+   its description, the quantity in LF, SF or EA, no price (said: not priced),
+   **Assumed**, its source naming the mark, the page and the file. Counts of the
+   same label on a page are one line. The division is not guessed: it is Unknown
+   until someone sets it, and the line says so.
+5. **Brought in again**, a mark the job already has is known by the mark's own
+   name in the file and is not added twice; a mark whose figure changed moves
+   its line and says what it was; a mark gone from the file is named and its
+   line is left (nothing is taken away because a file lacks it).
+6. **What cannot be read is said**: a mark with a curved edge, a mark with no
+   scale, a scale set for part of a sheet, a figure in a unit this program does
+   not hold. Each is named with its label and left out, never brought in as
+   nought.
+7. **The marks' shapes are kept with the drawing** when the PDF is added as a
+   drawing (`drawing add`), so the window can show them over the sheet and catch
+   their corners (the window's half is a later job; the model's side holds
+   them).
+8. **TIFF**: a TIFF is a picture of a plan as a PNG is (`drawing add` and the
+   window's Add drawing): one page or several (`--page`), the kinds of packing
+   the linked reader reads, and a kind it does not read is said by name. The
+   reader is the picture crate already linked with its TIFF part switched on, if
+   `tools/licenses.sh` passes with it.
+9. Nothing of the sample whole house moves.
+
+### Call 228. Clashes handed over as an issue list another program opens: BCF (2026-11-26; the lead's design, not built)
+
+Proposal 36, taken up under call 217 (the lead makes the calls) and call 220's
+table ("clashes also go out as an issue list (BCF)"). The mission's own loop
+ends with a veteran confirming or clearing each clash; the other trades and the
+designer work in other programs, and the open way to hand them a list of
+issues, each with the two things and a view of the place, is buildingSMART's
+BCF.
+
+1. **`plumbline export bcf <job> <file.bcfzip>`**: one issue for each clash "in
+   the same space", in the order of the clash list. Its title is the line the
+   clash list gives (the two things by name and by how much they are in each
+   other); its description says where (level and place, in feet and inches),
+   **whether it is a finding or a question for the field** (the program's
+   certainty, in those words), and the dollars riding on it where the
+   verify-in-field list has them.
+2. **Each issue names its two things by the ids the BIM file gives them**: the
+   same job written out as IFC and as BCF, the other program opens the model,
+   opens the issues, and each issue selects its two things. A test holds the
+   ids in the issue list to the ids in the IFC file.
+3. **Each issue has a view of the place**: where to stand and what to look at,
+   worked from the clash's place so both things are in the view.
+4. **Holes to cut go out only when asked** (`--holes`): a pipe through a wall is
+   work to do, not a clash; with the switch each is an issue of its own kind.
+   What is "set against" never goes out.
+5. **Which BCF**: the worker reads buildingSMART's own published format (the
+   version most programs open today, and the newer one), says which is written
+   and why, and checks the file against buildingSMART's own published schema
+   with an outside checker that is run and never linked, as the IFC checker is.
+   The zip is written with what is already linked.
+6. **Who wrote it**: the format wants an author and a time. The program knows no
+   person: the author is the program's name, and the time is the time of
+   writing (so two writings differ in that and nothing else; the demonstration
+   compares everything but the time).
+7. **Not in this call**: reading an issue list back (another party's replies and
+   closings laid against our clashes). It is the natural next step and is
+   written as owed.
+8. Nothing of the sample whole house moves.
+
+### Call 226, as built: loose ends at the command line (2026-11-26)
+
+The worker's work under contract 226M (`research/worker-report-call226M.md`),
+checked by the lead's own run of its copy (1,219 command-line tests: model 723,
+command line 69, sheets 7, model files 111, roofing 122, plans 187; 63
+command-line demonstrations; gates, port map, licences; the sample whole house
+byte for byte) and by the lead reading both sides of every moved expectation.
+
+1. **A try is under a tenth of a second in the build a person is given**: least
+   of five on the sample whole house 0.066 to 0.078 s (0.29 s in the build the
+   tests use), of which writing the job and reading it back is a little over
+   half. By call 226's own rule the putting-back was left alone. `try ...
+   --timed N` prints the figures. **The margin is thin and said**: when a house
+   heavier than the sample crosses it, the job is put back from only what the
+   change touched (the worker's design is in its report); the undo list cannot
+   be the source, since it holds whole texts.
+2. **A length in a sentence is said by one function** (`units::length_said`:
+   "10 ft", "7 ft 6 in", "6 1/8 in"; a length that is no sixteenth is said as it
+   is, never rounded to one the model does not hold); a hole's size in a try's
+   sentence by `units::across_said` ("14 in by 8 in"). Quantities on lists are
+   as they were ("4.00 in round" on the clash list).
+3. **The database's reply** says the line about how cells are shown once; a tab
+   it has no table for is named as typed.
+4. **`plumbline remove-cabinet-rule <job> <code>`**: the three cases of call
+   226, each said; boxes a rule made stay and still say what made them.
+5. **"Stocked heights"** is the table's last column (last, so a table of eleven
+   columns reads as before): W takes 12, 18 and 30 in, T takes 84 in, the bases
+   none (their height is never read from the number). A height read from the
+   number and not listed is flagged as a width is.
+6. **Owed**: sentences outside this job's search that still write a length with
+   decimals (the tolerance sentences to four places; a few written through
+   another helper, "by 3.5 in"); the window's entries for all of this.
+
+### Call 229. The house written out as glTF, to be looked at anywhere (2026-11-26; the lead's design, not built)
+
+Call 220's table: "A scan or a model as a mesh: the house out as glTF to look at
+anywhere". An owner, a designer or a sub opens a glTF in a browser, a phone or
+any 3D program with nothing installed; the BIM file needs a BIM program.
+
+1. **`plumbline export gltf <job> <file.glb>`**: the house as its solids, one
+   named part for each thing the BIM file writes (a wall with its openings cut,
+   a floor, a roof plane, a footing, a run, a thing set down by its shape), in
+   one file.
+2. **One source of solids.** The parts are worked from what the BIM file's
+   writer already works them from; nothing about a thing's shape is worked out a
+   second way. A test holds the count of parts and each part's box to the BIM
+   file's for the sample whole house.
+3. **The format's own measure and axes**: metres, and up as the format has it;
+   the plan's north is kept so the house is not mirrored (the worker says the
+   axes from the format's own text, and a test holds a corner known by hand).
+4. **Colour by what a thing is finished in**, plain: the finish the estimate
+   prices gives the part its colour. The window's patterns (lap, brick,
+   shingle) are not carried and the reply says so: it is a model to look at,
+   not the window's picture.
+5. **What is not carried is said** in the reply: prices, certainty, the
+   patterns, anything the BIM file's writer itself leaves out.
+6. **Checked** by reading the file back with a reader written for the test (its
+   parts, their boxes, every length of data as the file's own table of contents
+   says), and by the format's own published checker run as an outside program
+   where it can be installed.
+7. Not in this call: a mesh brought in to trace over (its own call).
+8. Nothing of the sample whole house moves.
+
+### Call 230. A scanner's own files taken in: LAS and E57 (2026-11-26; the lead's design, not built)
+
+Call 220's table: "A phone scan: points (PLY) yes; **LAS and E57 taken in** if a
+reader under a permitted licence exists; said if not". A surveyor's or a
+scanning crew's scan arrives as LAS or E57, not PLY.
+
+1. **A LAS file is read as a PLY is** and goes everywhere a scan goes today
+   (the same verbs, the same cut into a sheet to trace). LAS is a short public
+   format; the reader is written here from its published text, for the
+   versions and the kinds of point record the worker finds in that text, and a
+   kind it does not read is refused by name.
+2. **The packed kind of LAS (LAZ)** is read only if a reader under a permitted
+   licence can be linked; if not the program says so when one is picked and
+   says to save it as LAS.
+3. **E57** is read if a reader under a permitted licence can be linked (the
+   worker shows the licence of every crate it would add; `tools/licenses.sh`
+   passes); if not, it is refused by name with what to save it as.
+4. **Units and which way is up are asked, never guessed**, as for a PLY; where
+   the file itself says its unit, that is offered and said.
+5. **A scan is never Known.** What is traced over it is Assumed, as today.
+6. **Real scans never enter the repository**: the files of the demonstration
+   are made by a script, a made-up room, and the script is kept beside them.
+7. Nothing of the sample whole house moves.
+
+### Call 231. What reading the marks turned up, ruled (2026-11-26; the lead's)
+
+The worker of contract 227M read the PDF standard's text (in an English
+rendering of it; not the standard's own document) and the marking program's
+maker's help pages, which say what a person sees and nothing of what is stored.
+
+1. **A count is not brought in unless asked for.** The standard has no count
+   mark; the worker took a symbol placed on the page (a stamp) with a label as
+   one of a count, by label. That is a count this program makes, not one the
+   file states, and a stray "approved" stamp would come in as a line of 1 EA.
+   So: `marks` always lists the symbols by label with how many, saying it is
+   this program's count of the page's symbols; `import marks` brings them in as
+   lines **only with `--counts`**, and without it says how many labels and
+   symbols it left and how to bring them. A line that comes from a count says
+   so in its source.
+2. **What is taken as a mark's label and its figure** (its subject and its own
+   text) is the standard's own keys read in the commonest way, **not confirmed
+   against any file a marking program wrote**; none is in the repository and
+   none may be. It is said so in `research/pdf-marks.md` and in STATUS.md, and a
+   marked set of Patrick's own, made safe, placed in `refs/` would settle it: it
+   is his to give and is asked of him with the other pending things, never
+   waited on.
+3. **The refusal of a file that is no drawing names what is now read**: "it is
+   not a PDF, a PNG, a JPEG, a TIFF or a CAD drawing (DXF)". The two
+   expectations that hold the older sentence (`crates/plans/tests/plans.rs` and
+   `demos/plan.sh`) move with it and say why beside them.
+4. **Kept as built**: the marks' lines sit on the job with their heading
+   printed by `estimate` from their source (a kind of their own, with its place
+   in the window, is the window half's job); a mark is known again by its name
+   in the file and the file's name; a line somebody measured Known is left
+   alone and said.
+5. **Owed and said**: a line a person renamed is added again when the file is
+   brought in again; a scale set for part of a sheet, a metric figure and a
+   curved edge are named and left out; the marks have no picture of their own
+   in the made-up file, so another PDF reader shows the page without them.
+
+### Call 227, as built: marks on a PDF read as quantities; a TIFF as a plan (2026-11-26)
+
+The worker's work under contract 227M (`research/worker-report-call227M.md`,
+`research/pdf-marks.md`), with call 231's rulings applied, checked by the lead's
+own run of its copy (1,259 command-line tests: model 734, command line 78,
+sheets 7, model files 111, roofing 122, plans 207; 64 command-line
+demonstrations; gates, port map, licences; the sample whole house byte for
+byte) and by the lead reading the list and the bringing-in as a person would.
+
+1. **`plumbline marks <pdf> [--page n]`** lists a page's marks in its own order:
+   a length, a run of lengths, an area, a count of symbols by label, a note;
+   each with what the mark says, what its points work out to at the scale it
+   carries, and where it is on the sheet in inches. A mark whose two figures
+   differ by more than a hundredth is flagged with both.
+2. **`plumbline import marks <job> <pdf> [--page n] [--counts]`**: each measured
+   mark a line on the job, Assumed, its source naming the mark, the page and
+   the file; no price, no division, and said so. Again: the same, moved (with
+   what it was), or gone from the file (its line left). A line somebody
+   measured Known is left alone and said.
+3. **The notes are read with the PDF crate already linked**; no new one.
+4. **`drawing add` keeps a page's marks with the drawing** (the window's half
+   will show them); a page with none leaves the job byte for byte as before.
+5. **TIFF** is a picture of a plan: one page or `--page n`; read through the
+   picture project's own TIFF crate (MIT, with three small permissive crates),
+   linked directly because the picture crate hands out only the first page.
+6. **Unread and named, never nought**: a curved edge, no scale, a scale for part
+   of a sheet, a figure in a unit not held, no figure.
+7. Call 231 has what is not confirmed and what is owed.
+
+### Call 232. Size tags after call 218: three rulings from two tags that went missing (2026-11-26; the lead's)
+
+`demos/tradesw.sh` was not run on the build of call 218 and fails two checks on
+the builds since: the tags "Pad 36 x 36" (Foundation view) and "3 in waste
+stack" (Plumbing view) are gone. The window builder measured why
+(`handoff` report of contract 222WC, "Two tags gone in tradesw"): the pads are
+39 to 47 dots across from the whole-house distance and call 218's rule writes
+nothing under 48; the stack is 173 dots and is written, then loses its place to
+a 3/4 in cold water tag 19 dots away, because of two tags that would lie over
+one another the nearer was kept. The demonstration's expectation is older than
+call 218 and is what a trade's view is for: it stands, and the program is put
+right.
+
+1. **A size tag is written over a thing 24 dots or more across; a name still
+   wants 48.** Sizes are switched on by a person who wants to read them, and in
+   a trade's view the things are few. 24 dots is two lines of lettering: under
+   that the tag would hide what it names. The upper bound is as it was.
+2. **Of two tags that would lie over one another, the larger thing's is kept**:
+   by its section, then by its length; only then the nearer. A 3 in stack is not
+   left untagged for a 3/4 in pipe beside it.
+3. **A run's size on the screen is its whole length**, the pieces end to end
+   taken together, not its longest piece: three pieces of 5 ft are a run of 15
+   ft to the eye.
+4. `demos/tradesw.sh` is not edited and passes again; the tests of
+   `nav::label_shown` gain the tag's own least size and keep every figure they
+   hold for a name.
+5. **Added the same day, after the builder built points 1 to 3 and handed back
+   what moved.** (a) The two missing tags are back, and the 3/4 in cold water
+   run then had none: both its tags lost their places to the stack and to the
+   hot water. **A tag that loses its place is moved along its own run to the
+   nearest place where it lies over no tag that is kept, and is dropped only
+   when its run has no such place.** A run in a trade's view is not left
+   without its size while there is room on it to write one. (b) The Plumbing
+   picture's count of wire-coloured dots rose from under 100 to 171 with no
+   wire drawn: the tags that now show carry the swatches of the pipes they
+   name, and the hot water's is near the wire's colour to the script's eye.
+   The check means "no wire is drawn"; it is narrowed to count outside the
+   tags' own boxes, which the map gives, with this reason beside it in
+   `demos/tradesw.sh`. That one measure is the only edit to the demonstration.
+
+### Call 228, as built: clashes handed over as an issue list, BCF 2.1 (2026-11-26)
+
+The worker's work under contract 228M (`research/worker-report-call228M.md`,
+`research/bcf.md`), checked by the lead's own run of its copy (1,271
+command-line tests: model 734, command line 82, sheets 7, model files 119,
+roofing 122, plans 207; 65 command-line demonstrations; gates, port map,
+licences; the sample whole house byte for byte) and by the lead reading the
+reply and the demonstration's output.
+
+1. **`plumbline export bcf <job> <file.bcfzip> [--holes]`**: one issue for each
+   clash in the same space, in the clash list's order (the sample house: 11; 5
+   findings, 6 questions for the field); its title the list's own line, its
+   description in a builder's words with the level, the room, the place in feet
+   and inches, finding or question, and the dollars riding on a question.
+2. **The two things are named by the BIM file's own ids**, made by the one
+   function that makes them for that file (now public); a test holds 122 ids.
+3. **A view for each**: the place looked at, from outside both things; metres;
+   the model's axes.
+4. **Holes to cut only with `--holes`** (47 more, of their own kind); what is
+   set against never goes out; the reply counts what was not handed over.
+5. **BCF 2.1**, the version the coordination programs' own pages say they open;
+   checked against buildingSMART's own schema by an outside checker that is run
+   and never linked. The schema files' terms forbid a changed copy and are read
+   as not allowing one kept here: they are fetched by the checker when it runs.
+   The zip is written with the crate already linked for workbooks.
+6. **The author is the program's name**; two writings differ in the time only.
+7. **Lead's rulings**: the one line added to `crates/cli/Cargo.toml` (a
+   test-only reader of the zip, a crate already linked) is accepted though the
+   contract did not list the file; "on a thing of the same name" in the
+   demonstration means the job's own name for the thing.
+8. **Owed**: the reply's "identifiers" and "IFC file" said as ids and BIM file;
+   a picture of the place; the eye kept clear of the house's walls; BCF 3.0;
+   issues read back; the window's entry under Write out.
+
+### Call 233. What a house has that the tool chest draws as a plain box: starter shapes and items for appliances and small devices (2026-11-26; the lead's design, not built)
+
+Call 218's dive ends on a kitchen receptacle that is a plain box, and said so.
+The chest's 48 starter items have no electrical device at all, and its range,
+refrigerator, dishwasher, washer, dryer, air handler and panelboard are drawn as
+boxes. Since calls 198 and 203 a shape is rows of a table, so this is a table
+job, not code.
+
+1. **New starter shapes**, each a few blocks a person knows at a glance and each
+   true to its item's sizes: a range (a body, a cooktop, an oven door), a
+   refrigerator (two doors), a dishwasher, a laundry machine (washer and dryer
+   alike: a body and a round door), an air handler, a panelboard (a flat box
+   and its door), a receptacle and a switch (a plate, and what is on it), a
+   ceiling light, a recessed light, a smoke alarm, a thermostat, a register or
+   grille, a shower base.
+2. **The seven starter items that are boxes today are drawn as their shapes**;
+   their sizes, statuses and sources are not touched.
+3. **New starter items** for what was missing: duplex receptacle, switch,
+   ceiling light, recessed light, smoke alarm, thermostat, supply register,
+   return grille, shower base. Each size is a typical one from a published
+   standard or a maker-neutral source the worker names (address and the line
+   quoted in `research/device-sizes.md`), **Assumed**, "a typical size; the
+   product is not chosen". A size that cannot be sourced is Unknown, not
+   written from memory.
+4. **Where an item connects** for the new plumbing and mechanical items only
+   where a published rough-in gives it (call 211's rule); none is invented.
+5. **Nothing already in a job moves.** A job carries its own shapes only; a
+   thing set down before this call is what it was. The sample whole house's
+   saved job, estimate, clash list and verify-in-field list are byte for byte
+   what they were. If drawing one of its things as a new shape would change any
+   of those, the worker stops and hands that back.
+6. **Counts move, and only counts**: where a test or a demonstration counts the
+   starter shapes, their rows, the starter items or the database's tabs' rows,
+   that count moves to the new figure with "call 233" beside it; the worker
+   lists every one before touching any, and nothing else in those files moves.
+7. The window draws shapes from the table already; its pictures are retaken at
+   the next window merge, and the dive's last picture is looked at then.
+
+### Call 229, as built: the house written out as glTF (2026-11-26)
+
+The worker's work under contract 229M (`research/worker-report-call229M.md`,
+`research/gltf.md`), checked by the lead's own run of its copy (1,292
+command-line tests: model 740, command line 85, sheets 7, model files 131,
+roofing 122, plans 207; 66 command-line demonstrations; gates, port map,
+licences; the sample whole house byte for byte) and by the lead opening the
+file in a browser and looking at it.
+
+1. **`plumbline export gltf <job> <file.glb>`**: one file, a named part for each
+   thing the BIM file gives a body or a line (the sample house: 236), under its
+   level; the reply lists what was written and what was not carried.
+2. **One source of solids**: the two rules that lived inside the BIM file's
+   writer (which wall runs through a corner; the frame a run is drawn in) moved
+   to `world::solids`, and both writers call them. The BIM file is what it was.
+   A test holds every part's box to the BIM file's box for the same thing.
+3. **Metres; up as the format has it; not mirrored**: a place east, north, up
+   in feet is written east, up, minus north in metres. A corner worked by hand
+   is held by a test.
+4. **Colour by finish**, plain; glass and rooms see-through.
+5. **Not carried, and said in the reply and in the file**: prices and
+   certainty; the window's patterns; what a thing set down is drawn as; a
+   wall's layers and a window's frame and sash; systems; a roof plane's
+   thickness; a thing with no size.
+6. **Checked** by a reader written for the tests, by the format's own checker
+   run as an outside program, and by eye in a browser.
+7. BIMCraft's own glTF writer (MIT) was read and its layout followed; the port
+   map says so.
+8. **Owed**: things set down written as their shapes (the shapes are a table
+   now, so the same blocks can be written); a window's frame; unique names;
+   the window's entry under Write out; a mesh brought in (its own call).
+
+### Call 234. The field's measurements brought back by file: a sheet to fill, and the loop closed without retyping (2026-11-26; the lead's design, not built)
+
+Proposal 40's first half and step 8 of call 217's order, the model's side.
+Patrick's intent (call 216): "a field app in the future but for now it will be
+on a desktop". The loop is the mission: Assumed until a veteran measures it.
+Today the list to verify goes out as a sheet to print (`export vif`) with a
+blank for what was found, and every measurement comes back by someone typing it
+value by value. By file it comes back whole, and the same file is what a field
+companion would later fill (Q33: by file only; the program opens no
+connection).
+
+1. **`plumbline export field-sheet <job> <file.xlsx|csv>`**: a row for each
+   value there is to measure (not for each question: a question such as "check
+   its size" is three rows, a width, a depth and a height): where, the thing,
+   what to measure in a builder's words, what the job has now and how sure,
+   the dollars riding on its question, and blanks: **As found, Measured by,
+   On**. Sorted as the verify-in-field list is, by dollars. Each row carries a
+   reference of its own that says which value it is, so the sheet can be
+   sorted or cut down on site and still come back.
+2. **`plumbline import field-sheet <job> <file>`**: each row with something in
+   As found sets that value **Known**, by the very function a typed
+   measurement goes through (one arithmetic: the price, the clashes and the
+   list move exactly as they do for a typed one). Its source says it was
+   measured in the field, by whom and on what day where the row says, and
+   names the sheet and the row. A length is read as a laser or a tape writes it
+   (the readings typed measurements already take).
+3. **A row left blank changes nothing.** A row whose As found is what the job
+   already has makes the value Known at that figure: a measurement that agrees
+   is still a measurement.
+4. **All of it or none of it, and every refusal named by row**: a figure that
+   cannot be read as what the row measures; a reference the job does not have;
+   a value that is no longer what the sheet says it was when it went out
+   (somebody changed it since: the row says what the sheet had and what the
+   job has, and is not applied over it without `--anyway`).
+5. **The reply says what a typed measurement says**, for each row: what
+   followed, which clash was confirmed or cleared, the price before and after;
+   and at the end how many values were measured, how many questions are left
+   and the dollars still riding.
+6. **A value measured Known in the field is never set back to Assumed by a
+   later sheet**; a second measurement that differs is said, with both, and
+   needs `--anyway`.
+7. The printed sheet (`export vif`) is as it was. The window's entry, and a
+   photo kept with a measurement, are later jobs.
+8. Nothing of the sample whole house moves.
+
+### Call 230, as built: a scanner's own files taken in, LAS, LAZ and E57 (2026-11-26)
+
+The worker's work under contract 230M (`research/worker-report-call230M.md`,
+`research/scan-files.md`), checked by the lead's own run of its copy (1,316
+command-line tests: model 740, command line 85, sheets 7, model files 131,
+roofing 122, plans 231; 67 command-line demonstrations; gates, port map,
+licences; the sample whole house byte for byte).
+
+1. **A LAS is read as a PLY is**, by a reader written here from the publisher's
+   own text: versions 1.1 to 1.4, every kind of point record (the waveform not
+   kept, and said); another version, a kind above the tenth, a file cut short
+   (saying how many points it says and how many it holds), a file of no points
+   and a file in degrees are refused by name.
+2. **LAZ and E57 are read**, through `laz` (Apache-2.0; older versions were
+   LGPL, so the version is held at the permissive one) and `e57` (MIT), each
+   licence read in the crate's own files, with what each links in turn;
+   `tools/licenses.sh` passes.
+3. **Units**: a LAS says its unit only in its coordinate-system record; one
+   unit is offered and said, a person's word wins and both are said, two units
+   are refused until one is said. An E57 is meters by its standard. Which way
+   is up is said, never guessed.
+4. **A scan far from the zero** has its southwest corner taken to zero, and the
+   sheet's source says how far east and north it lay in the file's own grid.
+   Before, such a scan could not be brought in at all.
+5. A scan is never Known; the sheet's source names the file by its own ending.
+6. **Lead's rulings**: nothing of a standard is from memory (the one code that
+   was is now quoted from its source); the program that writes the made-up LAZ
+   and E57 is an example, not a command a person is given.
+7. **Owed**: a LAZ and an E57 from a scanner's own program read (Patrick's to
+   give, made safe; nothing waits on it); the walls finder's cells put right
+   (its own job); the shift kept as a figure of the job and not only as words;
+   the window's picker and entries.
+

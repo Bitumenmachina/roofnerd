@@ -14,3 +14,15 @@ hayro = "0.9.0"
 hayro-cmap = "0.1.1"
 # PNG and JPEG pictures of plans, and aerial pictures.
 image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
+# TIFF pictures of plans (call 227), the image-rs project's own reader of the format (MIT; its three small
+# crates are fax (MIT), weezl (MIT OR Apache-2.0) and quick-error (MIT/Apache-2.0); tools/licenses.sh passes with
+# them). Read directly, not through `image`, because `image` hands out the first page of a file only and a scanned
+# set is one TIFF of many pages. Packings read: none, LZW, deflate, PackBits, CCITT group 4, JPEG in a strip.
+tiff = "0.11"
+# A scanner's own files (call 230). E57 (ASTM E2807) is read by the e57 crate: MIT, pure Rust with unsafe code
+# forbidden, no network code; it links roxmltree (MIT OR Apache-2.0) and that links memchr (Unlicense OR MIT).
+e57 = "0.11"
+# The packed kind of LAS (LAZ, LASzip's compression) is read by laz: Apache-2.0 by its own manifest (its changelog says
+# it was LGPL before it was changed to Apache-2.0 to follow LASzip); it links byteorder (Unlicense OR MIT) and
+# num-traits (MIT OR Apache-2.0). tools/licenses.sh passes with them. LAS itself is read here from its published text.
+laz = "0.14"

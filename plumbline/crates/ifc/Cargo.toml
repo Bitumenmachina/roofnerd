@@ -8,3 +8,9 @@ rust-version.workspace = true
 
 [dependencies]
 plumbline-world = { path = "../world" }
+# The issue list (BCF) is a zip of text files: written with the zip crate the workbook writer already links (same version and features, so
+# no crate is added to the build; MIT).
+zip = { version = "9.0", default-features = false, features = ["deflate"] }
+# The house as glTF (call 229) is a JSON document and a binary run in one file: written with the JSON crate the model and the command line
+# already link (same version and features, so no crate is added to the build; MIT or Apache-2.0).
+serde_json = { workspace = true }

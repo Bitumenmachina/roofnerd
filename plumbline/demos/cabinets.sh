@@ -96,8 +96,10 @@ echo "== 5. Refused, in words, the job unchanged =="
 "$P" type "$J" door "door 3 x 7" --width "3 ft" --height "7 ft" "${K[@]}" > "$T/dt.txt"
 DT="$(made "$(cat "$T/dt.txt")")"
 cp "$J" "$T/before.json"
-refused "$P" cabinets "$J" "$S" "$KEAST" --in "$KITCHEN" --from "1 ft" --boxes "B99" "${N[@]}"
-says "$T/out.txt" "B99 is not in the tool chest. It has: "
+# call 225: B99 is now a box made by the rule for B (call 215); a code no rule reads is Q99
+refused "$P" cabinets "$J" "$S" "$KEAST" --in "$KITCHEN" --from "1 ft" --boxes "Q99" "${N[@]}"
+says "$T/out.txt" "Q99 is not in the tool chest, and no cabinet rule reads Q"
+says "$T/out.txt" ". It has: "
 says "$T/out.txt" "B18"
 cmp -s "$J" "$T/before.json" || { echo "FAIL: the refusal changed the job"; exit 1; }
 refused "$P" cabinets "$J" "$S" "$KEAST" --in "$KITCHEN" --from "1 ft" --boxes "B36 B36 B36 B36 B36 B36" "${N[@]}"

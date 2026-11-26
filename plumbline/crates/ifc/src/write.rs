@@ -19,6 +19,7 @@
 //! which is how the two are checked against each other.
 
 use plumbline_world::building::forms::Form;
+use plumbline_world::solids::along;
 use std::collections::{BTreeMap, HashMap};
 
 use plumbline_world::building::{self, ConnectorKind, Connectors, Domain, Flow, FittingKind, InSystem, Shape, SystemInfo};
@@ -132,10 +133,9 @@ fn name_or_none(s: &str) -> String {
     }
 }
 
-/// A thing's identifier in the file: 22 characters, the same for the same thing of the
-/// same job every time it is written, so a model written again matches the one before.
-fn guid(job: &str, key: &str) -> String {
-    const LETTERS: &[u8; 64] = b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_$";
+/// The 128 bits a thing's identifier is made from: the same for the same thing of the same job every time (call 228: the
+/// issue list's identifiers are made from these, so no thing has two).
+fn id_bits(job: &str, key: &str) -> u128 {
     let hash = |seed: u64| -> u64 {
         let mut h = seed;
         for b in job.bytes().chain([0u8]).chain(key.bytes()) {
@@ -144,13 +144,35 @@ fn guid(job: &str, key: &str) -> String {
         }
         h ^ (h >> 29)
     };
-    let bits = (u128::from(hash(0xCBF2_9CE4_8422_2325)) << 64) | u128::from(hash(0x8422_2325_CBF2_9CE4));
+    (u128::from(hash(0xCBF2_9CE4_8422_2325)) << 64) | u128::from(hash(0x8422_2325_CBF2_9CE4))
+}
+
+/// A thing's identifier in the file: 22 characters, the same for the same thing of the
+/// same job every time it is written, so a model written again matches the one before.
+/// `job` is the job's title and `key` the thing's path (or what else the file names).
+/// The one function that makes it: the issue list (`bcf`) calls this too (call 228).
+pub fn guid(job: &str, key: &str) -> String {
+    const LETTERS: &[u8; 64] = b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_$";
+    let bits = id_bits(job, key);
     let mut out = String::with_capacity(22);
     out.push(LETTERS[((bits >> 126) & 0x3) as usize] as char);
     for i in (0..21).rev() {
         out.push(LETTERS[((bits >> (i * 6)) & 0x3F) as usize] as char);
     }
     out
+}
+
+/// The same 128 bits written as the 8-4-4-4-12 hexadecimal form other formats ask of a list's own entries (an issue's identifier).
+/// Not random: the same job and key give the same one.
+pub fn uuid(job: &str, key: &str) -> String {
+    let bits = id_bits(job, &format!("{key} (as a 8-4-4-4-12 identifier)"));
+    let h = format!("{bits:032x}");
+    format!("{}-{}-{}-{}-{}", &h[0..8], &h[8..12], &h[12..16], &h[16..20], &h[20..32])
+}
+
+/// The title the file names the job by: what every identifier in it is made with.
+pub fn job_title(job: &mut Job) -> String {
+    job.world.get::<JobInfo>(job.root()).map(|j| j.title.clone()).unwrap_or_default()
 }
 
 struct Out {
@@ -268,20 +290,6 @@ impl Out {
     }
 }
 
-/// Along a run: the unit way from `a` to `b`, and a level way across it.
-fn along(a: P3, b: P3) -> Option<(P3, P3, f64)> {
-    let d = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
-    let length = (d[0] * d[0] + d[1] * d[1] + d[2] * d[2]).sqrt();
-    if length < 1.0e-9 {
-        return None;
-    }
-    let way = [d[0] / length, d[1] / length, d[2] / length];
-    let flat = (way[0] * way[0] + way[1] * way[1]).sqrt();
-    // Across, and level: square to the run on plan; for a riser, east.
-    let across = if flat < 1.0e-9 { [1.0, 0.0, 0.0] } else { [-way[1] / flat, way[0] / flat, 0.0] };
-    Some((way, across, length))
-}
-
 /// What IFC calls a fitting, by what it joins and what it is (call 204 point 6 writes one with no size by the same words).
 fn fitting_class(discipline: Discipline, kind: Option<FittingKind>) -> (&'static str, &'static str) {
     match (discipline, kind) {
@@ -334,7 +342,7 @@ fn domain_word(d: Domain) -> &'static str {
 /// The job's building as an IFC4 file. `when` is the moment it is written, as the file's
 /// own heading says it (`2026-01-31T09:30:00`), and `file` what the file is called.
 pub fn export(job: &mut Job, file: &str, when: &str) -> Result<Written, String> {
-    let title = job.world.get::<JobInfo>(job.root()).map(|j| j.title.clone()).unwrap_or_default();
+    let title = job_title(job);
     let elements = view::elements(job);
     let names: HashMap<String, String> = elements.iter().map(|e| (e.path.clone(), e.name.clone())).collect();
     let storeys = building::storey_totals(job);
@@ -435,26 +443,7 @@ pub fn export(job: &mut Job, file: &str, when: &str) -> Result<Written, String> 
     // centre line to the corner point, so written as drawn each corner had a notch
     // (J20-6: a 1 ft square missing at each outside corner of a ring of footings).
     // How much longer (or, below nought, shorter) each end of each is written.
-    let carried: std::collections::HashMap<&str, [f64; 2]> = {
-        let lines: Vec<(usize, &plumbline_world::building::Placement, [f64; 2], [f64; 2], f64)> = placed.iter().enumerate().filter_map(|(i, p)| match &p.shape { Shape::Wall { a, b, thickness, .. } => Some((i, p, *a, *b, *thickness)), _ => None }).collect();
-        let same = |x: [f64; 2], y: [f64; 2]| (x[0] - y[0]).hypot(x[1] - y[1]) < 0.01;
-        let mut out = std::collections::HashMap::new();
-        for (i, p, a, b, _) in &lines {
-            let mut by = [0.0, 0.0];
-            for (which, end) in [a, b].into_iter().enumerate() {
-                let meeting: Vec<&(usize, &plumbline_world::building::Placement, [f64; 2], [f64; 2], f64)> = lines.iter().filter(|o| o.0 != *i && o.1.kind == p.kind && o.1.storey == p.storey && (same(o.2, *end) || same(o.3, *end))).collect();
-                let [other] = meeting.as_slice() else { continue };
-                let (ux, uy) = (b[0] - a[0], b[1] - a[1]);
-                let (vx, vy) = (other.3[0] - other.2[0], other.3[1] - other.2[1]);
-                let turn = ((ux * vy - uy * vx) / (ux.hypot(uy) * vx.hypot(vy)).max(1.0e-12)).abs();
-                if turn > 0.98 {
-                    by[which] = if *i < other.0 { other.4 / 2.0 } else { -other.4 / 2.0 };
-                }
-            }
-            out.insert(p.path.as_str(), by);
-        }
-        out
-    };
+    let carried = plumbline_world::solids::corner_carry(&placed);
 
     for p in &placed {
         // Where it is placed from: its level's floor, or the building's zero.
@@ -471,7 +460,7 @@ pub fn export(job: &mut Job, file: &str, when: &str) -> Result<Written, String> 
                 };
                 let at = o.placed(Some(within), [a[0], a[1], base - floor], up, way);
                 // From so far before its first end to so far past its last (a corner).
-                let [before, after] = carried.get(p.path.as_str()).copied().unwrap_or([0.0, 0.0]);
+                let [before, after] = carried.get(&p.path).copied().unwrap_or([0.0, 0.0]);
                 let body = o.pushed_rect_on_axis([(length + after - before) / 2.0, 0.0], length + before + after, *thickness, *height, 0.0, length);
                 // A strip footing is IFC's footing of that sort; anything else here is a wall.
                 let wall = if p.kind == plumbline_world::Kind::Footing {
@@ -765,7 +754,7 @@ pub fn export(job: &mut Job, file: &str, when: &str) -> Result<Written, String> 
             rooms_no_walls += 1;
             continue;
         };
-        let high = storeys.iter().find(|s| level_of.get(&s.path).is_some_and(|l| l.0 == level)).and_then(|s| job.find(&s.path)).and_then(|e| job.world.get::<Level>(e)).and_then(|l| l.height.feet()).filter(|h| *h > 0.0);
+        let high = storeys.iter().find(|s| level_of.get(&s.path).is_some_and(|l| l.0 == level)).and_then(|s| plumbline_world::solids::level_height(job, &s.path));
         let Some(high) = high else {
             rooms_no_height += 1;
             continue;

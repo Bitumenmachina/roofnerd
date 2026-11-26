@@ -27,15 +27,23 @@
 
 pub mod carry;
 pub mod connections;
+pub mod copies;
+pub mod find;
 pub mod history;
 pub mod join;
 pub mod measure;
 pub mod shapes;
+pub mod slide;
 pub mod snap;
 pub mod stretch;
+pub mod trying;
 
 pub use connections::{connection_add, connection_row, connection_row_facing, connection_set, connection_set_how, connection_take, connections_outside_their_boxes, connections_standing, item_connections_worked, item_rows, ConnectionDone, ConnectionsFollowed, Near, Standing, StandsHow, StandsOff, WorkedConnection};
+pub use copies::{copy_by, copy_row, row_said, Copied};
+pub use find::{find_in_job, find_lines, find_names, nothing_said, NameFound};
 pub use history::{History, UNDO_LIMIT};
+pub use slide::{move_opening, wall_ends, FaceChange, OpeningMoved, OpeningTo};
+pub use trying::{apply, try_change, ChangeDone, AtOpening, Change, HowTall, Tried, Trouble, WouldMake};
 pub use shapes::{keep_shape_as, shape_block_add, shape_block_set, shape_block_take, BlockSet, ShapeChanged};
 pub use stretch::{move_wall, read_move, way_said, Followed, Moved, Resized, RoofMoved};
 pub use join::{connect, connect_at, connect_port, fit_all, fitting, split, Fitted, PassedOver, PortSaid};
@@ -528,7 +536,7 @@ pub fn opening(job: &mut Job, wall: &str, kind: Kind, type_path: &str, at: OnWal
                 let length = (dx * dx + dy * dy).sqrt();
                 let along = ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / length;
                 if !(0.0..=length).contains(&along) {
-                    return Err(format!("the point ({}, {}) falls {} ft along {wall}, which is {} ft long: it is not on the wall", p[0], p[1], crate::view::figure(along, 2), crate::view::figure(length, 2)));
+                    return Err(format!("the point ({}, {}) falls {} along {wall}, which is {} long: it is not on the wall", p[0], p[1], crate::units::length_said(along), crate::units::length_said(length)));
                 }
                 // And it is in the wall, not out in the room: within half the wall's
                 // thickness of its centre line, which lies to the left of the line it
@@ -543,7 +551,7 @@ pub fn opening(job: &mut Job, wall: &str, kind: Kind, type_path: &str, at: OnWal
                 };
                 let off = (((p[1] - a[1]) * dx - (p[0] - a[0]) * dy) / length - centre).abs();
                 if off > half + crate::check::FIT_TOLERANCE_FT {
-                    return Err(format!("the point ({}, {}) is {} ft off the middle of {wall}, which is {} ft thick: it is not on the wall", p[0], p[1], crate::view::figure(off, 2), crate::view::figure(half * 2.0, 2)));
+                    return Err(format!("the point ({}, {}) is {} off the middle of {wall}, which is {} thick: it is not on the wall", p[0], p[1], crate::units::length_said(off), crate::units::length_said(half * 2.0)));
                 }
                 how.val(Len::One((along * 10_000.0).round() / 10_000.0), "ft")
             }
@@ -1129,6 +1137,9 @@ pub struct Cabinets {
     pub left: f64,
     /// The boxes hang on the wall (they are wall boxes), this far up in feet.
     pub hung: Option<f64>,
+    /// Each box a rule made because the tool chest had not its code (call 215), said in full:
+    /// which rule, its sizes, and a width the trade does not stock.
+    pub made: Vec<String>,
 }
 
 /// The box codes a job's tool chest has: its furnishings of Division 12 named by one word of
@@ -1209,11 +1220,15 @@ pub fn cabinets(job: &mut Job, storey: &str, wall: &str, room: &str, from: &str,
             path: String,
             name: String,
             size: P3,
-            /// A box of the tool chest, named by a code: wall boxes start with W, tall ones with T.
+            /// A box of the tool chest, named by a code: its rule says where it stands.
             code: bool,
+            /// How far up its foot hangs, in feet, by its rule (call 215): None, it stands on the floor.
+            hang: Option<f64>,
             division: Option<crate::components::Division>,
         }
-        let chest = box_codes(job);
+        let rules = building::cabinet::effective(&job.cabinet_rules);
+        let mut chest = box_codes(job);
+        let mut made: Vec<String> = Vec::new();
         let mut boxes: Vec<Boxed> = Vec::new();
         for code in codes {
             let named = chest.iter().find(|(_, name)| name.eq_ignore_ascii_case(code.trim())).map(|(p, n)| (p.clone(), n.clone(), true)).or_else(|| {
@@ -1222,6 +1237,23 @@ pub fn cabinets(job: &mut Job, storey: &str, wall: &str, room: &str, from: &str,
                 all.sort();
                 all.into_iter().next().map(|(_, p, n)| (p, n, false))
             });
+            let named = match named {
+                Some(found) => Some(found),
+                // A code the chest has not is made by its rule, when a rule reads it (call 215).
+                None => match building::cabinet::ask(&rules, code) {
+                    building::cabinet::Asked::Made(m) => {
+                        let path = item(job, &m.name, m.item.clone())?;
+                        chest.push((path.clone(), m.name.clone()));
+                        made.push(m.said.clone());
+                        Some((path, m.name, true))
+                    }
+                    building::cabinet::Asked::Refused(why) => {
+                        let have = chest.iter().map(|(_, n)| n.as_str()).collect::<Vec<_>>().join(" ");
+                        return Err(if have.is_empty() { format!("{why}. It has no boxes: bring the starter items in first") } else { format!("{why}. It has: {have}") });
+                    }
+                    building::cabinet::Asked::NotACode => None,
+                },
+            };
             let Some((path, name, code)) = named else {
                 let have = chest.iter().map(|(_, n)| n.as_str()).collect::<Vec<_>>().join(" ");
                 return Err(if have.is_empty() { format!("{code} is not in the tool chest, and it has no boxes: bring the starter items in first") } else { format!("{code} is not in the tool chest. It has: {have}") });
@@ -1229,16 +1261,23 @@ pub fn cabinets(job: &mut Job, storey: &str, wall: &str, room: &str, from: &str,
             let e = job.find(&path).ok_or_else(|| format!("{path} is not in the job"))?;
             let it = job.world.get::<Item>(e).cloned().ok_or_else(|| format!("{path} is not an item"))?;
             let (size, _, _) = it.size_ft().map_err(|why| format!("{name}: {why}, so it cannot be set"))?;
-            boxes.push(Boxed { path, name, size, code, division: it.division });
+            // Where a box stands is its rule's, by the letters of its code; a box no rule reads stands on the floor (call 215).
+            let hang = if code { building::cabinet::hung_ft(&rules, &name) } else { None };
+            boxes.push(Boxed { path, name, size, code, hang, division: it.division });
         }
-        let hangs = |b: &Boxed| b.code && b.name.starts_with('W');
+        let hangs = |b: &Boxed| b.hang.is_some();
         // What a countertop goes over: what is not hung and stands no taller than a base box.
         let covered = |b: &Boxed| !hangs(b) && b.size[2] <= COUNTER_HEIGHT_FT + tol;
         let wall_boxes = boxes.iter().filter(|b| hangs(b)).count();
         if wall_boxes != 0 && wall_boxes != boxes.len() {
             return Err("wall boxes hang over the counter and base boxes stand under it: set them as two runs".into());
         }
-        let hung = (wall_boxes != 0).then_some(54.0 / 12.0);
+        let hung = boxes.iter().find_map(|b| b.hang);
+        if let Some(first) = hung {
+            if boxes.iter().any(|b| b.hang.is_some_and(|h| (h - first).abs() > tol)) {
+                return Err("the wall boxes of one run hang at one height, and these hang at different heights by their rules: set them as two runs".into());
+            }
+        }
         if countertop && hung.is_some() {
             return Err("a countertop goes over base boxes, and a run of wall boxes has none".into());
         }
@@ -1318,7 +1357,7 @@ pub fn cabinets(job: &mut Job, storey: &str, wall: &str, room: &str, from: &str,
             let (item, code, size) = (&b.path, &b.name, b.size);
             let mid = spot(along + size[0] / 2.0, face.off + size[1] / 2.0);
             let offset = match hung {
-                Some(up) => Val { value: Some(units::Len::One(up)), unit: "ft".into(), status: assumed.status, source: "wall boxes hang with their bottoms 54 in up, 18 in over a 36 in counter; the maker's catalog decides".into() },
+                Some(up) => Val { value: Some(units::Len::One(up)), unit: "ft".into(), status: assumed.status, source: format!("wall boxes hang with their bottoms {} up, {} over a 36 in counter; the maker's catalog decides", units::inches_said(up), units::inches_said(up - 3.0)) },
                 None => how.length("0 ft")?,
             };
             let (path, _) = place_item_in(job, storey, item, mid, offset, Entered { status: sure, source: &by })?;
@@ -1388,7 +1427,7 @@ pub fn cabinets(job: &mut Job, storey: &str, wall: &str, room: &str, from: &str,
         } else {
             None
         };
-        Ok(Cabinets { boxes: set, countertop: top, from: start, run, left: hi - end, hung })
+        Ok(Cabinets { boxes: set, countertop: top, from: start, run, left: hi - end, hung, made })
     })
 }
 

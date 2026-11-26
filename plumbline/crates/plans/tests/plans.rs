@@ -43,7 +43,8 @@ fn a_picture_is_a_picture_and_a_file_that_is_neither_is_refused() {
         assert_eq!(page.lost, ["it is a picture: it has no lines of its own to snap to, and is traced over by eye"]);
         assert_eq!(read(&file(name), 2).unwrap_err(), "a picture has one page; page 2 was asked for");
     }
-    assert_eq!(read(b"not a plan at all", 1).unwrap_err(), "it is not a PDF, a PNG or a JPEG");
+    // call 231: the refusal names what is now read
+    assert_eq!(read(b"not a plan at all", 1).unwrap_err(), "it is not a PDF, a PNG, a JPEG, a TIFF or a CAD drawing (DXF)");
     let pdf = file("made-up-plan.pdf");
     assert_eq!(read(&pdf, 2).unwrap_err(), "the file has 1 page; page 2 was asked for");
     assert_eq!(read(&pdf, 0).unwrap_err(), "the file has 1 page; page 0 was asked for");

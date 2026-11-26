@@ -101,7 +101,7 @@ fn lowest_elevation(job: &mut plumbline_world::job::Job) -> Option<f64> {
 /// Whether the job already holds a sheet laid from this scan under the level (its place is where the scan's feet put it).
 fn has_sheet(job: &mut plumbline_world::job::Job, level: &str, called: &str) -> bool {
     let mut q = job.world.query::<(&plumbline_world::Node, &plumbline_world::plans::Drawing)>();
-    q.iter(&job.world).any(|(n, d)| n.parent.as_deref() == Some(level) && d.file.source.starts_with(&format!("scan {called}.ply")))
+    q.iter(&job.world).any(|(n, d)| n.parent.as_deref() == Some(level) && d.file.source.starts_with(&format!("scan {called}.")))
 }
 
 /// A scan farther than this from zero (a house is not over 150 ft: call 179, A7) is not laid there.
@@ -255,7 +255,7 @@ pub fn run(args: &[String]) -> Result<(), String> {
             }
         }
     }
-    let usage = "find-walls takes the job's file, a scan (a PLY point cloud) and --level <level>: plumbline find-walls <file> <scan.ply> --level <level> [--units m|ft] [--up z|y] [--by-ceiling] [--lay [--outside \"<wall type>\"] [--take <n>] [--anyway]]";
+    let usage = "find-walls takes the job's file, a scan (a PLY, LAS, LAZ or E57 point cloud) and --level <level>: plumbline find-walls <file> <scan.ply> --level <level> [--units m|ft] [--up z|y] [--by-ceiling] [--lay [--outside \"<wall type>\"] [--take <n>] [--anyway]]";
     let (mut plain, mut flags): (Vec<&str>, Vec<(&str, Option<&str>)>) = (Vec::new(), Vec::new());
     let mut i = 1;
     while i < args.len() {
@@ -295,9 +295,10 @@ pub fn run(args: &[String]) -> Result<(), String> {
         return Err("--take says a wall found is a wall, to be laid with the rest: it goes with --lay".into());
     }
     let level = flag("--level").ok_or("say which level the scan is of: --level <level>")?.to_string();
-    let units_of = match flag("--units") {
-        None | Some("m") => Units::Metres,
-        Some("ft") => Units::Feet,
+    let said_units = match flag("--units") {
+        None => None,
+        Some("m") => Some(Units::Metres),
+        Some("ft") => Some(Units::Feet),
         Some(other) => return Err(format!("--units {other:?}: a scan is in m or ft")),
     };
     let up = match flag("--up") {
@@ -315,7 +316,9 @@ pub fn run(args: &[String]) -> Result<(), String> {
     }
     let bytes = std::fs::read(scan_path).map_err(|e| format!("cannot read {scan_path}: {e}"))?;
     let called = std::path::Path::new(scan_path).file_stem().and_then(|s| s.to_str()).unwrap_or("scan").to_string();
-    let mut scan = plumbline_plans::scan::read_ply(&bytes, units_of, up).map_err(|why| format!("{scan_path}: {why}"))?;
+    // A LAS or LAZ file's own word for its unit is taken where none is said (call 230); a PLY has none, and is in meters.
+    let units_of = plumbline_plans::scan::units_to_use(&bytes, said_units).map_err(|why| format!("{scan_path}: {why}"))?;
+    let mut scan = plumbline_plans::scan::read(&bytes, units_of, up).map_err(|why| format!("{scan_path}: {why}"))?;
     scan.level_by_floor();
     let taken = format!("read as {}{}", if units_of == Units::Metres { "meters" } else { "feet" }, if up == Up::Z { "" } else { ", with the file's other direction taken as up (--up y)" });
     // Where the scan holds more than one level, the one asked for is found by its floor: the level's elevation above the job's lowest level (call 183, 8).
@@ -337,6 +340,15 @@ pub fn run(args: &[String]) -> Result<(), String> {
         Some(format!("the level {level_name} is {} high ({status}, {source}) and the scan reads {} from floor to ceiling, {} {}: the walls are laid as high as the scan reads, Assumed, from the scan, and the level's height is not changed; measure it to tell which is right", inch(h), inch(reads), inch((reads - h).abs()), if reads > h { "more" } else { "less" }))
     });
     let mut out = said(&found, &called, scan.points.len(), &taken, level_note.as_deref());
+    // What a LAS, LAZ or E57 file says of itself, and what reading it did not keep (call 230); a PLY adds nothing here.
+    if plumbline_plans::scan::kind_of(&bytes) != Some(plumbline_plans::scan::Kind::Ply) {
+        for note in plumbline_plans::scan::file_notes(&bytes, units_of, Some(up)) {
+            let _ = writeln!(out, "  {note}");
+        }
+        for lost in &scan.lost {
+            let _ = writeln!(out, "  not kept: {lost}");
+        }
+    }
     if !lay {
         if !found.walls.is_empty() {
             let _ = writeln!(out, "  nothing is laid: say --lay to lay these walls, doors and windows on {level}");

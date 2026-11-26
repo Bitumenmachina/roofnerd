@@ -27,7 +27,10 @@
 //! lines; this reads the plain shapes straight, and says what it did not read.
 
 pub mod step;
+/// The clashes written as an issue list another program opens (BCF 2.1; call 228), naming things by the ids `write` gives them.
+pub mod bcf;
 pub mod write;
+pub mod gltf;
 mod maker;
 pub use maker::{maker_model, MadeItem, MakerModel};
 

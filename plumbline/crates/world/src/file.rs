@@ -36,6 +36,10 @@ struct FileRoot {
     /// job that names none saves as it always did.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     shapes: Vec<building::shape::Shape>,
+    /// The cabinet rules of its own the job carries (call 215). Left out when there are none, so
+    /// a job that never touched them saves as it always did.
+    #[serde(default, rename = "cabinetRules", skip_serializing_if = "Vec::is_empty")]
+    cabinet_rules: Vec<building::cabinet::Rule>,
     #[serde(flatten)]
     extra: BTreeMap<String, Value>,
 }
@@ -164,7 +168,7 @@ pub fn save(job: &mut Job) -> String {
         }
         schemas.entry(k.to_string()).or_insert_with(|| json!({ "value": { "dataType": if k == K_CLASS { "String" } else { "Object" } } }));
     }
-    let root = FileRoot { header: job.header.clone(), imports: job.imports.clone(), schemas, data, shapes: job.shapes.clone(), extra: job.extra.clone() };
+    let root = FileRoot { header: job.header.clone(), imports: job.imports.clone(), schemas, data, shapes: job.shapes.clone(), cabinet_rules: job.cabinet_rules.clone(), extra: job.extra.clone() };
     let mut out = String::new();
     write_pretty(&serde_json::to_value(&root).expect("the job serialises"), 0, &mut out);
     out.push('\n');
@@ -324,7 +328,18 @@ pub fn load(text: &str) -> Result<(Job, LoadReport), String> {
             return Err(format!("shape {:?} appears twice; a job has one shape of a name", shape.name));
         }
     }
-    let mut job = Job { header: root.header, world: bevy_ecs::world::World::new(), order: Vec::new(), imports: root.imports, schemas: root.schemas, extra: root.extra, shapes: root.shapes, found: std::collections::HashMap::new() };
+    if root.cabinet_rules.len() > building::cabinet::MOST_RULES {
+        return Err(format!("the file carries {} cabinet rules; a job carries at most {}", root.cabinet_rules.len(), building::cabinet::MOST_RULES));
+    }
+    let mut ruled: BTreeSet<String> = BTreeSet::new();
+    for rule in &root.cabinet_rules {
+        rule.check().map_err(|why| format!("cabinet rule {}: {why}", rule.code))?;
+        building::shape::check_drawn_as(&root.shapes, &rule.drawn_as).map_err(|why| format!("cabinet rule {}: drawn as: {why}", rule.code))?;
+        if !ruled.insert(rule.code.clone()) {
+            return Err(format!("cabinet rule {:?} appears twice; a job has one rule for a code", rule.code));
+        }
+    }
+    let mut job = Job { header: root.header, world: bevy_ecs::world::World::new(), order: Vec::new(), imports: root.imports, schemas: root.schemas, extra: root.extra, shapes: root.shapes, cabinet_rules: root.cabinet_rules, found: std::collections::HashMap::new() };
     for k in KNOWN_KEYS {
         // Ours are rewritten on save; do not keep a stale copy.
         if job.schemas.get(k) == Some(&json!({ "value": { "dataType": if k == K_CLASS { "String" } else { "Object" } } })) {

@@ -11462,7 +11462,21 @@ step to the words the `cabinets` verb already takes):
 8. The saved job of a run of starter codes only (B15, B30, SB36 with a
    countertop) is byte for byte the job the program wrote before this work.
 
-Not built yet.
+**Built (2026-11-26; the worker's, checked by the lead's own run of its copy:
+1,203 command-line tests, 62 command-line demonstrations with no FAIL in any, the
+three gates, the port map, the licences, the sample whole house byte for byte).**
+`demos/cabinet-rules.sh` passes its nine steps (the eight above and the database's
+tab). **A figure of the lead's above that was wrong**: the starter chest has
+**27** cabinet codes, not thirty-five (B nine, SB three, DB two, BLB, LS, W
+eight, T two, F); all 27 are exactly what their rules make. Existing
+expectations moved, each ruled first in DECISIONS.md call 225 with the reason
+beside it in the file: the tests' unknown box is Q99 where it was B99 (two
+places); the database's five tabs are six (three files). **Not right, and said:
+the window does not yet say that a box was made by a rule** (the model's reply
+has the line; the window's Cabinets tool does not show it), and
+`demos/cabinetsw.sh` still asks for B99 as a box the chest lacks: it is moved to
+Q99 and run when the window is next built on this model. A height the rule does
+not stock is not flagged and a rule cannot yet be taken away (call 226).
 
 ## Stopped for review, 2026-11-25 12:55 UTC (call 216), and started again the same day (call 217): read this first
 
@@ -11528,9 +11542,64 @@ the command line the stopped bench step (call 214) taken up again.
   it passed, its load-sensitive figure the same as alone (87 dots against 15).
   So builders and workers run every cargo command in the idle class and no
   longer stop for a timed window run; only two window sessions never run at
-  once (`window-run.lock`). `navw` is being run the same way; if a
-  demonstration fails beside a build it is run alone before it is believed, and
-  this note is put right.
+  once (`window-run.lock`). **Put right the same day:** `navw` did not hold.
+  Run twice on the frozen build of 2e6f63a with idle-class work beside it (once
+  with a whole build going round and round, once with only the workers' own
+  builds), its sessions a to e passed and **session f ran out of its ten
+  minutes both times**, every step done up to its second dive and no figure
+  wrong: the idle class keeps a build from costing a click, and it still slows
+  the software renderer. `navw`'s session f was the longest of any
+  demonstration; it is cut in two (f: the north arrow; h: the two dives; no
+  step and no check changed) and run again. A demonstration that fails for time
+  beside a build is not believed until it has run with nothing beside it.
+  **And put right once more (06:20 UTC):** cut in two, `navw` ran all eight
+  sessions to their end with three builds going beside it and failed three
+  figures: the north arrow's double-click was not taken (the view tilted 15.5
+  degrees, not straight down) and the two dives stopped short (0.73 ft and 0.90
+  ft from the place where 0.68 is asked). Those are lost clicks. So the idle
+  class does NOT keep a build from costing a click on the demonstration that
+  counts clicks most closely; it did on the others run so far. The rule now:
+  builds go on beside the window demonstrations in the idle class, **except
+  while `quiet.lock` stands**, which the lead sets for a demonstration that has
+  failed beside a build; no cargo and no session starts while it stands. `navw`
+  runs next with the machine to itself.
+- **Window demonstrations on the frozen build of 2e6f63a, the lead's own runs,
+  as they end** (the commits since touch no window code): `fixes209w` PASS
+  (with six builds beside it), `fixes197w` PASS (first run; its pictures read).
+  `itemlibw` PASS and `itemneww` PASS (first runs; pictures read).
+  `cabinetsw`, `gablew` and `gableendw` PASS (first runs; pictures read).
+  `navw` with the machine to itself (06:59 to 07:42): every figure as written
+  but one: **the north arrow's double-click does not look straight down on
+  this build** (the view stays at a 15.5 degree tilt). It passed on the build
+  before call 222 part A. The lead tried the demonstration's two clicks 0.4 s
+  apart where they are written 0.6 s apart: the same. So it is taken as a fault
+  in the window from part A until shown otherwise, and is with the window
+  builder to run down before the next window work is accepted; `navw.sh` is as
+  it was but for its long session cut in two.
+  `navw`: failed twice for time as said above, to be run again cut in two.
+  `tradesw` (first run, 08:07 to 08:20): every check but two: **the tags "3 in
+  waste stack" and "Pad 36 x 36" are no longer on the map** in the Plumbing and
+  Foundation views (five other tags are). `tradesw` had not been run since call
+  218, whose one rule writes a name only over a thing 48 dots or more across;
+  a 3 ft pad from the whole-house distance is about 42. Whether the
+  demonstration moves with that rule or the rule is wrong was put to the window
+  builder for figures, and is **ruled in DECISIONS.md call 232**: the pads are
+  39 to 47 dots and fall under the rule's 48; the stack is 173 dots and loses
+  its place to a nearer 3/4 in pipe's tag. The demonstration stands; a size tag
+  is written from 24 dots, the larger thing's tag is kept of two, and a run is
+  sized by its whole length. With the window builder to build; failed the same
+  way on its second run.
+  `screensw` PASS (first run, 08:45 to 09:05). `bringw` PASS (first run).
+  `movew` PASS (first run, 09:31 to 09:36). **So on the frozen build of
+  2e6f63a the lead's own runs stand at: ten pass (`fixes209w`, `fixes197w`,
+  `itemlibw`, `itemneww`, `cabinetsw`, `gablew`, `gableendw`, `screensw`,
+  `bringw`, `movew`); `navw` fails one figure (the north arrow's double-click)
+  and `tradesw` two (the size tags of call 232).** `trimw`, `benchw`, `dressw`, `shapebenchw`,
+  `glassw`, `moneyw` and `pricew` were last run by the lead on the build before
+  call 222 part A, and four of them by its builder since; they are run again
+  on the next merge, which is near. The builder's own runs
+  before the merge: `screensw` (seven sessions), `glassw`, `moneyw`, `benchw`,
+  `pricew`. `tools/committed.sh` has not been run on 2e6f63a or later.
 
 ## How the window moves: a demonstration, written before it is built (call 218; 2026-11-25)
 
@@ -11646,6 +11715,83 @@ words the verbs already take, and says where a figure of the lead's is wrong):
    line with its amount. Exact names come first.
 10. Nothing of the sample whole house moves: `plumbline sixteen` writes the job
     it wrote, byte for byte.
+
+**Built (2026-11-26; the worker's, checked by the lead's own run of its copy:
+1,169 command-line tests, 60 command-line demonstrations with no FAIL in any, the
+three gates, the port map, the licences, and the sample whole house byte for
+byte).** `demos/tools-feel.sh` passes its ten steps. **Figures of the lead's above
+that were wrong, and what is right** (the program was not bent to them):
+- Step 4: a door's place in its wall is its **middle**. Moved 5 ft east its
+  middle is 9 ft from the west end, 7 ft 6 in clear of the west end and 9 ft 6 in
+  clear of the east. Moved 15 ft east its middle would be at 19 ft and its east
+  edge at 20 ft 6 in: refused, **6 in** past the end, not 2 ft.
+- Step 5: the north wall was drawn from its east end, so the door is said "6 ft
+  from the east end in wall 3"; the faces move by 20.00 SF as worked (160 to
+  180, 180 to 160).
+- Step 7: copies are numbered from 2, so the copy on the east wall's line is
+  "Lavatory 6" (the fifth copy) and the sixth is "Lavatory 7".
+What a try costs on the sample whole house, in the build the tests use and on a
+shared machine: about a third of a second (the job written 62 ms, read 111 ms,
+the clash test 41 ms, and the change's own writing and reading). Not right: two
+older sentences the new verbs pass on still write "10.00 ft" and "14.00 in by
+8.00 in" (DECISIONS.md "Call 219, the model's side, as built", point 6).
+
+## How tools feel, in the window, the first job: shown before the click: a demonstration, written before it is built (call 219, points 1 to 4 and 8; 2026-11-26)
+
+`demos/shownw.sh` (contract `handoff/contracts/contract-219WA.md`). The job is the
+made-up one of `demos/tools-feel.sh`: one level, four outside walls 6 in thick on
+a 20 ft by 12 ft line, a door 3 ft wide whose middle is 4 ft from the south wall's
+west end, the starter items. The program writes to the map what is in hand (what
+the next click would make, where, its sizes and its turn), what the last try said,
+what the pointer caught, and how many tries it has made; the script reads those
+and counts ink in the pictures. **Every sentence about fitting is the model's own
+(`try_change`, `Tried::said`), the words `plumbline try` prints for the same
+change**: the script asks the command line and compares.
+
+1. **A wall is seen before it is made.** Wall in hand, **its sizes accepted as
+   they are offered**. A first corner clicked at (10, 0); the pointer moved to
+   (10, 6) and no click: a wall is seen through from (10, 0) to (10, 6) at its
+   thickness and height (ink of the seen-through thing along that line, none
+   there before); at the pointer the lettering reads **6' 0"** and **90°** (the
+   angle to the wall it leaves; on a first leg in the open, to the plan's east).
+2. **Whether it fits is said when the pointer rests.** Brought to (10, 12) and
+   rested: the words at the pointer are what `plumbline try` says of that wall
+   (one wall, with its length). While the pointer was moving the count of tries
+   did not rise; the rest made **one**. The saved job, written out now, is byte
+   for byte what it was.
+3. **The click makes what was seen.** Clicked: one more wall; the edges of the
+   wall made lie within 2 dots of the edges of the wall seen through.
+4. **Where it would clash it is drawn in the ink of a clash, with the words.** A
+   duct 14 in by 8 in, 8 ft up, from (-2, 6): the pointer rested at (22, 6): the
+   thing seen through is in the clash ink and the words say **2 holes to cut**
+   and name the west and the east wall. The click makes it (a hole to cut is not
+   a refusal), and the clash list has what the words said.
+5. **Where the model would refuse, the refusal is at the pointer, word for
+   word.** A wall from the south wall's west end to its east end, rested: the
+   refusal `plumbline try` gives. Clicked: refused as today; the count of walls
+   is what it was.
+6. **A door slides along the wall under the pointer.** Door in hand, the pointer
+   over the south wall 12 ft from its west end: a door is seen through in the
+   wall there; the lettering reads how far its edges are from each end as the
+   model gives them (a 3 ft door with its middle at 12 ft on a 20 ft line: 10 ft
+   6 in and 6 ft 6 in on the line; the builder says whether the model measures
+   on the line or to the faces, and the figure follows the model). Brought to 5
+   ft from the west end, over the door that is there (its edges at 2 ft 6 in and
+   5 ft 6 in): clash ink, and the model's refusal with by how much.
+7. **Typing still takes the length over.** Wall in hand, a corner clicked, "8"
+   typed and Enter: a wall 8 ft long toward the pointer, as today; the first
+   digit is not lost.
+8. **Turned in the hand.** A Lavatory in hand: the key that turns a thing set
+   down turns the one in hand a quarter (the map says a quarter; the seen-through
+   lavatory's long side lies the other way in the picture); an angle of 30
+   typed in the tool's own field turns it to 30; set down, the saved job has 30.
+   A thing set down and selected takes 45 typed on its panel: the saved job has
+   45, and the panel offered more than quarters.
+9. **Snaps can be let go.** Each kind of catch has a switch. With all on, the
+   pointer 3 in from the end of a wall is caught and the pointer says what by.
+   With that kind switched off it is not caught by it. With the letting-go key
+   held nothing is caught; let go, it is caught again.
+10. **Nothing else moved.** `planw`, `movew` and `moneyw` pass as they did.
 
 Not built yet.
 
@@ -11878,6 +12024,307 @@ suppliers, and one shape and one item of the job's own.
    nothing at all is brought in, and the reply names the tab, the row and why.
 7. The starter database in one bringing-in gives the same job as the starter
    tables brought in one by one, byte for byte.
+
+**Built (2026-11-26; the worker's, checked by the lead's own run of its copy:
+1,191 command-line tests, 61 command-line demonstrations with no FAIL in any, the
+three gates, the port map, the licences, the sample whole house byte for byte).**
+`demos/database.sh` passes its seven steps. The counts on the day: the starter
+tables are 48 items, 13 shapes in 49 rows, 5 rows of where items connect, 42
+assemblies in 202 lines; with the made-up job's own shape and item and its eight
+price rows, the workbook's tabs are Shapes 50, Items 49, Connections 5, Assemblies
+202, Prices 8. A workbook is compared cell for cell (two writings of the same job
+differ only in the time the file says it was made); a folder byte for byte. Not
+right: the reply says the same line about how cells are shown once for every tab;
+a tab added by hand is named in small letters whatever was typed; the window has
+no entry for it yet (DECISIONS.md "Call 223, as built").
+
+## Loose ends at the command line: a demonstration, written before it is built (call 226; 2026-11-26)
+
+`demos/loose-ends.sh` (contract `handoff/contracts/contract-226M.md`). Every figure
+is made up.
+
+1. **Lengths in sentences.** On the job of `demos/tools-feel.sh` (walls on a 20
+   ft by 12 ft line): a wall tried from (0, 0) to (10, 0), over the south wall,
+   is refused saying it lies along that wall for **10 ft** (the sentence has no
+   "10.00"); a duct 14 in by 8 in tried through two walls says **14 in by 8
+   in** for each hole. `plumbline takeoff` on the same job still writes its
+   quantities as it did (the script holds its text to what it was before).
+2. **What a try costs**, on the sample whole house, in the build a person is
+   given: a partition tried five times, the least of the five printed. It is
+   under a tenth of a second, or the script says the figure and stops. After the
+   five tries the job's text, the next name and the undo list are what they
+   were.
+3. **The database's reply.** The workbook of `demos/database.sh` with a tab
+   "Notes" added by hand, brought into an empty job: the line about how cells
+   are shown is in the reply **once**; the tab is named **"Notes"**.
+4. **A rule taken away.** A rule X brought in (reads the width; 24 in deep, 30
+   in high; a base). X30 asked for: made, 30 by 24 by 30. The rule taken away:
+   X33 is refused (no rule reads X); X30 is still in the chest and still says
+   the rule for X made it. B changed to 21 in deep and then taken away: B45 is
+   made **24** in deep. A rule the job does not carry, taken away: the reply
+   says it is the program's own and nothing changes.
+5. **Heights.** W3342 asked for: made 33 by 12 by 42 and flagged twice, 33 in
+   not a stocked width and 42 in not a stocked height (the chest's wall boxes
+   are 30, 18 and 12 high). W3030: no flag.
+6. `plumbline sixteen` writes the job it wrote, byte for byte.
+
+**Built (2026-11-26; the worker's, checked by the lead's own run of its copy:
+1,219 command-line tests, 63 command-line demonstrations with no FAIL in any, the
+three gates, the port map, the licences, the sample whole house byte for byte and
+its estimate, takeoff, verify-in-field and clash text as they were).**
+`demos/loose-ends.sh` passes its six steps. **What a try costs** on the sample
+whole house: about 0.29 s in the build the tests use and **0.066 to 0.078 s in
+the build a person is given** (least of five, on a busy machine): under the tenth
+of a second of call 226, so how the job is put back was left as it is, and the
+quicker way is written down for when a heavier house needs it. Twenty-one
+existing expectations moved, each only by how a length in a sentence is written
+and each marked in its file; one more (the cabinet rules' line of headings) by
+the lead's own hand for the new column. Not right: the margin on the try is
+thin; a few older sentences outside this job's search still write a length with
+decimals (DECISIONS.md "Call 226, as built", point 6).
+
+## Marks on a PDF read as quantities, and a TIFF as a plan: a demonstration, written before it is built (call 227; 2026-11-26)
+
+`demos/marks.sh` (contract `handoff/contracts/contract-227M.md`). Every figure is
+made up. The file is `demos/marks/marked-plan.pdf`: the made-up plan (30 ft by 20
+ft) on one page, with marks written as the PDF standard has them: **South wall**,
+a length along the south wall; **Outside walls**, a run of lengths round the plan;
+**Whole floor**, an area over the plan; **Bedroom**, an area 12 ft by 10 ft; four
+counts labelled **Receptacle**; a plain note "verify header"; and **North wall**,
+a length whose own text says 31'-0" though its ends are 30 ft apart at the
+sheet's scale. By hand (the worker says where a figure is wrong):
+
+1. `plumbline marks` lists, in the page's order, 1 length, 1 run of lengths, 2
+   areas, 1 count of 4, 1 note, and the flagged length: **South wall 30 LF,
+   Outside walls 100 LF, Whole floor 600 SF, Bedroom 120 SF, Receptacle 4 EA**;
+   the note is listed as a note with no quantity.
+2. **North wall** is listed with both figures, **31 LF as the mark says and 30
+   LF by its ends at the sheet's scale**, and is flagged.
+3. `import marks` into a new job: **six lines of the estimate** under the file's
+   name (the five and North wall at 31 LF), each Assumed, each source naming its
+   mark and page 1 of the file, none priced; the estimate says six lines are not
+   priced and its division Unknown; the job's price is what it was (nothing
+   priced yet). The reply repeats North wall's flag.
+4. Brought in again: nothing is added; the reply says six are the same.
+5. A copy of the file with **Whole floor** saying 650 SF: brought in, that line
+   is 650 SF and the reply says it was 600; five are the same.
+6. A copy with **Bedroom** taken out: the reply names Bedroom as gone from the
+   file and its line is still there.
+7. A copy with a mark with a curved edge and a mark with no scale: each is named
+   and left out; the others come in.
+8. The made-up plan with no marks (`demos/plans/made-up-plan.pdf`): "no marks on
+   page 1", and the job is byte for byte what it was.
+9. **TIFF**: `demos/marks/made-up-plan.tif` (the made-up plan's picture as a
+   TIFF) is added as a drawing: its size in dots is the PNG's, and a wall traced
+   over it at the same scale is the same wall. A two-page TIFF: page 2 by
+   `--page 2`. A TIFF packed a way the reader does not read: refused by the
+   packing's name.
+10. `plumbline sixteen` writes the job it wrote, byte for byte.
+
+**Built (2026-11-26; the worker's, checked by the lead's own run of its copy:
+1,259 command-line tests, 64 command-line demonstrations with no FAIL in any, the
+three gates, the port map, the licences, the sample whole house byte for byte).**
+`demos/marks.sh` passes. **Changed from the steps above by call 231**: a count
+is brought in only with `--counts`, so step 3 brings **five** lines and says one
+label of four symbols was left; a step added brings the count (six lines), and
+steps 4 to 6 run with it. None of the hand figures above was wrong. The refusal
+of a file that is no drawing now names TIFF and DXF (two expectations moved,
+marked in their files). The TIFF reader is the picture project's own (MIT),
+linked for its many pages; packings it does not read are refused by name.
+**Not confirmed, and said**: which keys a marking program writes a mark's label
+and figure to (QUESTIONS.md Q36); the standard was read in an English rendering
+of its text, not from the standard's own document. Not right: the heading over
+the marks' lines is printed by `estimate` and the window does not show it yet; a
+line somebody renamed is added again when the file is brought in again; a scale
+set for part of a sheet, a metric figure and a curved edge are named and left
+out; the window has no entry for marks or for a TIFF's page yet.
+
+## Clashes handed over as an issue list: a demonstration, written before it is built (call 228; 2026-11-26)
+
+`demos/bcf.sh` (contract `handoff/contracts/contract-228M.md`). The job is the
+made-up whole house, whose clash list says on the day: **in the same space 11 (5
+findings, 6 to verify in the field)**, set against 10, through a wall or a floor
+47.
+
+1. `plumbline export bcf` writes a file with **11 issues**, in the clash list's
+   order; the first is the first-floor trunk and the soil stack, "in each other
+   by 3.50 in" as the clash list writes it (a line of a list, not a sentence:
+   call 226).
+2. **5 of them say they are findings and 6 say they are questions for the
+   field**, the same five and six as the clash list marks.
+3. Each issue names two things by id, and **every one of the 22 ids is in the
+   BIM file written from the same job** (`export ifc`), on a thing of the same
+   name.
+4. Each issue has a view: the place looked at is within a foot of the clash's
+   place, and the eye is outside both things.
+5. With `--holes`: **58 issues** (11 and 47), the 47 of their own kind.
+6. The file passes buildingSMART's own schema, by the outside checker.
+7. Written twice, the two files differ only in the time of writing.
+8. A job with no clash: the file is written with no issue, and the reply says
+   there was none to hand over.
+9. `plumbline sixteen` writes the job it wrote, byte for byte.
+
+**Built (2026-11-26; the worker's, checked by the lead's own run of its copy:
+1,271 command-line tests, 65 command-line demonstrations with no FAIL in any, the
+three gates, the port map, the licences, the sample whole house byte for byte).**
+`demos/bcf.sh` passes its nine steps, the sixth by buildingSMART's own schema
+for BCF 2.1 through an outside checker (`tools/bcf-check.py`; it fetches the
+three schema files when run, since their terms do not allow a copy here, and
+says NOT CHECKED where it cannot). Every figure above was right; one wording
+was not: an id is on the same thing in the BIM file, whose own name is the
+job's name for it (the clash list adds a size or a type to 15 of them).
+**Not confirmed, and said**: which way the format's own axes lie; the model's
+(east, north, up) are written, as the BIM file writes them. Not right: no
+picture of the place is made; the eye is outside the two things but may stand
+behind a wall of the house; only BCF 2.1 is written; reading issues back is
+not built; the reply says "identifiers" and "IFC file" where this program says
+ids and BIM file (a word to put right); the window has no entry for it yet.
+
+## The house written out as glTF: a demonstration, written before it is built (call 229; 2026-11-26)
+
+`demos/gltf.sh` (contract `handoff/contracts/contract-229M.md`). The job is the
+made-up whole house: 40 ft by 28 ft on its outside line, the foundation's floor
+at -4 ft, the first floor at 0, the second at 10 ft.
+
+1. `plumbline export gltf` writes one file; the reply says how many parts, and
+   what was not carried (prices, certainty, the window's patterns).
+2. **The count of parts is the count of things the BIM file writes** from the
+   same job (the script counts both).
+3. **In metres**: the house's box on the ground is at least 12.192 m by 8.534 m
+   (40 ft and 28 ft) and no more than that by the overhang of the eaves the
+   worker names; its lowest point is at or below -1.219 m (-4 ft).
+4. **Not mirrored**: the front door's part lies on the south side of the
+   house's middle, and the kitchen sink's on the north, by the axes the format
+   gives.
+5. Each part has a name a builder knows it by (the name the clash list uses).
+6. A wall with a window in it has the hole: its part's volume is less than its
+   box's by the opening's.
+7. The file read back by the test's own reader is whole (every length the
+   file's table of contents gives is there); the format's own checker, where
+   installed, finds no error.
+8. `plumbline sixteen` writes the job it wrote, byte for byte.
+
+**Built (2026-11-26; the worker's, checked by the lead's own run of its copy:
+1,292 command-line tests, 66 command-line demonstrations with no FAIL in any, the
+three gates, the port map, the licences, the sample whole house byte for byte and
+its BIM file as it was but for the time it says).** `demos/gltf.sh` passes its
+eight steps, the seventh by the format's own checker (`tools/gltf-check.sh`, run
+and never linked): no error, no warning. **The lead opened the file in a
+browser** (a 3D viewer library fetched into scratch, the page drawn by the
+browser already on this machine): `demos/captured/gltf/` has the house whole
+and with the roof and second floor put away. It is the house, the right way
+round, its openings cut, the foundation under it, the ducts and pipes inside.
+**Figures of the lead's above that were wrong**: the parts are **236**, the
+things the BIM file gives a body or a line (two fittings with no size have
+neither and are named as not carried); the first floor is 40 ft 6 in by 28 ft
+6 in over its walls' thickness and the footings and roof reach 42 ft by 30 ft;
+the lowest point is the footing's bottom at -5 ft. Not right, and said in the
+file's own reply: a thing set down is its box, not its shape; a window is one
+pane; a roof plane has no thickness; the window's patterns are not carried;
+rooms are written as faint see-through volumes because the BIM file writes
+them; part names are the clash list's and are not unique (each part carries its
+path). The tests were written after the code and shown red by breaking it.
+
+## A scanner's own files: a demonstration, written before it is built (call 230; 2026-11-26)
+
+`demos/scan-files.sh` (contract `handoff/contracts/contract-230M.md`). A made-up
+room, 12 ft by 10 ft and 8 ft high, as points on its floor, ceiling and four
+walls, written by the demonstration's own script as a PLY (as today) and as a
+LAS with the same points.
+
+1. The LAS is read: **the same count of points as the PLY**, the same box (12
+   ft by 10 ft by 8 ft within a hundredth of a foot: LAS keeps a point as a
+   whole number times a scale), the same floor and ceiling found.
+2. Cut at 4 ft into a sheet to trace: the sheet from the LAS is the sheet from
+   the PLY (the script compares the two pictures).
+3. A wall traced over the LAS's sheet is Assumed, and says the scan.
+4. A LAS of a kind of point record the reader does not read is refused by the
+   kind's name; a file cut short is refused saying where.
+5. A LAZ: read, or refused saying to save it as LAS, as the licences decide
+   (the worker says which, and why).
+6. An E57 of the same room: read to the same figures, or refused by name
+   saying what to save it as, as the licences decide.
+7. `plumbline sixteen` writes the job it wrote, byte for byte.
+
+**Built (2026-11-26; the worker's, checked by the lead's own run of its copy:
+1,316 command-line tests, 67 command-line demonstrations with no FAIL in any, the
+three gates, the port map, the licences, the sample whole house byte for byte).**
+`demos/scan-files.sh` passes. **Read**: LAS 1.1 to 1.4, every kind of point record
+(a reader written here from the publisher's own text); LAZ and E57 through two
+crates whose licences were read at their source (Apache-2.0 and MIT; three
+crates added in all). The made-up room is 9,474 points, and its sheet at 4 ft is
+byte for byte the same from the PLY, the LAS, the LAZ and the E57. None of the
+hand figures above was wrong. Units: where a LAS says its unit it is offered and
+said, a person's word wins, two units are refused until one is said; an E57 is
+meters. A scan lying far from the zero (a map grid) has its southwest corner
+taken to zero, and its sheet's source says how far east and north it lay.
+**Not confirmed, and said**: no LAZ or E57 written by a scanner's own program
+has been read (the made-up ones are written by the crates that read them); the
+E57 standard itself and the packed format's own text were not reached. **A fault
+older than this job, found by it and not touched**: the walls finder cuts the
+plan into cells by rounding down, so points on a whole-foot line fall either
+side on a difference of 1e-16 and the finding can change; owed, its own job.
+Not right: the window's picker still lists a PLY only.
+
+## Starter shapes and items for appliances and small devices: a demonstration, written before it is built (call 233; 2026-11-26)
+
+`demos/devices.sh` (contract `handoff/contracts/contract-233M.md`). On the day the
+chest has 48 starter items and 13 starter shapes; by the lead's list the call adds
+14 shapes and 9 items (the worker gives the counts it ends with and says where
+they differ).
+
+1. `plumbline items` on a job with the starter chest: **57 items**; the nine new
+   ones are there, each Assumed with a source that names where its size is
+   from.
+2. The seven that were boxes (range, refrigerator, dishwasher, washer, dryer,
+   air handler, panelboard) say what they are drawn as, and their width, depth
+   and height are what they were.
+3. Each new shape, set down at its item's size: **its blocks lie inside the
+   item's box and reach each of its six faces** (a shape true to its sizes), at
+   that size and at half again as wide.
+4. A duplex receptacle set down on a wall at 18 in to its middle: the model
+   gives its plate's size as the item's, and it is "set against" the wall, not a
+   clash.
+5. The shapes and the items written out and brought back into an empty job:
+   the same tables, byte for byte.
+6. The sample whole house: `plumbline sixteen` writes the job it wrote, byte for
+   byte, and its estimate, clash list and verify-in-field list are what they
+   were.
+
+Not built yet.
+
+## The field's measurements brought back by file: a demonstration, written before it is built (call 234; 2026-11-26)
+
+`demos/field-sheet.sh` (contract `handoff/contracts/contract-234M.md`). The job is
+the one `demos/field.sh` measures by typing (made by `demos/field-job.sh`: a
+tracing with two clashes that are questions and a wall whose price is flagged).
+The figures are that demonstration's own, already worked by hand in STATUS.md
+("Field entry"); this one must come to the same.
+
+1. The sheet to fill is written: a row for each value to measure, by dollars,
+   each with its reference, what the job has now and how sure; nothing is
+   filled. Brought straight back: no row has anything As found; nothing
+   changes and the job is byte for byte what it was.
+2. **The measurements `demos/field.sh` types are filled into the sheet instead**
+   and it is brought back: the reply says for each what `field.sh` is told when
+   it is typed (the floor above moves and the price with it; one clash clears;
+   the other becomes a finding).
+3. **The job is the typed job**: its estimate, its clash list and its
+   verify-in-field list are, text for text, what `field.sh` ends with; each
+   measured value is Known and its source names the sheet, its row, who and
+   when.
+4. The sheet's rows put in another order and half of them deleted, then
+   brought back: the same result for the rows that are there.
+5. One row with "about nine feet" As found: nothing at all is brought in, the
+   row is named with why, and the job is byte for byte what it was.
+6. A value changed in the job after the sheet went out: its row is refused,
+   saying what the sheet had and what the job has; with `--anyway` it is taken.
+7. A row that agrees with what the job has: the value is Known at that figure
+   and the price does not move.
+8. A second sheet that measures a Known value differently: said with both, and
+   left, without `--anyway`.
+9. `plumbline sixteen` writes the job it wrote, byte for byte; `export vif` of
+   the sample house is what it was.
 
 Not built yet.
 

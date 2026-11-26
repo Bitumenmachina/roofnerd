@@ -86,7 +86,7 @@ says "$T/mixed.txt" "a footing needs a type of its own"
 
 echo "== One footing drawn over another is refused, in a footing's words =="
 if "$P" footing "$J" "$L" "$FT" --points "5,0 20,0" --depth "12 in" "${K[@]}" > "$T/over.txt" 2>&1; then echo "FAIL: a footing over a footing was taken"; exit 1; fi
-says "$T/over.txt" "lies along $F1 for 15.00 ft: one footing drawn over another would be counted twice"
+says "$T/over.txt" "lies along $F1 for 15 ft: one footing drawn over another would be counted twice"  # call 226: a length in a sentence is said as a builder says it
 
 echo "== A footing with no depth is refused; nothing is given a depth nobody entered =="
 if "$P" footing "$J" "$L" "$FT" --points "50,0 60,0" "${K[@]}" > "$T/nodepth.txt" 2>&1; then echo "FAIL: a footing with no depth was taken"; exit 1; fi

@@ -187,6 +187,23 @@ fn number(x: f64) -> String {
     }
 }
 
+/// Every tab of a workbook, each read as `read` would read it by its name, in the order they
+/// lie in the workbook. The note that other sheets were not read is left off each: they are
+/// all read. A CSV file is one table and has no tabs.
+pub fn read_tabs(bytes: &[u8]) -> Result<Vec<Sheet>, String> {
+    if sort_of(bytes) != Some(Sort::Xlsx) {
+        return Err("it is not a workbook (an .xlsx file): a CSV file is one table and has no tabs".into());
+    }
+    let book: Xlsx<_> = Xlsx::new(Cursor::new(bytes)).map_err(|_| "the workbook could not be read: it is damaged, locked with a password, or not a workbook (an .xlsx file) at all".to_string())?;
+    let mut out = Vec::new();
+    for name in book.sheet_names() {
+        let mut sheet = read_xlsx(bytes, Some(&name))?;
+        sheet.lost.retain(|l| !l.starts_with(&format!("the sheet \"{}\" was read;", sheet.name)));
+        out.push(sheet);
+    }
+    Ok(out)
+}
+
 fn plural(n: usize, one: &str, many: &str) -> String {
     if n == 1 {
         format!("1 {one}")
@@ -435,4 +452,30 @@ pub fn workbook(sheets: &[plumbline_world::export::OutSheet]) -> Result<(Vec<u8>
         .collect();
     let formulas = sheets.iter().flat_map(|s| s.rows.iter().flatten()).filter(|c| matches!(c, Out::Formula { .. } | Out::FormulaCount { .. } | Out::FormulaText { .. })).count();
     Ok((xlsx(&tabs)?, formulas))
+}
+
+#[cfg(test)]
+mod tabs_tests {
+    use super::*;
+
+    fn text(rows: &[&[&str]]) -> Vec<Vec<Cell>> {
+        rows.iter().map(|r| r.iter().map(|c| if c.is_empty() { Cell::Empty } else { Cell::Text(c.to_string()) }).collect()).collect()
+    }
+
+    /// Call 223: every tab of a workbook is read, by its name, in the order it lies, and none says the others were not read.
+    #[test]
+    fn every_tab_is_read_by_its_name() {
+        let tabs = [
+            Tab { name: "Items".into(), rows: text(&[&["Item", "Width"], &["Range", "30 in"]]), head: 0, widths: vec![] },
+            Tab { name: "Notes".into(), rows: text(&[&["Remember"], &["the supplier"]]), head: 0, widths: vec![] },
+        ];
+        let bytes = xlsx(&tabs).unwrap();
+        let read = read_tabs(&bytes).unwrap();
+        assert_eq!(read.iter().map(|s| s.name.as_str()).collect::<Vec<_>>(), ["Items", "Notes"]);
+        assert_eq!(read[0].rows, vec![vec!["Item".to_string(), "Width".to_string()], vec!["Range".to_string(), "30 in".to_string()]]);
+        assert_eq!(read[0].numbers, vec![1, 2]);
+        assert!(read.iter().all(|s| s.lost.iter().all(|l| !l.contains("other sheet"))), "{:?}", read.iter().map(|s| &s.lost).collect::<Vec<_>>());
+        // A CSV file is one table and has no tabs.
+        assert!(read_tabs(b"a,b\n1,2\n").is_err());
+    }
 }

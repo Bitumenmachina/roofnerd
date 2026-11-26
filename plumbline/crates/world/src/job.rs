@@ -88,6 +88,10 @@ pub struct Job {
     /// The shapes of its own the job carries (call 198): what an item can be drawn as, written
     /// as blocks between formulas. The thirteen the program draws are in the program, not here.
     pub shapes: Vec<crate::building::shape::Shape>,
+    /// The cabinet rules of its own the job carries (call 215): the ones it brought in or
+    /// changed. The program's own are in the program (`building::cabinet::starter`), and a job
+    /// that never touched them carries none.
+    pub cabinet_rules: Vec<crate::building::cabinet::Rule>,
     /// Where each path was last found, so that finding a thing is not a reading of the
     /// whole job (M21-9). Never trusted: `find` checks what it holds against the job
     /// and looks again where it is wrong, so nothing has to keep it up to date.
@@ -128,6 +132,7 @@ impl Job {
             schemas: BTreeMap::new(),
             extra: BTreeMap::new(),
             shapes: Vec::new(),
+            cabinet_rules: Vec::new(),
             found: HashMap::new(),
         };
         let id = job.world.spawn((Node::new("job-0001", "job-0001", None), Kind::Job, JobInfo { title: title.into(), length_unit: U_LENGTH.into(), next_id: 2 })).id();

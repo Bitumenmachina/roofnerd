@@ -614,7 +614,7 @@ cp "$JO" "$T/ov.before"
 FO="$("$P" find-walls "$JO" "$T/thickthin.ply" --level "$LO" --lay --outside "$WO")"
 echo "$FO" | sed -n '/laid on/,$p' | sed 's/^/    | /'
 says "five of six laid" "laid on $LO: 5 walls" "$FO"
-says "the one left is named, and what it lies along" "of what was found: lies along $HAND for 30.00 ft" "$FO"
+says "the one left is named, and what it lies along" "of what was found: lies along $HAND for 30 ft" "$FO"  # call 226: a length in a sentence is said as a builder says it
 [ "$("$P" show "$JO" | grep -c '\[wall\]' || true)" = 6 ] || { echo "FAIL: the hand-drawn wall and five found walls are six in the job"; exit 1; }
 "$P" check "$JO" >/dev/null && echo "    check passes: the hand-drawn wall, and five laid beside it"
 
