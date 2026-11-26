@@ -9570,3 +9570,112 @@ of theirs was changed.)
    and classification are not read. The third round's tests were written after
    its code and were never seen to fail. The window's entry under Bring in is not
    built.
+
+### Call 221, as built: a CAD drawing in and out (2026-11-26)
+
+Built by a Sonnet worker under `handoff/contracts/contract-221M.md`
+(`research/worker-report-call221M.md`), in two rounds, and accepted by the lead's
+own run in the worker's copy: 1,148 tests in the six command-line crates (672, 50,
+6, 111, 122, 187), 59 command-line demonstrations with `demos/dxf.sh` among them,
+no output with FAIL in it, the gates, `tools/portmap.sh`, `tools/licenses.sh`; the
+sample whole house unchanged to the byte.
+
+1. **The reader and the writer are written here**, from Autodesk's own published
+   reference, with no new crate linked. The one crate found (MIT) would have
+   brought four more with it and drops what it does not model without naming it,
+   which the fixed rule forbids.
+2. **In**: `drawing --file x.dxf` puts a CAD drawing on a level as a sheet. Where
+   the file says its unit the sheet is at true size with nothing to calibrate,
+   the scale Assumed and naming the file's own unit; where it does not, no scale
+   is guessed and one dimension is asked for. Lines, arcs, circles, polylines,
+   words and blocks set where they are inserted; both the text form and the
+   binary form. Its layers are switches (`layers`, `layer`), and a layer switched
+   off is not among the lines the sheet catches. The saved job gains one key on
+   a drawing, the layers that are off, written only when there are some.
+3. **The reply counts what the drawing holds**, by kind and by layer (ruled in
+   the second round): a circle is a circle, not the 36 short pieces it is drawn
+   with, which are said once.
+4. **Out**: `export dxf <job> <file> --level <level>` writes the plan of a level
+   in inches at true size, in the oldest common form of the format so that any
+   CAD program opens it. Layers are named as US practice names them, from the
+   AIA CAD Layer Guidelines as two colleges publish them: A-WALL, A-DOOR, A-GLAZ,
+   A-AREA-IDEN, A-FURN, P-FIXT, M-HVAC, E-POWR. Two things had no sourced name
+   and are written plainly and said so: EQUIPMENT and PIPES.
+5. **Closed formats are refused by name with what to do**: a DWG whatever it is
+   called (known by its first bytes), a Revit file and a SketchUp file each say
+   they are closed and what to save them as.
+6. **Three of the lead's hand figures were wrong, and the program was not bent to
+   them.** The plan written out has 10 long lines, not 8: a door cuts both faces
+   of its wall. The room is 224.25 SF, measured inside the faces, not 240. The
+   outer faces span 20 ft 6 in by 12 ft 6 in, the walls being 6 in thick on their
+   line. And the walls finder, on a house drawn with one line a wall, keeps its
+   own ruling and offers none.
+7. **Not carried, and counted in the reply each time.** In: hatches, images, 3D
+   solids, things on a tilted plane, a dimension's lines and arrows (its figure
+   comes as words), sheets laid out for printing; a binary drawing older than
+   release 14 is refused. Out: floors, roofs, footings, beams, posts, walls
+   marked to demolish and the cost of anything; the job and the IFC model carry
+   those.
+8. Not right, and said: the pointer does not yet catch a circle's center; the
+   window has no entry for bringing a CAD drawing in or writing one out; the
+   words "not read:" stand before the sentence about curves, which are read;
+   three things rest on common knowledge of the format and not on a page that
+   was opened (the bytes a Revit file begins with, that an arc's angles are in
+   degrees, a dimension's codes), each pinned by a test.
+
+### Call 218, as built: how the window moves (2026-11-26)
+
+Built by a Sonnet window builder under `handoff/contracts/contract-218W.md`
+(`research/worker-report-call218W.md`), in two rounds, merged with everything
+pushed since and pushed at 80ff75a: 1,197 tests in the seven crates (window 69,
+model 672, command line 45, sheets 6, model files 111, roofing 122, plans 172)
+and the three gates. `demos/navw.sh` measures it from the view's own path,
+written frame by frame.
+
+1. **Macro to micro on one wheel.** The wheel runs out to three times the
+   distance the job is framed at, where the house is a tenth to a fifth of the
+   window's width on its lot (the made-up house: 278 ft, 280 of 1,600 dots), and
+   in to 8 in from a thing. What is drawn near and far follows the distance, so
+   nothing is cut away at either end. From the lot to the kitchen receptacle is
+   about 58 notches; the receptacle stays within 1.4 dots of the pointer at every
+   notch (measured; the limit asked was 3) and fills 824 of the window's 960
+   dots at the end. The view never goes under the ground and stops at a wall's
+   face unless the walls are see-through.
+2. **A house on its lot at the far end** (second round; the first was a speck in
+   haze): ground lines fading outward, a soft sky, the house with its shadow.
+3. **Tilt as it dives**: from 60 degrees to 10 over the dive, never going back,
+   righting itself on the way out; a switch on the view bar ("Tilt as I dive")
+   leaves it at 60. On plan it does not tilt.
+4. **The name and size of what the dive is on show with no layer switched on**
+   (second round): the thing selected, or filling the middle of the view.
+5. **Pans, turns, flights**: a corner dragged at a tilt stays within half a dot
+   of the pointer and a flick carries on 87 dots; Shift and the left button turn
+   exactly as the right button does, and a ring marks the place turned about; a
+   double-click flies in 0.4 to 1.2 s by distance, its speed rising then
+   falling, ending with the thing between a third and two thirds of the window
+   (the front door: 0.81 s, 0.44); a hand taking over mid-flight never sends the
+   view backward; F frames what is selected, or the house.
+6. **A north arrow**, 84 dots across with N at its point: a click turns the view
+   north-up where it stands, a double-click looks straight down.
+7. **Levels glide** (17 frames, back to the inch); plan to 3D and back as one
+   move.
+8. **Found and fixed on the way**: the flights call 63 specified had never been
+   built (a double-click only set where to go); a flight's first frame jumped a
+   quarter of the way and came back; the north arrow's double-click was lost
+   because its state was kept on a card redrawn at every click.
+9. **Checked by the lead's own runs on a frozen build of 80ff75a, each passing
+   on its first run**: `navw` (seven sessions), `glassw`, `movew`, `moneyw`,
+   `bringw`, `pricew`, `trimw`, `benchw`, `dressw`, `shapebenchw`, `fixes209w`.
+   **Not run on that build**: `fixes197w`, `itemlibw`, `itemneww`, `cabinetsw`,
+   `gablew`, `gableendw`, `tradesw`. The lead's runs were keeping both builders
+   off the machine; those seven run on the next merge, which holds this code.
+   `tools/committed.sh` has not been run on 80ff75a or later; it waits for the
+   same merge.
+10. Not right, and said: at the bottom of the dive a receptacle is a plain box
+    (shapes for small devices are owed, a table job); the dive cannot be aimed at
+    a receptacle from the lot, where it is smaller than a dot, so the
+    demonstration comes down over what is under the pointer and centres it on
+    the way; Page Down from "All levels" goes first to the foundation (older
+    than this work, left as it was, to be ruled); the curves are read with the
+    program's clock slowed by `PLUMBLINE_FRAME`, a setting for demonstrations.
+    **No model that did not build it has yet tried the feel.**

@@ -13,6 +13,7 @@
 //! counted and said. The edges of filled shapes are lines, as strokes are.
 
 pub mod drawn;
+pub mod dxf;
 pub mod faces;
 #[cfg(test)]
 mod drawn_tests;
@@ -84,6 +85,8 @@ pub enum Sort {
     Pdf,
     Png,
     Jpeg,
+    /// A CAD drawing (DXF): lines, curves and words, at the scale of its own unit.
+    Dxf,
 }
 
 impl Sort {
@@ -92,6 +95,7 @@ impl Sort {
             Sort::Pdf => "PDF",
             Sort::Png => "PNG picture",
             Sort::Jpeg => "JPEG picture",
+            Sort::Dxf => "CAD drawing (DXF)",
         }
     }
 }
@@ -99,7 +103,9 @@ impl Sort {
 /// What kind of plan file these bytes are, by how they begin; none if they are neither
 /// a PDF, a PNG nor a JPEG.
 pub fn sort_of(bytes: &[u8]) -> Option<Sort> {
-    if bytes.windows(5).take(1024).any(|w| w == b"%PDF-") {
+    if dxf::is_dxf(bytes) {
+        Some(Sort::Dxf)
+    } else if bytes.windows(5).take(1024).any(|w| w == b"%PDF-") {
         Some(Sort::Pdf)
     } else if bytes.starts_with(&[0x89, b'P', b'N', b'G']) {
         Some(Sort::Png)
@@ -385,8 +391,25 @@ fn opened(bytes: &[u8]) -> Result<(image::DynamicImage, bool), String> {
 
 /// Read one page (counted from 1) of a plan file.
 pub fn read(bytes: &[u8], page: usize) -> Result<Page, String> {
+    read_with(bytes, page, None)
+}
+
+/// Read one page of a plan file with the layers of a CAD drawing named in `off` switched off (a PDF and a picture
+/// have none). With `off` none, a CAD drawing has off the layers its own file has off.
+pub fn read_with(bytes: &[u8], page: usize, off: Option<&[String]>) -> Result<Page, String> {
+    if let Some(why) = dxf::closed_format(bytes, "the file") {
+        return Err(why);
+    }
     match sort_of(bytes) {
         None => Err("it is not a PDF, a PNG or a JPEG".into()),
+        Some(Sort::Dxf) => {
+            if page != 1 {
+                return Err(format!("a CAD drawing has one page; page {page} was asked for"));
+            }
+            let cad = dxf::read(bytes)?;
+            let own = cad.off_by_the_file();
+            Ok(cad.page(off.unwrap_or(&own)))
+        }
         Some(Sort::Pdf) => read_pdf(bytes, page),
         Some(sort) => {
             if page != 1 {
@@ -427,8 +450,17 @@ pub fn png(picture: &Picture) -> Result<Vec<u8>, String> {
 /// What a page is without drawing it: the sort of file, how many pages the file has, and
 /// the page's size (a PDF's in points, a picture's in dots). The refusals are `read`'s.
 pub fn size_of(bytes: &[u8], page: usize) -> Result<(Sort, usize, [f64; 2]), String> {
+    if let Some(why) = dxf::closed_format(bytes, "the file") {
+        return Err(why);
+    }
     match sort_of(bytes) {
         None => Err("it is not a PDF, a PNG or a JPEG".into()),
+        Some(Sort::Dxf) => {
+            if page != 1 {
+                return Err(format!("a CAD drawing has one page; page {page} was asked for"));
+            }
+            Ok((Sort::Dxf, 1, dxf::read(bytes)?.size))
+        }
         Some(Sort::Pdf) => {
             let pdf = Pdf::new(bytes.to_vec()).map_err(|_| "the PDF could not be read: it is damaged, cut short, locked with a password, or not a PDF at all. Print it to a new PDF, or send it again".to_string())?;
             let pages = pdf.pages();
@@ -688,6 +720,19 @@ pub struct Text {
 /// than that is a space the page did not draw. A page whose words are drawn as shapes, or are a picture, has none, and that is
 /// for the caller to say.
 pub fn strings(bytes: &[u8], page: usize) -> Result<Vec<Text>, String> {
+    strings_with(bytes, page, None)
+}
+
+/// `strings`, with the layers of a CAD drawing named in `off` left off (none: those its file has off).
+pub fn strings_with(bytes: &[u8], page: usize, off: Option<&[String]>) -> Result<Vec<Text>, String> {
+    if sort_of(bytes) == Some(Sort::Dxf) {
+        if page != 1 {
+            return Err(format!("a CAD drawing has one page; page {page} was asked for"));
+        }
+        let cad = dxf::read(bytes)?;
+        let own = cad.off_by_the_file();
+        return Ok(cad.words(off.unwrap_or(&own)));
+    }
     if sort_of(bytes) != Some(Sort::Pdf) {
         return Err("only a PDF has words that can be read; a picture of a sheet is read by eye".into());
     }

@@ -264,7 +264,7 @@ whose stored figures do not match is reported by `show`, `check` and `set`.
 | `pl::fitting` | a Fitting | `kind`: bend, tee, cross, transition or coupling. | |
 | `pl::connectors` | Equipment, a Fixture or a Fitting | A list. Each: `name`; `kind` (pipe, duct, conduit, power); for a pipe, `domain` (cold, hot, waste, vent, storm, gas); `flow` (in, out) when it is not both; `at`, in the thing's own axes (x along its angle, y to its left, z up from its base); `size`; `facing` (call 211), only where one is said: back, front, left, right, up or down, in the thing's own axes; `of_item` (call 211), only on a connection a thing set down from an item was given: the name of the item's row it was made from (what the thing follows when the item's rows or sizes change; a connection a run or a model made has none). | `at`: `ft` or `in` |
 | `pl::system` | a System | `discipline` (Mechanical, Electrical, Plumbing) and `classification`: Supply Air, Return Air, Exhaust Air, Refrigerant, Domestic Cold Water, Domestic Hot Water, Sanitary, Vent, Power, Lighting. | |
-| `pl::drawing` | a Drawing, under a Storey | One page of a plan file laid under the tracing (section 5.11). `file`: where the file is, from the folder the job is in. `page`, counted from 1. `bytes` and `checksum`: the file's length and fingerprint when the drawing was made from it. `size`: the page's width and height in its own units (a PDF's points, a picture's dots). `scale`, when it has one: `from` and `to`, two places on the page, and the `distance` between them. `at`: where the page's lower-left corner is on the plan. | `distance`: `ft`, `in` or `ft-in`; `at`: `ft` or `in` |
+| `pl::drawing` | a Drawing, under a Storey | One page of a plan file laid under the tracing (section 5.11). `file`: where the file is, from the folder the job is in. `page`, counted from 1. `bytes` and `checksum`: the file's length and fingerprint when the drawing was made from it. `size`: the page's width and height in its own units (a PDF's points, a picture's dots, a CAD drawing's own unit). `layers_off`, only when some are: the layers of a CAD drawing (DXF) switched off on this sheet, by the file's own names; a job saved before this key was kept reads as it did, and a drawing with every layer on does not write it. `scale`, when it has one: `from` and `to`, two places on the page, and the `distance` between them. `at`: where the page's lower-left corner is on the plan. | `distance`: `ft`, `in` or `ft-in`; `at`: `ft` or `in` |
 | `pl::prior` | a Prior, under the job | An estimate made before, brought in to be set against this one (section 5.12). `lines`: each a `description` and, as far as the estimate gave them, a `quantity`, a `unit`, a `unit_cost`, an `amount`, a `class` and a `code`, as written. Nothing of it is in the job's price. | none |
 | `pl::item` | a Type, under the job | A thing that can be placed any number of times. `category`: Equipment, Fixture or Furnishing. `maker`, `model`, `width`, `depth`, `height` and, where it has one, `weight`: each a value with how sure it is and where it came from (read off a maker's sheet it is Assumed and names the sheet's line; from an item library it is as the library says). `sheet`: the maker's sheet it was made from, where it was. `division`, where it is said: which of the sixteen divisions' item it is. `form`, where it is said: what one of it is drawn as, a form by its name or `box`; not said, its name says. `priced_as`, where it is said (call 196): the name of an assembly the job has that goes on the item's kind; each of the item set down takes that assembly, its line made of the element's material being made of the item, priced from the price list under the item's own name (its `pl::supply`); not said, nothing set down from it is priced, and the estimate says so. A job saved before has none. | A form that is not one the program draws; a size of nothing or less; a category that is none of the three; `priced_as` empty or with a space before or after it |
 | `pl::item_connections` | a Type that carries `pl::item` | Where the item connects (call 211): a list, one for each place a pipe, a duct, a conduit or power meets it. Each: `name` (one of its own on the item, whatever the capitals); `kind` (pipe, duct, conduit, power); `carries` (cold, hot, waste, vent, storm, gas), only on a pipe; `flow` (in, out) when it is not both; `across`, `back`, `up`: each a formula in the item's `width`, `depth` and `height` that is a length (`-4 in`, `height - 12 in`; a plain 0 stands without a unit), across from the middle (a plus is to the right looking at the front), back from the back (the side that goes to a wall), up from the foot, the same three a block of a shape is written in and turned into the thing's own axes by the same function; `faces` (back, front, left, right, up, down), left out where nobody says which way it faces (call 214, round 3: a maker's connection point whose placement gives no axis; the key is absent, and a job written before reads and is written back the same; the table's Faces cell is then empty, and a thing set down from the item takes a connection with no `facing`); `place`: Assumed, and `place_from`, where it is from; `size`, where said, a value with how sure it is (Assumed) and where from. Written only on an item that has rows: a job whose items have none is written as it always was, and its schema names no `pl::item_connections`. A thing set down from the item takes each as a connection in `pl::connectors`, Assumed, saying the item and the row. | A row with a name another has, or none; `carries` on anything but a pipe; a place that is Known or Unknown or that does not say where it is from; a figure that is not a length of width, depth and height; a place off the item's box at the item's own sizes; a size of nothing or Known; more than 64 rows; the key on anything but a Type |
@@ -744,6 +744,35 @@ window, the left panel's Drawings to trace.
   white square filled over them (not kept), a white shape over lines that is not a
   square (the lines kept), lines drawn off the page (not kept) or running off it (cut
   at its edge), a file that does not end as a PDF does. A page with no size of its own and a file with no pages are refused.
+* **A CAD drawing (DXF) is a plan file too** (call 221; `crates/plans/src/dxf.rs`, written
+  from Autodesk's published DXF reference; no crate is linked for it). Its page is what is
+  drawn, from the lower-left corner of the drawing's extents, in the drawing's own unit.
+  LINE, LWPOLYLINE, POLYLINE (flat), ARC, CIRCLE, ELLIPSE and SPLINE come in as straight
+  lines (a curve as short straight pieces turning 10 degrees at most, so none leaves its
+  curve by more than 0.4 per cent of its radius, and the count is said); TEXT, MTEXT and
+  ATTRIB as words; INSERT with its BLOCK, scaled, turned and in rows and columns (a block's
+  layer 0 takes the insert's layer); a DIMENSION as its figure only (its lines and arrows
+  are not brought in, and say so). A drawing facing down mirrors x; a drawing on any other
+  tilted plane, on a sheet layout (paper space), a hatch, a picture, a 3D solid and every
+  other kind this program does not draw are counted by kind and not brought in. Both forms
+  of the file are read, the text form and the binary form from AutoCAD R14 on.
+* **A CAD drawing says its own unit** ($INSUNITS, Autodesk's table: inches, feet,
+  millimeters, centimeters, meters, yards and their survey forms and the rest), and the
+  sheet is then at true size with its scale Assumed and sourced to the file's own unit. A
+  drawing that says none has none: nothing is guessed, and one dimension gives it. Each
+  layer is a switch (`layers_off`); the file's own frozen and off layers come in off. The
+  walls finder reads the layers that are on.
+* **The plan of a level goes out as a CAD drawing** (`plumbline export dxf`): inches at
+  true size, R12 form (LINE, ARC, CIRCLE, TEXT) that every CAD program reads. Layers, with
+  where each name comes from: A-WALL, A-DOOR, A-GLAZ, A-AREA-IDEN, A-FURN, P-FIXT and
+  M-HVAC are the AIA CAD Layer Guidelines' (National CAD Standard); E-POWR is the nearest
+  published name for conduit and cable; EQUIPMENT and PIPES are plain names (no published
+  name was found), and the reply says so. Walls are their drawn faces, joined, cut at
+  doors and windows; things are outlines with their names; a run is its centerline. What
+  is not written (a wall marked to demolish, a riser, a floor, a roof, a footing, a beam,
+  a post) is said.
+* **A DWG, a Revit file and a SketchUp file are refused by name**, known by how they begin
+  or by their name, with what to save them as.
 * **Its scale is one dimension**: two places on the page, both on it and at least one
   unit of it apart, and the distance between them. A place on the page is then a place
   on the plan: `at` plus the page place times the feet to a unit. Lining up moves `at`

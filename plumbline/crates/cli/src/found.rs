@@ -684,7 +684,7 @@ fn load_sheet(path: &str, d: &plans::Drawing, name: &str) -> Result<(Vec<u8>, pl
     if bytes.len() as u64 != d.bytes || plumbline_plans::checksum(&bytes) != d.checksum {
         return Err(format!("the file of {name} HAS CHANGED since the drawing was made from it: what is found on it may no longer be what was scaled. Bring the sheet in again"));
     }
-    let page = plumbline_plans::read(&bytes, d.page).map_err(|why| format!("{name}: {why}"))?;
+    let page = plumbline_plans::read_with(&bytes, d.page, Some(&d.layers_off)).map_err(|why| format!("{name}: {why}"))?;
     if (page.size[0] - d.size[0]).abs() > 0.01 || (page.size[1] - d.size[1]).abs() > 0.01 {
         return Err(format!("the page of {name} is not the size this drawing was made at: nothing is found on it"));
     }
@@ -872,7 +872,7 @@ fn sheet_run(path: &str, mut job: plumbline_world::job::Job, drawing: &str, rest
     let mut d = d;
     if dimensions || scale_by.is_some() {
         let (bytes, page) = load_sheet(path, &d, &name)?;
-        let texts = plumbline_plans::strings(&bytes, d.page).map_err(|why| format!("{name}: {why}"))?;
+        let texts = plumbline_plans::strings_with(&bytes, d.page, Some(&d.layers_off)).map_err(|why| format!("{name}: {why}"))?;
         let dims = drawn::dimension_strings(&page.lines, &page.dashed, &texts);
         let order = dimension_order(&dims);
         let mut said = dimensions_said(&dims, &order, texts.len(), d.feet_per_unit(), &d);
@@ -930,7 +930,7 @@ fn sheet_run(path: &str, mut job: plumbline_world::job::Job, drawing: &str, rest
     // to say it by: said, and why (call 186).
     let lined_up = d.lined_up.is_some();
     let level_name = name_of(&mut job, &level);
-    if page.sort != plumbline_plans::Sort::Pdf || page.lines.is_empty() {
+    if !matches!(page.sort, plumbline_plans::Sort::Pdf | plumbline_plans::Sort::Dxf) || page.lines.is_empty() {
         let mut out = format!("sheet {name:?}: it has no drawn lines of its own, so there are none to find walls in");
         for why in &page.lost {
             out.push_str(&format!("\n  not read: {why}"));
@@ -939,13 +939,22 @@ fn sheet_run(path: &str, mut job: plumbline_world::job::Job, drawing: &str, rest
         let _ = std::io::stdout().write_all(out.as_bytes());
         return Ok(());
     }
-    let found = drawn::find_in(&page.lines, Some(k), page.size, corner, &drawn::Extra { dashed: &page.dashed, cuts: &page.cuts }, &drawn::Pick { plan, within })?;
+    // A CAD drawing has no paper and no border: what is drawn is all there is, and it is given a margin round it so that its own
+    // outermost walls are not taken for the edge of a sheet (a house drawn as one rectangle is that rectangle's walls).
+    let (lines, size, origin) = if page.sort == plumbline_plans::Sort::Dxf {
+        let pad = 0.2 * page.size[0].max(page.size[1]);
+        let moved: Vec<[[f64; 2]; 2]> = page.lines.iter().map(|[a, b]| [[a[0] + pad, a[1] + pad], [b[0] + pad, b[1] + pad]]).collect();
+        (moved, [page.size[0] + 2.0 * pad, page.size[1] + 2.0 * pad], [corner[0] - pad * k, corner[1] - pad * k])
+    } else {
+        (page.lines.clone(), page.size, corner)
+    };
+    let found = drawn::find_in(&lines, Some(k), size, origin, &drawn::Extra { dashed: &page.dashed, cuts: &page.cuts }, &drawn::Pick { plan, within })?;
     let mut out = sheet_said(&found, &name, &scale, &page.lost, page.pictures);
     // The page's reader does not read words, and says so; this verb does read the sheet's dimension strings (call 188
     // item 9). Where it has read some, it says that, and not that a dimension is typed by whoever reads it.
     const WORDS_NOT_READ: &str = "  not read: the words and figures on the page are drawn and not read: a dimension is typed by whoever reads it\n";
     if out.contains(WORDS_NOT_READ) {
-        let read = plumbline_plans::strings(&bytes, d.page).map(|texts| drawn::dimension_strings(&page.lines, &page.dashed, &texts).strings.len()).unwrap_or(0);
+        let read = plumbline_plans::strings_with(&bytes, d.page, Some(&d.layers_off)).map(|texts| drawn::dimension_strings(&page.lines, &page.dashed, &texts).strings.len()).unwrap_or(0);
         if read > 0 {
             let said = format!("  the sheet's own dimensions: {} read from its words; say --dimensions to list them, and --scale-by <n> to scale the sheet by one (the other words and figures on the page are not read)\n", count_said(read, "dimension string is", "dimension strings are"));
             out = out.replacen(WORDS_NOT_READ, &said, 1);
