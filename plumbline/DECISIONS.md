@@ -10203,3 +10203,30 @@ byte) and by the lead reading the list and the bringing-in as a person would.
    of a sheet, a figure in a unit not held, no figure.
 7. Call 231 has what is not confirmed and what is owed.
 
+### Call 232. Size tags after call 218: three rulings from two tags that went missing (2026-11-26; the lead's)
+
+`demos/tradesw.sh` was not run on the build of call 218 and fails two checks on
+the builds since: the tags "Pad 36 x 36" (Foundation view) and "3 in waste
+stack" (Plumbing view) are gone. The window builder measured why
+(`handoff` report of contract 222WC, "Two tags gone in tradesw"): the pads are
+39 to 47 dots across from the whole-house distance and call 218's rule writes
+nothing under 48; the stack is 173 dots and is written, then loses its place to
+a 3/4 in cold water tag 19 dots away, because of two tags that would lie over
+one another the nearer was kept. The demonstration's expectation is older than
+call 218 and is what a trade's view is for: it stands, and the program is put
+right.
+
+1. **A size tag is written over a thing 24 dots or more across; a name still
+   wants 48.** Sizes are switched on by a person who wants to read them, and in
+   a trade's view the things are few. 24 dots is two lines of lettering: under
+   that the tag would hide what it names. The upper bound is as it was.
+2. **Of two tags that would lie over one another, the larger thing's is kept**:
+   by its section, then by its length; only then the nearer. A 3 in stack is not
+   left untagged for a 3/4 in pipe beside it.
+3. **A run's size on the screen is its whole length**, the pieces end to end
+   taken together, not its longest piece: three pieces of 5 ft are a run of 15
+   ft to the eye.
+4. `demos/tradesw.sh` is not edited and passes again; the tests of
+   `nav::label_shown` gain the tag's own least size and keep every figure they
+   hold for a name.
+

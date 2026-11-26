@@ -11577,7 +11577,19 @@ the command line the stopped bench step (call 214) taken up again.
   builder to run down before the next window work is accepted; `navw.sh` is as
   it was but for its long session cut in two.
   `navw`: failed twice for time as said above, to be run again cut in two.
-  Still to run on it: `tradesw`, `screensw`, `bringw`, `movew`. The builder's own runs
+  `tradesw` (first run, 08:07 to 08:20): every check but two: **the tags "3 in
+  waste stack" and "Pad 36 x 36" are no longer on the map** in the Plumbing and
+  Foundation views (five other tags are). `tradesw` had not been run since call
+  218, whose one rule writes a name only over a thing 48 dots or more across;
+  a 3 ft pad from the whole-house distance is about 42. Whether the
+  demonstration moves with that rule or the rule is wrong was put to the window
+  builder for figures, and is **ruled in DECISIONS.md call 232**: the pads are
+  39 to 47 dots and fall under the rule's 48; the stack is 173 dots and loses
+  its place to a nearer 3/4 in pipe's tag. The demonstration stands; a size tag
+  is written from 24 dots, the larger thing's tag is kept of two, and a run is
+  sized by its whole length. With the window builder to build; failed the same
+  way on its second run.
+  Still to run on it: `screensw`, `bringw`, `movew`. The builder's own runs
   before the merge: `screensw` (seven sessions), `glassw`, `moneyw`, `benchw`,
   `pricew`. `tools/committed.sh` has not been run on 2e6f63a or later.
 
