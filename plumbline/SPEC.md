@@ -140,6 +140,16 @@ valid IFCX.
   the program draws are in the program (`library/shapes.csv`, all thirteen as rows) and are not saved; the file carries only shapes of the job's own. A job
   saved before has no `shapes` and reads as it did. An item that names a shape that is neither the
   job's nor the program's is refused on the way in, naming the shape.
+* **`cabinetRules`** (call 215), where there are any: the cabinet rules of its own the job carries,
+  the ones it brought in or changed (the eight the program ships with, `library/cabinet-rules.csv`, are in the
+  program and are not saved; a job that never touched them has no `cabinetRules` and is saved as it always was). A rule
+  is one family of boxes by the capital `code` letters (`B`, `SB`, `W`): what it `is` (`base`, `wall_box`, `tall_box`,
+  `filler`), how its number `reads` (`width`: one to three digits, the width in inches; `width_then_height`: four digits,
+  two and two), its `width`, `depth` and `height` (a length like `24 in`, left out where the number gives it: the width
+  always, the height where the number reads the height), `hung` (how far up its foot hangs, like `54 in`; left out, it
+  stands on the floor, and a wall box is the one that hangs), `drawn_as` (a shape's name, or `box`), the `stocked` widths
+  in inches, `status` (always `Assumed`) and `source`. A job has one rule to a code; a job carries at most 200. A rule is
+  worked for the next code asked for, and a box already made keeps its sizes.
 * **One entry per element.** A path appears once. A file with a repeated path is refused.
 * **Paths are permanent.** A new element's path is its kind and the job's next number
   (`plane-0017`). Renaming an element changes its name under its parent, never its path.
@@ -867,6 +877,17 @@ window, the left panel's Drawings to trace.
   material that is none of the six) is not used, and each of its rows says which block and which
   figure. Written out, brought into a second job and written again it is the same to the byte.
   `library/shapes.csv` is the one the program ships with.
+* **A table of cabinet rules** (call 215) is one row a rule, headed `Code`, `What it is`, `Number reads`, `Width`,
+  `Depth`, `Height`, `Stands`, `Drawn as`, `Stocked widths`, `How sure`, `Where from`: `B,base,the width,from the number,24 in,
+  34 1/2 in,on the floor,base cabinet,"12, 15, 18, 21, 24, 27, 30, 33, 36 in",Assumed,...`. `What it is` is a base, a wall box,
+  a tall box or a filler; `Number reads` is the width, or the width then the height; a width or a height that the number gives
+  says `from the number`; `Stands` is `on the floor` or `hung 54 in up`. Written out (`export cabinet-rules`) it holds the rules in
+  force: the program's, with the job's own changes in their places, then the job's own others. Brought in (`import
+  cabinet-rules`) a rule for letters the job has is changed, one that says what is in force is the same and carries nothing, a
+  rule changed back to the program's own is taken out of the job, one that is new is carried by the job; a row that cannot be
+  used (a code that is not letters, a wall box that stands on the floor, a rule that is not Assumed, a width given where the
+  number gives it) is named with why and the others still come in. `starter` keeps what the job holds. It is the tab `Cabinet
+  codes` of the database workbook, after Items. Written out, brought into a second job and written again it is the same to the byte.
 * **A prior estimate** is read by its headings (Description or Item; Quantity; Unit;
   Unit cost, Unit price or Rate; Amount, Total or Extension; Class; Cost code) into a
   Prior element under the job, as sure as whoever brought it says. A row with no figure

@@ -12,7 +12,7 @@ use crate::Job;
 
 /// The tabs, in the order each depends on the ones before it: an item is drawn as a shape,
 /// where things connect is a row of an item, a price is of an item or a material.
-pub const TABS: [&str; 5] = ["Shapes", "Items", "Connections", "Assemblies", "Prices"];
+pub const TABS: [&str; 6] = ["Shapes", "Items", "Cabinet codes", "Connections", "Assemblies", "Prices"];
 
 /// One tab of a workbook, or one file of a folder, as it was read.
 #[derive(Clone, Debug, Default)]
@@ -53,6 +53,7 @@ pub fn out(job: &mut Job) -> Vec<(&'static str, Vec<Vec<String>>)> {
     vec![
         ("Shapes", tables::shapes_out(job)),
         ("Items", tables::items_out(job)),
+        ("Cabinet codes", tables::cabinet_rules_out(job)),
         ("Connections", tables::connections_out(job)),
         ("Assemblies", tables::assemblies_out(job)),
         ("Prices", tables::prices_out(job)),
@@ -60,7 +61,7 @@ pub fn out(job: &mut Job) -> Vec<(&'static str, Vec<Vec<String>>)> {
 }
 
 /// The tables the program comes with, each as the text of its file: the starter database.
-/// (There is no starter price list: prices are the person's.)
+/// (There is no starter price list: prices are the person's. The program's own cabinet rules are in force whatever a job holds, so they are no tab of it.)
 pub fn starter_files() -> [(&'static str, &'static str); 4] {
     [("Shapes", tables::STARTER_SHAPES), ("Items", tables::STARTER_ITEMS), ("Connections", tables::STARTER_CONNECTIONS), ("Assemblies", tables::STARTER_LIBRARY)]
 }
@@ -90,7 +91,8 @@ pub fn bring_in(job: &mut Job, given: &[Given], starter: bool) -> Result<Whole, 
         let has = if given.is_empty() { "it has no tabs".to_string() } else { format!("it has: {}", given.iter().map(|g| format!("\"{}\"", g.name)).collect::<Vec<_>>().join(", ")) };
         return Err(format!("this is not a database this program can read: it has none of the tabs of one ({}); {has}. Nothing was brought in", TABS.join(", ")));
     }
-    let wanted: &[&str] = if starter { &TABS[..4] } else { &TABS };
+    // There is no starter price list, and the program's own cabinet rules are always in force: the starter database has neither tab.
+    let wanted: Vec<&str> = if starter { TABS.iter().copied().filter(|t| !matches!(*t, "Prices" | "Cabinet codes")).collect() } else { TABS.to_vec() };
     let absent: Vec<&'static str> = TABS.iter().enumerate().filter(|(i, t)| found[*i].is_none() && wanted.contains(t)).map(|(_, t)| *t).collect();
 
     let mut refused: Vec<String> = Vec::new();
@@ -112,7 +114,8 @@ pub fn bring_in(job: &mut Job, given: &[Given], starter: bool) -> Result<Whole, 
                     Ok((b, kept)) => (Ok(b), kept.len()),
                     Err(why) => (Err(why), 0),
                 },
-                ("Connections", false) => (tables::connections_in(job, &g.rows, numbers), 0),
+                ("Cabinet codes", _) => (tables::cabinet_rules_in(job, &g.rows, numbers), 0),
+        ("Connections", false) => (tables::connections_in(job, &g.rows, numbers), 0),
                 ("Connections", true) => match tables::connections_in_missing(job, &g.rows, numbers) {
                     Ok((b, kept)) => (Ok(b), kept.len()),
                     Err(why) => (Err(why), 0),

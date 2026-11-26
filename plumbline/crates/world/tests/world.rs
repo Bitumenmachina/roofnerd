@@ -6646,8 +6646,9 @@ fn a_run_of_cabinet_boxes_stands_along_a_wall_to_the_figures_worked_by_hand() {
 
     // Refused, and the job is as it was.
     let before = save(&mut job);
-    let err = ed::cabinets(&mut job, &level, &east, &kitchen, "1 ft", &["B99".to_string()], false, assumed()).unwrap_err();
-    assert!(err.contains("B99 is not in the tool chest. It has: ") && err.contains("B18") && err.contains("T2484"), "{err}");
+    // call 225: B99 is now a box made by the rule for B (call 215); a code no rule reads is Q99
+    let err = ed::cabinets(&mut job, &level, &east, &kitchen, "1 ft", &["Q99".to_string()], false, assumed()).unwrap_err();
+    assert!(err.contains("Q99 is not in the tool chest, and no cabinet rule reads Q") && err.contains("B18") && err.contains("T2484"), "{err}");
     let six: Vec<String> = ["B36"; 6].iter().map(|c| c.to_string()).collect();
     let err = ed::cabinets(&mut job, &level, &east, &kitchen, "1 ft", &six, false, assumed()).unwrap_err();
     assert!(err.contains("18' 0\" from 1' 0\" reaches 19' 0\" along") && err.contains("past the corner"), "{err}");

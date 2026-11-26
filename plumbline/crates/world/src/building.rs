@@ -61,6 +61,7 @@ use crate::units::{self, Len};
 use crate::value::{Derived, Status, Val};
 use crate::view::{self, Row, Sum, WorkSplit};
 
+pub mod cabinet;
 pub mod clash;
 pub mod connections;
 mod footings;

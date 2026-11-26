@@ -11462,7 +11462,21 @@ step to the words the `cabinets` verb already takes):
 8. The saved job of a run of starter codes only (B15, B30, SB36 with a
    countertop) is byte for byte the job the program wrote before this work.
 
-Not built yet.
+**Built (2026-11-26; the worker's, checked by the lead's own run of its copy:
+1,203 command-line tests, 62 command-line demonstrations with no FAIL in any, the
+three gates, the port map, the licences, the sample whole house byte for byte).**
+`demos/cabinet-rules.sh` passes its nine steps (the eight above and the database's
+tab). **A figure of the lead's above that was wrong**: the starter chest has
+**27** cabinet codes, not thirty-five (B nine, SB three, DB two, BLB, LS, W
+eight, T two, F); all 27 are exactly what their rules make. Existing
+expectations moved, each ruled first in DECISIONS.md call 225 with the reason
+beside it in the file: the tests' unknown box is Q99 where it was B99 (two
+places); the database's five tabs are six (three files). **Not right, and said:
+the window does not yet say that a box was made by a rule** (the model's reply
+has the line; the window's Cabinets tool does not show it), and
+`demos/cabinetsw.sh` still asks for B99 as a box the chest lacks: it is moved to
+Q99 and run when the window is next built on this model. A height the rule does
+not stock is not flagged and a rule cannot yet be taken away (call 226).
 
 ## Stopped for review, 2026-11-25 12:55 UTC (call 216), and started again the same day (call 217): read this first
 

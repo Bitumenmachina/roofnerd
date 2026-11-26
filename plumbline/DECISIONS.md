@@ -9922,3 +9922,42 @@ What calls 219, 223 and 215 left owed, in one job (`handoff/contracts/contract-2
    flags no height). The starter rows take the heights the chest already has.
 6. Nothing of the sample whole house moves.
 
+### Call 215, as built: a cabinet by rule (2026-11-26)
+
+The worker's work under contract 215M (`research/worker-report-call215M.md`), with
+call 225's rulings applied, checked by the lead's own run of its copy (1,203
+command-line tests: model 712, command line 64, sheets 7, model files 111,
+roofing 122, plans 187; 62 command-line demonstrations; gates, port map,
+licences; the sample whole house byte for byte) and by the lead reading every
+changed line of an existing expectation against call 225.
+
+1. **The rules are a table** (`library/cabinet-rules.csv`; `import` and `export
+   cabinet-rules`): Code, What it is, Number reads, Width, Depth, Height, Stands,
+   Drawn as, Stocked widths, How sure, Where from. Eight starter rows: B, SB, DB
+   and BLB (24 in deep, 34 1/2 in high), LS (36 in deep), W (four digits, the
+   width then the height; 12 in deep; hung 54 in up), T (four digits; 24 in
+   deep), F (a filler). A rule is always Assumed and says where it is from.
+2. **The 27 starter boxes are exactly what their rules make** (a test holds each:
+   size for size, what it is drawn as, its kind and trade).
+3. **A code the chest lacks is made by its rule when asked for**, by the rule
+   whose letters are the code's letters (SB36 is SB's, never B's). The item is
+   made in the chest, its sizes Assumed, saying the rule and how the number was
+   read; the reply says so ("B42 was made by the rule for B: 42 in wide, 24 in
+   deep and 34 1/2 in high; Assumed"). A width the rule does not list is made
+   and flagged a made-to-order box. **No box is made wider than 96 in** (call
+   225).
+4. **A code no rule reads is refused**, with the letters the rules read and how
+   the nearest rule reads its number.
+5. **Where a box stands is its rule's**, not its first letter's; wall boxes whose
+   rules hang at different heights are two runs.
+6. **The job carries only rules brought in or changed** (`cabinetRules`, absent
+   when there are none): a job that never touched the rules is byte for byte
+   what the program wrote before.
+7. **The database has a sixth tab, "Cabinet codes"**, after Items; the starter
+   database has none (the program's own rules are always in force).
+8. Nothing was ported from BIMCraft (its family types are labels; nothing there
+   reads a size out of a name: the port map says where it was looked for).
+9. **Owed**: the window says when a box was made by a rule, and its
+   demonstration's B99 moves to Q99 (the next window job on cabinets); call 226
+   has the rest.
+

@@ -65,14 +65,17 @@ fn tab<'a>(w: &'a database::Whole, name: &str) -> &'a database::TabIn {
 fn point_1_each_tab_is_its_tables_own_rows() {
     let mut job = full_job();
     let all = database::out(&mut job);
-    assert_eq!(all.iter().map(|(n, _)| *n).collect::<Vec<_>>(), ["Shapes", "Items", "Connections", "Assemblies", "Prices"]);
+    // call 225: the cabinet rules joined the database (call 223 as built, point 6)
+    assert_eq!(all.iter().map(|(n, _)| *n).collect::<Vec<_>>(), ["Shapes", "Items", "Cabinet codes", "Connections", "Assemblies", "Prices"]);
     assert_eq!(all[0].1, tables::shapes_out(&mut job));
     assert_eq!(all[1].1, tables::items_out(&mut job));
-    assert_eq!(all[2].1, tables::connections_out(&mut job));
-    assert_eq!(all[3].1, tables::assemblies_out(&mut job));
-    assert_eq!(all[4].1, tables::prices_out(&mut job));
+    // call 225: the cabinet rules joined the database (call 223 as built, point 6)
+    assert_eq!(all[2].1, tables::cabinet_rules_out(&mut job));
+    assert_eq!(all[3].1, tables::connections_out(&mut job));
+    assert_eq!(all[4].1, tables::assemblies_out(&mut job));
+    assert_eq!(all[5].1, tables::prices_out(&mut job));
     // The counts the program holds: 49 items, 50 rows of shapes (14 shapes), 5 rows of connections, 202 rows of assemblies (42 assemblies), 8 price rows.
-    assert_eq!(all.iter().map(|(_, r)| r.len() - 1).collect::<Vec<_>>(), [50, 49, 5, 202, 8], "rows under each tab's headings");
+    assert_eq!(all.iter().map(|(_, r)| r.len() - 1).collect::<Vec<_>>(), [50, 49, 8, 5, 202, 8], "rows under each tab's headings");
 }
 
 /// Points 2 and 3: brought into an empty job, each tab by its own reader, with counts; written out again it is the same.
@@ -82,7 +85,8 @@ fn points_2_and_3_out_in_and_out_again_is_the_same() {
     let sent = given_all(&mut first);
     let mut second = Job::new("Second (not a real job)", "test", "test");
     let reply = database::bring_in(&mut second, &sent, false).unwrap();
-    assert_eq!(reply.tabs.iter().map(|t| t.name).collect::<Vec<_>>(), ["Shapes", "Items", "Connections", "Assemblies", "Prices"], "in the order they depend on one another");
+    // call 225: the cabinet rules joined the database (call 223 as built, point 6)
+    assert_eq!(reply.tabs.iter().map(|t| t.name).collect::<Vec<_>>(), ["Shapes", "Items", "Cabinet codes", "Connections", "Assemblies", "Prices"], "in the order they depend on one another");
     // The 13 starter shapes are in every job: they are the same; the job's own is added.
     assert_eq!(tab(&reply, "Shapes").brought.same, 13);
     assert_eq!(tab(&reply, "Shapes").brought.done.len(), 1);
@@ -125,7 +129,8 @@ fn point_2_tabs_are_brought_in_by_what_they_depend_on_not_by_where_they_lie() {
     sent.reverse();
     let mut second = Job::new("Second (not a real job)", "test", "test");
     let reply = database::bring_in(&mut second, &sent, false).unwrap();
-    assert_eq!(reply.tabs.iter().map(|t| t.name).collect::<Vec<_>>(), ["Shapes", "Items", "Connections", "Assemblies", "Prices"]);
+    // call 225: the cabinet rules joined the database (call 223 as built, point 6)
+    assert_eq!(reply.tabs.iter().map(|t| t.name).collect::<Vec<_>>(), ["Shapes", "Items", "Cabinet codes", "Connections", "Assemblies", "Prices"]);
     assert_eq!(database::out(&mut second), database::out(&mut first));
 }
 
@@ -254,7 +259,8 @@ fn a_part_of_a_database_comes_in_and_the_missing_tabs_are_said() {
     let mut second = Job::new("Second (not a real job)", "test", "test");
     let reply = database::bring_in(&mut second, &sent, false).unwrap();
     assert_eq!(reply.tabs.len(), 1);
-    assert_eq!(reply.absent, ["Shapes", "Connections", "Assemblies", "Prices"]);
+    // call 225: the cabinet rules joined the database (call 223 as built, point 6)
+    assert_eq!(reply.absent, ["Shapes", "Cabinet codes", "Connections", "Assemblies", "Prices"]);
     assert_eq!(tab(&reply, "Items").brought.done.len(), 48);
 }
 

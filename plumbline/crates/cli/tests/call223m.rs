@@ -30,7 +30,13 @@ fn folder(name: &str) -> PathBuf {
     dir
 }
 
-const TABLES: [&str; 5] = ["shapes", "items", "connections", "assemblies", "prices"];
+// call 225: the cabinet rules joined the database (call 223 as built, point 6)
+const TABLES: [&str; 6] = ["shapes", "items", "cabinet-rules", "connections", "assemblies", "prices"];
+/// The file a table has in a folder of the database: the tab's name (the cabinet rules' tab is "Cabinet codes").
+// call 225: the cabinet rules joined the database (call 223 as built, point 6)
+fn folder_file(t: &str) -> String {
+    format!("{}.csv", if t == "cabinet-rules" { "cabinet codes" } else { t })
+}
 
 /// A job with the starter tables, a made-up price list of three suppliers, one shape and one item of its own.
 fn made(dir: &Path, job: &str) {
@@ -60,9 +66,11 @@ fn step_1_one_workbook_each_tab_is_its_table() {
     let dir = folder("one");
     made(&dir, "a.json");
     let said = ok(&dir, &["export", "database", "a.json", "my.xlsx"]);
-    assert!(said.contains("a tab for each table") && said.contains("Shapes 50, Items 49, Connections 5, Assemblies 202, Prices 8"), "{said}");
+    // call 225: the cabinet rules joined the database (call 223 as built, point 6)
+    assert!(said.contains("a tab for each table") && said.contains("Shapes 50, Items 49, Cabinet codes 8, Connections 5, Assemblies 202, Prices 8"), "{said}");
     let tabs = tabs_of(&dir.join("my.xlsx"));
-    assert_eq!(tabs.iter().map(|(n, _)| n.as_str()).collect::<Vec<_>>(), ["Shapes", "Items", "Connections", "Assemblies", "Prices"]);
+    // call 225: the cabinet rules joined the database (call 223 as built, point 6)
+    assert_eq!(tabs.iter().map(|(n, _)| n.as_str()).collect::<Vec<_>>(), ["Shapes", "Items", "Cabinet codes", "Connections", "Assemblies", "Prices"]);
     for (t, (_, rows)) in TABLES.iter().zip(&tabs) {
         ok(&dir, &["export", t, "a.json", &format!("{t}.csv")]);
         let single = sheets::read(&std::fs::read(dir.join(format!("{t}.csv"))).unwrap(), None).unwrap().rows;
@@ -71,7 +79,7 @@ fn step_1_one_workbook_each_tab_is_its_table() {
     // The folder: each file is, byte for byte, the table written out alone.
     ok(&dir, &["export", "database", "a.json", "my folder"]);
     for t in TABLES {
-        assert_eq!(std::fs::read(dir.join("my folder").join(format!("{t}.csv"))).unwrap(), std::fs::read(dir.join(format!("{t}.csv"))).unwrap(), "{t}");
+        assert_eq!(std::fs::read(dir.join("my folder").join(folder_file(t))).unwrap(), std::fs::read(dir.join(format!("{t}.csv"))).unwrap(), "{t}");
     }
 }
 
@@ -84,7 +92,8 @@ fn steps_2_and_3_in_to_an_empty_job_and_out_again() {
     ok(&dir, &["export", "database", "a.json", "my"]);
     ok(&dir, &["new", "b.json", "Second (not a real job)"]);
     let said = ok(&dir, &["import", "database", "b.json", "my.xlsx"]);
-    for line in ["(a workbook, 5 tabs): brought in whole", "the tab Shapes: 50 rows under its headings", "the tab Items: 49 rows under its headings", "the tab Connections: 5 rows under its headings", "the tab Assemblies: 202 rows under its headings", "the tab Prices: 8 rows under its headings"] {
+    // call 225: the cabinet rules joined the database (call 223 as built, point 6)
+    for line in ["(a workbook, 6 tabs): brought in whole", "the tab Shapes: 50 rows under its headings", "the tab Items: 49 rows under its headings", "the tab Connections: 5 rows under its headings", "the tab Assemblies: 202 rows under its headings", "the tab Prices: 8 rows under its headings"] {
         assert!(said.contains(line), "{line}\n{said}");
     }
     assert!(said.contains("  set: 49\n"), "49 items added:\n{said}");
@@ -93,15 +102,16 @@ fn steps_2_and_3_in_to_an_empty_job_and_out_again() {
     assert_eq!(tabs_of(&dir.join("my.xlsx")), tabs_of(&dir.join("my2.xlsx")), "cell for cell");
     ok(&dir, &["export", "database", "b.json", "my2"]);
     for t in TABLES {
-        assert_eq!(std::fs::read(dir.join("my").join(format!("{t}.csv"))).unwrap(), std::fs::read(dir.join("my2").join(format!("{t}.csv"))).unwrap(), "{t}: byte for byte");
+        assert_eq!(std::fs::read(dir.join("my").join(folder_file(t))).unwrap(), std::fs::read(dir.join("my2").join(folder_file(t))).unwrap(), "{t}: byte for byte");
     }
     // The folder comes in too, and is the same again.
     ok(&dir, &["new", "c.json", "Third (not a real job)"]);
     let said = ok(&dir, &["import", "database", "c.json", "my"]);
-    assert!(said.contains("(a folder, 5 files): brought in whole"), "{said}");
+    // call 225: the cabinet rules joined the database (call 223 as built, point 6)
+    assert!(said.contains("(a folder, 6 files): brought in whole"), "{said}");
     ok(&dir, &["export", "database", "c.json", "my3"]);
     for t in TABLES {
-        assert_eq!(std::fs::read(dir.join("my").join(format!("{t}.csv"))).unwrap(), std::fs::read(dir.join("my3").join(format!("{t}.csv"))).unwrap(), "{t}: byte for byte");
+        assert_eq!(std::fs::read(dir.join("my").join(folder_file(t))).unwrap(), std::fs::read(dir.join("my3").join(folder_file(t))).unwrap(), "{t}: byte for byte");
     }
 }
 

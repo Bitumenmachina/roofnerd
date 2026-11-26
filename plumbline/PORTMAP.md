@@ -556,3 +556,22 @@ what follows. Not taken: ids and GUIDs, `keep_parts`, merging JSON, `dry_run`. T
 | `find_in_job` | ours |  |  | names, then lines of the estimate: one search; the every-word rule is BIMCraft's `matches` (`ui-egui/src/find.rs:29`), the rest is ours; `grep -rnw 'fn find_in_job' crates/core/src`: nothing |
 | `where_said` | ours |  |  | where a moved opening stands and how clear it is of each end of its wall, in a builder's words; `grep -rnw 'fn where_said' crates/core/src`: nothing |
 | `fits` | ours |  |  | whether a tried change would be made and would be in the same space as nothing; `grep -rn 'impl Tried' crates/core/src`: nothing |
+| `HEADINGS` | ours |  |  | the headings of the table of cabinet rules; BIMCraft's family types are named parameters, not a table of rules: `grep -rn 'const HEADINGS' crates/core/src`: nothing |
+| `FROM_NUMBER` | ours |  |  | the cell a width or height has where the code's number gives it; `grep -rn 'FROM_NUMBER' crates/core/src`: nothing |
+| `ON_THE_FLOOR` | ours |  |  | the cell of a box that stands on the floor; `grep -rn 'ON_THE_FLOOR' crates/core/src`: nothing |
+| `MOST_RULES` | ours |  |  | the most cabinet rules of its own a job carries, 200; `grep -rn 'MOST_RULES' crates/core/src`: nothing |
+| `Is` | ours |  |  | what a cabinet box is to a cabinet maker (a base, a wall box, a tall box, a filler); BIMCraft's family has a category (`family.rs` `Category`) and no such kinds; `grep -rn 'enum Is' crates/core/src`: nothing |
+| `a` | ours |  |  | `Is` with its "a" in front, for a sentence; as Is, `grep -rn 'enum Is' crates/core/src`: nothing |
+| `Reads` | ours |  |  | how the figures after a cabinet code's letters read (the width, or the width then the height); a size in BIMCraft comes from a named parameter of a type (`family.rs` `types`, `parameters`, `resolve`) and nothing there reads a size out of a name; `grep -rn 'enum Reads' crates/core/src`: nothing |
+| `Rule` | ours |  |  | one family of cabinet boxes: its letters, what it is, how its number reads, its sizes, where it stands, what it is drawn as, the widths stocked, how sure and where from. In BIMCraft a family has types, each a value for each named parameter (`family.rs:555` `Family`); a code that carries its size in its name and a rule to read it is not there; `grep -rnw 'struct Rule' crates/core/src`: nothing |
+| `read_code` | ours |  |  | a cabinet code split into its letters and its figures; `grep -rn 'fn read_code' crates/core/src`: nothing |
+| `hung_ft` | ours |  |  | how far up a box named by a code hangs by its rule, in feet; `grep -rn 'fn hung_ft' crates/core/src`: nothing |
+| `reading` | ours |  |  | how a rule's number reads, with an example, said as a cabinet maker says it; `grep -rn 'reads four digits' crates/core/src`: nothing (a `fn reading` there is a session's own, `engine.rs:559`) |
+| `number` | ours |  |  | the width and the height a rule reads out of a code's figures; BIMCraft reads no size out of a name (`family.rs` `resolve` takes a parameter's value, never a type's name); `grep -rn 'width then the height' crates/core/src`: nothing |
+| `make` | ours |  |  | the item of the tool chest a rule makes for a code, every size Assumed and saying the rule; `grep -rn 'made-to-order' crates/core/src`: nothing (a `fn make` there makes a mesh, `view3d/fragments.rs:31`) |
+| `cells` | ours |  |  | a rule as the cells of its table row; `grep -rn 'fn cells(&self' crates/core/src`: nothing |
+| `from_cells` | ours |  |  | a rule read from the cells of a table row; `grep -rn 'fn from_cells' crates/core/src`: nothing |
+| `effective` | ours |  |  | the cabinet rules in force: the program's with the job's own in their places; `grep -rn 'fn effective' crates/core/src`: nothing |
+| `rule_for` | ours |  |  | the rule for a code's letters; `grep -rn 'fn rule_for' crates/core/src`: nothing |
+| `ask` | ours |  |  | a code the tool chest has not, asked for: made by its rule or refused in a cabinet maker's words; `grep -rn 'fn ask' crates/core/src`: nothing |
+| `WIDEST` | ours |  |  | the widest box a rule makes, 96 in, a sheet's length (call 225); `grep -rn 'WIDEST' crates/core/src`: nothing |

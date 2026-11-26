@@ -68,7 +68,8 @@ echo
 echo "== 1. Written out as my database: one workbook, a tab to a table, each tab what the table's own writing-out gives =="
 echo "      49 items (48 starter and 1 of its own), 50 rows of shapes (14 shapes), 5 rows of connections, 202 rows of assemblies (42), 8 price rows (2 materials by 3 suppliers, and each material's own row)"
 "$P" export database "$T/a.json" "$T/my.xlsx" > "$T/out1.txt"
-says "$T/out1.txt" "a tab for each table: Shapes 50, Items 49, Connections 5, Assemblies 202, Prices 8"
+# call 225: the cabinet rules joined the database (call 223 as built, point 6)
+says "$T/out1.txt" "a tab for each table: Shapes 50, Items 49, Cabinet codes 8, Connections 5, Assemblies 202, Prices 8"
 for t in shapes items connections assemblies prices; do
   "$P" export $t "$T/a.json" "$T/$t.xlsx" >/dev/null
   name="$(printf '%s' "$t" | awk '{print toupper(substr($0,1,1)) substr($0,2)}')"
@@ -77,7 +78,8 @@ for t in shapes items connections assemblies prices; do
   printf '    the %s tab is the %s table, cell for cell\n' "$name" "$t"
 done
 "$P" export database "$T/a.json" "$T/my" > "$T/out1f.txt"
-says "$T/out1f.txt" "a file for each table: Shapes 50, Items 49, Connections 5, Assemblies 202, Prices 8"
+# call 225: the cabinet rules joined the database (call 223 as built, point 6)
+says "$T/out1f.txt" "a file for each table: Shapes 50, Items 49, Cabinet codes 8, Connections 5, Assemblies 202, Prices 8"
 for t in shapes items connections assemblies prices; do
   "$P" export $t "$T/a.json" "$T/$t.csv" >/dev/null
   cmp -s "$T/my/$t.csv" "$T/$t.csv" || { echo "FAIL: my/$t.csv is not the $t table written alone"; exit 1; }
@@ -88,7 +90,8 @@ echo
 echo "== 2. Brought into a new, empty job: each tab's count is what was written =="
 "$P" new "$T/b.json" "Second (not a real job)" >/dev/null
 "$P" import database "$T/b.json" "$T/my.xlsx" > "$T/in2.txt"
-for line in "(a workbook, 5 tabs): brought in whole" "the tab Shapes: 50 rows under its headings" "the tab Items: 49 rows under its headings" "the tab Connections: 5 rows under its headings" "the tab Assemblies: 202 rows under its headings" "the tab Prices: 8 rows under its headings" "in all: 104 set; no row refused"; do says "$T/in2.txt" "$line"; done
+# call 225: the cabinet rules joined the database (call 223 as built, point 6)
+for line in "(a workbook, 6 tabs): brought in whole" "the tab Shapes: 50 rows under its headings" "the tab Items: 49 rows under its headings" "the tab Connections: 5 rows under its headings" "the tab Assemblies: 202 rows under its headings" "the tab Prices: 8 rows under its headings" "in all: 104 set; no row refused"; do says "$T/in2.txt" "$line"; done
 lacks "$T/in2.txt" "not used: 1"
 
 echo
@@ -101,7 +104,8 @@ diff -r "$T/my" "$T/my2" >/dev/null || { echo "FAIL: the second folder is not th
 echo "    the two folders are the same, file for file, byte for byte"
 "$P" new "$T/c.json" "Third (not a real job)" >/dev/null
 "$P" import database "$T/c.json" "$T/my" > "$T/in3.txt"
-says "$T/in3.txt" "(a folder, 5 files): brought in whole"
+# call 225: the cabinet rules joined the database (call 223 as built, point 6)
+says "$T/in3.txt" "(a folder, 6 files): brought in whole"
 "$P" export database "$T/c.json" "$T/my3" >/dev/null
 diff -r "$T/my" "$T/my3" >/dev/null || { echo "FAIL: the folder brought in and written out is not the folder"; exit 1; }
 echo "    the folder brought into a third job and written out again is the same, byte for byte"

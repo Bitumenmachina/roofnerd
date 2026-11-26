@@ -1137,6 +1137,9 @@ pub struct Cabinets {
     pub left: f64,
     /// The boxes hang on the wall (they are wall boxes), this far up in feet.
     pub hung: Option<f64>,
+    /// Each box a rule made because the tool chest had not its code (call 215), said in full:
+    /// which rule, its sizes, and a width the trade does not stock.
+    pub made: Vec<String>,
 }
 
 /// The box codes a job's tool chest has: its furnishings of Division 12 named by one word of
@@ -1217,11 +1220,15 @@ pub fn cabinets(job: &mut Job, storey: &str, wall: &str, room: &str, from: &str,
             path: String,
             name: String,
             size: P3,
-            /// A box of the tool chest, named by a code: wall boxes start with W, tall ones with T.
+            /// A box of the tool chest, named by a code: its rule says where it stands.
             code: bool,
+            /// How far up its foot hangs, in feet, by its rule (call 215): None, it stands on the floor.
+            hang: Option<f64>,
             division: Option<crate::components::Division>,
         }
-        let chest = box_codes(job);
+        let rules = building::cabinet::effective(&job.cabinet_rules);
+        let mut chest = box_codes(job);
+        let mut made: Vec<String> = Vec::new();
         let mut boxes: Vec<Boxed> = Vec::new();
         for code in codes {
             let named = chest.iter().find(|(_, name)| name.eq_ignore_ascii_case(code.trim())).map(|(p, n)| (p.clone(), n.clone(), true)).or_else(|| {
@@ -1230,6 +1237,23 @@ pub fn cabinets(job: &mut Job, storey: &str, wall: &str, room: &str, from: &str,
                 all.sort();
                 all.into_iter().next().map(|(_, p, n)| (p, n, false))
             });
+            let named = match named {
+                Some(found) => Some(found),
+                // A code the chest has not is made by its rule, when a rule reads it (call 215).
+                None => match building::cabinet::ask(&rules, code) {
+                    building::cabinet::Asked::Made(m) => {
+                        let path = item(job, &m.name, m.item.clone())?;
+                        chest.push((path.clone(), m.name.clone()));
+                        made.push(m.said.clone());
+                        Some((path, m.name, true))
+                    }
+                    building::cabinet::Asked::Refused(why) => {
+                        let have = chest.iter().map(|(_, n)| n.as_str()).collect::<Vec<_>>().join(" ");
+                        return Err(if have.is_empty() { format!("{why}. It has no boxes: bring the starter items in first") } else { format!("{why}. It has: {have}") });
+                    }
+                    building::cabinet::Asked::NotACode => None,
+                },
+            };
             let Some((path, name, code)) = named else {
                 let have = chest.iter().map(|(_, n)| n.as_str()).collect::<Vec<_>>().join(" ");
                 return Err(if have.is_empty() { format!("{code} is not in the tool chest, and it has no boxes: bring the starter items in first") } else { format!("{code} is not in the tool chest. It has: {have}") });
@@ -1237,16 +1261,23 @@ pub fn cabinets(job: &mut Job, storey: &str, wall: &str, room: &str, from: &str,
             let e = job.find(&path).ok_or_else(|| format!("{path} is not in the job"))?;
             let it = job.world.get::<Item>(e).cloned().ok_or_else(|| format!("{path} is not an item"))?;
             let (size, _, _) = it.size_ft().map_err(|why| format!("{name}: {why}, so it cannot be set"))?;
-            boxes.push(Boxed { path, name, size, code, division: it.division });
+            // Where a box stands is its rule's, by the letters of its code; a box no rule reads stands on the floor (call 215).
+            let hang = if code { building::cabinet::hung_ft(&rules, &name) } else { None };
+            boxes.push(Boxed { path, name, size, code, hang, division: it.division });
         }
-        let hangs = |b: &Boxed| b.code && b.name.starts_with('W');
+        let hangs = |b: &Boxed| b.hang.is_some();
         // What a countertop goes over: what is not hung and stands no taller than a base box.
         let covered = |b: &Boxed| !hangs(b) && b.size[2] <= COUNTER_HEIGHT_FT + tol;
         let wall_boxes = boxes.iter().filter(|b| hangs(b)).count();
         if wall_boxes != 0 && wall_boxes != boxes.len() {
             return Err("wall boxes hang over the counter and base boxes stand under it: set them as two runs".into());
         }
-        let hung = (wall_boxes != 0).then_some(54.0 / 12.0);
+        let hung = boxes.iter().find_map(|b| b.hang);
+        if let Some(first) = hung {
+            if boxes.iter().any(|b| b.hang.is_some_and(|h| (h - first).abs() > tol)) {
+                return Err("the wall boxes of one run hang at one height, and these hang at different heights by their rules: set them as two runs".into());
+            }
+        }
         if countertop && hung.is_some() {
             return Err("a countertop goes over base boxes, and a run of wall boxes has none".into());
         }
@@ -1326,7 +1357,7 @@ pub fn cabinets(job: &mut Job, storey: &str, wall: &str, room: &str, from: &str,
             let (item, code, size) = (&b.path, &b.name, b.size);
             let mid = spot(along + size[0] / 2.0, face.off + size[1] / 2.0);
             let offset = match hung {
-                Some(up) => Val { value: Some(units::Len::One(up)), unit: "ft".into(), status: assumed.status, source: "wall boxes hang with their bottoms 54 in up, 18 in over a 36 in counter; the maker's catalog decides".into() },
+                Some(up) => Val { value: Some(units::Len::One(up)), unit: "ft".into(), status: assumed.status, source: format!("wall boxes hang with their bottoms {} up, {} over a 36 in counter; the maker's catalog decides", units::inches_said(up), units::inches_said(up - 3.0)) },
                 None => how.length("0 ft")?,
             };
             let (path, _) = place_item_in(job, storey, item, mid, offset, Entered { status: sure, source: &by })?;
@@ -1396,7 +1427,7 @@ pub fn cabinets(job: &mut Job, storey: &str, wall: &str, room: &str, from: &str,
         } else {
             None
         };
-        Ok(Cabinets { boxes: set, countertop: top, from: start, run, left: hi - end, hung })
+        Ok(Cabinets { boxes: set, countertop: top, from: start, run, left: hi - end, hung, made })
     })
 }
 
