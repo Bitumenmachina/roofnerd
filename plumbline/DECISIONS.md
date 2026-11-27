@@ -10879,3 +10879,64 @@ reads; that is the defect, and it is why the whole set is now run and not a chos
    reads the demonstrations git holds or is about to (`git ls-files`), and still
    refuses a demonstration added without its row (proved: one added, refused; taken
    out, passed).
+
+### Call 242. Part B of the layout, and every kind of file through one list: what a file is, where the reading lives, how a moved control is still found (2026-11-27; the lead's design, not built)
+
+Call 240 point 3 made Bring in and Write out one sheet each with a list, and that is
+how step 6 of call 237 is built. This call settles what that needs before anyone
+builds it. Nothing here changes a number, a meaning or a saved job.
+
+1. **The program says what a file is; the person agrees or says otherwise.** Bring in
+   shows the files of the job's folder, each with what it is. That is worked out in
+   one place, for the command line and the window alike, and is an offer: nothing
+   comes in until Bring in is pressed, and where a file could be two things the
+   window asks which. A file that is none of them is not listed; the foot of the
+   list says how many such files there are. The rule, whole:
+
+   | The file's ending | What is looked at | It is said to be |
+   |---|---|---|
+   | pdf | whether it opens; its pages; its measured marks | a plan, or a maker's sheet (a plan first; with marks: "a plan, with N measured marks") |
+   | png, jpg, jpeg | | a plan (a picture) |
+   | tif, tiff | its pages | a plan (a picture; of N pages when more than one) |
+   | dxf | whether it says its units | a plan (a CAD drawing) |
+   | ply, las, laz, e57 | | a scan |
+   | ifc | whether it has a level with a wall or a floor on it | with one: a designer's model, or a maker's model; with none: a maker's model |
+   | csv, xlsx | the row of headings, by each table's own reader | each table whose reader finds the headings it needs, the most particular first: a field sheet; my database (a workbook whose tabs are the tables); assemblies; items; shapes; connections; cabinet rules; a price list; a prior estimate. A table with a quantity or an amount column is a prior estimate before it is a price list. |
+   | json | whether it is a job of this program | a job (opened, not brought in; the list says so) |
+
+   A reader's own headings are the test: no second list of headings is kept. The
+   words in the table are the words on the screen (the lead's wording call).
+2. **Where it lives: a crate of its own, `crates/files`, that both the command line
+   and the window call.** The model's crate cannot see the readers of PDFs, of
+   workbooks and of BIM files (they stand above it), and today the body of each
+   `import` and `export` verb is in the command line's own file, where the window
+   cannot call it; the window spells its seven kinds a second time. That is two
+   arithmetics waiting to differ. `crates/files` holds: `kind` (the rule above),
+   `bring` (a file of a kind into a job, with what was said) and `write` (a job out
+   as a kind). The bodies move there from the command line as they are (a move, not
+   a rewrite: the command line's replies and every saved job byte for byte, by the
+   demonstrations that already check them), and the window's seven are brought
+   onto the same functions. The command line gains one verb, `plumbline kind <file>
+   [<file> ...]`, one line to a file.
+3. **A control that moves into a menu or a sheet keeps its name, and the program
+   says how it is reached.** For a control that is not in view because the place it
+   lives in is closed, the map carries a row naming the control that opens that
+   place (`way`, the control, its opener). The kit's `on` follows it: it presses the
+   opener as a person does, waits for a drawn frame, then presses the control. No
+   demonstration is edited for a control that moved; one that measures a place or
+   counts what is in view still stops for a ruling (call 240, point 7).
+4. **Part B is two jobs, in this order, each with every demonstration still
+   passing.** **B1, the layout** (contract 240B1): the job's name opens the job's
+   menu; the view's cluster holds the level and the layers, each a sheet that can
+   be pinned (Q37's working assumption); the tools in two levels; the panel for a
+   thing with one main button and its depth in rows that open; the next step as one
+   line on a new job; every line of `demos/quietw.md` at its figure. **B2, the
+   files** (contract 240B2, after `crates/files` is in): Bring in and Write out as
+   sheets over `crates/files`; `demos/filesw.md`, reworked by this call, is its
+   check. The estimate window follows as part C.
+5. **Write out's rows, grouped by who they are for** (wording): *For you*: Estimate
+   workbook; Estimate as a list (CSV); My database; Field sheet; Verify-in-field
+   list. *For suppliers*, *For subcontractors*, *For the project manager*: one row
+   each. *For other programs*: BIM model (IFC); Issue list (BCF); 3D file (glTF);
+   Plan as CAD (DXF); Price list; Assemblies; Items. A row is a name, who it is
+   for and the file it makes. A new kind is a row.

@@ -5,7 +5,7 @@ nothing is added below, and what is no longer so is taken out. How it came to be
 is the calls in `DECISIONS.md` (`DECISIONS-index.md` finds one). Everything this file
 held before 2026-11-26 is `STATUS-history.md`.
 
-**As of 2026-11-26, the lead. It is not a release candidate and it is not tagged.**
+**As of 2026-11-27, the lead. It is not a release candidate and it is not tagged.**
 
 ## Where the work is
 
@@ -16,13 +16,13 @@ the build goes on without asking him, and what he is sent is the manual, changed
 | Step | What | Where it stands |
 |---|---|---|
 | 1 | The lead's checks in the repository | **Done.** `tools/check.sh`, `tools/window-run.sh`, `tools/quiet.sh`, `tools/index.sh`. |
-| 2 | Window demonstrations made sure; all forty-five run with nothing beside them | **The kit is in (20a15ea): a press waits until the window has drawn.** The builder's ten passed, each on its first run. The lead's own run of all forty-five is going, in parts. See "The window" below. |
-| 3 | The manual; `demos/captured/` let go | **Done, and it goes on**: `manual/index.html` (written by `tools/manual.py` from `manual/manual.md`, this file and `manual/pictures/`) is published to Patrick as one artifact, `https://claude.ai/artifact/DTAkAoTGMcTYEkVAXdHLYt` (to change it: `tools/manual.py take` the new pictures, `tools/manual.py build`, `tools/manual.py page <file>`, and publish that file with the pictures to the same address). Seventeen pictures, each stamped with the commit it is of (two are of 18e0ad8, three of 20a15ea; the oldest is of 2026-11-23); they are replaced as step 2's runs give new ones. `demos/captured/` is no longer kept in the repository. |
+| 2 | Window demonstrations made sure; all forty-five run with nothing beside them | **The kit is in (20a15ea): a press waits until the window has drawn.** The lead's own run of all forty-five, one at a time with nothing beside it, is going in parts: see "The window" below for the count. Two failed on their own stale expectations and are put right (call 241). |
+| 3 | The manual; `demos/captured/` let go | **Done, and it goes on**: `manual/index.html` (written by `tools/manual.py` from `manual/manual.md`, this file and `manual/pictures/`) is published to Patrick as one artifact, `https://claude.ai/artifact/DTAkAoTGMcTYEkVAXdHLYt` (to change it: `tools/manual.py take` the new pictures, `tools/manual.py build`, `tools/manual.py page <file>`, and publish that file with the pictures to the same address). Seventeen pictures, each stamped with the commit it is of: thirteen are of the build of 20a15ea, from the lead's run; four (the dive, the plan's scale, a wall moved, two plans) are older and are replaced when their demonstrations have run. `demos/captured/` is no longer kept in the repository. |
 | 4 | The documents put right | **Done.** Four lists are written by tools and checked by the commit hook (`DECISIONS-index.md`, the README's demonstrations, the table in `LICENSES.md`, the manual's page). `TRY-IT.md` is gone: the manual takes its place. |
 | 5 | The earlier program off the branch; the commit hook BuildOS's own | **Done.** It is on `main`, whole. |
-| 5b | **Design review, and the window laid out again** (calls 239, 240) | **Judged; being built.** A design judge on another model measured the screens and searched what shipping programs do (`research/judgment-design-1126.md`): Patrick is right, and it is now in figures. `VISUAL.md` section G has sixteen numbered lines; `demos/quietw.md` is the check, to be proved red first. Part A is contract 240A; part B (the Job panel into menus and sheets; the tools' second level) follows it. The outside designer's prompt is `handoff/design-review-prompt.md`; one reading is put to Patrick (`QUESTIONS.md` Q37). |
-| 6 | The window takes every kind of file the command line takes | Not begun. Call 240 changes how: Bring in and Write out become one sheet each with a list, so a new kind of file is a row and not a button. Built with part B. |
-| 7 | The eleven files over 2,000 lines cut | Not begun. |
+| 5b | **Design review, and the window laid out again** (calls 239, 240) | **Judged; being built.** A design judge on another model measured the screens and searched what shipping programs do (`research/judgment-design-1126.md`): Patrick is right, and it is now in figures. `VISUAL.md` section G has sixteen numbered lines; `demos/quietw.md` is the check, to be proved red first. Part A is contract 240A, with its builder now. Part B is designed (call 242): B1 the layout (the job's menu, the level and layers in the view's cluster, the tools in two levels), then B2 the files. The outside designer's prompt is `handoff/design-review-prompt.md`; one reading is put to Patrick (`QUESTIONS.md` Q37). |
+| 6 | The window takes every kind of file the command line takes | **Designed (call 242), not built.** Bring in is one list of the job's files, each with what it is; Write out is one list of what can be written. What a file is, and the reading and writing of every kind, go into one crate the command line and the window both call (`demos/kind.md`, contract 242M); the window's sheets follow (`demos/filesw.md`, part B2). |
+| 7 | The eleven files over 2,000 lines cut | **With a worker** (contract 237S): eight files of the model, the plans, the BIM file and the command line, as a move proved line for line. Not yet accepted. The window's three long files are cut after the layout work. |
 | 8 | The name BuildOS through the code | Not begun. Last, alone. |
 | 9 | Items 9 to 12 judged again | Not begun. |
 
@@ -45,15 +45,20 @@ the build goes on without asking him, and what he is sent is the manual, changed
 
 ## The window
 
-**Being proven on the head, all forty-five, by the lead's own run** (`tools/window-run.sh`,
-nothing beside it, on the build of 20a15ea; its results are added here when it ends).
-Before the kit: `twoplansw`, `tradesw` and `navw` each passed on its first run on the
-build of 18e0ad8, where the double-click in a plan that had failed twice was
-repaired (it was the demonstration's own pacing). With the kit (20a15ea: a press is
-held until a frame has been drawn with it down; one double-click paced inside the
-program's half second), the builder's ten passed each on its first run: `twoplansw`,
-`navw`, `tradesw`, `glassw`, `moneyw`, `pricew`, `screensw`, `movew`, `planw`, `clashw`.
-The window's 110 tests pass.
+**The lead's run of all forty-five, each alone, on the build of 20a15ea** (scripts of
+9b656b1; `tools/window-run.sh`, nothing beside it). **So far twenty-six have passed,
+each on its first run**: `fixes197w`, `benchw`, `bringw`, `buildw`, `cabinetsw`,
+`carryw`, `d4w`, `d5w`, `draww`, `dressw`, `fieldw`, `firstw`, `fixes209w`, `foundw`,
+`gableendw`, `gablew`, `house`, `itemlibw`, `itemneww`, `itemsw`, `layoutsw`, `lightw`,
+`pagew`, `renow`, `roofw`, `roomlinew`. **Two failed twice, on expectations that had
+gone stale, not on the program** (call 241): `quantityw` expected a wall's list of
+figures as it was before calls 185 and 192; `scanw`'s search for file words did not
+leave out a row call 191 added. Both are put right and are to be run again.
+**Seventeen have not been run yet** on this build: `shapebenchw`, `shinglew`,
+`toolsw`, `tracew`, `trimw`, `turnw`, `d2`, `screensw`, `navw`, `twoplansw`, `tradesw`,
+`glassw`, `moneyw`, `pricew`, `movew`, `planw`, `clashw` (the kit's builder passed the
+last ten of these on the same build; the lead's own run of them is owed). The
+window's 110 tests pass.
 
 **The rule that was broken, and is now held by a tool.** No build runs on the machine
 while a timed window demonstration runs. On 2026-11-26 the lead ran builds beside them
@@ -67,8 +72,7 @@ PDF, a maker's model, the database, the field's sheet; write out the issue list 
 the house as glTF, the field's sheet, the database, the cabinet rules. It brings in
 PDF, PNG, JPEG, CSV, XLSX, IFC and PLY.
 
-**Owed to the window from work already in the tree**: its three counts of the chest
-(48) become 57 (`cabinetsw`, `turnw`, `itemlibw`; call 235); a cabinet made by a rule
+**Owed to the window from work already in the tree**: a cabinet made by a rule
 says so; a starter shape is still drawn through the program's list of forms and a
 washer's door is square (call 235, points 4 and 5).
 
@@ -81,11 +85,11 @@ build it.
 |---|---|---|
 | 1 | A clean clone installs on Linux from the README in one pass | A clean copy of 1edb650 builds and passes. The README's steps were last walked on a fresh system on 2026-11-22. |
 | 2 | Every import works, each file picked from a list | Every kind is read at the command line. The window takes seven kinds (step 6). |
-| 3 | A real residential plan PDF opened, scaled, traced; the 3D house builds | `firstw` does it on a public-domain plan; not run on the present build. |
+| 3 | A real residential plan PDF opened, scaled, traced; the 3D house builds | `firstw` does it on a public-domain plan and passed on the build of 20a15ea (the lead's run). |
 | 4 | Clashes show their certainty; the VIF list is sorted by dollars | So at the command line: 11 in the sample house, 5 findings and 6 to verify; 85 questions, the most dollars first. `clashw` not run on the present build. |
-| 5 | A typed or lasered measurement makes a value Known; the clash clears; the price moves in the second window | `fieldw` and `moneyw` passed on earlier builds; not run on the present one. A sheet filled in the field comes back by file (call 234). |
-| 6 | A price per SF or LF grows into line items and rolls back up | `d4` passes; `d4w` not run on the present build. |
-| 7 | The estimate sheet: stretch-out, labor per line, overhead and profit, three suppliers | `d5` passes; `d5w` and `pricew` not run on the present build. |
+| 5 | A typed or lasered measurement makes a value Known; the clash clears; the price moves in the second window | `fieldw` passed on the build of 20a15ea; `moneyw` is among the seventeen still to run. A sheet filled in the field comes back by file (call 234). |
+| 6 | A price per SF or LF grows into line items and rolls back up | `d4` passes; `d4w` passed on the build of 20a15ea. |
+| 7 | The estimate sheet: stretch-out, labor per line, overhead and profit, three suppliers | `d5` passes; `d5w` passed on the build of 20a15ea; `pricew` is among the seventeen still to run. |
 | 8 | xlsx with live formulas, CSV, IFC4 passed by IfcOpenShell; three lenses | So at the command line (`export`; IfcOpenShell 0.9.0 passes the file). Not all of it from the window. |
 | 9 | A judge lists every word on every screen; none is a software term | **Failed three times on 2026-11-16. Not judged since.** The language gate passes. |
 | 10 | A veteran with no software background completes a whole-house takeoff from a PDF | Passed once, on d20ac60 (2026-11-16). The window has changed much since. To judge again. |
@@ -95,7 +99,7 @@ build it.
 
 ## What is not right
 
-- The window is behind the command line and unproven on the head (steps 2 and 6).
+- The window is behind the command line (step 6), and seventeen of its forty-five demonstrations are still to be run on the present build (step 2).
 - **The window is busy and its tools are cramped** (Patrick, call 239). At 1600 by 960
   the panels and bars cover a little over half the window; about ninety controls are
   in view at once; eighteen tools sit in one row with labels near 10 px; Show is said

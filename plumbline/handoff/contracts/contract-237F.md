@@ -1,5 +1,7 @@
 # Contract 237F: every kind of file, in and out, from the window (window builder)
 
+**Not issued as written. Call 242 replaces it: the file kinds come in through the Bring in and Write out sheets (contract 240B2, over `crates/files` from contract 242M). Kept as the record of what was first meant.**
+
 You are the one window builder, in /home/user/roofnerd, on the commit the lead names
 when it starts you (the tree is clean). Read `CLAUDE.md` whole ("The main thing to
 remember"; "Imports matter as much as exports"; "Speak construction"), then
