@@ -19,7 +19,8 @@ make() {
 if [ "${1:-}" = --check ]; then
   bad=0
   if ! make | cmp -s - DECISIONS-index.md; then echo "DECISIONS-index.md is not what DECISIONS.md gives: run plumbline/tools/index.sh"; bad=1; fi
-  for f in demos/*.sh; do
+  # The demonstrations git holds or is about to (a file not yet added is not in the commit this guards: call 241).
+  for f in $(git ls-files -- 'demos/*.sh'); do
     n=$(basename "$f")
     case $n in window.sh|field-job.sh) continue;; esac
     grep -qF "demos/$n" README.md || { echo "README.md does not name demos/$n"; bad=1; }

@@ -10841,3 +10841,41 @@ Ruled.
    size) at 1600 by 960 and 1366 by 768, and is proved red on the window as it
    is today before anything is changed.
 
+
+### Call 241. Two window demonstrations failed in the full run on their own stale expectations; each is put right, with its reason (2026-11-27)
+
+The lead's run of all forty-five window demonstrations, alone, on the build of
+20a15ea (call 237, step 2) failed two, each twice and each the same way. Neither is
+a fault of the program. Each had not been run since the decision that moved what it
+reads; that is the defect, and it is why the whole set is now run and not a chosen few.
+
+1. **`quantityw`: the list of a wall's figures grew by two calls and the
+   demonstration still expected the old list.** A quantity that names something a
+   wall does not have is refused with the figures a wall has. The demonstration
+   expected the sentence to end "... sill length, net length)". The program says
+   "... sill length, net length, outside corners, corner board length, gable area)":
+   outside corners and corner board length are call 185's (worked in `trim.rs`),
+   gable area is call 192's. Both calls were written before the code moved; the
+   demonstration was not moved with them. **Decided:** the demonstration expects the
+   list as calls 185 and 192 made it, whole and in order, to its closing bracket. It
+   still fails if a figure is dropped or one is added without a call.
+2. **`scanw`: the check that no file word is on the map left out the handles a
+   script clicks, and call 191 gave each handle a second row.** The rows named
+   "File <name>" are how a script picks a file from the list and are left out of the
+   search for file words (a person reads the list's own lettering, which the same
+   check does read). Call 191 added a row beginning `size` for each control, with
+   its width and height; the handle's size row carries the handle's name and so
+   the file's ending, and the search found it. **Decided:** the search leaves out
+   the size row of a handle as it leaves out the handle (`size<tab>model<tab>File `),
+   and nothing else. Narrowed, not loosened: proved by putting ".ply" in a row that
+   is not a handle's, where it still fails.
+3. **What this says about the others.** Twenty-six passed on their first run. A
+   demonstration that reads a sentence whole, or the map whole, is run whenever the
+   sentence or the map's form is changed: `tools/window-run.sh all` is the check,
+   and STATUS.md says on which build it last ran.
+4. **The commit hook's list check reads what the commit holds.** It refused this
+   call's commit because a builder's demonstration, not yet added to git and not
+   in the commit, is not in the README's list. The check guards the commit: it now
+   reads the demonstrations git holds or is about to (`git ls-files`), and still
+   refuses a demonstration added without its row (proved: one added, refused; taken
+   out, passed).

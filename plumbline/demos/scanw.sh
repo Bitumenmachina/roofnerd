@@ -268,11 +268,11 @@ grep -q $'^model\tPut the message away\t' "$T/map-twice.txt" || { echo "FAIL: th
 echo "    the message card has its mark; the mark puts it away, and so does Esc with no tool in hand"
 # No software word is anywhere a person reads: in what was said, or on the map (the rows named
 # "File <name>" are the handles a script clicks, and are left out). The folder is named
-# "this job's folder" and never by its place.
+# "this job's folder" and never by its place. A handle's size row (call 191) is left out with the handle: call 241.
 if grep -qiE 'tmp|\.ply|y up|z up|vertex|binary|point cloud|mesh' "$SAID"; then echo "FAIL: what the window said has a software word or a path in it"; grep -iE 'tmp|\.ply|y up|z up|vertex|binary|point cloud|mesh' "$SAID"; exit 1; fi
 for m in map-list map-brought map-side map-stood; do
   [ -s "$T/$m.txt" ] || { echo "FAIL: the session kept no $m"; exit 1; }
-  if grep -v $'^model\tFile ' "$T/$m.txt" | grep -qiE 'tmp|\.ply|y up|z up'; then echo "FAIL: the map ($m) has a software word or a path in it"; grep -v $'^model\tFile ' "$T/$m.txt" | grep -iE 'tmp|\.ply|y up|z up'; exit 1; fi
+  if grep -vE $'^(size\t)?model\tFile ' "$T/$m.txt" | grep -qiE 'tmp|\.ply|y up|z up'; then echo "FAIL: the map ($m) has a software word or a path in it"; grep -vE $'^(size\t)?model\tFile ' "$T/$m.txt" | grep -iE 'tmp|\.ply|y up|z up'; exit 1; fi
 done
 echo "    nothing said and nothing on the map has tmp, .ply, y up or z up in it (4 maps, $(wc -l < "$SAID") lines said)"
 grep -q $'^model\tMeasured in meters\t' "$T/map-list.txt" && grep -q $'^model\tMeasured in feet\t' "$T/map-list.txt" || { echo "FAIL: the scan list's two choices are not on the map"; exit 1; }
