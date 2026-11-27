@@ -10940,3 +10940,26 @@ builds it. Nothing here changes a number, a meaning or a saved job.
    each. *For other programs*: BIM model (IFC); Issue list (BCF); 3D file (glTF);
    Plan as CAD (DXF); Price list; Assemblies; Items. A row is a name, who it is
    for and the file it makes. A new kind is a row.
+6. **Three things about B1 not taken from the judge as written, and why** (added the
+   same day, before the contract).
+   - **Move and Delete stay in the tools.** The judge put them in the selected
+     thing's panel. Moving a thing is the act Patrick named ("the whole point of
+     clash is also moving a bathroom vanity around"): it stays one press from rest
+     and works on what is pointed at, with nothing selected first. They are also in
+     the selected thing's panel, by word. There is no Select tool: with no tool in
+     hand a click selects, as today, and Esc puts a tool down.
+   - **A new, empty job shows less, and grows.** Sixteen things to press at the
+     most (G2) cannot hold the whole dock and the whole view cluster. On a job with
+     nothing drawn: the six tools of a first takeoff and one "More tools"; 3D and
+     Plan and the level; the job's name; the next step. Undo and Redo come with the
+     first thing done, the layers with the first thing to show, the price with the
+     first thing priced, Walk and the compass with the first wall. Nothing that has
+     come goes away again on that job.
+   - **Until B2, Bring in and Write out open a sheet whose rows are today's kinds**
+     (the nine and the six, as a list). B2 puts the list of files in its place.
+7. **Where the rest goes** is the judge's section 5 as written, but for: Layouts
+   (stays under Lists in the estimate window, call 240); the price (keeps its
+   cents); Set scale and Line up (beside the plan's own row in Layers, and in the
+   guide's second step); Sun and Tilt as I dive (the view cluster's last control,
+   "View"); the three panel switches (gone: there are no standing panels to
+   switch; Tab hides all glass and brings it back); Lettering (the job's menu).
