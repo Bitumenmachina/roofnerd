@@ -28,7 +28,9 @@ Commit nothing, push nothing.
 
 - Each table reader's headings test run over the five files `demos/kind.md` marks
   "(first)" and over the two price lists and the prior estimate: the whole line for
-  each. **Stop there for the five** and say so: the lead rules on each line.
+  each. **Decide nothing for the five**: write the lines in the report, have
+  `demos/kind.sh` print them without passing or failing them, and go on with the
+  rest. The lead rules on each line.
 - The list of verbs you will move, with the lines each has today, and which the
   window already spells itself in `crates/app/src/bring.rs` and `plans.rs` (do not
   change the window: that is contract 240B2).
@@ -38,8 +40,8 @@ Commit nothing, push nothing.
 No number, no meaning, no saved job, no file written out, no sentence the command
 line says today, no expectation of a test or a demonstration. If something will not
 move without changing one of those, leave it where it is and say why. Files you may
-touch: `crates/files/**`, `crates/cli/src/**`, `crates/world/src/tables.rs`,
-`fieldsheet.rs`, `database.rs` (only to make a headings test callable),
+touch: `crates/files/**`, `crates/cli/src/**`, `crates/world/src/tables.rs` and its parts in
+`tables/` (call 245), `fieldsheet.rs`, `database.rs` (only to make a headings test callable),
 `Cargo.toml`, `Cargo.lock`, `demos/kind.sh`, `README.md`, `LICENSES.md` by its tool.
 
 ## How it is run

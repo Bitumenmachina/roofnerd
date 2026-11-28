@@ -46,8 +46,10 @@ if [ "${1:-}" = "--quick" ]; then echo "committed: PASS (quick). Every crate and
 # crates are always built afresh from the archive.
 SCRATCH="$HERE/target/committed"
 rm -rf "$SCRATCH"; mkdir -p "$SCRATCH/debug"
+# (COMMITTED_FROM=<a build folder> links in from that one, when this folder's own has no build.)
+FROM="${COMMITTED_FROM:-$HERE/target}"
 for part in deps build .fingerprint; do
-  [ -d "$HERE/target/debug/$part" ] && cp -al "$HERE/target/debug/$part" "$SCRATCH/debug/$part"
+  [ -d "$FROM/debug/$part" ] && cp -al "$FROM/debug/$part" "$SCRATCH/debug/$part"
 done
 rm -rf "$SCRATCH"/debug/.fingerprint/plumbline* "$SCRATCH"/debug/build/plumbline*
 # (Where this folder has no build yet there is nothing to link in and nothing to take out: the check then builds everything afresh.)
