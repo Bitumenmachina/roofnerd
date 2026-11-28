@@ -11219,3 +11219,73 @@ what any `import` does: only what `kind` says, which is new.
    picture's ending that is not a picture is not read, with the reader's reason, as
    a PDF is. Taken: it is the reader's own test, and it is never guessed from its
    inside what else the file might be.
+
+### Call 248. Part A of the new layout came back part done: what was found, and what is ruled before it goes on (2026-11-28)
+
+The builder of contract 240A handed back with every line of `quietw` that part A
+owes passing at 1600 by 960, one failing at 1366 by 768 (G14), and twelve
+demonstrations, two screen sizes and the gates not run. The lead read the four
+pictures; a design judge on another model read them cold against `VISUAL.md` G
+(`research/judgment-quiet-A-1128.md`). It is quieter at rest: the house keeps 77 %
+of the window where it kept 55 %, the tools are larger, unboxed and spaced, and
+Wall is found at a glance. **It is not accepted.** What is so, and what is ruled:
+
+1. **The price must be read with what rides on it.** The judge found the price
+   with no mark and no name and read it as Known beside "85 to verify". On the
+   sample house the model holds the price Known (no line's arithmetic rests on an
+   Assumed value), so no mark is the rule working. But the builder also took "$
+   riding" off the bar, and that was the sentence that told the truth about this
+   price: $17,060.62 of it rides on the 85 questions. **Ruled**: beside the price
+   the bar says "85 to verify, $17,060.62 riding", one control, in ink, opening
+   Verify in field. It is not the price written twice (G11): it is another figure.
+   The word **Price** stands before the price, at the caption's size: a dollar
+   figure without its name is not a builder's figure (job cost and price are two).
+2. **No picture showed a mark, so no picture proved the marks.** The sample house
+   shows Known figures only. `demos/quietw.md` gains a view of a job entered
+   Assumed (the box house of `demos/movew.sh`), where the price has no figure and
+   a wall's figures are Assumed, with the marks counted by hand, on the map and in
+   the picture's own dots.
+3. **Dropped from the bar, and taken**: the counts of Known, Assumed and Unknown
+   (they come back when the pointer rests on the price, part B1); the word of how
+   sure (the mark says it); the allowances chip (the estimate window's recap says
+   Allowances on its own line). The panel that summed the job with nothing
+   selected is gone, as call 240 point 6 asked: the estimate window holds it.
+4. **One place for a message means one.** A tool's instruction is said once, in
+   its strip of fields, and no card repeats it. On a new job the line "Pick a tool
+   below..." goes: Next steps says where to start. **A message that refuses, asks,
+   or says something was left out or not read does not go by itself**: it stays
+   until its mark or Esc puts it away or the person's next act on the model
+   (import loss is reported, never silent, and a card that leaves after twenty
+   seconds is silent to a person who looked away). A plain "Saved." or "Opened."
+   goes by itself, and Last message brings the last one back.
+5. **The view fits the house into the part of the window that is free.** At 1366 by
+   768 the tools stand over the foot of the house at rest, and the strip of fields
+   over the wall being drawn (G14). Wherever the view fits a thing (a job opened,
+   Home, a flight to a thing, 3D to Plan), it fits it into the window less the
+   glass standing at its edges. `navw` measures the view's path: a figure of it
+   that moves is brought to the lead, not edited.
+6. **Lettering and colour, from the judge's measures.** A control's only word and
+   a sentence are 13 px ("Show", "Hide", the first step's sentence, the note under
+   a finish). Every colour lettering is set in reaches 4.5 to 1 on the glass at its
+   lightest: "Saved" in green gave 3.87, the faint and soft inks 4.18 to 4.38. The
+   colour test passed while the window failed, so the test is wrong: it names
+   every colour lettering is set in, not three. **Green leaves the glass** (G8:
+   three colours carry meaning): "Saved" and "Not saved" are words in ink; a plain
+   message has no square.
+7. **Controls at rest without boxes, where part A reaches.** The view's row (3D,
+   Plan, Walk, Frame, Tilt as I dive, Sun) loses its boxes as the tools did; the
+   one in force keeps the accent's wash. The Show chips, Add level, Add drawing,
+   Smaller and Larger stand in panels part B1 takes away, and are left to it.
+8. **The groups of tools must read.** The gaps pass by number and the eye sees no
+   groups. A hairline stands between two groups.
+9. **The job's name is whole where it fits.** "Sample whole house (not a..." was
+   cut with half the bar empty. The name is whole up to two fifths of the window's
+   width; past that it ends in an ellipsis and the whole name is said when the
+   pointer rests on it. The new job of `quietw` is named as a job is.
+10. **Left to part B1, and said there**: the left panel (797 tall, about 33 things
+    to press, and its "more below" over a row at 1366); the two rows of tools at
+    1366; the compass card (97 tall: in the view's cluster at 40); the card at the
+    lower right that says only "3D"; the panel for a thing's eleven boxed buttons.
+11. **Owed as the contract said**: the twelve demonstrations and the five more the
+    builder named, each run and passing or stopped on with what it expects and what
+    it gets; `quietw` at 1920 and 2560 wide; the three gates.

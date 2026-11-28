@@ -17,6 +17,9 @@ The sample whole house (`plumbline sixteen`), opened cold.
 - **At rest**: 3D, nothing selected, no tool in hand. At 1600 by 960 and at 1366 by 768.
 - **At work**: a wall of the first floor selected and the Wall tool in hand. At 1600 by 960.
 - **A new job**: a job whose file is not there yet. At 1600 by 960.
+- **A job entered Assumed** (call 248): the box house `demos/movew.sh` makes (24 by
+  16 ft, walls 9 ft, every value entered Assumed from a made-up survey, no overhead
+  or profit set), its east wall selected, on plan. At 1600 by 960.
 
 ## What is measured, the figure today, and the figure it must reach
 
@@ -39,6 +42,21 @@ within what is said, or the script is wrong and is put right before it is truste
 | 14 | At work, the area of any floating thing over the selected wall's box on screen | more than 0 (a message lies on it) | 0 |
 | 15 | At each of 1366 by 768, 1600 by 960, 1920 by 1080, 2560 by 1440 and each step of lettering: controls or figures whose box runs past their card or the window | at 1366 the count of unknowns is cut | 0 |
 | 16 | The estimate window at 880 wide, largest lettering: the count of tabs and of lines they take | 10 tabs on 2 lines, one cut | at most 5, on 1 line |
+
+## What call 248 added, after part A's first hand-back (figures by hand)
+
+| | What the script works out | Must be |
+|---|---|---|
+| M1 | On the job entered Assumed: the east wall is 16 ft long and 9 ft tall, so its face is 16 x 9 = 144.00 SF, its length 16.00 LF, its cost 144 x $3 = $432.00. Each is Assumed in the model. The marks the map says stand before those three figures in the wall's panel | 3 at the least, each the half-filled amber circle, each within 16 px to the left of its figure; the builder lists the model's status of every figure the panel shows, and every Assumed or Unknown one has its mark |
+| M2 | In the picture of that screen, inside each mark's box: dots of the mark's colour; in each figure's own lettering: dots of amber or red | more than 0 in every mark; 0 in every figure |
+| M3 | On the same job the price has no figure (no overhead or profit is set): what stands before "no figure" in the top bar | the open red circle of Unknown |
+| M4 | On the sample house at rest: what the top bar says beside the price | "85 to verify, $17,060.62 riding" (the figures `plumbline vif` gives), and the word Price before the price |
+| M5 | The count of places a message stands, at rest, at work and on the new job; and any run of four words or more written in two places in view | 1 place at the most; 0 runs written twice |
+| M6 | At work at 1366 by 768 as at 1600 by 960: line 14 | 0 |
+| M7 | The job's name in the top bar | whole (no ellipsis) where it is narrower than two fifths of the window |
+| M8 | In the pictures at rest and on the new job: the contrast of each piece of lettering against the glass beside it, by its own dots | 4.5 to 1 at the least (3 to 1 at 24 px or more); 0 dots of green in any lettering |
+
+Part A owes M1 to M8.
 
 Lines 8 and 9 are not measured on the screen but in the colours themselves, by a test
 in `crates/app/src/theme.rs`, written first: every colour used for lettering on the
