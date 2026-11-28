@@ -11360,3 +11360,18 @@ places in thirty-one scripts; not all are on the house.
    no more demonstrations against fixed dots and hands back what it has.
 6. **Then:** 250P accepted and committed; part A laid over it; a judge that did
    not build it reads the new pictures; all forty-five run by the lead.
+
+## Call 251 (2026-11-28): Patrick's ruling: the name is BuildOS, and nothing waits on him
+
+Patrick, asked what only he could give: "Use BuildOS nothing waits on me".
+
+1. **The name is BuildOS.** Call 115 left unchecked whether the name was free to
+   use, and call 246, point 6, left that to him to ask. He has ruled: it is used.
+   The question is closed and is not put to him again. The rename (call 246,
+   contract 246N) goes ahead in its place in the order, last and alone. No search
+   with the product's name leaves this machine, as before.
+2. **Nothing waits on him.** The work runs to the release candidate on the lead's
+   calls (call 217). `QUESTIONS.md` Q37 keeps its working answer. What only he can
+   place (a hand estimate, a marked PDF, real scans, each sanitized) is still his
+   to place when he chooses; item 13 stays pending until there is one, and the
+   production ruling is asked once, after the tag.

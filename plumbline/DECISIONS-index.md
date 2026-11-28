@@ -280,3 +280,4 @@ starts on. A call with "as built" in its heading is the record of what was made.
 | 11223 | Call 248. Part A of the new layout came back part done: what was found, and what is ruled before it goes on (2026-11-28) |
 | 11293 | Call 249. A window run of many gives way between two of its demonstrations (2026-11-28) |
 | 11315 | Call 250 (2026-11-28): a place on the house in a demonstration is a place in the model, not a dot of the window; part A's moved lines ruled |
+| 11364 | Call 251 (2026-11-28): Patrick's ruling: the name is BuildOS, and nothing waits on him |
