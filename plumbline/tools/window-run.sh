@@ -4,7 +4,7 @@
 #   tools/window-run.sh navw tradesw        the ones named
 # Run from plumbline/. It builds nothing: build first (cargo build -p plumbline -p plumbline-app).
 # It waits until no cargo or rustc is running and no command-line demonstration of tools/check.sh is,
-# lets in a command that waited on the last window run, holds the lock tools/quiet.sh reads, runs each
+# lets in a command that waited on the last window run or waits between two of this one, holds the lock tools/quiet.sh reads, runs each
 # demonstration on a virtual display, runs a failure once more before it is believed, and writes
 #   target/window-run/results.txt     PASS or FAIL, the name, the run, the times
 #   target/window-run/<name>.<run>.log
@@ -35,6 +35,9 @@ trap 'rm -f "$LOCK"' EXIT
 touch "$LOCK"
 bad=0
 for n in "${names[@]}"; do
+  # A command that waits on the lock is let in between two demonstrations of one call: the lock is put down until it has had its turn
+  # (a call naming eighteen held it for three hours on 2026-11-28 and a worker's check with it: call 249).
+  if waiting; then rm -f "$LOCK"; while waiting; do sleep 15; done; touch "$LOCK"; fi
   r=FAIL
   for run in 1 2; do
     while pgrep -x rustc >/dev/null || pgrep -x cargo >/dev/null || busy; do sleep 10; done

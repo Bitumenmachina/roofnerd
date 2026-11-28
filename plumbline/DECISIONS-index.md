@@ -278,3 +278,4 @@ starts on. A call with "as built" in its heading is the record of what was made.
 | 11100 | Call 246. The name BuildOS through the code: what changes, what never does, how it is proved (call 237 step 8; 2026-11-28; the lead's design, not built) |
 | 11173 | Call 247. What a file is said to be: call 242's rule put right from the readers' own answers (2026-11-28; rulings for contract 242M, before its script expects them) |
 | 11223 | Call 248. Part A of the new layout came back part done: what was found, and what is ruled before it goes on (2026-11-28) |
+| 11293 | Call 249. A window run of many gives way between two of its demonstrations (2026-11-28) |

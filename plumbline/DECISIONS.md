@@ -11289,3 +11289,25 @@ Wall is found at a glance. **It is not accepted.** What is so, and what is ruled
 11. **Owed as the contract said**: the twelve demonstrations and the five more the
     builder named, each run and passing or stopped on with what it expects and what
     it gets; `quietw` at 1920 and 2560 wide; the three gates.
+
+### Call 249. A window run of many gives way between two of its demonstrations (2026-11-28)
+
+Call 244 let a waiting command in between two calls of `tools/window-run.sh`. On
+2026-11-28 the lead told the layout's builder to name eighteen demonstrations in one
+call, "so the lock is held once"; the call held the lock for three hours, the files
+worker's whole check waited behind it, and a restart then stopped both. The
+instruction was the lead's mistake, and a tool that can be told to starve another
+is the fault under it.
+
+**Ruled**: before each demonstration of a call, `tools/window-run.sh` looks for a
+command waiting on the lock (`<lock>.waiting`, touched by `tools/quiet.sh`). If one
+is, it puts the lock down until the mark has gone quiet for forty seconds, takes the
+lock again, and waits as before for cargo and for a command-line demonstration to be
+done before it starts the next. Nothing runs beside a timed demonstration, as
+before; what changes is who goes next.
+
+**Proved** on a scratch lock with two stand-in demonstrations of twenty seconds and
+a command that asks for the lock six seconds in. With the tool as it was, the
+command got in two seconds after the second demonstration ended (red). With the
+change it got in one second after the first ended, and the second began twenty-nine
+seconds later (green).
