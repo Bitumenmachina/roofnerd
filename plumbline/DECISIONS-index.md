@@ -276,3 +276,4 @@ starts on. A call with "as built" in its heading is the record of what was made.
 | 11029 | Call 244. The three tools that share the machine give way to each other (2026-11-28) |
 | 11057 | Call 245. Call 237 step 7, as built: eight long files cut, accepted (2026-11-28) |
 | 11100 | Call 246. The name BuildOS through the code: what changes, what never does, how it is proved (call 237 step 8; 2026-11-28; the lead's design, not built) |
+| 11173 | Call 247. What a file is said to be: call 242's rule put right from the readers' own answers (2026-11-28; rulings for contract 242M, before its script expects them) |

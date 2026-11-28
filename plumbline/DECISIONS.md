@@ -11169,3 +11169,53 @@ have just passed.
    is free to use. No search with the product's name leaves this machine.
 
 Contract: `handoff/contracts/contract-246N.md`.
+
+### Call 247. What a file is said to be: call 242's rule put right from the readers' own answers (2026-11-28; rulings for contract 242M, before its script expects them)
+
+The worker on contract 242M made each table's headings test callable and ran them
+over the made-up files. Four things in call 242 point 1 and in `demos/kind.md` were
+the lead's and were wrong or unsaid. Nothing here changes a number, a saved job or
+what any `import` does: only what `kind` says, which is new.
+
+1. **A particular table is said alone.** Run as call 242 wrote it, the starter
+   assemblies came out "assemblies, or a prior estimate" and the starter items
+   "items, a price list, or a prior estimate": the two general readers take almost
+   any table with a name in its first column. A person asked that of every file is
+   asked a question nobody has. So: where a particular table's reader finds every
+   heading it needs (a field sheet; assemblies; items; shapes; connections; cabinet
+   rules, the first of them in that order), the file is said to be that table and
+   nothing else. A price list and a prior estimate are said only where no
+   particular table is found (a prior estimate first where there is a quantity or
+   an amount column, as before). The five rows marked "(first)" in `demos/kind.md`
+   are now exact: assemblies; items; shapes; connections; cabinet rules.
+2. **The person can still say otherwise, from the readers' whole answer.**
+   `crates/files` gives two things for a file: what it is said to be (point 1: the
+   line `plumbline kind` prints and the window lists) and every kind whose reader
+   would take it, what is said first (for the window's "it is something else":
+   contract 240B2). No reader is made stricter or looser for either.
+3. **My database is a workbook with two or more tabs named as the program's
+   tables.** `import database` takes a workbook with one such tab and names any
+   other tab as left alone, and it stays so: an owner may add a tab of notes to
+   their database and bring it back. But a supplier's workbook with one tab called
+   Prices is, by that test, a database, and would be offered as one first. With two
+   or more named tabs it is said to be my database, whatever other tabs it has;
+   with one, it is said to be what that tab's table is (point 1), and my database
+   is among what the person may say otherwise. (The worker's first answer, every
+   tab a table of the program, would have stopped listing a database with a tab of
+   notes: not taken.) The tabs' names are the reader's own list (`TABS`).
+4. **Measured marks are the marks that would come in as quantities, and what was
+   not read is said.** A note measures nothing and is not counted. A mark that
+   cannot be read is not counted and is not passed over: the line says how many.
+   `demos/marks/marked-plan.pdf` (7 marks: 2 lengths, 1 run of lengths, 2 areas, 1
+   count, 1 note): "a plan, with 6 measured marks, or a maker's sheet".
+   `demos/marks/unreadable.pdf` (4 marks: 1 length, 3 not read): "a plan, with 1
+   measured mark (3 more not read), or a maker's sheet". The two counts come from
+   the function `plumbline marks` and `import marks` count with, not a second
+   count. (`demos/kind.md` had said that file does not open. It opens: it is its
+   marks that are not read. The lead's mistake, from the file's name. A PDF that
+   does not open is made by the script.)
+5. **A picture is opened to see that it is one.** Call 242's table had nothing
+   looked at for a PNG or a JPEG. The worker reads its size, so a file with a
+   picture's ending that is not a picture is not read, with the reader's reason, as
+   a PDF is. Taken: it is the reader's own test, and it is never guessed from its
+   inside what else the file might be.
