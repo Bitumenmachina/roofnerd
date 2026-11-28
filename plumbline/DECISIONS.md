@@ -10963,3 +10963,65 @@ builds it. Nothing here changes a number, a meaning or a saved job.
    guide's second step); Sun and Tilt as I dive (the view cluster's last control,
    "View"); the three panel switches (gone: there are no standing panels to
    switch; Tab hides all glass and brings it back); Lettering (the job's menu).
+
+### Call 243. The estimate window at three depths: sixteen divisions, their items, an item's places (part C of the new layout; 2026-11-28)
+
+Written while part A is with its builder, so that the contract is ready. The judge's
+section 7 is the start; what the model already has decides the rest. The sample
+whole house has 432 lines; the model already adds them up to 56 items
+(`plumbline estimate <file> by-item`, `Estimate::by_item`), and to sixteen
+divisions. Today the estimate window writes all three one under the other: the
+sixteen, then the 56 under "The estimate, by item", then the 432 under "The sheet":
+about 520 rows, and every line said twice. Patrick's rule is that depth is on demand
+and "macro to micro means zooming into the same job, never changing screens".
+
+Ruled.
+
+1. **One table at three depths.** Under the recap, the sixteen divisions, each a row
+   with its figure. A division opens to its items, one row an item (what it is, its
+   places when more than one, quantity, unit cost, amount). An item in more than one
+   place opens to its places: the lines as "The sheet" has them today, with the
+   same fields. An item in one place is its line: its fields are on the item's row.
+   "The estimate, by item" and "The sheet" as two tables are gone. No figure is
+   worked in the window: the division's is the model's, the item's is `by_item`'s,
+   the line's is the line's.
+2. **What is open when the window opens.** Every division that has a line is open to
+   its items; no item is open to its places. For the sample house that is 16 rows
+   and 56 rows where there were about 520. A row that opens says so with a mark at
+   its left and keeps what was opened while the program runs (the screen's memory,
+   not the job's: the saved job does not change). One control at the head of the
+   table: "Open all" and "Close all".
+3. **A price typed on an item's row in more than one place** is not built in this
+   part unless it is the road call 207 already made (`set <item> price`): the
+   builder says, before any code, whether an item of `by_item` is what that verb
+   prices by name, with the sample house's "Wall framing, 2x6 at 16 in" worked both
+   ways. If it is the same road, the row takes a unit cost and the model sets it; if
+   it is not, the row is read and its places are where a price is typed, and the
+   lead rules on the rest. No second arithmetic either way.
+4. **Four tabs: Estimate, Verify in field, Clashes, Lists.** Lists opens Building,
+   Roof, Mechanical, Electrical, Plumbing and Layouts (each as it is today; one
+   with nothing in it is left out as today). They are lists of what is in the
+   model, not of the estimate's lines, which is why they are not filters of the
+   lines as the judge had them. **Budget is the other side of a two-way switch at
+   the head of Estimate** ("Estimate" and "Budget": the price per SF or LF and the
+   detail it grows into are one job at two depths). Each keeps its name on the map
+   and is reached by the way (call 242, point 3).
+5. **Not priced is said once.** A division with lines not priced says so on its own
+   row ("4 lines not priced"); a line's empty cell has the open red circle and no
+   words. No more than two red words in a block (G12). A division with no figure
+   has the mark and an empty cell, not "no figure".
+6. **The head of the window** is one bar: the job's name, the price once with its
+   cents, "N to verify" (it opens Verify in field), and Estimate, Plan, Two plans.
+   The counts of Known, Assumed and Unknown come when the pointer rests on the
+   price. The name of the program is not in it.
+7. **Rows and fields.** A row is 32 tall; lettering is the four sizes of call 240;
+   a field is drawn as a field under the pointer and when it is being typed in,
+   and as its figure otherwise; a line's formula and where its figures came from
+   open under the line with one press, as they do today or nearer. The recap
+   keeps its rows and loses its shadow. The estimate window is not glass
+   (`VISUAL.md` F4 stands).
+8. **Two plans**: each plan's level and its layers are one control at its upper
+   left; the line between is 1 px; where the pointer is, is said at the lower left
+   of its own plan in the smallest lettering.
+9. **The demonstration is `demos/estimatew.md`**, written with this call, figures
+   by hand from the sample house. `quietw` line 16 is this part's too.
