@@ -11096,3 +11096,76 @@ are cut after the layout work, which is rewriting them.
 `CLAUDE.md`'s table of where each thing is changed names the new files (three rows
 put right, one added). Older calls and `STATUS-history.md` that name
 `crates/world/tests/world.rs` for a test mean the files `world*.rs` beside it.
+
+### Call 246. The name BuildOS through the code: what changes, what never does, how it is proved (call 237 step 8; 2026-11-28; the lead's design, not built)
+
+Calls 115 and 174 (point 4) left the folder, the crates, the two commands and the
+environment names called plumbline, to be renamed in one change of their own. This
+call settles that change before anyone makes it. It is made last, alone: after the
+layout (parts B1, B2 and C) and the cut of the window's three long files, with no
+other working copy open, on a head whose whole check and all window demonstrations
+have just passed.
+
+1. **What changes: the names of things in the repository, by one rule.**
+   - The folder `plumbline/` is `buildos/`.
+   - The crates: `plumbline-world`, `-plans`, `-sheets`, `-ifc`, `-roofing`, `-files`
+     and `-app` are `buildos-world` and so on; the command line's crate `plumbline`
+     is `buildos`. The folders under `crates/` keep their names.
+   - The two commands a person types: `plumbline` is `buildos`; `plumbline-app` is
+     `buildos-app`.
+   - The environment names: `PLUMBLINE_BIN`, `_MAP`, `_SETTINGS`, `_GRAPHICS`,
+     `_TRACE`, `_SHOTS`, `_FRAME`, `_RUN_DOTS`, `_FOG` are `BUILDOS_` and the same
+     word. One name each: the old name is not read. (Nobody but the demonstrations
+     and Patrick's one try has set them; the settings folder is `buildos` already.)
+   - Every sentence the program says that names a command ("Enter one with:
+     plumbline measure ...", every usage line) says `buildos`. This is a change to
+     what a person reads, decided here: an expectation of a test or a demonstration
+     that holds such a sentence changes by the same substitution and by nothing
+     else.
+   - The documents that say what is so now (`CLAUDE.md`, the two READMEs, `SPEC.md`,
+     `STATUS.md`, `VISUAL.md`, `QUESTIONS.md`, `PROPOSALS.md`, `PORTMAP.md`,
+     `LICENSES.md` by its tool, `NOTICE`, the manual, `divisions/`, `handoff/README.md`
+     and any contract not yet issued), the scripts, the hook and the three gates.
+2. **What never changes: the words of the file format** (call 115). `pl::` at the
+   head of every attribute of a saved job; the job's header (`plumbline/<name>` as
+   its id, `plumbline` as its author); `Plumbline_Values` and `Plumbline_Roof` in a
+   written BIM file and the two words in its `FILE_NAME` line; the Producer of a
+   written PDF. Jobs and models already written must keep reading, and a job saved
+   after the change is byte for byte the job saved before it: the sample whole
+   house stays `880d9fd3c364b5f7`. That checksum, unmoved, is the proof.
+3. **What is left as it was written: the records of what was so.** `DECISIONS.md`
+   before this call's "as built", `STATUS-history.md`, `research/`, the issued
+   contracts in `handoff/contracts/`, the two old hand-off notes. They say
+   `plumbline/` and mean the folder that is now `buildos/`; the head of
+   `DECISIONS.md`, `DECISIONS-index.md` and `handoff/README.md` each say so in one
+   line. A demonstration's file name is not a name of anything and is left (call
+   174).
+4. **How it is proved.**
+   - **The change is a script.** The worker hands back the script that makes the
+     change from the head (the substitutions in order, and `git mv`), not only the
+     changed tree. The lead runs the script on the head and gets the worker's tree
+     with no difference. A hand edit the script does not make is listed, each with
+     its reason.
+   - **Before and after, the same.** Taken on the head before: the names of every
+     test; `tools/check.sh`'s counts; what every command-line demonstration prints;
+     what the command with no verb prints. After: the same lists and outputs with
+     the substitution applied to the old ones, line for line; the same counts; the
+     sample house's checksum unmoved; a job saved by the old program opens in the
+     new and saves byte for byte.
+   - **A gate for the name**, `tools/gate-name.sh`, in the commit hook: the word
+     plumbline, in any case, is nowhere in the tree but in the places points 2 and
+     3 name, each listed in the gate with its reason. Proved red (the word put in a
+     source file fails it) before it is trusted.
+   - All window demonstrations pass on the renamed build (`tools/window-run.sh
+     all`), the three gates, the licences and the port map pass, and
+     `tools/committed.sh` passes on the commit.
+5. **Owed after it, as a call of its own: what a newly written file says of the
+   program that wrote it.** A job's author, a BIM file's originating program and a
+   PDF's Producer are read by a person in another program, and say plumbline. To
+   say BuildOS there moves the bytes of every file written and so the sample
+   house's checksum, once; older files must still read. It is not mixed into the
+   rename, whose proof is that no written byte moves.
+6. **Not checked, and Patrick's to ask for** (call 115): whether the name BuildOS
+   is free to use. No search with the product's name leaves this machine.
+
+Contract: `handoff/contracts/contract-246N.md`.
