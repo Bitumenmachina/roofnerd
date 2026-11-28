@@ -35,8 +35,12 @@ the build goes on without asking him, and what he is sent is the manual, changed
   whole house (`plumbline sixteen`) is 880d9fd3c364b5f7, as it has been, and prices at
   $393,981.66.
 - **The window's own tests, on the build of 20a15ea**: 110 pass.
-- **`tools/committed.sh` passed on 1edb650** (108 test runs from a clean copy). It has
-  not been run since; it is owed before the next push that changes code.
+- **`tools/committed.sh` passed on 1edb650** (108 test runs from a clean copy). **The
+  cut (2b2b231) was pushed on its quick form only** (every crate and every file a
+  demonstration reads is in the commit): the machine was restarted while the full
+  one ran, and two commits were not yet on the branch. The full one is running on
+  2b2b231 again; until it has passed, the pushed head has not been built from a
+  clean copy by the lead.
 - After the earlier program left the branch, the roofing crate's 122 tests were run
   again and pass (three of them read two of its files, now kept byte for byte in
   `crates/roofing/tests/engine/`). The two rewritten gates were each proved red and
