@@ -273,3 +273,4 @@ starts on. A call with "as built" in its heading is the record of what was made.
 | 10845 | Call 241. Two window demonstrations failed in the full run on their own stale expectations; each is put right, with its reason (2026-11-27) |
 | 10883 | Call 242. Part B of the layout, and every kind of file through one list: what a file is, where the reading lives, how a moved control is still found (2026-11-27; the lead's design, not built) |
 | 10967 | Call 243. The estimate window at three depths: sixteen divisions, their items, an item's places (part C of the new layout; 2026-11-28) |
+| 11029 | Call 244. The three tools that share the machine give way to each other (2026-11-28) |

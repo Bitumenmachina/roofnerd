@@ -11025,3 +11025,31 @@ Ruled.
    of its own plan in the smallest lettering.
 9. **The demonstration is `demos/estimatew.md`**, written with this call, figures
    by hand from the sample house. `quietw` line 16 is this part's too.
+
+### Call 244. The three tools that share the machine give way to each other (2026-11-28)
+
+What was seen. The lead's window run is done in parts, one `tools/window-run.sh`
+call a demonstration, one after another. Each call let go of the lock for less
+than a second before the next took it; `tools/quiet.sh` looks every fifteen
+seconds; so a worker's build never got in, and worker 237S's whole check was
+killed three times at two hours without having run. And `tools/check.sh` ran its
+sixty-nine command-line demonstrations without looking at the lock at all: a
+demonstration that reads a scan beside a timed window demonstration is the same
+fault as a build beside one.
+
+Ruled, and built.
+
+1. **A command that waited goes next.** `tools/quiet.sh` says it is waiting
+   (`<lock>.waiting`, touched each time it looks). `tools/window-run.sh` does not
+   take the lock while that mark is under forty seconds old. Then it waits, as
+   before, for cargo to be gone.
+2. **A command-line demonstration of the whole check is not run beside a window
+   demonstration.** `tools/check.sh` waits for the lock before each one, says one
+   is running (`<lock>.busy`), and gives way if a window run took the lock in the
+   same moment. `tools/window-run.sh` waits for that mark to go before each
+   demonstration; a mark over twenty minutes old (a check that was killed) is not
+   believed.
+3. **Proved on a scratch lock**: no mark, not waiting and not busy; `quiet.sh` on
+   a held lock is seen waiting within three seconds; a waiting mark two minutes
+   old and a busy mark twenty-five minutes old are not believed; with the lock
+   gone `quiet.sh` runs its command. No gate and no expectation is changed.

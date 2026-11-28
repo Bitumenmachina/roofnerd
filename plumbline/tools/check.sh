@@ -5,8 +5,8 @@
 #                             and the sample whole house's checksum
 #   tools/check.sh --window   the window's own tests as well (a long build the first time)
 # Run from plumbline/. Each test program is built, run and deleted before the next: the model's
-# test programs together are over 6 GB. Every cargo command waits for a timed window run to end
-# (tools/quiet.sh). It writes target/check/summary.txt and one log for each demonstration, and
+# test programs together are over 6 GB. Every cargo command and every demonstration waits for a
+# timed window run to end (tools/quiet.sh), and a window run waits for a demonstration going. It writes target/check/summary.txt and one log for each demonstration, and
 # ends with status 0 only if nothing failed.
 set -u
 cd "$(dirname "$0")/.." || exit 1
@@ -18,6 +18,7 @@ crates="plumbline-world plumbline plumbline-sheets plumbline-ifc plumbline-roofi
 export CARGO_INCREMENTAL=0 CARGO_PROFILE_DEV_DEBUG=0
 clean() { find "$T/debug/deps" -maxdepth 1 -type f -executable ! -name '*.so' ! -name 'plumbline-*' -size +20M -delete 2>/dev/null; }
 bad=0
+LOCK="${BUILDOS_LOCK:-/tmp/buildos-window.lock}"; trap 'rm -f "$LOCK.busy"' EXIT
 {
   echo "on $(git rev-parse --short HEAD)$(git diff --quiet HEAD -- . || echo ' with changes not committed'), $(date -u +%F' '%H:%M) UTC"
   for c in $crates; do
@@ -36,7 +37,10 @@ bad=0
     n=$(basename "$f" .sh)
     case $n in window|field-job) continue;; esac
     grep -q 'plumbline-app\|open_window\|xvfb\|xdotool' "$f" && continue
+    # Not beside a timed window demonstration: wait for the lock, say this one is running, and give way if a window run took the lock meanwhile.
+    while :; do tools/quiet.sh true; touch "$LOCK.busy"; [ -e "$LOCK" ] || break; rm -f "$LOCK.busy"; done
     if timeout 900 bash "$f" > "$OUT/$n.log" 2>&1 && ! grep -q 'FAIL' "$OUT/$n.log"; then pass=$((pass+1)); else fail="$fail $n"; fi
+    rm -f "$LOCK.busy"
   done
   echo "command-line demonstrations: $pass passed; failed:${fail:- none}"; [ -z "$fail" ] || bad=1
   for g in gate-language.sh gate-egress.sh "gate-clientdata.sh --all"; do ( cd .. && bash tools/$g >/dev/null 2>&1 ) && echo "$g: pass" || { echo "$g: FAIL"; bad=1; }; done
