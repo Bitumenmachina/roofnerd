@@ -11311,3 +11311,52 @@ a command that asks for the lock six seconds in. With the tool as it was, the
 command got in two seconds after the second demonstration ended (red). With the
 change it got in one second after the first ended, and the second began twenty-nine
 seconds later (green).
+
+## Call 250 (2026-11-28): a place on the house in a demonstration is a place in the model, not a dot of the window; part A's moved lines ruled
+
+**What was brought.** Call 248, point 5, frames the house in the free part of the
+window. The layout builder built that three ways. The first two (a view whose
+middle is not the window's middle) broke the wheel and the flight for anyone who
+reasons from the view's pose, `navw` among them, and were taken out. The third
+holds: the middle of the view is the middle of the window, and the fit is carried
+in the pose (the job as opened, F, Home, a flight to a thing). On it `quietw`
+passes every line part A owes and M1 to M8, and `navw` passes sessions a to g
+unedited. What still fails is of one kind: a line that names a fixed dot of the
+window as where a part of the house stands. `glassw`: "the door is not at
+(805, 640)". `navw` session h: the pointer set at (800, 560) for the south wall's
+face. `tradesw`: the boxes it reads the shadow, the foundation wall and a vent
+from. The house is framed up and to the right of where it was, so the door is
+elsewhere. The window demonstrations hold about a hundred and forty such fixed
+places in thirty-one scripts; not all are on the house.
+
+**Ruled.**
+
+1. **The framing stands, as the pose fit.** No view has a middle other than its
+   window's. A hand or a script that reasons from the pose is right.
+2. **A fixed dot that stands for a place on the house or the ground in the model
+   view becomes that place in the model** (feet east, north and up), turned to a
+   dot by the kit from the pose the program writes (the `view` line beside the
+   map). The arithmetic is the one `navw` has (`project`); it moves to the kit and
+   `navw` calls it there: one arithmetic. A dot that stands for a place of the
+   window (a panel, a bare corner to park the pointer) stays a dot. A place on the
+   plan is already asked of the program (`at`, `plan_px`) and stays so.
+3. **The proof that no expectation is loosened is run on the framing the scripts
+   were written for.** On the build of the pushed head, for every place changed,
+   the kit's dot lies within 3 dots of the dot the script held, listed place by
+   place; and every changed demonstration passes there with no other line of it
+   changed. No threshold, count, colour test or sentence changes. Only then are
+   the same scripts run on the new framing; what fails there is the program's.
+   The framing moves again when part B1 puts the left panel away: after this call
+   that costs no demonstration a line.
+4. **`tradesw` tells a wire from a duct by the colours the program draws them
+   in.** Call 240, point 6, took electrical off amber, because amber is how sure a
+   value is and nothing else. Electrical is violet (hue 262; lighting 255) and
+   HVAC blue (hue 209). The bands become pipe 60 to 200 (as it was), duct 200 to
+   240, wire 240 to 290; the counts wanted do not change. This one line changes
+   with part A, by the lead, when part A is accepted, since on the pushed head
+   electrical is still drawn amber.
+5. **The work of points 2 and 3 is a worker's** (contract 250P), on the pushed
+   head, in its own working copy, before part A is accepted. Part A's builder runs
+   no more demonstrations against fixed dots and hands back what it has.
+6. **Then:** 250P accepted and committed; part A laid over it; a judge that did
+   not build it reads the new pictures; all forty-five run by the lead.
