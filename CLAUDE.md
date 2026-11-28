@@ -388,16 +388,17 @@ through `tools/quiet.sh`, which waits for the lock.
 | measured marks on a PDF read as quantities | `crates/plans/src/marks.rs`, `crates/world/src/marks.rs`; call 227 |
 | the field's sheet written out and its measurements brought back | `crates/world/src/fieldsheet.rs`; call 234 |
 | which panels are on screen, and their switches at the lower right | `crates/app/src/panels.rs` (`panels_on`, `status_line`); a panel's "more below" strip: `more_below` |
-| a footing (a strip footing is held as a wall is, and is never counted as one) | `crates/world/src/building.rs` (search `Kind::Footing`), `editing.rs` (`footings`); DECISIONS.md call 70 |
+| a footing (a strip footing is held as a wall is, and is never counted as one) | `crates/world/src/building/faults.rs` and `figures.rs` (search `Kind::Footing`), `editing/put.rs` (`footings`); DECISIONS.md call 70 |
 | how a wall's frame is laid out; what a framing line names | `crates/world/src/building/framing.rs`; drawn in `scene.rs` behind the Framing switch; call 71 |
 | bringing a file in from the window | `crates/app/src/bring.rs`, `crates/app/src/plans.rs` |
 | what the model holds and its rules | `crates/world/src/building/model.rs`, `components.rs`, `check.rs`; the saved job: `file.rs`, and `SPEC.md` |
 | a quantity, a formula on a line, a price | `crates/world/src/lines.rs`, `formula.rs`, `derive.rs`, `view.rs` |
 | clashes; the verify-in-field list | `crates/world/src/building/clash.rs`; `vif.rs` |
 | a maker's sheet read into an item | `crates/plans/src/lib.rs` (`words`), `crates/world/src/spec.rs` |
-| the item library: items by trade as a table, brought in and written out; the starter items; a placed thing following its item, and turned | `crates/world/src/tables.rs` (`items_in`, `items_in_missing`, `items_out`), `library/items.csv`, `crates/world/src/editing.rs` (`placed_follow`, `turn`); in the window `crates/app/src/bring.rs`, the Items list and an item's panel in `panels.rs` (New item, Rename item, Delete item: `tools.rs` `new_item`, `rename_item`); DECISIONS.md calls 105, 107, 109, 111 |
+| the item library: items by trade as a table, brought in and written out; the starter items; a placed thing following its item, and turned | `crates/world/src/tables/items.rs` (`items_in`, `items_in_missing`, `items_out`), `library/items.csv`, `crates/world/src/editing/items.rs` (`placed_follow`) and `editing/changes.rs` (`turn`); in the window `crates/app/src/bring.rs`, the Items list and an item's panel in `panels.rs` (New item, Rename item, Delete item: `tools.rs` `new_item`, `rename_item`); DECISIONS.md calls 105, 107, 109, 111 |
 | the workbook, CSV, the three lenses; IFC in and out | `crates/world/src/export.rs`, `crates/sheets`; `crates/ifc` |
-| a command-line verb and what it prints | `crates/cli/src/main.rs` |
+| a command-line verb and what it prints | `crates/cli/src/main.rs` (`run`: each verb's words, and `usage`); what a verb does, in `crates/cli/src/drawing.rs`, `look.rs`, `money.rs`, `show.rs`, `tables_cmd.rs` |
+| a long file cut into parts (call 237, step 7) | the old file keeps its name and takes its parts in by `mod` and `pub use`, in a folder of its name: `building/`, `editing/`, `tables/` (the model), `found/`, `drawn/` (the plans), `bringing.rs` and `entry.rs` (the BIM file); the model's tests are `crates/world/tests/world*.rs` with `tests/common/` |
 
 **Change it the way that has held.** In this order, every time:
 

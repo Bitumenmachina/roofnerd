@@ -11053,3 +11053,46 @@ Ruled, and built.
    a held lock is seen waiting within three seconds; a waiting mark two minutes
    old and a busy mark twenty-five minutes old are not believed; with the lock
    gone `quiet.sh` runs its command. No gate and no expectation is changed.
+
+### Call 245. Call 237 step 7, as built: eight long files cut, accepted (2026-11-28)
+
+Worker 237S (another model) cut eight of the eleven files over 2,000 lines as a
+move: `crates/cli/src/main.rs` (4,310 lines, now 977 and five files of verbs);
+`crates/world/src/building.rs` (3,944, now 377 and six files in `building/`);
+`editing.rs` (2,666, now 226 and five in `editing/`); `tables.rs` (2,332, now 203
+and seven in `tables/`); `crates/world/tests/world.rs` (6,713, now nine files of
+tests and `tests/common/`); `crates/plans/src/found.rs` (2,930, now 717 and five in
+`found/`); `drawn.rs` (2,330, now 275 and three in `drawn/`); `crates/ifc/src/lib.rs`
+(2,852, now 761, `entry.rs` and `bringing.rs`). The old file keeps its name and
+takes its parts in by `mod` and `pub use`, so every path a caller wrote still holds.
+
+**What the lead ran, on the worker's tree (314a4f7 with the cut).**
+- The move proof, file by file (the non-blank lines of the old file against those
+  of its parts together): no old line is gone; every new line is a `mod`, `use` or
+  `#[allow]` line, the old line with `pub(super)`, `pub(crate)` or `pub` put
+  before it (338 such lines over the eight), or one of five header lines (below).
+  The worker proved the proof red (a figure changed from 100.0 to 101.0 failed it).
+- The model's test names: 678 before, 678 after, the same list.
+- `tools/check.sh` with the port map: 1,344 tests pass (the model 759, the command
+  line 94, the workbook 7, the BIM file 131, the roof 122, the plans 231), 69
+  command-line demonstrations pass, the three gates, the licences and the port map
+  pass, the sample whole house is 880d9fd3c364b5f7 as it was. `check: PASS`.
+
+**One thing the contract forbade and the lead allows.** The contract said no new
+lines and no change to `NOTICE`. Five of the new files hold code ported from
+BIMCraft (`editing/put.rs`, `items.rs`, `floors.rs`, `changes.rs`,
+`building/wall_faces.rs`), and the port map's gate asks that such a file says so at
+its head and that `NOTICE` names it. The worker added two or three header lines
+to each of the five and six lines to `NOTICE`. That is right: where ported code
+goes, its notice goes with it. The contract's rule was the lead's mistake.
+
+**What is still long, and why.** Functions were not cut inside: `bring` in
+`crates/ifc/src/bringing.rs` is one function of 1,680 lines, `find_core` in
+`crates/plans/src/drawn/finding.rs` one of 1,020, the command line's `run` one of
+900. Cutting inside a function changes its body and is not a move; it is not done
+in this step. The window's three long files (`panels.rs`, `scene.rs`, `tools.rs`)
+are cut after the layout work, which is rewriting them.
+
+`CLAUDE.md`'s table of where each thing is changed names the new files (three rows
+put right, one added). Older calls and `STATUS-history.md` that name
+`crates/world/tests/world.rs` for a test mean the files `world*.rs` beside it.

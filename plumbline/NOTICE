@@ -38,6 +38,8 @@ the same license:
                                         crates/core/src/model.rs and
                                         crates/core/src/view3d.rs; the rest of
                                         the file is this project's own
+  crates/world/src/building/wall_faces.rs  floor_outline (cut from building.rs); the
+                                        rest of the file is this project's own
 
 The plan set's page of line work and its PDF are ported from the same project at
 the same commit, under the same license:
@@ -66,6 +68,10 @@ commit, under the same license:
                                         crates/core/src/draw.rs and
                                         crates/core/src/engine.rs; the file is
                                         otherwise this project's own
+  crates/world/src/editing/put.rs       the same rules (cut from editing.rs)
+  crates/world/src/editing/floors.rs    the same rules (cut from editing.rs)
+  crates/world/src/editing/changes.rs   the same rules (cut from editing.rs)
+  crates/world/src/editing/items.rs     the same rules (cut from editing.rs)
   crates/world/src/editing/join.rs      the rule for cutting a run in two, from
                                         split in crates/core/src/commands.rs;
                                         the rest of the file is this project's
